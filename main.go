@@ -6,7 +6,6 @@ import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -58,9 +57,7 @@ type Game struct {
 	moveCount  int
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+var localRand *rand.Rand = rand.New(rand.NewSource(1))
 
 type Room struct {
 	X, Y, Width, Height int
@@ -84,10 +81,10 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 
 	for i := 0; i < 10; i++ { // Attempt to create 10 rooms
 		for attempt := 0; attempt < 10; attempt++ { // Limit of 10 attempts per room
-			roomWidth := rand.Intn(10) + 5  // Random width between 5 and 15
-			roomHeight := rand.Intn(10) + 5 // Random height between 5 and 15
-			roomX := rand.Intn(width-roomWidth-1) + 1
-			roomY := rand.Intn(height-roomHeight-1) + 1
+			roomWidth := localRand.Intn(10) + 5  // Random width between 5 and 15
+			roomHeight := localRand.Intn(10) + 5 // Random height between 5 and 15
+			roomX := localRand.Intn(width-roomWidth-1) + 1
+			roomY := localRand.Intn(height-roomHeight-1) + 1
 
 			newRoom := Room{roomX, roomY, roomWidth, roomHeight}
 			valid := true
@@ -121,7 +118,7 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 		x1, y1 := roomA.X+roomA.Width/2, roomA.Y+roomA.Height/2
 		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
 
-		if rand.Intn(2) == 0 {
+		if localRand.Intn(2) == 0 {
 			for x := min(x1, x2); x <= max(x1, x2); x++ {
 				mapGrid[y1][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
 			}
@@ -138,9 +135,9 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 		}
 	}
 
-	playerRoom := rooms[rand.Intn(len(rooms))]
-	playerX := rand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
-	playerY := rand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
+	playerRoom := rooms[localRand.Intn(len(rooms))]
+	playerX := localRand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
+	playerY := localRand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
 
 	player := Player{
 		Entity:    Entity{X: playerX, Y: playerY, Char: '@'},
@@ -154,12 +151,12 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 
 	for i := 0; i < 5; i++ { // ここでは5つの敵と5つのアイテムを生成します
 		// ランダムな部屋を選ぶ
-		room := rooms[rand.Intn(len(rooms))]
+		room := rooms[localRand.Intn(len(rooms))]
 		// ランダムな位置を選ぶ（壁を避ける）
-		enemyX := rand.Intn(room.Width-2) + room.X + 1
-		enemyY := rand.Intn(room.Height-2) + room.Y + 1
-		itemX := rand.Intn(room.Width-2) + room.X + 1
-		itemY := rand.Intn(room.Height-2) + room.Y + 1
+		enemyX := localRand.Intn(room.Width-2) + room.X + 1
+		enemyY := localRand.Intn(room.Height-2) + room.Y + 1
+		itemX := localRand.Intn(room.Width-2) + room.X + 1
+		itemY := localRand.Intn(room.Height-2) + room.Y + 1
 
 		// 敵とアイテムを配列に追加
 		enemies = append(enemies, Enemy{
@@ -252,7 +249,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	screenWidth, screenHeight := screen.Size()
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 
 	// 画面中央の位置を計算
 	centerX := (screenWidth-tileSize)/2 - tileSize
