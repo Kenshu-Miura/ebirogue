@@ -6,6 +6,7 @@ import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -57,7 +58,7 @@ type Game struct {
 	moveCount  int
 }
 
-var localRand *rand.Rand = rand.New(rand.NewSource(1))
+var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type Room struct {
 	X, Y, Width, Height int
