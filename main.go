@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
@@ -52,24 +53,59 @@ type Game struct {
 	tilesetImg *ebiten.Image
 	offsetX    int
 	offsetY    int
+	moveCount  int
 }
 
 func (g *Game) Update() error {
+	var dx, dy int
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
-		g.offsetY += tileSize
+	// キーの押下状態を取得
+	upPressed := inpututil.IsKeyJustPressed(ebiten.KeyUp)
+	downPressed := inpututil.IsKeyJustPressed(ebiten.KeyDown)
+	leftPressed := inpututil.IsKeyJustPressed(ebiten.KeyLeft)
+	rightPressed := inpututil.IsKeyJustPressed(ebiten.KeyRight)
+	aPressed := ebiten.IsKeyPressed(ebiten.KeyA) // Aキーが押されているかどうかをチェック
+
+	if aPressed { // 斜め移動のロジック
+		if (upPressed || downPressed) && (leftPressed || rightPressed) {
+			if upPressed {
+				dy = tileSize
+			}
+			if downPressed {
+				dy = -tileSize
+			}
+			if leftPressed {
+				dx = tileSize
+			}
+			if rightPressed {
+				dx = -tileSize
+			}
+		}
+	} else { // 上下左右の移動のロジック
+		if upPressed && !downPressed {
+			dy = tileSize
+		}
+		if downPressed && !upPressed {
+			dy = -tileSize
+		}
+		if leftPressed && !rightPressed {
+			dx = tileSize
+		}
+		if rightPressed && !leftPressed {
+			dx = -tileSize
+		}
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
-		g.offsetY -= tileSize
+
+	// オフセットを更新
+	g.offsetX += dx
+	g.offsetY += dy
+
+	// 移動があった場合にカウントをインクリメント
+	if dx != 0 || dy != 0 {
+		g.moveCount++
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
-		g.offsetX += tileSize
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
-		g.offsetX -= tileSize
-	}
+
 	return nil
-
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -120,6 +156,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		opts.GeoM.Translate(float64(item.X*tileSize+offsetX), float64(item.Y*tileSize+offsetY))
 		screen.DrawImage(g.itemImg, opts)
 	}
+
+	// カウントを画面右上に表示
+	countText := fmt.Sprintf("Moves: %d", g.moveCount)
+	ebitenutil.DebugPrintAt(screen, countText, screenWidth-100, 10) // Adjust the x-position as needed to align to the right
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
