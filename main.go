@@ -56,6 +56,22 @@ type Game struct {
 	moveCount  int
 }
 
+func (g *Game) MovePlayer(dx, dy int) {
+	// dx と dy が両方とも0の場合、移動は発生していない
+	if dx == 0 && dy == 0 {
+		return
+	}
+
+	newPX := g.state.Player.X + dx
+	newPY := g.state.Player.Y + dy
+	// マップ範囲内およびブロックされていないタイル上にあることを確認
+	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
+		g.state.Player.X = newPX
+		g.state.Player.Y = newPY
+		g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
+	}
+}
+
 func (g *Game) Update() error {
 	var dx, dy int
 
@@ -69,55 +85,34 @@ func (g *Game) Update() error {
 	if aPressed { // 斜め移動のロジック
 		if (upPressed || downPressed) && (leftPressed || rightPressed) {
 			if upPressed {
-				dy = tileSize
+				dy = -1
 			}
 			if downPressed {
-				dy = -tileSize
+				dy = 1
 			}
 			if leftPressed {
-				dx = tileSize
+				dx = -1
 			}
 			if rightPressed {
-				dx = -tileSize
+				dx = 1
 			}
 		}
 	} else { // 上下左右の移動のロジック
 		if upPressed && !downPressed {
-			dy = tileSize
+			dy = -1
 		}
 		if downPressed && !upPressed {
-			dy = -tileSize
+			dy = 1
 		}
 		if leftPressed && !rightPressed {
-			dx = tileSize
+			dx = -1
 		}
 		if rightPressed && !leftPressed {
-			dx = -tileSize
+			dx = 1
 		}
 	}
 
-	// カメラの新しい位置を計算
-	newOffsetX := g.offsetX + dx
-	newOffsetY := g.offsetY + dy
-
-	// プレイヤーのマップ上の位置を計算
-	playerMapX := (g.state.Player.X*tileSize - newOffsetX) / tileSize
-	playerMapY := (g.state.Player.Y*tileSize - newOffsetY) / tileSize
-
-	// インデックスがマップの範囲内にあることを確認
-	if playerMapX >= 0 && playerMapX < len(g.state.Map[0]) && playerMapY >= 0 && playerMapY < len(g.state.Map) {
-		// 新しい位置が壁タイルでないことを確認
-		if !g.state.Map[playerMapY][playerMapX].Blocked {
-			// オフセットを更新
-			g.offsetX = newOffsetX
-			g.offsetY = newOffsetY
-
-			// 移動があった場合にカウントをインクリメント
-			if dx != 0 || dy != 0 {
-				g.moveCount++
-			}
-		}
-	}
+	g.MovePlayer(dx, dy) // プレイヤーの移動を更新
 
 	return nil
 }
@@ -125,11 +120,13 @@ func (g *Game) Update() error {
 func (g *Game) Draw(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Size()
 
-	mapWidth := len(g.state.Map[0]) * tileSize
-	mapHeight := len(g.state.Map) * tileSize
+	// 画面中央の位置を計算
+	centerX := (screenWidth-tileSize)/2 - tileSize
+	centerY := (screenHeight-tileSize)/2 - tileSize
 
-	offsetX := (screenWidth-mapWidth)/2 + g.offsetX
-	offsetY := (screenHeight-mapHeight)/2 + g.offsetY
+	// マップのオフセットを計算
+	offsetX := centerX - g.state.Player.X*tileSize
+	offsetY := centerY - g.state.Player.Y*tileSize
 
 	// タイルの描画
 	for y, row := range g.state.Map {
@@ -151,9 +148,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// プレイヤーを描画
 	opts := &ebiten.DrawImageOptions{}
-	// 画面中央の位置を計算
-	centerX := (screenWidth - tileSize) / 2
-	centerY := (screenHeight - tileSize) / 2
 	opts.GeoM.Translate(float64(centerX), float64(centerY))
 	screen.DrawImage(g.playerImg, opts)
 
