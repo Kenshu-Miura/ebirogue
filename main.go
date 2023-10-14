@@ -96,13 +96,27 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// オフセットを更新
-	g.offsetX += dx
-	g.offsetY += dy
+	// カメラの新しい位置を計算
+	newOffsetX := g.offsetX + dx
+	newOffsetY := g.offsetY + dy
 
-	// 移動があった場合にカウントをインクリメント
-	if dx != 0 || dy != 0 {
-		g.moveCount++
+	// プレイヤーのマップ上の位置を計算
+	playerMapX := (g.state.Player.X*tileSize - newOffsetX) / tileSize
+	playerMapY := (g.state.Player.Y*tileSize - newOffsetY) / tileSize
+
+	// インデックスがマップの範囲内にあることを確認
+	if playerMapX >= 0 && playerMapX < len(g.state.Map[0]) && playerMapY >= 0 && playerMapY < len(g.state.Map) {
+		// 新しい位置が壁タイルでないことを確認
+		if !g.state.Map[playerMapY][playerMapX].Blocked {
+			// オフセットを更新
+			g.offsetX = newOffsetX
+			g.offsetY = newOffsetY
+
+			// 移動があった場合にカウントをインクリメント
+			if dx != 0 || dy != 0 {
+				g.moveCount++
+			}
+		}
 	}
 
 	return nil
