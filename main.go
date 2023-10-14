@@ -5,6 +5,8 @@ import (
 	"image"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -56,6 +58,138 @@ type Game struct {
 	moveCount  int
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+type Room struct {
+	X, Y, Width, Height int
+}
+
+func (r Room) Intersects(other Room) bool {
+	return r.X < other.X+other.Width && r.X+r.Width > other.X &&
+		r.Y < other.Y+other.Height && r.Y+r.Height > other.Y
+}
+
+func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) {
+	mapGrid := make([][]Tile, height)
+	for y := range mapGrid {
+		mapGrid[y] = make([]Tile, width)
+		for x := range mapGrid[y] {
+			mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+		}
+	}
+
+	var rooms []Room
+
+	for i := 0; i < 10; i++ { // Attempt to create 10 rooms
+		for attempt := 0; attempt < 10; attempt++ { // Limit of 10 attempts per room
+			roomWidth := rand.Intn(10) + 5  // Random width between 5 and 15
+			roomHeight := rand.Intn(10) + 5 // Random height between 5 and 15
+			roomX := rand.Intn(width-roomWidth-1) + 1
+			roomY := rand.Intn(height-roomHeight-1) + 1
+
+			newRoom := Room{roomX, roomY, roomWidth, roomHeight}
+			valid := true
+			for _, room := range rooms {
+				if newRoom.Intersects(room) {
+					valid = false
+					break
+				}
+			}
+
+			if valid {
+				rooms = append(rooms, newRoom)
+				for y := roomY; y < roomY+roomHeight; y++ {
+					for x := roomX; x < roomX+roomWidth; x++ {
+						if x == roomX || x == roomX+roomWidth-1 || y == roomY || y == roomY+roomHeight-1 {
+							mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+						} else {
+							mapGrid[y][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Connect rooms with corridors
+	for i := 0; i < len(rooms)-1; i++ {
+		roomA := rooms[i]
+		roomB := rooms[i+1]
+
+		x1, y1 := roomA.X+roomA.Width/2, roomA.Y+roomA.Height/2
+		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
+
+		if rand.Intn(2) == 0 {
+			for x := min(x1, x2); x <= max(x1, x2); x++ {
+				mapGrid[y1][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+			for y := min(y1, y2); y <= max(y1, y2); y++ {
+				mapGrid[y][x2] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+		} else {
+			for y := min(y1, y2); y <= max(y1, y2); y++ {
+				mapGrid[y][x1] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+			for x := min(x1, x2); x <= max(x1, x2); x++ {
+				mapGrid[y2][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+		}
+	}
+
+	playerRoom := rooms[rand.Intn(len(rooms))]
+	playerX := rand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
+	playerY := rand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
+
+	player := Player{
+		Entity:    Entity{X: playerX, Y: playerY, Char: '@'},
+		Health:    100,
+		MaxHealth: 100,
+	}
+
+	// 敵とアイテムの配列を初期化
+	var enemies []Enemy
+	var items []Entity
+
+	for i := 0; i < 5; i++ { // ここでは5つの敵と5つのアイテムを生成します
+		// ランダムな部屋を選ぶ
+		room := rooms[rand.Intn(len(rooms))]
+		// ランダムな位置を選ぶ（壁を避ける）
+		enemyX := rand.Intn(room.Width-2) + room.X + 1
+		enemyY := rand.Intn(room.Height-2) + room.Y + 1
+		itemX := rand.Intn(room.Width-2) + room.X + 1
+		itemY := rand.Intn(room.Height-2) + room.Y + 1
+
+		// 敵とアイテムを配列に追加
+		enemies = append(enemies, Enemy{
+			Entity:    Entity{X: enemyX, Y: enemyY, Char: 'E'},
+			Health:    50,
+			MaxHealth: 50,
+		})
+		items = append(items, Entity{
+			X:    itemX,
+			Y:    itemY,
+			Char: '!',
+		})
+	}
+
+	return mapGrid, player, enemies, items
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
 func (g *Game) MovePlayer(dx, dy int) {
 	// dx と dy が両方とも0の場合、移動は発生していない
 	if dx == 0 && dy == 0 {
@@ -192,34 +326,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load item image: %v", err)
 	}
+
+	mapGrid, player, enemies, items := GenerateRandomMap(100, 100)
+
 	game := &Game{
 		state: GameState{
-			Map: [][]Tile{
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "floor", Blocked: false, BlockSight: false}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-				{Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}, Tile{Type: "wall", Blocked: true, BlockSight: true}},
-			},
-			Player: Player{
-				Entity:    Entity{X: 1, Y: 1, Char: '@'},
-				Health:    100,
-				MaxHealth: 100,
-			},
-			Enemies: []Enemy{
-				{
-					Entity:    Entity{X: 1, Y: 2, Char: 'E'},
-					Health:    50,
-					MaxHealth: 50,
-				},
-			},
-			Items: []Entity{
-				{X: 2, Y: 1, Char: '!'},
-			},
+			Map:     mapGrid,
+			Player:  player,
+			Enemies: enemies,
+			Items:   items,
 		},
 		playerImg:  img,
 		tilesetImg: tilesetImg,
