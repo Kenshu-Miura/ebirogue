@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 const (
@@ -49,10 +50,26 @@ type Game struct {
 	enemyImg   *ebiten.Image
 	itemImg    *ebiten.Image
 	tilesetImg *ebiten.Image
+	offsetX    int
+	offsetY    int
 }
 
 func (g *Game) Update() error {
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		g.offsetY += tileSize
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		g.offsetY -= tileSize
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		g.offsetX += tileSize
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		g.offsetX -= tileSize
+	}
 	return nil
+
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -61,9 +78,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	mapWidth := len(g.state.Map[0]) * tileSize
 	mapHeight := len(g.state.Map) * tileSize
 
-	offsetX := (screenWidth - mapWidth) / 2
-	offsetY := (screenHeight - mapHeight) / 2
+	offsetX := (screenWidth-mapWidth)/2 + g.offsetX
+	offsetY := (screenHeight-mapHeight)/2 + g.offsetY
 
+	// タイルの描画
 	for y, row := range g.state.Map {
 		for x, tile := range row {
 			var srcX, srcY int
@@ -83,7 +101,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// プレイヤーを描画
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(g.state.Player.X*tileSize+offsetX), float64(g.state.Player.Y*tileSize+offsetY))
+	// 画面中央の位置を計算
+	centerX := (screenWidth - tileSize) / 2
+	centerY := (screenHeight - tileSize) / 2
+	opts.GeoM.Translate(float64(centerX), float64(centerY))
 	screen.DrawImage(g.playerImg, opts)
 
 	// 敵を描画
@@ -156,6 +177,8 @@ func main() {
 		tilesetImg: tilesetImg,
 		enemyImg:   enemyImg,
 		itemImg:    itemImg,
+		offsetX:    0,
+		offsetY:    0,
 	}
 
 	ebiten.SetWindowSize(1280, 960)
