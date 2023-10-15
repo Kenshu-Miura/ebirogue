@@ -73,6 +73,16 @@ func isCorridor(tile Tile) bool {
 	return tile.Type == "corridor"
 }
 
+func isInsideRoom(x, y int, rooms []Room) bool {
+	for _, room := range rooms {
+		if x > room.X && x < room.X+room.Width-1 &&
+			y > room.Y && y < room.Y+room.Height-1 {
+			return true
+		}
+	}
+	return false
+}
+
 func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	for i := 0; i < len(rooms)-1; i++ {
 		roomA := rooms[i]
@@ -86,19 +96,20 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 
 		// Draw horizontal corridor from roomA to the turning point
 		for x := min(x1, turnX); x <= max(x1, turnX); x++ {
-			if !isCorridor(mapGrid[y1][x]) {
+			if !isInsideRoom(x, y1, rooms) && !isCorridor(mapGrid[y1][x]) {
 				mapGrid[y1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
 
 		// Draw vertical corridor from the turning point to roomB
 		for y := min(turnY, y2); y <= max(turnY, y2); y++ {
-			if !isCorridor(mapGrid[y][x2]) {
+			if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
 				mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
 	}
 }
+
 func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	var rooms []Room
 
