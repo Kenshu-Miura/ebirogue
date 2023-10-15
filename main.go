@@ -125,6 +125,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 						}
 					}
 				}
+				break // Exit the inner loop as soon as a room is successfully created
 			}
 		}
 	}
