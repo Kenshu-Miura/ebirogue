@@ -70,7 +70,7 @@ func (r Room) Intersects(other Room) bool {
 }
 
 func isCorridor(tile Tile) bool {
-	return tile.Type == "floor"
+	return tile.Type == "corridor"
 }
 
 func connectRooms(rooms []Room, mapGrid [][]Tile) {
@@ -87,19 +87,18 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		// Draw horizontal corridor from roomA to the turning point
 		for x := min(x1, turnX); x <= max(x1, turnX); x++ {
 			if !isCorridor(mapGrid[y1][x]) {
-				mapGrid[y1][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+				mapGrid[y1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
 
 		// Draw vertical corridor from the turning point to roomB
 		for y := min(turnY, y2); y <= max(turnY, y2); y++ {
 			if !isCorridor(mapGrid[y][x2]) {
-				mapGrid[y][x2] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+				mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
 	}
 }
-
 func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	var rooms []Room
 
@@ -283,8 +282,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			switch tile.Type {
 			case "wall":
 				srcX, srcY = 0, 0 // タイルセット上の壁タイルの位置
-			case "floor":
+			case "corridor":
 				srcX, srcY = tileSize, 0 // タイルセット上の床タイルの位置
+			case "floor":
+				srcX, srcY = 2*tileSize, 0 // タイルセット上の通路タイルの位置
 			default:
 				continue // 未知のタイルタイプは描画しない
 			}
