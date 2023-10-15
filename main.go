@@ -204,10 +204,33 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 
 	for i := 0; i < numRooms; i++ { // Attempt to create a specified number of rooms
 		for attempt := 0; attempt < 10; attempt++ { // Limit of 10 attempts per room
-			roomWidth := localRand.Intn(10) + 5  // Random width between 5 and 15
-			roomHeight := localRand.Intn(10) + 5 // Random height between 5 and 15
-			roomX := localRand.Intn(width-roomWidth-1) + 1
-			roomY := localRand.Intn(height-roomHeight-1) + 1
+			var roomX, roomY, roomWidth, roomHeight int
+
+			// If there are already rooms created, try to align the new room with one of them
+			if len(rooms) > 0 {
+				alignWith := rooms[localRand.Intn(len(rooms))] // Randomly select a room to align with
+
+				// Randomly decide to align horizontally or vertically
+				if localRand.Intn(2) == 0 {
+					// Align horizontally
+					roomWidth = localRand.Intn(10) + 5 // Random width between 5 and 15
+					roomHeight = alignWith.Height      // Match the height of the room to align with
+					roomX = localRand.Intn(width-roomWidth-1) + 1
+					roomY = alignWith.Y
+				} else {
+					// Align vertically
+					roomWidth = alignWith.Width         // Match the width of the room to align with
+					roomHeight = localRand.Intn(10) + 5 // Random height between 5 and 15
+					roomX = alignWith.X
+					roomY = localRand.Intn(height-roomHeight-1) + 1
+				}
+			} else {
+				// If this is the first room, generate random dimensions and position
+				roomWidth = localRand.Intn(10) + 5  // Random width between 5 and 15
+				roomHeight = localRand.Intn(10) + 5 // Random height between 5 and 15
+				roomX = localRand.Intn(width-roomWidth-1) + 1
+				roomY = localRand.Intn(height-roomHeight-1) + 1
+			}
 
 			newRoom := Room{roomX, roomY, roomWidth, roomHeight}
 			valid := true
