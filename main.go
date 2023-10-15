@@ -221,21 +221,21 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 				// Randomly decide to align horizontally or vertically
 				if localRand.Intn(2) == 0 {
 					// Align horizontally
-					roomWidth = localRand.Intn(10) + 5 // Random width between 5 and 15
+					roomWidth = localRand.Intn(10) + 7 // Random width between 5 and 15
 					roomHeight = alignWith.Height      // Match the height of the room to align with
 					roomX = localRand.Intn(width-roomWidth-1) + 1
 					roomY = alignWith.Y
 				} else {
 					// Align vertically
 					roomWidth = alignWith.Width         // Match the width of the room to align with
-					roomHeight = localRand.Intn(10) + 5 // Random height between 5 and 15
+					roomHeight = localRand.Intn(10) + 7 // Random height between 5 and 15
 					roomX = alignWith.X
 					roomY = localRand.Intn(height-roomHeight-1) + 1
 				}
 			} else {
 				// If this is the first room, generate random dimensions and position
-				roomWidth = localRand.Intn(10) + 5  // Random width between 5 and 15
-				roomHeight = localRand.Intn(10) + 5 // Random height between 5 and 15
+				roomWidth = localRand.Intn(10) + 7  // Random width between 5 and 15
+				roomHeight = localRand.Intn(10) + 7 // Random height between 5 and 15
 				roomX = localRand.Intn(width-roomWidth-1) + 1
 				roomY = localRand.Intn(height-roomHeight-1) + 1
 			}
@@ -243,7 +243,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 			newRoom := Room{roomX, roomY, roomWidth, roomHeight}
 			valid := true
 			for _, room := range rooms {
-				if !newRoom.IsSeparatedBy(room, 3) {
+				if !newRoom.IsSeparatedBy(room, 5) {
 					valid = false
 					break
 				}
