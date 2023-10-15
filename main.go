@@ -100,6 +100,28 @@ type Coordinate struct {
 	X, Y int
 }
 
+func isCorridorConnected(mapGrid [][]Tile, x1, y1, x2, y2 int) bool {
+	for y := y1; y <= y2; y++ {
+		for x := x1; x <= x2; x++ {
+			tile := mapGrid[y][x]
+			if tile.Type == "corridor" {
+				// Check surrounding tiles for walls
+				for dy := -1; dy <= 1; dy++ {
+					for dx := -1; dx <= 1; dx++ {
+						if dy != 0 || dx != 0 { // Skip the center tile
+							neighbor := mapGrid[y+dy][x+dx]
+							if neighbor.Type == "wall" {
+								return false // A wall is touching the corridor
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return true // No walls are touching the corridor
+}
+
 func isWall(mapGrid [][]Tile, x, y int, doorLocations []Coordinate) bool {
 	// Check if the coordinates are within the bounds of the map
 	if x < 0 || y < 0 || x >= len(mapGrid[0]) || y >= len(mapGrid) {
@@ -120,30 +142,45 @@ func isWall(mapGrid [][]Tile, x, y int, doorLocations []Coordinate) bool {
 	return false // This location is not a wall
 }
 
-func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorLocations []Coordinate) {
+func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositions []Coordinate) {
 	// Determine the turning points
 	turnX1, turnY1 := x1, (y1+y2)/2
 	turnX2, turnY2 := x2, (y1+y2)/2
 
 	// Draw vertical corridor from the starting point to the first turning point
 	for y := min(y1, turnY1); y <= max(y1, turnY1); y++ {
-		if !isWall(mapGrid, x1, y, doorLocations) && !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
+		if !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
 			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
 
+	// Verify that the corridor segment does not intersect with walls
+	if !isCorridorConnected(mapGrid, x1, min(y1, turnY1), x1, max(y1, turnY1)) {
+		fmt.Println("Corridor segment intersects with a wall")
+	}
+
 	// Draw horizontal corridor from the first turning point to the second turning point
 	for x := min(turnX1, turnX2); x <= max(turnX1, turnX2); x++ {
-		if !isWall(mapGrid, x, turnY1, doorLocations) && !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
+		if !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
 			mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
 
+	// Verify that the corridor segment does not intersect with walls
+	if !isCorridorConnected(mapGrid, min(turnX1, turnX2), turnY1, max(turnX1, turnX2), turnY1) {
+		fmt.Println("Corridor segment intersects with a wall")
+	}
+
 	// Draw vertical corridor from the second turning point to the end point
 	for y := min(turnY2, y2); y <= max(turnY2, y2); y++ {
-		if !isWall(mapGrid, x2, y, doorLocations) && !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
+		if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
 			mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
+	}
+
+	// Verify that the corridor segment does not intersect with walls
+	if !isCorridorConnected(mapGrid, x2, min(turnY2, y2), x2, max(turnY2, y2)) {
+		fmt.Println("Corridor segment intersects with a wall")
 	}
 }
 
