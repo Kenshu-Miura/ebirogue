@@ -149,16 +149,17 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 }
 
 func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) {
+	// Step 1: Initialize all tiles to "other" type
 	mapGrid := make([][]Tile, height)
 	for y := range mapGrid {
 		mapGrid[y] = make([]Tile, width)
 		for x := range mapGrid[y] {
-			mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+			mapGrid[y][x] = Tile{Type: "other", Blocked: true, BlockSight: true}
 		}
 	}
 
-	numRooms := localRand.Intn(7) + 4                        // Random number of rooms between 4 and 10
-	rooms := generateRooms(mapGrid, width, height, numRooms) // Generate rooms
+	numRooms := localRand.Intn(7) + 4
+	rooms := generateRooms(mapGrid, width, height, numRooms) // Step 2: Generate rooms
 
 	connectRooms(rooms, mapGrid)
 
