@@ -77,20 +77,17 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		x1, y1 := roomA.X+roomA.Width/2, roomA.Y+roomA.Height/2
 		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
 
-		if localRand.Intn(2) == 0 {
-			for x := min(x1, x2); x <= max(x1, x2); x++ {
-				mapGrid[y1][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
-			for y := min(y1, y2); y <= max(y1, y2); y++ {
-				mapGrid[y][x2] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
-		} else {
-			for y := min(y1, y2); y <= max(y1, y2); y++ {
-				mapGrid[y][x1] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
-			for x := min(x1, x2); x <= max(x1, x2); x++ {
-				mapGrid[y2][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
+		// Determine the turning points
+		turnX, turnY := x2, y1
+
+		// Draw horizontal corridor from roomA to the turning point
+		for x := min(x1, turnX); x <= max(x1, turnX); x++ {
+			mapGrid[y1][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+		}
+
+		// Draw vertical corridor from the turning point to roomB
+		for y := min(turnY, y2); y <= max(turnY, y2); y++ {
+			mapGrid[y][x2] = Tile{Type: "floor", Blocked: false, BlockSight: false}
 		}
 	}
 }
