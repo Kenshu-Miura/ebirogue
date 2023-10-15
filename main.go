@@ -69,6 +69,32 @@ func (r Room) Intersects(other Room) bool {
 		r.Y < other.Y+other.Height && r.Y+r.Height > other.Y
 }
 
+func connectRooms(rooms []Room, mapGrid [][]Tile) {
+	for i := 0; i < len(rooms)-1; i++ {
+		roomA := rooms[i]
+		roomB := rooms[i+1]
+
+		x1, y1 := roomA.X+roomA.Width/2, roomA.Y+roomA.Height/2
+		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
+
+		if localRand.Intn(2) == 0 {
+			for x := min(x1, x2); x <= max(x1, x2); x++ {
+				mapGrid[y1][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+			for y := min(y1, y2); y <= max(y1, y2); y++ {
+				mapGrid[y][x2] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+		} else {
+			for y := min(y1, y2); y <= max(y1, y2); y++ {
+				mapGrid[y][x1] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+			for x := min(x1, x2); x <= max(x1, x2); x++ {
+				mapGrid[y2][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
+			}
+		}
+	}
+}
+
 func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) {
 	mapGrid := make([][]Tile, height)
 	for y := range mapGrid {
@@ -111,30 +137,7 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 		}
 	}
 
-	// Connect rooms with corridors
-	for i := 0; i < len(rooms)-1; i++ {
-		roomA := rooms[i]
-		roomB := rooms[i+1]
-
-		x1, y1 := roomA.X+roomA.Width/2, roomA.Y+roomA.Height/2
-		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
-
-		if localRand.Intn(2) == 0 {
-			for x := min(x1, x2); x <= max(x1, x2); x++ {
-				mapGrid[y1][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
-			for y := min(y1, y2); y <= max(y1, y2); y++ {
-				mapGrid[y][x2] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
-		} else {
-			for y := min(y1, y2); y <= max(y1, y2); y++ {
-				mapGrid[y][x1] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
-			for x := min(x1, x2); x <= max(x1, x2); x++ {
-				mapGrid[y2][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-			}
-		}
-	}
+	connectRooms(rooms, mapGrid)
 
 	playerRoom := rooms[localRand.Intn(len(rooms))]
 	playerX := localRand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
