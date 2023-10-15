@@ -151,6 +151,18 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	}
 }
 
+func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
+	// Horizontal separation
+	if r.X+r.Width+tiles <= other.X || other.X+other.Width+tiles <= r.X {
+		return true
+	}
+	// Vertical separation
+	if r.Y+r.Height+tiles <= other.Y || other.Y+other.Height+tiles <= r.Y {
+		return true
+	}
+	return false
+}
+
 func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	var rooms []Room
 
@@ -164,7 +176,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 			newRoom := Room{roomX, roomY, roomWidth, roomHeight}
 			valid := true
 			for _, room := range rooms {
-				if newRoom.Intersects(room) {
+				if !newRoom.IsSeparatedBy(room, 2) {
 					valid = false
 					break
 				}
