@@ -1,12 +1,10 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"image"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
-	"math"
 	"math/rand"
 	"time"
 
@@ -61,6 +59,7 @@ type Game struct {
 }
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+var doorPositions []Coordinate
 
 type Room struct {
 	X, Y, Width, Height int
@@ -97,82 +96,52 @@ func hasWallTiles(mapGrid [][]Tile, x1, y1, x2, y2 int, door1X, door1Y, door2X, 
 	return false
 }
 
-func findDoorPositions(mapGrid [][]Tile, x1, y1, x2, y2 int) (door1X, door1Y, door2X, door2Y int) {
-	var firstWallHit bool
-	for y := y1; y <= y2; y++ {
-		for x := x1; x <= x2; x++ {
-			if mapGrid[y][x].Type == "wall" {
-				if !firstWallHit {
-					door1X, door1Y = x, y
-					firstWallHit = true
-				} else {
-					door2X, door2Y = x, y
-				}
+type Coordinate struct {
+	X, Y int
+}
+
+func isWall(mapGrid [][]Tile, x, y int, doorLocations []Coordinate) bool {
+	// Check if the coordinates are within the bounds of the map
+	if x < 0 || y < 0 || x >= len(mapGrid[0]) || y >= len(mapGrid) {
+		return false
+	}
+
+	// Check if the tile at the specified coordinates is a wall
+	if mapGrid[y][x].Type == "wall" {
+		// Check if a door is planned at this location
+		for _, doorLocation := range doorLocations {
+			if x == doorLocation.X && y == doorLocation.Y {
+				return false // This location is designated for a door, not a wall
 			}
 		}
-	}
-	return
-}
-
-func distance(x1, y1, x2, y2 int) float64 {
-	dx := float64(x2 - x1)
-	dy := float64(y2 - y1)
-	return math.Sqrt(dx*dx + dy*dy)
-}
-
-func nearestRoom(x, y int, rooms []Room, currentRoom Room) (nearest Room, nearestIndex int, err error) {
-	minDist := math.MaxFloat64
-	for i, room := range rooms {
-		// Skip the current room
-		if room == currentRoom {
-			continue
-		}
-
-		roomX := room.X + room.Width/2
-		roomY := room.Y + room.Height/2
-		dist := distance(x, y, roomX, roomY)
-
-		// Skip rooms with zero distance (which should not occur with the current room check above)
-		if dist == 0 {
-			continue
-		}
-
-		if dist < minDist {
-			minDist = dist
-			nearest = room
-			nearestIndex = i
-		}
+		return true // This location is a wall and no door is planned here
 	}
 
-	if minDist == math.MaxFloat64 {
-		return Room{}, -1, errors.New("no nearest room found")
-	}
-
-	return nearest, nearestIndex, nil
+	return false // This location is not a wall
 }
 
-func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room) {
+func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorLocations []Coordinate) {
 	// Determine the turning points
 	turnX1, turnY1 := x1, (y1+y2)/2
 	turnX2, turnY2 := x2, (y1+y2)/2
 
 	// Draw vertical corridor from the starting point to the first turning point
 	for y := min(y1, turnY1); y <= max(y1, turnY1); y++ {
-		if !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
+		if !isWall(mapGrid, x1, y, doorLocations) && !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
 			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
 
 	// Draw horizontal corridor from the first turning point to the second turning point
 	for x := min(turnX1, turnX2); x <= max(turnX1, turnX2); x++ {
-		if !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
+		if !isWall(mapGrid, x, turnY1, doorLocations) && !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
 			mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
 
 	// Draw vertical corridor from the second turning point to the end point
 	for y := min(turnY2, y2); y <= max(turnY2, y2); y++ {
-		if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
+		if !isWall(mapGrid, x2, y, doorLocations) && !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
 			mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
@@ -189,7 +158,7 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		return
 	}
 
-	var doorPositions []struct{ x, y int }
+	var doorPositions []Coordinate
 
 	for i := 0; i < len(rooms); i++ {
 		roomA := rooms[i]
@@ -202,17 +171,17 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		fmt.Printf("Connecting room %d to room %d with coordinates (%d, %d) to (%d, %d)\n", i, (i+1)%len(rooms), x1, y1, x2, y2)
 
 		// Draw corridor
-		drawCorridor(mapGrid, x1, y1, x2, y2, rooms)
+		drawCorridor(mapGrid, x1, y1, x2, y2, rooms, doorPositions)
 
 		// Store door positions for later
-		doorPositions = append(doorPositions, struct{ x, y int }{x1, y1}, struct{ x, y int }{x2, y2})
+		doorPositions = append(doorPositions, Coordinate{X: x1, Y: y1}, Coordinate{X: x2, Y: y2})
 	}
 
 	for _, pos := range doorPositions {
-		placeDoor(mapGrid, pos.x, pos.y)
+		placeDoor(mapGrid, pos.X, pos.Y)
 	}
 
-	encloseCorridorsWithWalls(mapGrid)
+	//encloseCorridorsWithWalls(mapGrid)
 	fmt.Println("All rooms are connected in a zigzag manner")
 }
 
@@ -389,11 +358,11 @@ func (g *Game) MovePlayer(dx, dy int) {
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
 	// マップ範囲内およびブロックされていないタイル上にあることを確認
-	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
-		g.state.Player.X = newPX
-		g.state.Player.Y = newPY
-		g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
-	}
+	//if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
+	g.state.Player.X = newPX
+	g.state.Player.Y = newPY
+	g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
+	//}
 }
 
 func (g *Game) Update() error {
