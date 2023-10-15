@@ -95,18 +95,10 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	}
 }
 
-func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) {
-	mapGrid := make([][]Tile, height)
-	for y := range mapGrid {
-		mapGrid[y] = make([]Tile, width)
-		for x := range mapGrid[y] {
-			mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
-		}
-	}
-
+func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	var rooms []Room
 
-	for i := 0; i < 10; i++ { // Attempt to create 10 rooms
+	for i := 0; i < numRooms; i++ { // Attempt to create a specified number of rooms
 		for attempt := 0; attempt < 10; attempt++ { // Limit of 10 attempts per room
 			roomWidth := localRand.Intn(10) + 5  // Random width between 5 and 15
 			roomHeight := localRand.Intn(10) + 5 // Random height between 5 and 15
@@ -136,6 +128,21 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 			}
 		}
 	}
+
+	return rooms
+}
+
+func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) {
+	mapGrid := make([][]Tile, height)
+	for y := range mapGrid {
+		mapGrid[y] = make([]Tile, width)
+		for x := range mapGrid[y] {
+			mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+		}
+	}
+
+	numRooms := localRand.Intn(7) + 4                        // Random number of rooms between 4 and 10
+	rooms := generateRooms(mapGrid, width, height, numRooms) // Generate rooms
 
 	connectRooms(rooms, mapGrid)
 
