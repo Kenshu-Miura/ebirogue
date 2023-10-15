@@ -303,7 +303,7 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 		}
 	}
 
-	numRooms := localRand.Intn(7) + 4
+	numRooms := localRand.Intn(6) + 5
 	rooms := generateRooms(mapGrid, width, height, numRooms) // Step 2: Generate rooms
 
 	connectRooms(rooms, mapGrid)
