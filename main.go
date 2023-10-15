@@ -152,31 +152,22 @@ func nearestRoom(x, y int, rooms []Room, currentRoom Room) (nearest Room, neares
 }
 
 func connectRooms(rooms []Room, mapGrid [][]Tile) {
-	connectedRooms := make(map[int]bool) // Create a new map to track which rooms are connected.
+	if len(rooms) == 0 {
+		fmt.Println("No rooms to connect")
+		return
+	}
 
 	for i := 0; i < len(rooms); i++ {
 		roomA := rooms[i]
+		roomB := rooms[(i+1)%len(rooms)] // Use modulo to loop back to the first room after the last room
+
 		x1, y1 := roomA.X+roomA.Width/2, roomA.Y+roomA.Height/2
-
-		// Exclude current room and already connected rooms from search
-		var searchRooms []Room
-		for j, room := range rooms {
-			if !connectedRooms[j] {
-				searchRooms = append(searchRooms, room)
-			}
-		}
-
-		nearestRoom, nearestIndex, err := nearestRoom(x1, y1, searchRooms, roomA)
-		if err != nil {
-			fmt.Printf("Error finding nearest room: %v\n", err)
-			continue // Skip to the next iteration if an error occurs
-		}
-		x2, y2 := nearestRoom.X+nearestRoom.Width/2, nearestRoom.Y+nearestRoom.Height/2
+		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
 
 		// Determine the turning points
 		turnX, turnY := x2, y1
 
-		fmt.Printf("Connecting room %d to nearest room with coordinates (%d, %d) to (%d, %d)\n", i, x1, y1, x2, y2)
+		fmt.Printf("Connecting room %d to room %d with coordinates (%d, %d) to (%d, %d)\n", i, (i+1)%len(rooms), x1, y1, x2, y2)
 
 		// Draw horizontal corridor from roomA to the turning point
 		for x := min(x1, turnX); x <= max(x1, turnX); x++ {
@@ -185,32 +176,15 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 			}
 		}
 
-		// Draw vertical corridor from the turning point to nearestRoom
+		// Draw vertical corridor from the turning point to roomB
 		for y := min(turnY, y2); y <= max(turnY, y2); y++ {
 			if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
 				mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
-
-		// Mark the rooms as connected
-		connectedRooms[i] = true
-		// Use the nearestIndex to update the connectedRooms map
-		connectedRooms[nearestIndex] = true
 	}
 
-	// Check if all rooms are connected
-	allConnected := true
-	for i := 0; i < len(rooms); i++ {
-		if !connectedRooms[i] {
-			allConnected = false
-			fmt.Printf("Room %d is not connected\n", i)
-			break
-		}
-	}
-
-	if allConnected {
-		fmt.Println("All rooms are connected")
-	}
+	fmt.Println("All rooms are connected in a circular manner")
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
