@@ -443,6 +443,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				srcX, srcY = tileSize, 0 // タイルセット上の床タイルの位置
 			case "floor":
 				srcX, srcY = 2*tileSize, 0 // タイルセット上の通路タイルの位置
+			case "door":
+				srcX, srcY = 3*tileSize, 0 // タイルセット上のドアタイルの位置
 			default:
 				continue // 未知のタイルタイプは描画しない
 			}
