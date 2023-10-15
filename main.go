@@ -236,7 +236,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	var rooms []Room
 
 	for i := 0; i < numRooms; i++ { // Attempt to create a specified number of rooms
-		for attempt := 0; attempt < 10; attempt++ { // Limit of 10 attempts per room
+		for attempt := 0; attempt < 100; attempt++ { // Limit of 100 attempts per room
 			var roomX, roomY, roomWidth, roomHeight int
 
 			// If there are already rooms created, try to align the new room with one of them
@@ -246,21 +246,21 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 				// Randomly decide to align horizontally or vertically
 				if localRand.Intn(2) == 0 {
 					// Align horizontally
-					roomWidth = localRand.Intn(10) + 7 // Random width between 5 and 15
+					roomWidth = localRand.Intn(10) + 6 // Random width between 6 and 15
 					roomHeight = alignWith.Height      // Match the height of the room to align with
 					roomX = localRand.Intn(width-roomWidth-1) + 1
 					roomY = alignWith.Y
 				} else {
 					// Align vertically
 					roomWidth = alignWith.Width         // Match the width of the room to align with
-					roomHeight = localRand.Intn(10) + 7 // Random height between 5 and 15
+					roomHeight = localRand.Intn(10) + 6 // Random height between 6 and 15
 					roomX = alignWith.X
 					roomY = localRand.Intn(height-roomHeight-1) + 1
 				}
 			} else {
 				// If this is the first room, generate random dimensions and position
-				roomWidth = localRand.Intn(10) + 7  // Random width between 5 and 15
-				roomHeight = localRand.Intn(10) + 7 // Random height between 5 and 15
+				roomWidth = localRand.Intn(min(10, width-2)) + 6   // Random width between 6 and 15, but not exceeding map width
+				roomHeight = localRand.Intn(min(10, height-2)) + 6 // Random height between 6 and 15, but not exceeding map height
 				roomX = localRand.Intn(width-roomWidth-1) + 1
 				roomY = localRand.Intn(height-roomHeight-1) + 1
 			}
@@ -303,7 +303,7 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 		}
 	}
 
-	numRooms := localRand.Intn(6) + 5
+	numRooms := localRand.Intn(6) + 4
 	rooms := generateRooms(mapGrid, width, height, numRooms) // Step 2: Generate rooms
 
 	connectRooms(rooms, mapGrid)
@@ -499,7 +499,7 @@ func main() {
 		log.Fatalf("failed to load item image: %v", err)
 	}
 
-	mapGrid, player, enemies, items := GenerateRandomMap(50, 50)
+	mapGrid, player, enemies, items := GenerateRandomMap(70, 70)
 
 	game := &Game{
 		state: GameState{
