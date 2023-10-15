@@ -165,26 +165,34 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
 
 		// Determine the turning points
-		turnX, turnY := x2, y1
+		turnX1, turnY1 := x1, (y1+y2)/2
+		turnX2, turnY2 := x2, (y1+y2)/2
 
 		fmt.Printf("Connecting room %d to room %d with coordinates (%d, %d) to (%d, %d)\n", i, (i+1)%len(rooms), x1, y1, x2, y2)
 
-		// Draw horizontal corridor from roomA to the turning point
-		for x := min(x1, turnX); x <= max(x1, turnX); x++ {
-			if !isInsideRoom(x, y1, rooms) && !isCorridor(mapGrid[y1][x]) {
-				mapGrid[y1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		// Draw vertical corridor from roomA to the first turning point
+		for y := min(y1, turnY1); y <= max(y1, turnY1); y++ {
+			if !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
+				mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
 
-		// Draw vertical corridor from the turning point to roomB
-		for y := min(turnY, y2); y <= max(turnY, y2); y++ {
+		// Draw horizontal corridor from the first turning point to the second turning point
+		for x := min(turnX1, turnX2); x <= max(turnX1, turnX2); x++ {
+			if !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
+				mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+			}
+		}
+
+		// Draw vertical corridor from the second turning point to roomB
+		for y := min(turnY2, y2); y <= max(turnY2, y2); y++ {
 			if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
 				mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
 	}
 
-	fmt.Println("All rooms are connected in a circular manner")
+	fmt.Println("All rooms are connected in a zigzag manner")
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
