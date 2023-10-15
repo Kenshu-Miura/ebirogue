@@ -151,45 +151,65 @@ func nearestRoom(x, y int, rooms []Room, currentRoom Room) (nearest Room, neares
 	return nearest, nearestIndex, nil
 }
 
+func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room) {
+	// Determine the turning points
+	turnX1, turnY1 := x1, (y1+y2)/2
+	turnX2, turnY2 := x2, (y1+y2)/2
+
+	// Draw vertical corridor from the starting point to the first turning point
+	for y := min(y1, turnY1); y <= max(y1, turnY1); y++ {
+		if !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
+			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		}
+	}
+
+	// Draw horizontal corridor from the first turning point to the second turning point
+	for x := min(turnX1, turnX2); x <= max(turnX1, turnX2); x++ {
+		if !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
+			mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		}
+	}
+
+	// Draw vertical corridor from the second turning point to the end point
+	for y := min(turnY2, y2); y <= max(turnY2, y2); y++ {
+		if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
+			mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		}
+	}
+}
+
+func placeDoor(mapGrid [][]Tile, x, y int) {
+	mapGrid[y][x] = Tile{Type: "door", Blocked: true, BlockSight: true}
+	fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
+}
+
 func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	if len(rooms) == 0 {
 		fmt.Println("No rooms to connect")
 		return
 	}
 
+	var doorPositions []struct{ x, y int }
+
 	for i := 0; i < len(rooms); i++ {
 		roomA := rooms[i]
-		roomB := rooms[(i+1)%len(rooms)] // Use modulo to loop back to the first room after the last room
+		roomB := rooms[(i+1)%len(rooms)]
 
-		x1, y1 := roomA.X+roomA.Width/2, roomA.Y+roomA.Height/2
-		x2, y2 := roomB.X+roomB.Width/2, roomB.Y+roomB.Height/2
-
-		// Determine the turning points
-		turnX1, turnY1 := x1, (y1+y2)/2
-		turnX2, turnY2 := x2, (y1+y2)/2
+		// Adjust coordinates to the edge of the rooms
+		x1, y1 := roomA.X+roomA.Width-1, roomA.Y+roomA.Height/2
+		x2, y2 := roomB.X, roomB.Y+roomB.Height/2
 
 		fmt.Printf("Connecting room %d to room %d with coordinates (%d, %d) to (%d, %d)\n", i, (i+1)%len(rooms), x1, y1, x2, y2)
 
-		// Draw vertical corridor from roomA to the first turning point
-		for y := min(y1, turnY1); y <= max(y1, turnY1); y++ {
-			if !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
-				mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-			}
-		}
+		// Draw corridor
+		drawCorridor(mapGrid, x1, y1, x2, y2, rooms)
 
-		// Draw horizontal corridor from the first turning point to the second turning point
-		for x := min(turnX1, turnX2); x <= max(turnX1, turnX2); x++ {
-			if !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
-				mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-			}
-		}
+		// Store door positions for later
+		doorPositions = append(doorPositions, struct{ x, y int }{x1, y1}, struct{ x, y int }{x2, y2})
+	}
 
-		// Draw vertical corridor from the second turning point to roomB
-		for y := min(turnY2, y2); y <= max(turnY2, y2); y++ {
-			if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
-				mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-			}
-		}
+	for _, pos := range doorPositions {
+		placeDoor(mapGrid, pos.x, pos.y)
 	}
 
 	encloseCorridorsWithWalls(mapGrid)
