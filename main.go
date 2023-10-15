@@ -123,8 +123,13 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		// Determine the turning points
 		turnX, turnY := x2, y1
 
+		fmt.Printf("Connecting room %d to room %d\n", i, i+1)
+		fmt.Printf("Turning point: (%d, %d)\n", turnX, turnY)
+
 		// Find the position where the horizontal corridor hits a wall
 		door1X, door1Y, door2X, door2Y := findDoorPositions(mapGrid, min(x1, turnX), y1, max(x1, turnX), y1)
+
+		fmt.Printf("Found door positions for horizontal corridor: door1(%d, %d), door2(%d, %d)\n", door1X, door1Y, door2X, door2Y)
 
 		// Check for wall tiles before drawing the horizontal corridor
 		if !hasWallTiles(mapGrid, min(x1, turnX), y1, max(x1, turnX), y1, door1X, door1Y, door2X, door2Y) {
@@ -134,10 +139,13 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 					mapGrid[y1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 				}
 			}
+			fmt.Printf("Drawn horizontal corridor from room %d to turning point\n", i)
 		}
 
 		// Find the position where the vertical corridor hits a wall
 		door1X, door1Y, door2X, door2Y = findDoorPositions(mapGrid, x2, min(turnY, y2), x2, max(turnY, y2))
+
+		fmt.Printf("Found door positions for vertical corridor: door1(%d, %d), door2(%d, %d)\n", door1X, door1Y, door2X, door2Y)
 
 		// Check for wall tiles before drawing the vertical corridor
 		if !hasWallTiles(mapGrid, x2, min(turnY, y2), x2, max(turnY, y2), door1X, door1Y, door2X, door2Y) {
@@ -147,6 +155,7 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 					mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 				}
 			}
+			fmt.Printf("Drawn vertical corridor from turning point to room %d\n", i+1)
 		}
 	}
 }
@@ -277,11 +286,11 @@ func (g *Game) MovePlayer(dx, dy int) {
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
 	// マップ範囲内およびブロックされていないタイル上にあることを確認
-	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
-		g.state.Player.X = newPX
-		g.state.Player.Y = newPY
-		g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
-	}
+	//if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
+	g.state.Player.X = newPX
+	g.state.Player.Y = newPY
+	g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
+	//}
 }
 
 func (g *Game) Update() error {
