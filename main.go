@@ -83,6 +83,35 @@ func isInsideRoom(x, y int, rooms []Room) bool {
 	return false
 }
 
+// New hasWallTiles function without the hitWall flag
+func hasWallTiles(mapGrid [][]Tile, x1, y1, x2, y2 int, door1X, door1Y, door2X, door2Y int) bool {
+	for y := y1; y <= y2; y++ {
+		for x := x1; x <= x2; x++ {
+			if (x != door1X || y != door1Y) && (x != door2X || y != door2Y) && mapGrid[y][x].Type == "wall" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func findDoorPositions(mapGrid [][]Tile, x1, y1, x2, y2 int) (door1X, door1Y, door2X, door2Y int) {
+	var firstWallHit bool
+	for y := y1; y <= y2; y++ {
+		for x := x1; x <= x2; x++ {
+			if mapGrid[y][x].Type == "wall" {
+				if !firstWallHit {
+					door1X, door1Y = x, y
+					firstWallHit = true
+				} else {
+					door2X, door2Y = x, y
+				}
+			}
+		}
+	}
+	return
+}
+
 func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	for i := 0; i < len(rooms)-1; i++ {
 		roomA := rooms[i]
@@ -94,17 +123,29 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		// Determine the turning points
 		turnX, turnY := x2, y1
 
-		// Draw horizontal corridor from roomA to the turning point
-		for x := min(x1, turnX); x <= max(x1, turnX); x++ {
-			if !isInsideRoom(x, y1, rooms) && !isCorridor(mapGrid[y1][x]) {
-				mapGrid[y1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		// Find the position where the horizontal corridor hits a wall
+		door1X, door1Y, door2X, door2Y := findDoorPositions(mapGrid, min(x1, turnX), y1, max(x1, turnX), y1)
+
+		// Check for wall tiles before drawing the horizontal corridor
+		if !hasWallTiles(mapGrid, min(x1, turnX), y1, max(x1, turnX), y1, door1X, door1Y, door2X, door2Y) {
+			// Draw horizontal corridor from roomA to the turning point
+			for x := min(x1, turnX); x <= max(x1, turnX); x++ {
+				if !isInsideRoom(x, y1, rooms) && !isCorridor(mapGrid[y1][x]) {
+					mapGrid[y1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+				}
 			}
 		}
 
-		// Draw vertical corridor from the turning point to roomB
-		for y := min(turnY, y2); y <= max(turnY, y2); y++ {
-			if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
-				mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		// Find the position where the vertical corridor hits a wall
+		door1X, door1Y, door2X, door2Y = findDoorPositions(mapGrid, x2, min(turnY, y2), x2, max(turnY, y2))
+
+		// Check for wall tiles before drawing the vertical corridor
+		if !hasWallTiles(mapGrid, x2, min(turnY, y2), x2, max(turnY, y2), door1X, door1Y, door2X, door2Y) {
+			// Draw vertical corridor from the turning point to roomB
+			for y := min(turnY, y2); y <= max(turnY, y2); y++ {
+				if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
+					mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+				}
 			}
 		}
 	}
