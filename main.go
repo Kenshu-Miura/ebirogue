@@ -192,7 +192,32 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		}
 	}
 
+	encloseCorridorsWithWalls(mapGrid)
 	fmt.Println("All rooms are connected in a zigzag manner")
+}
+
+func encloseCorridorsWithWalls(mapGrid [][]Tile) {
+	height := len(mapGrid)
+	width := len(mapGrid[0])
+
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if mapGrid[y][x].Type == "corridor" {
+				// Check each side of the corridor tile
+				for dy := -1; dy <= 1; dy++ {
+					for dx := -1; dx <= 1; dx++ {
+						newY, newX := y+dy, x+dx
+						if newY >= 0 && newY < height && newX >= 0 && newX < width {
+							// If the tile is other, replace it with a wall
+							if mapGrid[newY][newX].Type == "other" {
+								mapGrid[newY][newX] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
@@ -344,11 +369,11 @@ func (g *Game) MovePlayer(dx, dy int) {
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
 	// マップ範囲内およびブロックされていないタイル上にあることを確認
-	//if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
-	g.state.Player.X = newPX
-	g.state.Player.Y = newPY
-	g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
-	//}
+	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
+		g.state.Player.X = newPX
+		g.state.Player.Y = newPY
+		g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
+	}
 }
 
 func (g *Game) Update() error {
