@@ -718,10 +718,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	offsetY := centerY - g.state.Player.Y*tileSize
 
 	g.DrawMap(screen, offsetX, offsetY)
-	g.DrawPlayer(screen, centerX, centerY)
 	g.DrawItems(screen, offsetX, offsetY)
 	g.DrawEnemies(screen, offsetX, offsetY)
 	g.DrawHUD(screen)
+	g.DrawPlayer(screen, centerX, centerY)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
