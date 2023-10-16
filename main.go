@@ -165,6 +165,26 @@ func placeDoor(mapGrid [][]Tile, x, y int) {
 	fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
 }
 
+func generateCorridorStartPoints(rooms []Room) []Coordinate {
+	var corridorStartPoints []Coordinate
+
+	for _, room := range rooms {
+		// Top edge
+		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X + room.Width/2, Y: room.Y})
+
+		// Bottom edge
+		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X + room.Width/2, Y: room.Y + room.Height - 1})
+
+		// Left edge
+		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X, Y: room.Y + room.Height/2})
+
+		// Right edge
+		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X + room.Width - 1, Y: room.Y + room.Height/2})
+	}
+
+	return corridorStartPoints
+}
+
 func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	if len(rooms) == 0 {
 		fmt.Println("No rooms to connect")
@@ -172,6 +192,10 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	}
 
 	var doorPositions []Coordinate
+
+	// Generate corridor start points for all rooms
+	corridorStartPoints := generateCorridorStartPoints(rooms)
+	// Optionally, print or store the corridorStartPoints for debugging or further processing
 
 	for i := 0; i < len(rooms); i++ {
 		roomA := rooms[i]
