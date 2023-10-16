@@ -52,12 +52,13 @@ type Item struct {
 }
 
 type Enemy struct {
-	Entity              // EnemyはEntityのフィールドを継承します
-	Name         string // 敵の名前
+	Entity       // EnemyはEntityのフィールドを継承します
+	Name         string
 	Health       int
 	MaxHealth    int
-	AttackPower  int // 攻撃力
-	DefensePower int // 防御力
+	AttackPower  int    // 攻撃力
+	DefensePower int    // 防御力
+	Type         string // 敵の種類（例: "orc", "goblin", "slime" 等）
 }
 
 type GameState struct {
@@ -70,7 +71,8 @@ type GameState struct {
 type Game struct {
 	state      GameState
 	playerImg  *ebiten.Image
-	enemyImg   *ebiten.Image
+	ebiImg     *ebiten.Image
+	snakeImg   *ebiten.Image
 	itemImg    *ebiten.Image
 	tilesetImg *ebiten.Image
 	offsetX    int
@@ -366,7 +368,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		for {
@@ -386,10 +388,32 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 				}
 			}
 		}
+
+		// Randomly select enemy type
+		var enemyType, enemyName, enemyChar string
+		var enemyAP, enemyDP int
+		if localRand.Intn(2) == 0 { // 50% chance for each type
+			enemyType = "Shrimp"
+			enemyName = "海老"
+			enemyChar = "E"
+			enemyAP = 5
+			enemyDP = 2
+		} else {
+			enemyType = "Snake"
+			enemyName = "蛇"
+			enemyChar = "S"
+			enemyAP = 7
+			enemyDP = 1
+		}
+
 		enemies = append(enemies, Enemy{
-			Entity:    Entity{X: enemyX, Y: enemyY, Char: 'E'},
-			Health:    50,
-			MaxHealth: 50,
+			Entity:       Entity{X: enemyX, Y: enemyY, Char: rune(enemyChar[0])},
+			Health:       50,
+			MaxHealth:    50,
+			Name:         enemyName,
+			AttackPower:  enemyAP,
+			DefensePower: enemyDP,
+			Type:         enemyType,
 		})
 	}
 	return enemies
@@ -493,14 +517,18 @@ func abs(x int) int {
 func (g *Game) CheckForEnemies(x, y int) bool {
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == x && enemy.Y == y {
-			// プレイヤーの移動先に敵がいる場合、敵のHealthを10減らす
-			g.state.Enemies[i].Health -= 10
+			// Player's AttackPower is considered while dealing damage
+			netDamage := g.state.Player.AttackPower - enemy.DefensePower
+			if netDamage < 0 { // Ensure damage does not go below 0
+				netDamage = 0
+			}
+			g.state.Enemies[i].Health -= netDamage
 			if g.state.Enemies[i].Health <= 0 {
 				// 敵のHealthが0以下の場合、敵を配列から削除
 				g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
 			} else {
-				// 敵のHealthがまだ残っている場合、敵はプレイヤーに反撃
-				g.DamagePlayer(10)
+				// Enemy retaliates with its AttackPower
+				g.DamagePlayer(enemy.AttackPower)
 			}
 			g.IncrementMoveCount()
 			return true
@@ -606,7 +634,12 @@ func (g *Game) OpenDoor() {
 }
 
 func (g *Game) DamagePlayer(amount int) {
-	g.state.Player.Health -= amount
+	// Player's DefensePower is considered while receiving damage
+	netDamage := amount - g.state.Player.DefensePower
+	if netDamage < 0 { // Ensure damage does not go below 0
+		netDamage = 0
+	}
+	g.state.Player.Health -= netDamage
 	if g.state.Player.Health < 0 {
 		g.state.Player.Health = 0 // Ensure health does not go below 0
 	}
@@ -616,7 +649,7 @@ func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
 		// Check if the enemy is adjacent or diagonally adjacent to the player
 		if abs(enemy.X-g.state.Player.X) <= 1 && abs(enemy.Y-g.state.Player.Y) <= 1 {
-			g.DamagePlayer(10) // Enemy attacks player using the DamagePlayer function
+			g.DamagePlayer(enemy.AttackPower) // Enemy attacks player with its AttackPower
 		} else {
 			moved := false
 			for !moved {
@@ -709,9 +742,19 @@ func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 
 func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, enemy := range g.state.Enemies {
+		var img *ebiten.Image
+		switch enemy.Type {
+		case "Snake":
+			img = g.snakeImg
+		case "Shrimp":
+			img = g.ebiImg
+		default:
+			img = g.ebiImg
+		}
+
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX), float64(enemy.Y*tileSize+offsetY))
-		screen.DrawImage(g.enemyImg, opts)
+		screen.DrawImage(img, opts)
 	}
 }
 
@@ -762,7 +805,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load tileset image: %v", err)
 	}
-	enemyImg, _, err := ebitenutil.NewImageFromFile("img/ebi.png")
+	ebiImg, _, err := ebitenutil.NewImageFromFile("img/ebi.png")
 	if err != nil {
 		log.Fatalf("failed to load enemy image: %v", err)
 	}
@@ -770,6 +813,11 @@ func main() {
 	itemImg, _, err := ebitenutil.NewImageFromFile("img/kane.png")
 	if err != nil {
 		log.Fatalf("failed to load item image: %v", err)
+	}
+
+	snakeImg, _, err := ebitenutil.NewImageFromFile("img/snake.png")
+	if err != nil {
+		log.Fatalf("failed to load snake image: %v", err)
 	}
 
 	// プレイヤーの初期化
@@ -780,6 +828,8 @@ func main() {
 		Satiety:      100,
 		Inventory:    []Item{},
 		MaxInventory: 20,
+		AttackPower:  10, // 攻撃力を追加
+		DefensePower: 3,  // 防御力を追加
 	}
 
 	// 最初のマップを生成
@@ -794,7 +844,8 @@ func main() {
 		},
 		playerImg:  img,
 		tilesetImg: tilesetImg,
-		enemyImg:   enemyImg,
+		ebiImg:     ebiImg,
+		snakeImg:   snakeImg,
 		itemImg:    itemImg,
 		offsetX:    0,
 		offsetY:    0,
