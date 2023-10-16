@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math"
@@ -11,7 +12,11 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/opentype"
 )
 
 const (
@@ -57,14 +62,47 @@ type Game struct {
 	offsetX    int
 	offsetY    int
 	moveCount  int
+	Floor      int
 }
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+var mplusNormalFont font.Face
 
 type Room struct {
 	ID            int
 	X, Y          int
 	Width, Height int
+}
+
+func init() {
+	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	const dpi = 72
+	mplusNormalFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
+		Size:    24,
+		DPI:     dpi,
+		Hinting: font.HintingVertical,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (g *Game) checkForStairs() {
+	player := g.state.Player
+	playerTile := g.state.Map[player.Y][player.X]
+
+	if playerTile.Type == "stairs" {
+		mapGrid, player, enemies, items, newFloor := GenerateRandomMap(70, 70, g.Floor)
+		g.state.Map = mapGrid
+		g.state.Player = player
+		g.state.Enemies = enemies
+		g.state.Items = items
+		g.Floor = newFloor
+	}
 }
 
 func (r Room) Intersects(other Room) bool {
@@ -313,7 +351,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	return rooms
 }
 
-func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) {
+func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Enemy, []Entity, int) {
 	// Step 1: Initialize all tiles to "other" type
 	mapGrid := make([][]Tile, height)
 	for y := range mapGrid {
@@ -380,7 +418,7 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 		})
 	}
 
-	return mapGrid, player, enemies, items
+	return mapGrid, player, enemies, items, currentFloor + 1
 }
 
 func min(a, b int) int {
@@ -405,11 +443,11 @@ func (g *Game) MovePlayer(dx, dy int) {
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
 	// マップ範囲内およびブロックされていないタイル上にあることを確認
-	//if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
-	g.state.Player.X = newPX
-	g.state.Player.Y = newPY
-	g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
-	//}
+	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
+		g.state.Player.X = newPX
+		g.state.Player.Y = newPY
+		g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
+	}
 }
 
 func (g *Game) Update() error {
@@ -453,6 +491,8 @@ func (g *Game) Update() error {
 	}
 
 	g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+
+	g.checkForStairs()
 
 	return nil
 }
@@ -514,6 +554,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// カウントを画面右上に表示
 	countText := fmt.Sprintf("Moves: %d", g.moveCount)
 	ebitenutil.DebugPrintAt(screen, countText, screenWidth-100, 10) // Adjust the x-position as needed to align to the right
+
+	floorText := fmt.Sprintf("Floor: %d", g.Floor)
+	xfloorText := 10
+	yfloorText := 30
+	text.Draw(screen, floorText, mplusNormalFont, xfloorText, yfloorText, color.White)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -539,7 +584,7 @@ func main() {
 		log.Fatalf("failed to load item image: %v", err)
 	}
 
-	mapGrid, player, enemies, items := GenerateRandomMap(70, 70)
+	mapGrid, player, enemies, items, newFloor := GenerateRandomMap(70, 70, 0) // 初期階層は1です
 
 	game := &Game{
 		state: GameState{
@@ -554,6 +599,7 @@ func main() {
 		itemImg:    itemImg,
 		offsetX:    0,
 		offsetY:    0,
+		Floor:      newFloor,
 	}
 
 	ebiten.SetWindowSize(1280, 960)
