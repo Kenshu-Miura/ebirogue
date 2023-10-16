@@ -587,20 +587,22 @@ func (g *Game) HandleInput() (int, int) {
 	// 矢印キーの押下ロジック
 	if arrowPressed && time.Since(g.lastArrowPress) >= 125*time.Millisecond {
 		if shiftPressed { // 斜め移動のロジック
-			if (upPressed || downPressed) && (leftPressed || rightPressed) {
-				if upPressed {
-					dy = -1
-				}
-				if downPressed {
-					dy = 1
-				}
-				if leftPressed {
-					dx = -1
-				}
-				if rightPressed {
-					dx = 1
-				}
+			player := g.state.Player
+			blockUp := g.state.Map[player.Y-1][player.X].Blocked
+			blockDown := g.state.Map[player.Y+1][player.X].Blocked
+			blockLeft := g.state.Map[player.Y][player.X-1].Blocked
+			blockRight := g.state.Map[player.Y][player.X+1].Blocked
+
+			if upPressed && rightPressed && (!blockUp && !blockRight) {
+				dy, dx = -1, 1
+			} else if upPressed && leftPressed && (!blockUp && !blockLeft) {
+				dy, dx = -1, -1
+			} else if downPressed && leftPressed && (!blockDown && !blockLeft) {
+				dy, dx = 1, -1
+			} else if downPressed && rightPressed && (!blockDown && !blockRight) {
+				dy, dx = 1, 1
 			}
+
 		} else { // 上下左右の移動のロジック
 			if upPressed && !downPressed {
 				dy = -1
