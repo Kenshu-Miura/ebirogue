@@ -797,7 +797,15 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	// Player Satiety
 	playerSatietyText := fmt.Sprintf("満腹度: %3d", g.state.Player.Satiety)
-	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-110, 70, color.White) // Adjusted y-coordinate to place Satiety text below HP text
+	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-110, 70, color.White)
+
+	// Player Attack Power
+	playerAttackPowerText := fmt.Sprintf("攻撃力: %3d", g.state.Player.AttackPower)
+	text.Draw(screen, playerAttackPowerText, mplusNormalFont, screenWidth-110, 90, color.White) // Adjusted y-coordinate to place Attack Power text below Satiety text
+
+	// Player Defense Power
+	playerDefensePowerText := fmt.Sprintf("防御力: %3d", g.state.Player.DefensePower)
+	text.Draw(screen, playerDefensePowerText, mplusNormalFont, screenWidth-110, 110, color.White) // Adjusted y-coordinate to place Defense Power text below Attack Power text
 
 	// Floor level
 	floorText := fmt.Sprintf("Floor: %d", g.Floor)
