@@ -82,7 +82,7 @@ func init() {
 
 	const dpi = 72
 	mplusNormalFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    24,
+		Size:    16,
 		DPI:     dpi,
 		Hinting: font.HintingVertical,
 	})
@@ -458,9 +458,9 @@ func (g *Game) HandleInput() (int, int) {
 	downPressed := inpututil.IsKeyJustPressed(ebiten.KeyDown)
 	leftPressed := inpututil.IsKeyJustPressed(ebiten.KeyLeft)
 	rightPressed := inpututil.IsKeyJustPressed(ebiten.KeyRight)
-	aPressed := ebiten.IsKeyPressed(ebiten.KeyA) // Aキーが押されているかどうかをチェック
+	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
 
-	if aPressed { // 斜め移動のロジック
+	if shiftPressed { // 斜め移動のロジック
 		if (upPressed || downPressed) && (leftPressed || rightPressed) {
 			if upPressed {
 				dy = -1
@@ -492,10 +492,33 @@ func (g *Game) HandleInput() (int, int) {
 	return dx, dy
 }
 
+func (g *Game) OpenDoor() {
+	playerX, playerY := g.state.Player.X, g.state.Player.Y
+	directions := []struct{ dx, dy int }{
+		{0, -1}, // Up
+		{0, 1},  // Down
+		{-1, 0}, // Left
+		{1, 0},  // Right
+	}
+	for _, dir := range directions {
+		tile := g.state.Map[playerY+dir.dy][playerX+dir.dx]
+		if tile.Type == "door" {
+			g.state.Map[playerY+dir.dy][playerX+dir.dx] = Tile{Type: "corridor"}
+			g.moveCount++
+		}
+	}
+}
+
 func (g *Game) Update() error {
 	dx, dy := g.HandleInput()
 
 	g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+
+	// 扉を開く処理の追加
+	spacePressed := inpututil.IsKeyJustPressed(ebiten.KeySpace) // Spaceキーをチェック
+	if spacePressed {
+		g.OpenDoor()
+	}
 
 	g.checkForStairs()
 
@@ -553,14 +576,12 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	screenWidth, _ := screen.Bounds().Dx(), screen.Bounds().Dy()
 
 	// Moves count
-	countText := fmt.Sprintf("Moves: %d", g.moveCount)
-	ebitenutil.DebugPrintAt(screen, countText, screenWidth-100, 10)
+	MoveText := fmt.Sprintf("Moves: %3d", g.moveCount)
+	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-100, 30, color.White)
 
 	// Floor level
 	floorText := fmt.Sprintf("Floor: %d", g.Floor)
-	xfloorText := 10
-	yfloorText := 30
-	text.Draw(screen, floorText, mplusNormalFont, xfloorText, yfloorText, color.White)
+	text.Draw(screen, floorText, mplusNormalFont, 10, 30, color.White) // x座標とy座標を直接指定
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
