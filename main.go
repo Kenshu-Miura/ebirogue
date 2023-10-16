@@ -192,34 +192,28 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	}
 
 	var doorPositions []Coordinate
-
-	// Generate corridor start points for all rooms
 	corridorStartPoints := generateCorridorStartPoints(rooms)
-	// Optionally, print or store the corridorStartPoints for debugging or further processing
 
-	for i := 0; i < len(rooms); i++ {
-		roomA := rooms[i]
-		roomB := rooms[(i+1)%len(rooms)]
-
-		// Adjust coordinates to the edge of the rooms
-		x1, y1 := roomA.X+roomA.Width-1, roomA.Y+roomA.Height/2
-		x2, y2 := roomB.X, roomB.Y+roomB.Height/2
-
-		fmt.Printf("Connecting room %d with coordinates (%d, %d) to room %d with coordinates (%d, %d)\n", roomA.ID, roomA.X, roomA.Y, roomB.ID, roomB.X, roomB.Y)
-
-		// Draw corridor
-		drawCorridor(mapGrid, x1, y1, x2, y2, rooms, doorPositions)
-
-		// Store door positions for later
-		doorPositions = append(doorPositions, Coordinate{X: x1, Y: y1}, Coordinate{X: x2, Y: y2})
+	// Iterate through all corridor start points and try to connect them to each other
+	for i, startPoint := range corridorStartPoints {
+		for j, endPoint := range corridorStartPoints {
+			// Avoid connecting a point to itself
+			if i != j {
+				isConnectable := isCorridorConnected(mapGrid, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y)
+				if isConnectable {
+					drawCorridor(mapGrid, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y, rooms, doorPositions)
+					// Store door positions for later
+					doorPositions = append(doorPositions, startPoint, endPoint)
+				}
+			}
+		}
 	}
 
 	for _, pos := range doorPositions {
 		placeDoor(mapGrid, pos.X, pos.Y)
 	}
 
-	//encloseCorridorsWithWalls(mapGrid)
-	fmt.Println("All rooms are connected in a zigzag manner")
+	fmt.Println("All rooms are connected")
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
