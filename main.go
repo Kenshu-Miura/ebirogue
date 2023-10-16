@@ -38,6 +38,8 @@ type Player struct {
 	Entity       // PlayerはEntityのフィールドを継承します
 	Health       int
 	MaxHealth    int
+	AttackPower  int    // 攻撃力
+	DefensePower int    // 防御力
 	Satiety      int    // 満腹度
 	Inventory    []Item // 所持アイテム
 	MaxInventory int    // 最大所持アイテム数
@@ -50,9 +52,12 @@ type Item struct {
 }
 
 type Enemy struct {
-	Entity    // EnemyはEntityのフィールドを継承します
-	Health    int
-	MaxHealth int
+	Entity              // EnemyはEntityのフィールドを継承します
+	Name         string // 敵の名前
+	Health       int
+	MaxHealth    int
+	AttackPower  int // 攻撃力
+	DefensePower int // 防御力
 }
 
 type GameState struct {
@@ -101,13 +106,12 @@ func init() {
 }
 
 func (g *Game) checkForStairs() {
-	player := g.state.Player
+	player := &g.state.Player
 	playerTile := g.state.Map[player.Y][player.X]
 
 	if playerTile.Type == "stairs" {
-		mapGrid, player, enemies, items, newFloor := GenerateRandomMap(70, 70, g.Floor)
+		mapGrid, enemies, items, newFloor := GenerateRandomMap(70, 70, g.Floor, player)
 		g.state.Map = mapGrid
-		g.state.Player = player
 		g.state.Enemies = enemies
 		g.state.Items = items
 		g.Floor = newFloor
@@ -420,7 +424,7 @@ func generateItems(rooms []Room) []Entity {
 	return items
 }
 
-func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Enemy, []Entity, int) {
+func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Entity, int) {
 	// Step 1: Initialize all tiles to "other" type
 	mapGrid := make([][]Tile, height)
 	for y := range mapGrid {
@@ -443,18 +447,12 @@ func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Ene
 
 	connectRooms(rooms, mapGrid)
 
+	// プレイヤーの新しい位置を設定
 	playerRoom := rooms[localRand.Intn(len(rooms))]
 	playerX := localRand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
 	playerY := localRand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
-
-	player := Player{
-		Entity:       Entity{X: playerX, Y: playerY, Char: '@'},
-		Health:       100,
-		MaxHealth:    100,
-		Satiety:      100,      // 満腹度を最大に設定
-		Inventory:    []Item{}, // 空のインベントリを初期化
-		MaxInventory: 20,       // 最大所持アイテム数を設定
-	}
+	player.Entity.X = playerX
+	player.Entity.Y = playerY
 
 	// 階段タイルを配置するためのランダムな部屋を選択
 	stairsRoom := rooms[localRand.Intn(len(rooms))]
@@ -468,7 +466,7 @@ func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Ene
 	enemies := generateEnemies(rooms, playerRoom)
 	items := generateItems(rooms)
 
-	return mapGrid, player, enemies, items, currentFloor + 1
+	return mapGrid, enemies, items, currentFloor + 1
 }
 
 func min(a, b int) int {
@@ -774,7 +772,18 @@ func main() {
 		log.Fatalf("failed to load item image: %v", err)
 	}
 
-	mapGrid, player, enemies, items, newFloor := GenerateRandomMap(70, 70, 0) // 初期階層は1です
+	// プレイヤーの初期化
+	player := Player{
+		Entity:       Entity{Char: '@'},
+		Health:       100,
+		MaxHealth:    100,
+		Satiety:      100,
+		Inventory:    []Item{},
+		MaxInventory: 20,
+	}
+
+	// 最初のマップを生成
+	mapGrid, enemies, items, newFloor := GenerateRandomMap(70, 70, 0, &player) // 初期階層は1です
 
 	game := &Game{
 		state: GameState{
