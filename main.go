@@ -396,21 +396,55 @@ func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Ene
 	// 階段タイルを配置
 	mapGrid[stairsY][stairsX] = Tile{Type: "stairs", Blocked: false, BlockSight: false}
 
-	for i := 0; i < 5; i++ { // ここでは5つの敵と5つのアイテムを生成します
-		// ランダムな部屋を選ぶ
-		room := rooms[localRand.Intn(len(rooms))]
-		// ランダムな位置を選ぶ（壁を避ける）
-		enemyX := localRand.Intn(room.Width-2) + room.X + 1
-		enemyY := localRand.Intn(room.Height-2) + room.Y + 1
-		itemX := localRand.Intn(room.Width-2) + room.X + 1
-		itemY := localRand.Intn(room.Height-2) + room.Y + 1
-
-		// 敵とアイテムを配列に追加
+	// 敵を生成するループ
+	for i := 0; i < 5; i++ {
+		var enemyRoom Room
+		var enemyX, enemyY int
+		for {
+			enemyRoom = rooms[localRand.Intn(len(rooms))]
+			if enemyRoom != playerRoom {
+				enemyX = localRand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
+				enemyY = localRand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
+				// Check if the position is already occupied by another enemy
+				occupied := false
+				for _, enemy := range enemies {
+					if enemy.X == enemyX && enemy.Y == enemyY {
+						occupied = true
+						break
+					}
+				}
+				if !occupied {
+					break
+				}
+			}
+		}
 		enemies = append(enemies, Enemy{
 			Entity:    Entity{X: enemyX, Y: enemyY, Char: 'E'},
 			Health:    50,
 			MaxHealth: 50,
 		})
+	}
+
+	// アイテムを生成するループ
+	for i := 0; i < 5; i++ {
+		var itemRoom Room
+		var itemX, itemY int
+		for {
+			itemRoom = rooms[localRand.Intn(len(rooms))]
+			itemX = localRand.Intn(itemRoom.Width-2) + itemRoom.X + 1
+			itemY = localRand.Intn(itemRoom.Height-2) + itemRoom.Y + 1
+			// Check if the position is already occupied by another item
+			occupied := false
+			for _, item := range items {
+				if item.X == itemX && item.Y == itemY {
+					occupied = true
+					break
+				}
+			}
+			if !occupied {
+				break
+			}
+		}
 		items = append(items, Entity{
 			X:    itemX,
 			Y:    itemY,
@@ -434,20 +468,56 @@ func max(a, b int) int {
 	}
 	return b
 }
-func (g *Game) MovePlayer(dx, dy int) {
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func (g *Game) CheckForEnemies(x, y int) bool {
+	for i, enemy := range g.state.Enemies {
+		if enemy.X == x && enemy.Y == y {
+			// プレイヤーの移動先に敵がいる場合、敵のHealthを10減らす
+			g.state.Enemies[i].Health -= 10
+			if g.state.Enemies[i].Health <= 0 {
+				// 敵のHealthが0以下の場合、敵を配列から削除
+				g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
+			} else {
+				// 敵のHealthがまだ残っている場合、敵はプレイヤーに反撃
+				g.DamagePlayer(10)
+			}
+			g.moveCount++
+			return true
+		}
+	}
+	return false
+}
+
+func (g *Game) MovePlayer(dx, dy int) bool {
 	// dx と dy が両方とも0の場合、移動は発生していない
 	if dx == 0 && dy == 0 {
-		return
+		return false
 	}
 
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
+
+	// 敵との戦闘チェック
+	if g.CheckForEnemies(newPX, newPY) {
+		// 戦闘が発生した場合、プレイヤーは移動しない
+		return false
+	}
+
 	// マップ範囲内およびブロックされていないタイル上にあることを確認
 	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
 		g.state.Player.X = newPX
 		g.state.Player.Y = newPY
 		g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
+		return true
 	}
+	return false
 }
 
 func (g *Game) HandleInput() (int, int) {
@@ -504,7 +574,51 @@ func (g *Game) OpenDoor() {
 		tile := g.state.Map[playerY+dir.dy][playerX+dir.dx]
 		if tile.Type == "door" {
 			g.state.Map[playerY+dir.dy][playerX+dir.dx] = Tile{Type: "corridor"}
+			g.MoveEnemies()
 			g.moveCount++
+		}
+	}
+}
+
+func (g *Game) DamagePlayer(amount int) {
+	g.state.Player.Health -= amount
+	if g.state.Player.Health < 0 {
+		g.state.Player.Health = 0 // Ensure health does not go below 0
+	}
+}
+
+func (g *Game) MoveEnemies() {
+	for i, enemy := range g.state.Enemies {
+		// Check if the enemy is adjacent or diagonally adjacent to the player
+		if abs(enemy.X-g.state.Player.X) <= 1 && abs(enemy.Y-g.state.Player.Y) <= 1 {
+			g.DamagePlayer(10) // Enemy attacks player using the DamagePlayer function
+		} else {
+			moved := false
+			for !moved {
+				direction := rand.Intn(4)
+				switch direction {
+				case 0: // Up
+					if enemy.Y > 0 && !g.state.Map[enemy.Y-1][enemy.X].Blocked {
+						g.state.Enemies[i].Y--
+						moved = true
+					}
+				case 1: // Down
+					if enemy.Y < len(g.state.Map)-1 && !g.state.Map[enemy.Y+1][enemy.X].Blocked {
+						g.state.Enemies[i].Y++
+						moved = true
+					}
+				case 2: // Left
+					if enemy.X > 0 && !g.state.Map[enemy.Y][enemy.X-1].Blocked {
+						g.state.Enemies[i].X--
+						moved = true
+					}
+				case 3: // Right
+					if enemy.X < len(g.state.Map[0])-1 && !g.state.Map[enemy.Y][enemy.X+1].Blocked {
+						g.state.Enemies[i].X++
+						moved = true
+					}
+				}
+			}
 		}
 	}
 }
@@ -512,7 +626,11 @@ func (g *Game) OpenDoor() {
 func (g *Game) Update() error {
 	dx, dy := g.HandleInput()
 
-	g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+	moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+
+	if moved {
+		g.MoveEnemies()
+	}
 
 	// 扉を開く処理の追加
 	spacePressed := inpututil.IsKeyJustPressed(ebiten.KeySpace) // Spaceキーをチェック
@@ -578,6 +696,10 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	// Moves count
 	MoveText := fmt.Sprintf("Moves: %3d", g.moveCount)
 	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-100, 30, color.White)
+
+	// Player HP
+	playerHPText := fmt.Sprintf("HP: %3d", g.state.Player.Health)
+	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-100, 50, color.White) // Adjusted y-coordinate to place HP text below Moves count
 
 	// Floor level
 	floorText := fmt.Sprintf("Floor: %d", g.Floor)
