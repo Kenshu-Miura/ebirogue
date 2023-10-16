@@ -69,17 +69,18 @@ type GameState struct {
 }
 
 type Game struct {
-	state         GameState
-	playerImg     *ebiten.Image
-	ebiImg        *ebiten.Image
-	snakeImg      *ebiten.Image
-	itemImg       *ebiten.Image
-	tilesetImg    *ebiten.Image
-	offsetX       int
-	offsetY       int
-	moveCount     int
-	Floor         int
-	lastIncrement time.Time
+	state          GameState
+	playerImg      *ebiten.Image
+	ebiImg         *ebiten.Image
+	snakeImg       *ebiten.Image
+	itemImg        *ebiten.Image
+	tilesetImg     *ebiten.Image
+	offsetX        int
+	offsetY        int
+	moveCount      int
+	Floor          int
+	lastIncrement  time.Time
+	lastArrowPress time.Time // 矢印キーが最後に押された時間を追跡
 }
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -567,10 +568,10 @@ func (g *Game) HandleInput() (int, int) {
 	var dx, dy int
 
 	// キーの押下状態を取得
-	upPressed := inpututil.IsKeyJustPressed(ebiten.KeyUp)
-	downPressed := inpututil.IsKeyJustPressed(ebiten.KeyDown)
-	leftPressed := inpututil.IsKeyJustPressed(ebiten.KeyLeft)
-	rightPressed := inpututil.IsKeyJustPressed(ebiten.KeyRight)
+	upPressed := ebiten.IsKeyPressed(ebiten.KeyUp)
+	downPressed := ebiten.IsKeyPressed(ebiten.KeyDown)
+	leftPressed := ebiten.IsKeyPressed(ebiten.KeyLeft)
+	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight)
 	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
 	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
 
@@ -581,35 +582,42 @@ func (g *Game) HandleInput() (int, int) {
 		g.lastIncrement = time.Now() // lastIncrementの更新
 	}
 
-	if shiftPressed { // 斜め移動のロジック
-		if (upPressed || downPressed) && (leftPressed || rightPressed) {
-			if upPressed {
+	arrowPressed := upPressed || downPressed || leftPressed || rightPressed
+
+	// 矢印キーの押下ロジック
+	if arrowPressed && time.Since(g.lastArrowPress) >= 125*time.Millisecond {
+		if shiftPressed { // 斜め移動のロジック
+			if (upPressed || downPressed) && (leftPressed || rightPressed) {
+				if upPressed {
+					dy = -1
+				}
+				if downPressed {
+					dy = 1
+				}
+				if leftPressed {
+					dx = -1
+				}
+				if rightPressed {
+					dx = 1
+				}
+			}
+		} else { // 上下左右の移動のロジック
+			if upPressed && !downPressed {
 				dy = -1
 			}
-			if downPressed {
+			if downPressed && !upPressed {
 				dy = 1
 			}
-			if leftPressed {
+			if leftPressed && !rightPressed {
 				dx = -1
 			}
-			if rightPressed {
+			if rightPressed && !leftPressed {
 				dx = 1
 			}
 		}
-	} else { // 上下左右の移動のロジック
-		if upPressed && !downPressed {
-			dy = -1
-		}
-		if downPressed && !upPressed {
-			dy = 1
-		}
-		if leftPressed && !rightPressed {
-			dx = -1
-		}
-		if rightPressed && !leftPressed {
-			dx = 1
-		}
+		g.lastArrowPress = time.Now() // lastArrowPressの更新
 	}
+
 	return dx, dy
 }
 
