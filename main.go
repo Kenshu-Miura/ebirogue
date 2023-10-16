@@ -35,9 +35,18 @@ type Entity struct {
 }
 
 type Player struct {
-	Entity    // PlayerはEntityのフィールドを継承します
-	Health    int
-	MaxHealth int
+	Entity       // PlayerはEntityのフィールドを継承します
+	Health       int
+	MaxHealth    int
+	Satiety      int    // 満腹度
+	Inventory    []Item // 所持アイテム
+	MaxInventory int    // 最大所持アイテム数
+}
+
+type Item struct {
+	Name        string
+	Description string
+	// 他のアイテムに関連するフィールドもここに追加できます。
 }
 
 type Enemy struct {
@@ -439,9 +448,12 @@ func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Ene
 	playerY := localRand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
 
 	player := Player{
-		Entity:    Entity{X: playerX, Y: playerY, Char: '@'},
-		Health:    100,
-		MaxHealth: 100,
+		Entity:       Entity{X: playerX, Y: playerY, Char: '@'},
+		Health:       100,
+		MaxHealth:    100,
+		Satiety:      100,      // 満腹度を最大に設定
+		Inventory:    []Item{}, // 空のインベントリを初期化
+		MaxInventory: 20,       // 最大所持アイテム数を設定
 	}
 
 	// 階段タイルを配置するためのランダムな部屋を選択
@@ -492,7 +504,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 				// 敵のHealthがまだ残っている場合、敵はプレイヤーに反撃
 				g.DamagePlayer(10)
 			}
-			g.moveCount++
+			g.IncrementMoveCount()
 			return true
 		}
 	}
@@ -518,7 +530,7 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
 		g.state.Player.X = newPX
 		g.state.Player.Y = newPY
-		g.moveCount++ // プレイヤーが移動するたびにカウントを増やす
+		g.IncrementMoveCount() // プレイヤーが移動するたびにカウントを増やす
 		return true
 	}
 	return false
@@ -566,6 +578,17 @@ func (g *Game) HandleInput() (int, int) {
 	return dx, dy
 }
 
+func (g *Game) IncrementMoveCount() {
+	g.moveCount++
+	// Check if moveCount has increased by 10
+	if g.moveCount%10 == 0 && g.moveCount != 0 {
+		g.state.Player.Satiety -= 1     // Reduce satiety by 1
+		if g.state.Player.Satiety < 0 { // Ensure satiety does not go below 0
+			g.state.Player.Satiety = 0
+		}
+	}
+}
+
 func (g *Game) OpenDoor() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
 	directions := []struct{ dx, dy int }{
@@ -579,7 +602,7 @@ func (g *Game) OpenDoor() {
 		if tile.Type == "door" {
 			g.state.Map[playerY+dir.dy][playerX+dir.dx] = Tile{Type: "corridor"}
 			g.MoveEnemies()
-			g.moveCount++
+			g.IncrementMoveCount()
 		}
 	}
 }
@@ -698,12 +721,16 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	screenWidth, _ := screen.Bounds().Dx(), screen.Bounds().Dy()
 
 	// Moves count
-	MoveText := fmt.Sprintf("Moves: %3d", g.moveCount)
+	MoveText := fmt.Sprintf("ターン数: %3d", g.moveCount)
 	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-100, 30, color.White)
 
 	// Player HP
 	playerHPText := fmt.Sprintf("HP: %3d", g.state.Player.Health)
-	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-100, 50, color.White) // Adjusted y-coordinate to place HP text below Moves count
+	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-100, 50, color.White)
+
+	// Player Satiety
+	playerSatietyText := fmt.Sprintf("満腹度: %3d", g.state.Player.Satiety)
+	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-100, 70, color.White) // Adjusted y-coordinate to place Satiety text below HP text
 
 	// Floor level
 	floorText := fmt.Sprintf("Floor: %d", g.Floor)
