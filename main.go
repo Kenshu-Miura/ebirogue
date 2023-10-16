@@ -61,7 +61,9 @@ type Game struct {
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type Room struct {
-	X, Y, Width, Height int
+	ID            int
+	X, Y          int
+	Width, Height int
 }
 
 func (r Room) Intersects(other Room) bool {
@@ -179,7 +181,7 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		x1, y1 := roomA.X+roomA.Width-1, roomA.Y+roomA.Height/2
 		x2, y2 := roomB.X, roomB.Y+roomB.Height/2
 
-		fmt.Printf("Connecting room %d to room %d with coordinates (%d, %d) to (%d, %d)\n", i, (i+1)%len(rooms), x1, y1, x2, y2)
+		fmt.Printf("Connecting room %d with coordinates (%d, %d) to room %d with coordinates (%d, %d)\n", roomA.ID, roomA.X, roomA.Y, roomB.ID, roomB.X, roomB.Y)
 
 		// Draw corridor
 		drawCorridor(mapGrid, x1, y1, x2, y2, rooms, doorPositions)
@@ -241,7 +243,13 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 				roomY = localRand.Intn(height-roomHeight-1) + 1
 			}
 
-			newRoom := Room{roomX, roomY, roomWidth, roomHeight}
+			newRoom := Room{
+				ID:     i, // Assign the unique ID to the room
+				X:      roomX,
+				Y:      roomY,
+				Width:  roomWidth,
+				Height: roomHeight,
+			}
 			valid := true
 			for _, room := range rooms {
 				if !newRoom.IsSeparatedBy(room, 5) {
