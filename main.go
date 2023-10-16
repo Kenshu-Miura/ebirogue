@@ -450,7 +450,7 @@ func (g *Game) MovePlayer(dx, dy int) {
 	}
 }
 
-func (g *Game) Update() error {
+func (g *Game) HandleInput() (int, int) {
 	var dx, dy int
 
 	// キーの押下状態を取得
@@ -489,6 +489,11 @@ func (g *Game) Update() error {
 			dx = 1
 		}
 	}
+	return dx, dy
+}
+
+func (g *Game) Update() error {
+	dx, dy := g.HandleInput()
 
 	g.MovePlayer(dx, dy) // プレイヤーの移動を更新
 
@@ -497,68 +502,79 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
-	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-
-	// 画面中央の位置を計算
-	centerX := (screenWidth-tileSize)/2 - tileSize
-	centerY := (screenHeight-tileSize)/2 - tileSize
-
-	// マップのオフセットを計算
-	offsetX := centerX - g.state.Player.X*tileSize
-	offsetY := centerY - g.state.Player.Y*tileSize
-
-	// タイルの描画
+func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 	for y, row := range g.state.Map {
 		for x, tile := range row {
 			var srcX, srcY int
 			switch tile.Type {
 			case "wall":
-				srcX, srcY = 0, 0 // タイルセット上の壁タイルの位置
+				srcX, srcY = 0, 0
 			case "corridor":
-				srcX, srcY = tileSize, 0 // タイルセット上の床タイルの位置
+				srcX, srcY = tileSize, 0
 			case "floor":
-				srcX, srcY = 2*tileSize, 0 // タイルセット上の通路タイルの位置
+				srcX, srcY = 2*tileSize, 0
 			case "door":
-				srcX, srcY = 3*tileSize, 0 // タイルセット上のドアタイルの位置
+				srcX, srcY = 3*tileSize, 0
 			case "stairs":
-				srcX, srcY = 4*tileSize, 0 // タイルセット上の階段タイルの位置
+				srcX, srcY = 4*tileSize, 0
 			default:
-				continue // 未知のタイルタイプは描画しない
+				continue
 			}
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Translate(float64(x*tileSize+offsetX), float64(y*tileSize+offsetY))
 			screen.DrawImage(g.tilesetImg.SubImage(image.Rect(srcX, srcY, srcX+tileSize, srcY+tileSize)).(*ebiten.Image), opts)
 		}
 	}
+}
 
-	// プレイヤーを描画
+func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(centerX), float64(centerY))
 	screen.DrawImage(g.playerImg, opts)
+}
 
-	// アイテムを描画
+func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, item := range g.state.Items {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(item.X*tileSize+offsetX), float64(item.Y*tileSize+offsetY))
 		screen.DrawImage(g.itemImg, opts)
 	}
+}
 
-	// 敵を描画
+func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, enemy := range g.state.Enemies {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX), float64(enemy.Y*tileSize+offsetY))
 		screen.DrawImage(g.enemyImg, opts)
 	}
+}
 
-	// カウントを画面右上に表示
+func (g *Game) DrawHUD(screen *ebiten.Image) {
+	screenWidth, _ := screen.Bounds().Dx(), screen.Bounds().Dy()
+
+	// Moves count
 	countText := fmt.Sprintf("Moves: %d", g.moveCount)
-	ebitenutil.DebugPrintAt(screen, countText, screenWidth-100, 10) // Adjust the x-position as needed to align to the right
+	ebitenutil.DebugPrintAt(screen, countText, screenWidth-100, 10)
 
+	// Floor level
 	floorText := fmt.Sprintf("Floor: %d", g.Floor)
 	xfloorText := 10
 	yfloorText := 30
 	text.Draw(screen, floorText, mplusNormalFont, xfloorText, yfloorText, color.White)
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	centerX := (screenWidth-tileSize)/2 - tileSize
+	centerY := (screenHeight-tileSize)/2 - tileSize
+	offsetX := centerX - g.state.Player.X*tileSize
+	offsetY := centerY - g.state.Player.Y*tileSize
+
+	g.DrawMap(screen, offsetX, offsetY)
+	g.DrawPlayer(screen, centerX, centerY)
+	g.DrawItems(screen, offsetX, offsetY)
+	g.DrawEnemies(screen, offsetX, offsetY)
+	g.DrawHUD(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
