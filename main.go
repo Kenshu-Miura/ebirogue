@@ -350,6 +350,14 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 	var enemies []Enemy
 	var items []Entity
 
+	// 階段タイルを配置するためのランダムな部屋を選択
+	stairsRoom := rooms[localRand.Intn(len(rooms))]
+	// 階段のランダムな位置を選ぶ（壁を避ける）
+	stairsX := localRand.Intn(stairsRoom.Width-2) + stairsRoom.X + 1
+	stairsY := localRand.Intn(stairsRoom.Height-2) + stairsRoom.Y + 1
+	// 階段タイルを配置
+	mapGrid[stairsY][stairsX] = Tile{Type: "stairs", Blocked: false, BlockSight: false}
+
 	for i := 0; i < 5; i++ { // ここでは5つの敵と5つのアイテムを生成します
 		// ランダムな部屋を選ぶ
 		room := rooms[localRand.Intn(len(rooms))]
@@ -473,6 +481,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				srcX, srcY = 2*tileSize, 0 // タイルセット上の通路タイルの位置
 			case "door":
 				srcX, srcY = 3*tileSize, 0 // タイルセット上のドアタイルの位置
+			case "stairs":
+				srcX, srcY = 4*tileSize, 0 // タイルセット上の階段タイルの位置
 			default:
 				continue // 未知のタイルタイプは描画しない
 			}
@@ -487,18 +497,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	opts.GeoM.Translate(float64(centerX), float64(centerY))
 	screen.DrawImage(g.playerImg, opts)
 
-	// 敵を描画
-	for _, enemy := range g.state.Enemies {
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX), float64(enemy.Y*tileSize+offsetY))
-		screen.DrawImage(g.enemyImg, opts)
-	}
-
 	// アイテムを描画
 	for _, item := range g.state.Items {
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(item.X*tileSize+offsetX), float64(item.Y*tileSize+offsetY))
 		screen.DrawImage(g.itemImg, opts)
+	}
+
+	// 敵を描画
+	for _, enemy := range g.state.Enemies {
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX), float64(enemy.Y*tileSize+offsetY))
+		screen.DrawImage(g.enemyImg, opts)
 	}
 
 	// カウントを画面右上に表示
