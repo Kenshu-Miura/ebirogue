@@ -606,10 +606,19 @@ func (g *Game) HandleInput() (int, int) {
 
 func (g *Game) IncrementMoveCount() {
 	g.moveCount++
-	// Check if moveCount has increased by 10
+	// Check if moveCount has increased by 5
+	if g.moveCount%5 == 0 && g.moveCount != 0 {
+		// Recover 1 HP for the player
+		g.state.Player.Health += 1
+		// Ensure player's health does not exceed MaxHealth
+		if g.state.Player.Health > g.state.Player.MaxHealth {
+			g.state.Player.Health = g.state.Player.MaxHealth
+		}
+	}
+	// Existing satiety reduction logic
 	if g.moveCount%10 == 0 && g.moveCount != 0 {
-		g.state.Player.Satiety -= 1     // Reduce satiety by 1
-		if g.state.Player.Satiety < 0 { // Ensure satiety does not go below 0
+		g.state.Player.Satiety -= 1
+		if g.state.Player.Satiety < 0 {
 			g.state.Player.Satiety = 0
 		}
 	}
@@ -763,15 +772,15 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	// Moves count
 	MoveText := fmt.Sprintf("ターン数: %3d", g.moveCount)
-	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-100, 30, color.White)
+	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-110, 30, color.White)
 
 	// Player HP
 	playerHPText := fmt.Sprintf("HP: %3d", g.state.Player.Health)
-	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-100, 50, color.White)
+	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-110, 50, color.White)
 
 	// Player Satiety
 	playerSatietyText := fmt.Sprintf("満腹度: %3d", g.state.Player.Satiety)
-	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-100, 70, color.White) // Adjusted y-coordinate to place Satiety text below HP text
+	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-110, 70, color.White) // Adjusted y-coordinate to place Satiety text below HP text
 
 	// Floor level
 	floorText := fmt.Sprintf("Floor: %d", g.Floor)
