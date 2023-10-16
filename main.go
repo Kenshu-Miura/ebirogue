@@ -5,6 +5,7 @@ import (
 	"image"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -322,7 +323,15 @@ func GenerateRandomMap(width, height int) ([][]Tile, Player, []Enemy, []Entity) 
 		}
 	}
 
-	numRooms := localRand.Intn(6) + 4
+	// Generate a random float between 0 and 1
+	randomFloat := rand.Float64()
+
+	// Apply exponential decay
+	decayFactor := 0.5 // Adjust this value to control the rate of decay
+	prob := math.Pow(randomFloat, decayFactor)
+
+	// Scale and transform to get the number of rooms between 4 and 10
+	numRooms := int(prob*7) + 4                              // This will give a value between 4 and 10 with a decreasing probability as the number of rooms increases
 	rooms := generateRooms(mapGrid, width, height, numRooms) // Step 2: Generate rooms
 
 	connectRooms(rooms, mapGrid)
