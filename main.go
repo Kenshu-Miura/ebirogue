@@ -351,6 +351,66 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	return rooms
 }
 
+func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
+	var enemies []Enemy
+	for i := 0; i < 5; i++ {
+		var enemyRoom Room
+		var enemyX, enemyY int
+		for {
+			enemyRoom = rooms[localRand.Intn(len(rooms))]
+			if enemyRoom != playerRoom {
+				enemyX = localRand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
+				enemyY = localRand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
+				occupied := false
+				for _, enemy := range enemies {
+					if enemy.X == enemyX && enemy.Y == enemyY {
+						occupied = true
+						break
+					}
+				}
+				if !occupied {
+					break
+				}
+			}
+		}
+		enemies = append(enemies, Enemy{
+			Entity:    Entity{X: enemyX, Y: enemyY, Char: 'E'},
+			Health:    50,
+			MaxHealth: 50,
+		})
+	}
+	return enemies
+}
+
+func generateItems(rooms []Room) []Entity {
+	var items []Entity
+	for i := 0; i < 5; i++ {
+		var itemRoom Room
+		var itemX, itemY int
+		for {
+			itemRoom = rooms[localRand.Intn(len(rooms))]
+			itemX = localRand.Intn(itemRoom.Width-2) + itemRoom.X + 1
+			itemY = localRand.Intn(itemRoom.Height-2) + itemRoom.Y + 1
+			occupied := false
+			for _, item := range items {
+				if item.X == itemX && item.Y == itemY {
+					occupied = true
+					break
+				}
+			}
+			if !occupied {
+				break
+			}
+		}
+		items = append(items, Entity{
+			X:    itemX,
+			Y:    itemY,
+			Char: '!',
+		})
+	}
+	return items
+}
+
 func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Enemy, []Entity, int) {
 	// Step 1: Initialize all tiles to "other" type
 	mapGrid := make([][]Tile, height)
@@ -384,10 +444,6 @@ func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Ene
 		MaxHealth: 100,
 	}
 
-	// 敵とアイテムの配列を初期化
-	var enemies []Enemy
-	var items []Entity
-
 	// 階段タイルを配置するためのランダムな部屋を選択
 	stairsRoom := rooms[localRand.Intn(len(rooms))]
 	// 階段のランダムな位置を選ぶ（壁を避ける）
@@ -396,61 +452,9 @@ func GenerateRandomMap(width, height, currentFloor int) ([][]Tile, Player, []Ene
 	// 階段タイルを配置
 	mapGrid[stairsY][stairsX] = Tile{Type: "stairs", Blocked: false, BlockSight: false}
 
-	// 敵を生成するループ
-	for i := 0; i < 5; i++ {
-		var enemyRoom Room
-		var enemyX, enemyY int
-		for {
-			enemyRoom = rooms[localRand.Intn(len(rooms))]
-			if enemyRoom != playerRoom {
-				enemyX = localRand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
-				enemyY = localRand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
-				// Check if the position is already occupied by another enemy
-				occupied := false
-				for _, enemy := range enemies {
-					if enemy.X == enemyX && enemy.Y == enemyY {
-						occupied = true
-						break
-					}
-				}
-				if !occupied {
-					break
-				}
-			}
-		}
-		enemies = append(enemies, Enemy{
-			Entity:    Entity{X: enemyX, Y: enemyY, Char: 'E'},
-			Health:    50,
-			MaxHealth: 50,
-		})
-	}
-
-	// アイテムを生成するループ
-	for i := 0; i < 5; i++ {
-		var itemRoom Room
-		var itemX, itemY int
-		for {
-			itemRoom = rooms[localRand.Intn(len(rooms))]
-			itemX = localRand.Intn(itemRoom.Width-2) + itemRoom.X + 1
-			itemY = localRand.Intn(itemRoom.Height-2) + itemRoom.Y + 1
-			// Check if the position is already occupied by another item
-			occupied := false
-			for _, item := range items {
-				if item.X == itemX && item.Y == itemY {
-					occupied = true
-					break
-				}
-			}
-			if !occupied {
-				break
-			}
-		}
-		items = append(items, Entity{
-			X:    itemX,
-			Y:    itemY,
-			Char: '!',
-		})
-	}
+	// Call the newly created functions to generate enemies and items
+	enemies := generateEnemies(rooms, playerRoom)
+	items := generateItems(rooms)
 
 	return mapGrid, player, enemies, items, currentFloor + 1
 }
