@@ -75,10 +75,10 @@ func isCorridor(tile Tile) bool {
 	return tile.Type == "corridor"
 }
 
-func isInsideRoom(x, y int, rooms []Room) bool {
+func isInsideRoomOrOnBoundary(x, y int, rooms []Room) bool {
 	for _, room := range rooms {
-		if x > room.X && x < room.X+room.Width-1 &&
-			y > room.Y && y < room.Y+room.Height-1 {
+		if x >= room.X && x <= room.X+room.Width-1 &&
+			y >= room.Y && y <= room.Y+room.Height-1 {
 			return true
 		}
 	}
@@ -140,21 +140,21 @@ func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositi
 
 	// Draw vertical corridor from the starting point to the first turning point
 	for y := min(y1, turnY1); y <= max(y1, turnY1); y++ {
-		if !isInsideRoom(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
+		if !isInsideRoomOrOnBoundary(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
 			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
 
 	// Draw horizontal corridor from the first turning point to the second turning point
 	for x := min(turnX1, turnX2); x <= max(turnX1, turnX2); x++ {
-		if !isInsideRoom(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
+		if !isInsideRoomOrOnBoundary(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
 			mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
 
 	// Draw vertical corridor from the second turning point to the end point
 	for y := min(turnY2, y2); y <= max(turnY2, y2); y++ {
-		if !isInsideRoom(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
+		if !isInsideRoomOrOnBoundary(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
 			mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
