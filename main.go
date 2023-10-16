@@ -160,9 +160,26 @@ func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositi
 	}
 }
 
-func placeDoor(mapGrid [][]Tile, x, y int) {
-	mapGrid[y][x] = Tile{Type: "door", Blocked: true, BlockSight: true}
-	fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
+func validateAndPlaceDoor(mapGrid [][]Tile, x, y int) {
+	// Check adjacent tiles to see if there is a corridor tile
+	adjacentCorridor := false
+	directions := []Coordinate{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} // Up, Down, Left, Right
+	for _, dir := range directions {
+		newX, newY := x+dir.X, y+dir.Y
+		if mapGrid[newY][newX].Type == "corridor" {
+			adjacentCorridor = true
+			break
+		}
+	}
+
+	// If adjacent to a corridor, place a door; otherwise, place a wall
+	if adjacentCorridor {
+		mapGrid[y][x] = Tile{Type: "door", Blocked: true, BlockSight: true}
+		fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
+	} else {
+		mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+		fmt.Printf("Wall placed at coordinates (%d, %d) as no adjacent corridor was found\n", x, y) // Log wall position
+	}
 }
 
 func generateCorridorStartPoints(rooms []Room) []Coordinate {
@@ -210,7 +227,7 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	}
 
 	for _, pos := range doorPositions {
-		placeDoor(mapGrid, pos.X, pos.Y)
+		validateAndPlaceDoor(mapGrid, pos.X, pos.Y) // Use the new function to validate and place doors
 	}
 
 	fmt.Println("All rooms are connected")
