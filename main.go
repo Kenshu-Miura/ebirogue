@@ -69,16 +69,17 @@ type GameState struct {
 }
 
 type Game struct {
-	state      GameState
-	playerImg  *ebiten.Image
-	ebiImg     *ebiten.Image
-	snakeImg   *ebiten.Image
-	itemImg    *ebiten.Image
-	tilesetImg *ebiten.Image
-	offsetX    int
-	offsetY    int
-	moveCount  int
-	Floor      int
+	state         GameState
+	playerImg     *ebiten.Image
+	ebiImg        *ebiten.Image
+	snakeImg      *ebiten.Image
+	itemImg       *ebiten.Image
+	tilesetImg    *ebiten.Image
+	offsetX       int
+	offsetY       int
+	moveCount     int
+	Floor         int
+	lastIncrement time.Time
 }
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -571,6 +572,14 @@ func (g *Game) HandleInput() (int, int) {
 	leftPressed := inpututil.IsKeyJustPressed(ebiten.KeyLeft)
 	rightPressed := inpututil.IsKeyJustPressed(ebiten.KeyRight)
 	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
+	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
+
+	// 足踏みロジック
+	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond {
+		g.IncrementMoveCount()
+		g.MoveEnemies()
+		g.lastIncrement = time.Now() // lastIncrementの更新
+	}
 
 	if shiftPressed { // 斜め移動のロジック
 		if (upPressed || downPressed) && (leftPressed || rightPressed) {
