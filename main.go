@@ -812,27 +812,23 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	dy := player.Y - enemy.Y
 
 	// Determine the new position of the enemy.
-	newX := enemy.X + sign(dx)
-	newY := enemy.Y + sign(dy)
+	newX, newY := enemy.X+sign(dx), enemy.Y+sign(dy)
 
-	if dy > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-		//log.Printf("the bottom of enemy")
-		g.state.Enemies[enemyIndex].Y++
-	}
-
-	if dy < 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-		//log.Printf("the top of enemy")
-		g.state.Enemies[enemyIndex].Y--
-	}
-
-	if dx < 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-		//log.Printf("the left of enemy")
-		g.state.Enemies[enemyIndex].X--
-	}
-
-	if dx > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-		//log.Printf("the right of enemy")
-		g.state.Enemies[enemyIndex].X++
+	// Check if the new position is blocked or occupied.
+	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		g.state.Enemies[enemyIndex].X = newX
+		g.state.Enemies[enemyIndex].Y = newY
+	} else {
+		// If the direct path is blocked, try moving horizontally or vertically.
+		newX, newY = enemy.X+sign(dx), enemy.Y
+		if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+			g.state.Enemies[enemyIndex].X = newX
+		} else {
+			newX, newY = enemy.X, enemy.Y+sign(dy)
+			if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+				g.state.Enemies[enemyIndex].Y = newY
+			}
+		}
 	}
 }
 
