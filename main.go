@@ -389,7 +389,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 10; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		for {
@@ -730,9 +730,9 @@ func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
 	}
 
 	result := room1 == room2
-	if result {
-		log.Printf("Points are in the same room: %v\n", result) // Log result
-	}
+	//if result {
+	//log.Printf("Points are in the same room: %v\n", result) // Log result
+	//}
 	return result
 }
 
@@ -792,15 +792,6 @@ func (g *Game) MoveEnemies() {
 	}
 }
 
-func isOccupied(g *Game, x, y int) bool {
-	for _, enemy := range g.state.Enemies {
-		if enemy.X == x && enemy.Y == y {
-			return true
-		}
-	}
-	return false
-}
-
 // sign function returns the sign of an integer.
 func sign(x int) int {
 	if x > 0 {
@@ -824,25 +815,38 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	newX := enemy.X + sign(dx)
 	newY := enemy.Y + sign(dy)
 
-	if dy > 0 && !g.state.Map[newY][enemy.X].Blocked {
-		log.Printf("the bottom of enemy")
+	if dy > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		//log.Printf("the bottom of enemy")
 		g.state.Enemies[enemyIndex].Y++
 	}
 
-	if dy < 0 && !g.state.Map[newY][enemy.X].Blocked {
-		log.Printf("the top of enemy")
+	if dy < 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		//log.Printf("the top of enemy")
 		g.state.Enemies[enemyIndex].Y--
 	}
 
-	if dx < 0 && !g.state.Map[enemy.Y][newX].Blocked {
-		log.Printf("the left of enemy")
+	if dx < 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		//log.Printf("the left of enemy")
 		g.state.Enemies[enemyIndex].X--
 	}
 
-	if dx > 0 && !g.state.Map[enemy.Y][newX].Blocked {
-		log.Printf("the rifht of enemy")
+	if dx > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		//log.Printf("the right of enemy")
 		g.state.Enemies[enemyIndex].X++
 	}
+}
+
+func isOccupied(g *Game, x, y int) bool {
+	for _, enemy := range g.state.Enemies {
+		if enemy.X == x && enemy.Y == y {
+			return true
+		}
+	}
+	// Check if the player is at the specified coordinates
+	if g.state.Player.X == x && g.state.Player.Y == y {
+		return true
+	}
+	return false
 }
 
 func moveRandomly(g *Game, i int) {
@@ -1071,9 +1075,9 @@ func NewGame() *Game {
 	}
 
 	// Log the contents of game.rooms
-	for i, room := range game.rooms {
-		log.Printf("Room %d: %+v\n", i, room)
-	}
+	//for i, room := range game.rooms {
+	//	log.Printf("Room %d: %+v\n", i, room)
+	//}
 
 	return game
 }
