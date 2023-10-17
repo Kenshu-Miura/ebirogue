@@ -40,10 +40,14 @@ type Player struct {
 	MaxHealth        int
 	AttackPower      int    // 攻撃力
 	DefensePower     int    // 防御力
+	Power            int    // プレイヤーのパワー
+	MaxPower         int    // プレイヤーの最大パワー
 	Satiety          int    // 満腹度
+	MaxSatiety       int    // 最大満腹度
 	Inventory        []Item // 所持アイテム
 	MaxInventory     int    // 最大所持アイテム数
 	ExperiencePoints int    // 所持経験値
+	Level            int    // プレイヤーのレベル
 }
 
 type Item struct {
@@ -88,6 +92,7 @@ type Game struct {
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 var mplusNormalFont font.Face
+var levelExpRequirements = []int{0, 5, 12, 22, 35, 51, 70, 92, 118, 148, 181} // レベル10までの経験値要件
 
 type Room struct {
 	ID            int
@@ -109,6 +114,14 @@ func init() {
 	})
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func (p *Player) checkLevelUp() {
+	if p.Level < 10 && p.Level < len(levelExpRequirements) && p.ExperiencePoints >= levelExpRequirements[p.Level] {
+		p.Level++ // レベルアップ
+		// 必要に応じて他のプレイヤーステータスをアップデート
+		p.MaxHealth += 10
 	}
 }
 
@@ -233,7 +246,8 @@ func validateAndPlaceDoor(mapGrid [][]Tile, x, y int) {
 
 	// If adjacent to a corridor, place a door; otherwise, place a wall
 	if adjacentCorridor {
-		mapGrid[y][x] = Tile{Type: "door", Blocked: true, BlockSight: true}
+		//mapGrid[y][x] = Tile{Type: "door", Blocked: true, BlockSight: true}
+		mapGrid[y][x] = Tile{Type: "corridor", Blocked: false, BlockSight: true}
 		//fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
 	} else {
 		mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
@@ -532,7 +546,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == x && enemy.Y == y {
 			// Player's AttackPower is considered while dealing damage
-			netDamage := g.state.Player.AttackPower - enemy.DefensePower
+			netDamage := g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - enemy.DefensePower
 			if netDamage < 0 { // Ensure damage does not go below 0
 				netDamage = 0
 			}
@@ -543,6 +557,8 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 				// 敵の経験値をプレイヤーの所持経験値に加える
 				g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+
+				g.state.Player.checkLevelUp() // レベルアップをチェック
 
 			} else {
 				// Enemy retaliates with its AttackPower
@@ -859,31 +875,40 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	// Moves count
 	MoveText := fmt.Sprintf("ターン数: %3d", g.moveCount)
-	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-110, 30, color.White)
+	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-130, 30, color.White)
 
 	// Player HP
-	playerHPText := fmt.Sprintf("HP: %3d", g.state.Player.Health)
-	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-110, 50, color.White)
+	playerHPText := fmt.Sprintf("HP:%3d/%3d", g.state.Player.Health, g.state.Player.MaxHealth)
+	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-130, 50, color.White)
 
 	// Player Satiety
-	playerSatietyText := fmt.Sprintf("満腹度: %3d", g.state.Player.Satiety)
-	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-110, 70, color.White)
+	playerSatietyText := fmt.Sprintf("満腹度:%3d/%3d", g.state.Player.Satiety, g.state.Player.MaxSatiety)
+	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-130, 70, color.White)
 
 	// Player Attack Power
 	playerAttackPowerText := fmt.Sprintf("攻撃力: %3d", g.state.Player.AttackPower)
-	text.Draw(screen, playerAttackPowerText, mplusNormalFont, screenWidth-110, 90, color.White)
+	text.Draw(screen, playerAttackPowerText, mplusNormalFont, screenWidth-130, 90, color.White)
 
 	// Player Defense Power
 	playerDefensePowerText := fmt.Sprintf("防御力: %3d", g.state.Player.DefensePower)
-	text.Draw(screen, playerDefensePowerText, mplusNormalFont, screenWidth-110, 110, color.White)
+	text.Draw(screen, playerDefensePowerText, mplusNormalFont, screenWidth-130, 110, color.White)
+
+	// Player Power
+	playerPowerText := fmt.Sprintf("パワー: %2d/%2d", g.state.Player.Power, g.state.Player.MaxPower)
+	text.Draw(screen, playerPowerText, mplusNormalFont, screenWidth-130, 130, color.White)
 
 	// Player Experience Points
 	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
-	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-110, 130, color.White) // Adjusted y-coordinate to place Experience Points text below Defense Power text
+	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White) // Adjusted y-coordinate to place Experience Points text below Defense Power text
 
 	// Floor level
 	floorText := fmt.Sprintf("階層: B%dF", g.Floor)
 	text.Draw(screen, floorText, mplusNormalFont, 10, 30, color.White) // x座標とy座標を直接指定
+
+	// Player Level
+	playerLevelText := fmt.Sprintf("レベル: %d", g.state.Player.Level)
+	text.Draw(screen, playerLevelText, mplusNormalFont, 10, 50, color.White) // x座標とy座標を直接指定
+
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -934,11 +959,15 @@ func main() {
 		Health:           100,
 		MaxHealth:        100,
 		Satiety:          100,
+		MaxSatiety:       100,
 		Inventory:        []Item{},
 		MaxInventory:     20,
-		AttackPower:      10, // 攻撃力を追加
-		DefensePower:     3,  // 防御力を追加
-		ExperiencePoints: 0,  // 経験値を追加,
+		AttackPower:      3, // 攻撃力を追加
+		DefensePower:     3, // 防御力を追加
+		ExperiencePoints: 0, // 経験値を追加,
+		Level:            1, // レベルを追加
+		Power:            8, // パワーを追加
+		MaxPower:         8, // 最大パワーを追加
 	}
 
 	// 最初のマップを生成
