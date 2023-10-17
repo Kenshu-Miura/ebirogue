@@ -77,6 +77,7 @@ type GameState struct {
 
 type Game struct {
 	state          GameState
+	rooms          []Room
 	playerImg      *ebiten.Image
 	ebiImg         *ebiten.Image
 	snakeImg       *ebiten.Image
@@ -130,11 +131,12 @@ func (g *Game) checkForStairs() {
 	playerTile := g.state.Map[player.Y][player.X]
 
 	if playerTile.Type == "stairs" {
-		mapGrid, enemies, items, newFloor := GenerateRandomMap(70, 70, g.Floor, player)
+		mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, player)
 		g.state.Map = mapGrid
 		g.state.Enemies = enemies
 		g.state.Items = items
 		g.Floor = newFloor
+		g.rooms = newRoom
 	}
 }
 
@@ -387,7 +389,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		for {
@@ -476,7 +478,7 @@ func generateItems(rooms []Room) []Entity {
 	return items
 }
 
-func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Entity, int) {
+func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Entity, int, []Room) {
 	// Step 1: Initialize all tiles to "other" type
 	mapGrid := make([][]Tile, height)
 	for y := range mapGrid {
@@ -518,7 +520,7 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 	enemies := generateEnemies(rooms, playerRoom)
 	items := generateItems(rooms)
 
-	return mapGrid, enemies, items, currentFloor + 1
+	return mapGrid, enemies, items, currentFloor + 1, rooms
 }
 
 func min(a, b int) int {
@@ -705,8 +707,34 @@ func (g *Game) DamagePlayer(amount int) {
 	}
 }
 
+func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
+	var room1, room2 Room
+	//log.Printf("Checking if points (%d, %d) and (%d, %d) are in the same room\n", x1, y1, x2, y2) // Log input points
+	for _, room := range rooms {
+		// Adjust the conditions to check if the points are within the inner boundaries of the room
+		if x1 > room.X && x1 < room.X+room.Width-1 && y1 > room.Y && y1 < room.Y+room.Height-1 {
+			room1 = room
+			//log.Printf("Point (%d, %d) is in Room %d: %+v\n", x1, y1, i, room) // Log room details for point 1
+		}
+		if x2 > room.X && x2 < room.X+room.Width-1 && y2 > room.Y && y2 < room.Y+room.Height-1 {
+			room2 = room
+			//log.Printf("Point (%d, %d) is in Room %d: %+v\n", x2, y2, i, room) // Log room details for point 2
+		}
+	}
+	result := room1 == room2
+	//if result {
+	//	log.Printf("Points are in the same room: %v\n", result) // Log result
+	//}
+	return result
+}
+
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
+		// Check if the enemy and player are in the same room
+		if isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms) {
+			g.state.Enemies[i].PlayerDiscovered = true
+		}
+
 		// Variables to store the difference in position
 		dx := enemy.X - g.state.Player.X
 		dy := enemy.Y - g.state.Player.Y
@@ -721,22 +749,26 @@ func (g *Game) MoveEnemies() {
 			blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
 
 			// Log the values of blockUp, blockDown, blockLeft, blockRight
-			//log.Printf("blockUp: %v, blockDown: %v, blockLeft: %v, blockRight: %v\n", blockUp, blockDown, blockLeft, blockRight)
+			log.Printf("blockUp: %v, blockDown: %v, blockLeft: %v, blockRight: %v\n", blockUp, blockDown, blockLeft, blockRight)
 
 			preventAttack := false
 
-			if dx == 1 && dy == -1 { // Player is to the top-left of enemy, this condition was missing
+			if dx == 1 && dy == 1 { // Player is to the top-left of enemy
+				log.Printf("the top-left of enemy")
 				preventAttack = blockUp || blockLeft
-			} else if dx == -1 && dy == -1 { // Player is to the top-right of enemy
+			} else if dx == -1 && dy == 1 { // Player is to the top-right of enemy
+				log.Printf("the top-right of enemy")
 				preventAttack = blockUp || blockRight
-			} else if dx == 1 && dy == 1 { // Player is to the bottom-left of enemy
+			} else if dx == 1 && dy == -1 { // Player is to the bottom-left of enemy
+				log.Printf("the bottom-left of enemy")
 				preventAttack = blockDown || blockLeft
-			} else if dx == -1 && dy == 1 { // Player is to the bottom-right of enemy
+			} else if dx == -1 && dy == -1 { // Player is to the bottom-right of enemy
+				log.Printf("the bottom-right of enemy")
 				preventAttack = blockDown || blockRight
 			}
 
 			// Log the value of preventAttack
-			//log.Printf("preventAttack: %v\n", preventAttack)
+			log.Printf("preventAttack: %v\n", preventAttack)
 
 			if preventAttack {
 				moveRandomly(g, i) // Call function to move enemy randomly
@@ -744,6 +776,8 @@ func (g *Game) MoveEnemies() {
 				g.DamagePlayer(enemy.AttackPower) // Enemy attacks player with its AttackPower
 			}
 
+		} else if g.state.Enemies[i].PlayerDiscovered {
+			g.MoveTowardsPlayer(i) // Call function to move enemy towards player
 		} else {
 			moveRandomly(g, i) // Call function to move enemy randomly
 		}
@@ -757,6 +791,42 @@ func isOccupied(g *Game, x, y int) bool {
 		}
 	}
 	return false
+}
+
+// sign function returns the sign of an integer.
+func sign(x int) int {
+	if x > 0 {
+		return 1
+	} else if x < 0 {
+		return -1
+	}
+	return 0
+}
+
+// MoveTowardsPlayer function moves the enemy towards the player.
+func (g *Game) MoveTowardsPlayer(enemyIndex int) {
+	enemy := g.state.Enemies[enemyIndex]
+	player := g.state.Player
+
+	// Determine the direction to move based on the player's position.
+	dx := player.X - enemy.X
+	dy := player.Y - enemy.Y
+
+	// Determine the new position of the enemy.
+	var newX, newY int
+	if abs(dx) > abs(dy) { // If horizontal distance is greater, move horizontally
+		newX = enemy.X + sign(dx)
+		newY = enemy.Y
+	} else { // If vertical distance is greater or equal, move vertically
+		newX = enemy.X
+		newY = enemy.Y + sign(dy)
+	}
+
+	// Update the enemy's position if the new position is walkable.
+	if !g.state.Map[newY][newX].Blocked {
+		g.state.Enemies[enemyIndex].X = newX
+		g.state.Enemies[enemyIndex].Y = newY
+	}
 }
 
 func moveRandomly(g *Game, i int) {
@@ -929,30 +999,22 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return 640, 480
 }
 
+// loadImage is a helper function to load an image from a file.
+func loadImage(filepath string) *ebiten.Image {
+	img, _, err := ebitenutil.NewImageFromFile(filepath)
+	if err != nil {
+		log.Fatalf("failed to load image from %s: %v", filepath, err)
+	}
+	return img
+}
+
 // NewGame function initializes a new game and returns a pointer to a Game object.
 func NewGame() *Game {
-	img, _, err := ebitenutil.NewImageFromFile("img/ebisan.png")
-	if err != nil {
-		log.Fatalf("failed to load image: %v", err)
-	}
-	tilesetImg, _, err := ebitenutil.NewImageFromFile("img/tileset.png")
-	if err != nil {
-		log.Fatalf("failed to load tileset image: %v", err)
-	}
-	ebiImg, _, err := ebitenutil.NewImageFromFile("img/ebi.png")
-	if err != nil {
-		log.Fatalf("failed to load enemy image: %v", err)
-	}
-
-	itemImg, _, err := ebitenutil.NewImageFromFile("img/kane.png")
-	if err != nil {
-		log.Fatalf("failed to load item image: %v", err)
-	}
-
-	snakeImg, _, err := ebitenutil.NewImageFromFile("img/snake.png")
-	if err != nil {
-		log.Fatalf("failed to load snake image: %v", err)
-	}
+	img := loadImage("img/ebisan.png")
+	tilesetImg := loadImage("img/tileset.png")
+	ebiImg := loadImage("img/ebi.png")
+	itemImg := loadImage("img/kane.png")
+	snakeImg := loadImage("img/snake.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -972,7 +1034,7 @@ func NewGame() *Game {
 	}
 
 	// 最初のマップを生成
-	mapGrid, enemies, items, newFloor := GenerateRandomMap(70, 70, 0, &player) // 初期階層は1です
+	mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, 0, &player) // 初期階層は1です
 
 	game := &Game{
 		state: GameState{
@@ -981,6 +1043,7 @@ func NewGame() *Game {
 			Enemies: enemies,
 			Items:   items,
 		},
+		rooms:      newRoom,
 		playerImg:  img,
 		tilesetImg: tilesetImg,
 		ebiImg:     ebiImg,
@@ -989,6 +1052,11 @@ func NewGame() *Game {
 		offsetX:    0,
 		offsetY:    0,
 		Floor:      newFloor,
+	}
+
+	// Log the contents of game.rooms
+	for i, room := range game.rooms {
+		log.Printf("Room %d: %+v\n", i, room)
 	}
 
 	return game
