@@ -2,7 +2,6 @@ package main
 
 import (
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 	"math/rand"
 )
 
@@ -58,13 +57,13 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
 
 	// Log block status
-	log.Printf("Block status - Up: %v, Down: %v, Left: %v, Right: %v\n", blockUp, blockDown, blockLeft, blockRight)
+	//log.Printf("Block status - Up: %v, Down: %v, Left: %v, Right: %v\n", blockUp, blockDown, blockLeft, blockRight)
 
 	// Adjust diagonal movement based on block status
 	if dx != 0 && dy != 0 { // Diagonal movement
 		// Check the block status for the intended diagonal movement
 		blockDiagonal := g.state.Map[newY][newX].Blocked
-		log.Printf("Block Diagonal: %v\n", blockDiagonal) // Log the block status for the intended diagonal movement
+		//log.Printf("Block Diagonal: %v\n", blockDiagonal) // Log the block status for the intended diagonal movement
 
 		if blockDiagonal || ((dx > 0 && dy > 0 && (blockDown || blockRight)) || (dx > 0 && dy < 0 && (blockUp || blockRight)) || (dx < 0 && dy > 0 && (blockDown || blockLeft)) || (dx < 0 && dy < 0 && (blockUp || blockLeft))) {
 			// Adjust movement to be only horizontal or vertical
@@ -80,7 +79,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
 		g.state.Enemies[enemyIndex].X = newX
 		g.state.Enemies[enemyIndex].Y = newY
-		log.Printf("Enemy moved to: (%d, %d)\n", newX, newY) // Log the new position
+		//log.Printf("Enemy moved to: (%d, %d)\n", newX, newY) // Log the new position
 	} else {
 		// If the direct path is blocked, try moving horizontally or vertically.
 		blockUp := enemy.Y > 0 && g.state.Map[enemy.Y-1][enemy.X].Blocked
@@ -88,7 +87,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 		blockLeft := enemy.X > 0 && g.state.Map[enemy.Y][enemy.X-1].Blocked
 		blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
 
-		log.Printf("Block status - Up: %v, Down: %v, Left: %v, Right: %v\n", blockUp, blockDown, blockLeft, blockRight) // Log block status
+		//log.Printf("Block status - Up: %v, Down: %v, Left: %v, Right: %v\n", blockUp, blockDown, blockLeft, blockRight) // Log block status
 
 		if dx != 0 && dy != 0 { // Diagonal movement
 			if dx > 0 && dy > 0 && !blockDown && !blockRight { // Moving DownRight
@@ -124,23 +123,30 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 			}
 		}
 		// Log any movement or action taken
-		log.Printf("Final Enemy Position: (%d, %d)\n", g.state.Enemies[enemyIndex].X, g.state.Enemies[enemyIndex].Y)
+		//log.Printf("Final Enemy Position: (%d, %d)\n", g.state.Enemies[enemyIndex].X, g.state.Enemies[enemyIndex].Y)
 	}
 }
 
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
+		// Variables to store the difference in position
+		dx := enemy.X - g.state.Player.X
+		dy := enemy.Y - g.state.Player.Y
+
+		// Calculate Manhattan distance between enemy and player
+		distance := abs(dx) + abs(dy)
+		if distance >= 7 {
+			g.state.Enemies[i].PlayerDiscovered = false
+		}
+
 		// Check if the enemy and player are in the same room
 		if isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms) {
 			g.state.Enemies[i].PlayerDiscovered = true
 		}
 
-		// Variables to store the difference in position
-		dx := enemy.X - g.state.Player.X
-		dy := enemy.Y - g.state.Player.Y
-
 		// Check if the enemy is adjacent or diagonally adjacent to the player
 		if abs(dx) <= 1 && abs(dy) <= 1 {
+			g.state.Enemies[i].PlayerDiscovered = true
 			//log.Printf("Enemy position: (%d, %d), Player position: (%d, %d)\n", enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y)
 			// Determine if there are walls that should prevent attacking
 			blockUp := enemy.Y > 0 && g.state.Map[enemy.Y-1][enemy.X].Blocked
@@ -294,6 +300,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 				g.DamagePlayer(enemy.AttackPower)
 			}
 			g.IncrementMoveCount()
+			g.MoveEnemies()
 			return true
 		}
 	}

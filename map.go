@@ -163,7 +163,7 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		validateAndPlaceDoor(mapGrid, pos.X, pos.Y) // Use the new function to validate and place doors
 	}
 
-	fmt.Println("All rooms are connected")
+	//fmt.Println("All rooms are connected")
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
