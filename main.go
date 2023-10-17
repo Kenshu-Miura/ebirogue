@@ -709,22 +709,30 @@ func (g *Game) DamagePlayer(amount int) {
 
 func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
 	var room1, room2 Room
+	foundRoom1, foundRoom2 := false, false // New variables to track if room1 and room2 are found
+
 	//log.Printf("Checking if points (%d, %d) and (%d, %d) are in the same room\n", x1, y1, x2, y2) // Log input points
 	for _, room := range rooms {
 		// Adjust the conditions to check if the points are within the inner boundaries of the room
 		if x1 > room.X && x1 < room.X+room.Width-1 && y1 > room.Y && y1 < room.Y+room.Height-1 {
 			room1 = room
-			//log.Printf("Point (%d, %d) is in Room %d: %+v\n", x1, y1, i, room) // Log room details for point 1
+			foundRoom1 = true // Set foundRoom1 to true if room1 is found
 		}
 		if x2 > room.X && x2 < room.X+room.Width-1 && y2 > room.Y && y2 < room.Y+room.Height-1 {
 			room2 = room
-			//log.Printf("Point (%d, %d) is in Room %d: %+v\n", x2, y2, i, room) // Log room details for point 2
+			foundRoom2 = true // Set foundRoom2 to true if room2 is found
 		}
 	}
+
+	// If either point is not in a room, return false
+	if !foundRoom1 || !foundRoom2 {
+		return false
+	}
+
 	result := room1 == room2
-	//if result {
-	//	log.Printf("Points are in the same room: %v\n", result) // Log result
-	//}
+	if result {
+		log.Printf("Points are in the same room: %v\n", result) // Log result
+	}
 	return result
 }
 
@@ -754,16 +762,16 @@ func (g *Game) MoveEnemies() {
 			preventAttack := false
 
 			if dx == 1 && dy == 1 { // Player is to the top-left of enemy
-				log.Printf("the top-left of enemy")
+				//log.Printf("the top-left of enemy")
 				preventAttack = blockUp || blockLeft
 			} else if dx == -1 && dy == 1 { // Player is to the top-right of enemy
-				log.Printf("the top-right of enemy")
+				//log.Printf("the top-right of enemy")
 				preventAttack = blockUp || blockRight
 			} else if dx == 1 && dy == -1 { // Player is to the bottom-left of enemy
-				log.Printf("the bottom-left of enemy")
+				//log.Printf("the bottom-left of enemy")
 				preventAttack = blockDown || blockLeft
 			} else if dx == -1 && dy == -1 { // Player is to the bottom-right of enemy
-				log.Printf("the bottom-right of enemy")
+				//log.Printf("the bottom-right of enemy")
 				preventAttack = blockDown || blockRight
 			}
 
@@ -771,7 +779,7 @@ func (g *Game) MoveEnemies() {
 			log.Printf("preventAttack: %v\n", preventAttack)
 
 			if preventAttack {
-				moveRandomly(g, i) // Call function to move enemy randomly
+				g.MoveTowardsPlayer(i) // Call function to move enemy towards player
 			} else {
 				g.DamagePlayer(enemy.AttackPower) // Enemy attacks player with its AttackPower
 			}
@@ -813,19 +821,27 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	dy := player.Y - enemy.Y
 
 	// Determine the new position of the enemy.
-	var newX, newY int
-	if abs(dx) > abs(dy) { // If horizontal distance is greater, move horizontally
-		newX = enemy.X + sign(dx)
-		newY = enemy.Y
-	} else { // If vertical distance is greater or equal, move vertically
-		newX = enemy.X
-		newY = enemy.Y + sign(dy)
+	newX := enemy.X + sign(dx)
+	newY := enemy.Y + sign(dy)
+
+	if dy > 0 && !g.state.Map[newY][enemy.X].Blocked {
+		log.Printf("the bottom of enemy")
+		g.state.Enemies[enemyIndex].Y++
 	}
 
-	// Update the enemy's position if the new position is walkable.
-	if !g.state.Map[newY][newX].Blocked {
-		g.state.Enemies[enemyIndex].X = newX
-		g.state.Enemies[enemyIndex].Y = newY
+	if dy < 0 && !g.state.Map[newY][enemy.X].Blocked {
+		log.Printf("the top of enemy")
+		g.state.Enemies[enemyIndex].Y--
+	}
+
+	if dx < 0 && !g.state.Map[enemy.Y][newX].Blocked {
+		log.Printf("the left of enemy")
+		g.state.Enemies[enemyIndex].X--
+	}
+
+	if dx > 0 && !g.state.Map[enemy.Y][newX].Blocked {
+		log.Printf("the rifht of enemy")
+		g.state.Enemies[enemyIndex].X++
 	}
 }
 
