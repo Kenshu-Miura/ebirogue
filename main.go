@@ -929,7 +929,8 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return 640, 480
 }
 
-func main() {
+// NewGame function initializes a new game and returns a pointer to a Game object.
+func NewGame() *Game {
 	img, _, err := ebitenutil.NewImageFromFile("img/ebisan.png")
 	if err != nil {
 		log.Fatalf("failed to load image: %v", err)
@@ -962,12 +963,12 @@ func main() {
 		MaxSatiety:       100,
 		Inventory:        []Item{},
 		MaxInventory:     20,
-		AttackPower:      3, // 攻撃力を追加
-		DefensePower:     3, // 防御力を追加
-		ExperiencePoints: 0, // 経験値を追加,
-		Level:            1, // レベルを追加
-		Power:            8, // パワーを追加
-		MaxPower:         8, // 最大パワーを追加
+		AttackPower:      3,
+		DefensePower:     3,
+		ExperiencePoints: 0,
+		Level:            1,
+		Power:            8,
+		MaxPower:         8,
 	}
 
 	// 最初のマップを生成
@@ -989,6 +990,12 @@ func main() {
 		offsetY:    0,
 		Floor:      newFloor,
 	}
+
+	return game
+}
+
+func main() {
+	game := NewGame()
 
 	ebiten.SetWindowSize(1280, 960)
 	ebiten.SetWindowTitle("ebirogue")
