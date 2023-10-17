@@ -40,7 +40,6 @@ func moveRandomly(g *Game, i int) {
 	}
 }
 
-// MoveTowardsPlayer function moves the enemy towards the player.
 func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	enemy := g.state.Enemies[enemyIndex]
 	player := g.state.Player
@@ -52,21 +51,79 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	// Determine the new position of the enemy.
 	newX, newY := enemy.X+sign(dx), enemy.Y+sign(dy)
 
+	// Check for blockages in diagonal movement
+	blockUp := enemy.Y > 0 && g.state.Map[enemy.Y-1][enemy.X].Blocked
+	blockDown := enemy.Y < len(g.state.Map)-1 && g.state.Map[enemy.Y+1][enemy.X].Blocked
+	blockLeft := enemy.X > 0 && g.state.Map[enemy.Y][enemy.X-1].Blocked
+	blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
+
+	// Log block status
+	log.Printf("Block status - Up: %v, Down: %v, Left: %v, Right: %v\n", blockUp, blockDown, blockLeft, blockRight)
+
+	// Adjust diagonal movement based on block status
+	if dx != 0 && dy != 0 { // Diagonal movement
+		if (dx > 0 && dy > 0 && (blockDown || blockRight)) || // Bottom Right
+			(dx > 0 && dy < 0 && (blockUp || blockRight)) || // Top Right
+			(dx < 0 && dy > 0 && (blockDown || blockLeft)) || // Bottom Left
+			(dx < 0 && dy < 0 && (blockUp || blockLeft)) { // Top Left
+			// Adjust movement to be only horizontal or vertical
+			if rand.Intn(2) == 0 {
+				newY = enemy.Y // Reset vertical movement
+			} else {
+				newX = enemy.X // Reset horizontal movement
+			}
+		}
+	}
+
 	// Check if the new position is blocked or occupied.
 	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
 		g.state.Enemies[enemyIndex].X = newX
 		g.state.Enemies[enemyIndex].Y = newY
+		log.Printf("Enemy moved to: (%d, %d)\n", newX, newY) // Log the new position
 	} else {
 		// If the direct path is blocked, try moving horizontally or vertically.
-		newX, newY = enemy.X+sign(dx), enemy.Y
-		if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-			g.state.Enemies[enemyIndex].X = newX
+		blockUp := enemy.Y > 0 && g.state.Map[enemy.Y-1][enemy.X].Blocked
+		blockDown := enemy.Y < len(g.state.Map)-1 && g.state.Map[enemy.Y+1][enemy.X].Blocked
+		blockLeft := enemy.X > 0 && g.state.Map[enemy.Y][enemy.X-1].Blocked
+		blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
+
+		log.Printf("Block status - Up: %v, Down: %v, Left: %v, Right: %v\n", blockUp, blockDown, blockLeft, blockRight) // Log block status
+
+		if dx != 0 && dy != 0 { // Diagonal movement
+			if dx > 0 && dy > 0 && !blockDown && !blockRight { // Moving DownRight
+				g.state.Enemies[enemyIndex].X++
+				g.state.Enemies[enemyIndex].Y++
+			} else if dx > 0 && dy < 0 && !blockUp && !blockRight { // Moving UpRight
+				g.state.Enemies[enemyIndex].X++
+				g.state.Enemies[enemyIndex].Y--
+			} else if dx < 0 && dy > 0 && !blockDown && !blockLeft { // Moving DownLeft
+				g.state.Enemies[enemyIndex].X--
+				g.state.Enemies[enemyIndex].Y++
+			} else if dx < 0 && dy < 0 && !blockUp && !blockLeft { // Moving UpLeft
+				g.state.Enemies[enemyIndex].X--
+				g.state.Enemies[enemyIndex].Y--
+			} else if !blockLeft && dx < 0 { // Move Left only
+				g.state.Enemies[enemyIndex].X--
+			} else if !blockRight && dx > 0 { // Move Right only
+				g.state.Enemies[enemyIndex].X++
+			} else if !blockUp && dy < 0 { // Move Up only
+				g.state.Enemies[enemyIndex].Y--
+			} else if !blockDown && dy > 0 { // Move Down only
+				g.state.Enemies[enemyIndex].Y++
+			}
 		} else {
-			newX, newY = enemy.X, enemy.Y+sign(dy)
+			newX, newY = enemy.X+sign(dx), enemy.Y
 			if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-				g.state.Enemies[enemyIndex].Y = newY
+				g.state.Enemies[enemyIndex].X = newX
+			} else {
+				newX, newY = enemy.X, enemy.Y+sign(dy)
+				if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+					g.state.Enemies[enemyIndex].Y = newY
+				}
 			}
 		}
+		// Log any movement or action taken
+		log.Printf("Final Enemy Position: (%d, %d)\n", g.state.Enemies[enemyIndex].X, g.state.Enemies[enemyIndex].Y)
 	}
 }
 
@@ -91,7 +148,7 @@ func (g *Game) MoveEnemies() {
 			blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
 
 			// Log the values of blockUp, blockDown, blockLeft, blockRight
-			log.Printf("blockUp: %v, blockDown: %v, blockLeft: %v, blockRight: %v\n", blockUp, blockDown, blockLeft, blockRight)
+			//log.Printf("blockUp: %v, blockDown: %v, blockLeft: %v, blockRight: %v\n", blockUp, blockDown, blockLeft, blockRight)
 
 			preventAttack := false
 
@@ -110,7 +167,7 @@ func (g *Game) MoveEnemies() {
 			}
 
 			// Log the value of preventAttack
-			log.Printf("preventAttack: %v\n", preventAttack)
+			//log.Printf("preventAttack: %v\n", preventAttack)
 
 			if preventAttack {
 				g.MoveTowardsPlayer(i) // Call function to move enemy towards player

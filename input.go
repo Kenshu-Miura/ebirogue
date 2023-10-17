@@ -47,12 +47,14 @@ func (g *Game) HandleInput() (int, int) {
 
 	// 矢印キーの押下ロジック
 	if arrowPressed && time.Since(g.lastArrowPress) >= 125*time.Millisecond {
+
+		player := g.state.Player
+		blockUp := g.state.Map[player.Y-1][player.X].Blocked
+		blockDown := g.state.Map[player.Y+1][player.X].Blocked
+		blockLeft := g.state.Map[player.Y][player.X-1].Blocked
+		blockRight := g.state.Map[player.Y][player.X+1].Blocked
+
 		if shiftPressed { // 斜め移動のロジック
-			player := g.state.Player
-			blockUp := g.state.Map[player.Y-1][player.X].Blocked
-			blockDown := g.state.Map[player.Y+1][player.X].Blocked
-			blockLeft := g.state.Map[player.Y][player.X-1].Blocked
-			blockRight := g.state.Map[player.Y][player.X+1].Blocked
 
 			if upPressed && rightPressed && (!blockUp && !blockRight) {
 				dy, dx = -1, 1
@@ -65,17 +67,33 @@ func (g *Game) HandleInput() (int, int) {
 			}
 
 		} else { // 上下左右の移動のロジック
-			if upPressed && !downPressed {
+			blockUpRight := blockUp || blockRight
+			blockUpLeft := blockUp || blockLeft
+			blockDownLeft := blockDown || blockLeft
+			blockDownRight := blockDown || blockRight
+
+			if upPressed && !downPressed && !blockUp {
 				dy = -1
 			}
-			if downPressed && !upPressed {
+			if downPressed && !upPressed && !blockDown {
 				dy = 1
 			}
-			if leftPressed && !rightPressed {
+			if leftPressed && !rightPressed && !blockLeft {
 				dx = -1
 			}
-			if rightPressed && !leftPressed {
+			if rightPressed && !leftPressed && !blockRight {
 				dx = 1
+			}
+
+			// 斜め移動のロジック
+			if upPressed && rightPressed && !blockUpRight {
+				dy, dx = -1, 1
+			} else if upPressed && leftPressed && !blockUpLeft {
+				dy, dx = -1, -1
+			} else if downPressed && leftPressed && !blockDownLeft {
+				dy, dx = 1, -1
+			} else if downPressed && rightPressed && !blockDownRight {
+				dy, dx = 1, 1
 			}
 		}
 		g.lastArrowPress = time.Now() // lastArrowPressの更新
