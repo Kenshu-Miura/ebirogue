@@ -65,6 +65,7 @@ type Enemy struct {
 	Type             string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
 	ExperiencePoints int    // Experience points enemy holds
 	PlayerDiscovered bool   // Whether the enemy has discovered the player
+	Direction        int    // -1: uninitialized, 0: Up, 1: Down, 2: Left, 3: Right
 }
 
 type Room struct {

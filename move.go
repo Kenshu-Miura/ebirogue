@@ -9,31 +9,47 @@ func moveRandomly(g *Game, i int) {
 	enemy := g.state.Enemies[i]
 	moved := false
 	for !moved {
-		direction := rand.Intn(4)
-		switch direction {
+		// If the enemy's Direction is uninitialized, select a random direction.
+		if enemy.Direction == -1 {
+			enemy.Direction = rand.Intn(4)
+		}
+
+		switch enemy.Direction {
 		case 0: // Up
 			newY, newX := enemy.Y-1, enemy.X
 			if newY > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
 				g.state.Enemies[i].Y--
 				moved = true
+				enemy.Direction = -1 // Reset direction after moving
+			} else {
+				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
 			}
 		case 1: // Down
 			newY, newX := enemy.Y+1, enemy.X
 			if newY < len(g.state.Map)-1 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
 				g.state.Enemies[i].Y++
 				moved = true
+				enemy.Direction = -1 // Reset direction after moving
+			} else {
+				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
 			}
 		case 2: // Left
 			newY, newX := enemy.Y, enemy.X-1
 			if newX > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
 				g.state.Enemies[i].X--
 				moved = true
+				enemy.Direction = -1 // Reset direction after moving
+			} else {
+				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
 			}
 		case 3: // Right
 			newY, newX := enemy.Y, enemy.X+1
 			if newX < len(g.state.Map[0])-1 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
 				g.state.Enemies[i].X++
 				moved = true
+				enemy.Direction = -1 // Reset direction after moving
+			} else {
+				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
 			}
 		}
 	}
