@@ -35,14 +35,15 @@ type Entity struct {
 }
 
 type Player struct {
-	Entity       // PlayerはEntityのフィールドを継承します
-	Health       int
-	MaxHealth    int
-	AttackPower  int    // 攻撃力
-	DefensePower int    // 防御力
-	Satiety      int    // 満腹度
-	Inventory    []Item // 所持アイテム
-	MaxInventory int    // 最大所持アイテム数
+	Entity           // PlayerはEntityのフィールドを継承します
+	Health           int
+	MaxHealth        int
+	AttackPower      int    // 攻撃力
+	DefensePower     int    // 防御力
+	Satiety          int    // 満腹度
+	Inventory        []Item // 所持アイテム
+	MaxInventory     int    // 最大所持アイテム数
+	ExperiencePoints int    // 所持経験値
 }
 
 type Item struct {
@@ -52,13 +53,15 @@ type Item struct {
 }
 
 type Enemy struct {
-	Entity       // EnemyはEntityのフィールドを継承します
-	Name         string
-	Health       int
-	MaxHealth    int
-	AttackPower  int    // 攻撃力
-	DefensePower int    // 防御力
-	Type         string // 敵の種類（例: "orc", "goblin", "slime" 等）
+	Entity           // Enemy inherits fields from Entity
+	Name             string
+	Health           int
+	MaxHealth        int
+	AttackPower      int    // Attack power
+	DefensePower     int    // Defense power
+	Type             string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
+	ExperiencePoints int    // Experience points enemy holds
+	PlayerDiscovered bool   // Whether the enemy has discovered the player
 }
 
 type GameState struct {
@@ -231,10 +234,10 @@ func validateAndPlaceDoor(mapGrid [][]Tile, x, y int) {
 	// If adjacent to a corridor, place a door; otherwise, place a wall
 	if adjacentCorridor {
 		mapGrid[y][x] = Tile{Type: "door", Blocked: true, BlockSight: true}
-		fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
+		//fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
 	} else {
 		mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
-		fmt.Printf("Wall placed at coordinates (%d, %d) as no adjacent corridor was found\n", x, y) // Log wall position
+		//fmt.Printf("Wall placed at coordinates (%d, %d) as no adjacent corridor was found\n", x, y) // Log wall position
 	}
 }
 
@@ -394,28 +397,37 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 		// Randomly select enemy type
 		var enemyType, enemyName, enemyChar string
 		var enemyAP, enemyDP int
+		var enemyHealth, enemyMaxHealth, enemyExperiencePoints int
 		if localRand.Intn(2) == 0 { // 50% chance for each type
 			enemyType = "Shrimp"
 			enemyName = "海老"
 			enemyChar = "E"
-			enemyAP = 5
+			enemyAP = 4
 			enemyDP = 2
+			enemyHealth = 30
+			enemyMaxHealth = 30
+			enemyExperiencePoints = 5
 		} else {
 			enemyType = "Snake"
 			enemyName = "蛇"
 			enemyChar = "S"
 			enemyAP = 7
 			enemyDP = 1
+			enemyHealth = 50
+			enemyMaxHealth = 50
+			enemyExperiencePoints = 10
 		}
 
 		enemies = append(enemies, Enemy{
-			Entity:       Entity{X: enemyX, Y: enemyY, Char: rune(enemyChar[0])},
-			Health:       50,
-			MaxHealth:    50,
-			Name:         enemyName,
-			AttackPower:  enemyAP,
-			DefensePower: enemyDP,
-			Type:         enemyType,
+			Entity:           Entity{X: enemyX, Y: enemyY, Char: rune(enemyChar[0])},
+			Health:           enemyHealth,
+			MaxHealth:        enemyMaxHealth,
+			Name:             enemyName,
+			AttackPower:      enemyAP,
+			DefensePower:     enemyDP,
+			Type:             enemyType,
+			ExperiencePoints: enemyExperiencePoints,
+			PlayerDiscovered: false,
 		})
 	}
 	return enemies
@@ -528,6 +540,10 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			if g.state.Enemies[i].Health <= 0 {
 				// 敵のHealthが0以下の場合、敵を配列から削除
 				g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
+
+				// 敵の経験値をプレイヤーの所持経験値に加える
+				g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+
 			} else {
 				// Enemy retaliates with its AttackPower
 				g.DamagePlayer(enemy.AttackPower)
@@ -675,35 +691,87 @@ func (g *Game) DamagePlayer(amount int) {
 
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
+		// Variables to store the difference in position
+		dx := enemy.X - g.state.Player.X
+		dy := enemy.Y - g.state.Player.Y
+
 		// Check if the enemy is adjacent or diagonally adjacent to the player
-		if abs(enemy.X-g.state.Player.X) <= 1 && abs(enemy.Y-g.state.Player.Y) <= 1 {
-			g.DamagePlayer(enemy.AttackPower) // Enemy attacks player with its AttackPower
+		if abs(dx) <= 1 && abs(dy) <= 1 {
+			//log.Printf("Enemy position: (%d, %d), Player position: (%d, %d)\n", enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y)
+			// Determine if there are walls that should prevent attacking
+			blockUp := enemy.Y > 0 && g.state.Map[enemy.Y-1][enemy.X].Blocked
+			blockDown := enemy.Y < len(g.state.Map)-1 && g.state.Map[enemy.Y+1][enemy.X].Blocked
+			blockLeft := enemy.X > 0 && g.state.Map[enemy.Y][enemy.X-1].Blocked
+			blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
+
+			// Log the values of blockUp, blockDown, blockLeft, blockRight
+			//log.Printf("blockUp: %v, blockDown: %v, blockLeft: %v, blockRight: %v\n", blockUp, blockDown, blockLeft, blockRight)
+
+			preventAttack := false
+
+			if dx == 1 && dy == -1 { // Player is to the top-left of enemy, this condition was missing
+				preventAttack = blockUp || blockLeft
+			} else if dx == -1 && dy == -1 { // Player is to the top-right of enemy
+				preventAttack = blockUp || blockRight
+			} else if dx == 1 && dy == 1 { // Player is to the bottom-left of enemy
+				preventAttack = blockDown || blockLeft
+			} else if dx == -1 && dy == 1 { // Player is to the bottom-right of enemy
+				preventAttack = blockDown || blockRight
+			}
+
+			// Log the value of preventAttack
+			//log.Printf("preventAttack: %v\n", preventAttack)
+
+			if preventAttack {
+				moveRandomly(g, i) // Call function to move enemy randomly
+			} else {
+				g.DamagePlayer(enemy.AttackPower) // Enemy attacks player with its AttackPower
+			}
+
 		} else {
-			moved := false
-			for !moved {
-				direction := rand.Intn(4)
-				switch direction {
-				case 0: // Up
-					if enemy.Y > 0 && !g.state.Map[enemy.Y-1][enemy.X].Blocked {
-						g.state.Enemies[i].Y--
-						moved = true
-					}
-				case 1: // Down
-					if enemy.Y < len(g.state.Map)-1 && !g.state.Map[enemy.Y+1][enemy.X].Blocked {
-						g.state.Enemies[i].Y++
-						moved = true
-					}
-				case 2: // Left
-					if enemy.X > 0 && !g.state.Map[enemy.Y][enemy.X-1].Blocked {
-						g.state.Enemies[i].X--
-						moved = true
-					}
-				case 3: // Right
-					if enemy.X < len(g.state.Map[0])-1 && !g.state.Map[enemy.Y][enemy.X+1].Blocked {
-						g.state.Enemies[i].X++
-						moved = true
-					}
-				}
+			moveRandomly(g, i) // Call function to move enemy randomly
+		}
+	}
+}
+
+func isOccupied(g *Game, x, y int) bool {
+	for _, enemy := range g.state.Enemies {
+		if enemy.X == x && enemy.Y == y {
+			return true
+		}
+	}
+	return false
+}
+
+func moveRandomly(g *Game, i int) {
+	enemy := g.state.Enemies[i]
+	moved := false
+	for !moved {
+		direction := rand.Intn(4)
+		switch direction {
+		case 0: // Up
+			newY, newX := enemy.Y-1, enemy.X
+			if newY > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+				g.state.Enemies[i].Y--
+				moved = true
+			}
+		case 1: // Down
+			newY, newX := enemy.Y+1, enemy.X
+			if newY < len(g.state.Map)-1 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+				g.state.Enemies[i].Y++
+				moved = true
+			}
+		case 2: // Left
+			newY, newX := enemy.Y, enemy.X-1
+			if newX > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+				g.state.Enemies[i].X--
+				moved = true
+			}
+		case 3: // Right
+			newY, newX := enemy.Y, enemy.X+1
+			if newX < len(g.state.Map[0])-1 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+				g.state.Enemies[i].X++
+				moved = true
 			}
 		}
 	}
@@ -803,14 +871,18 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	// Player Attack Power
 	playerAttackPowerText := fmt.Sprintf("攻撃力: %3d", g.state.Player.AttackPower)
-	text.Draw(screen, playerAttackPowerText, mplusNormalFont, screenWidth-110, 90, color.White) // Adjusted y-coordinate to place Attack Power text below Satiety text
+	text.Draw(screen, playerAttackPowerText, mplusNormalFont, screenWidth-110, 90, color.White)
 
 	// Player Defense Power
 	playerDefensePowerText := fmt.Sprintf("防御力: %3d", g.state.Player.DefensePower)
-	text.Draw(screen, playerDefensePowerText, mplusNormalFont, screenWidth-110, 110, color.White) // Adjusted y-coordinate to place Defense Power text below Attack Power text
+	text.Draw(screen, playerDefensePowerText, mplusNormalFont, screenWidth-110, 110, color.White)
+
+	// Player Experience Points
+	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
+	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-110, 130, color.White) // Adjusted y-coordinate to place Experience Points text below Defense Power text
 
 	// Floor level
-	floorText := fmt.Sprintf("Floor: %d", g.Floor)
+	floorText := fmt.Sprintf("階層: B%dF", g.Floor)
 	text.Draw(screen, floorText, mplusNormalFont, 10, 30, color.White) // x座標とy座標を直接指定
 }
 
@@ -858,14 +930,15 @@ func main() {
 
 	// プレイヤーの初期化
 	player := Player{
-		Entity:       Entity{Char: '@'},
-		Health:       100,
-		MaxHealth:    100,
-		Satiety:      100,
-		Inventory:    []Item{},
-		MaxInventory: 20,
-		AttackPower:  10, // 攻撃力を追加
-		DefensePower: 3,  // 防御力を追加
+		Entity:           Entity{Char: '@'},
+		Health:           100,
+		MaxHealth:        100,
+		Satiety:          100,
+		Inventory:        []Item{},
+		MaxInventory:     20,
+		AttackPower:      10, // 攻撃力を追加
+		DefensePower:     3,  // 防御力を追加
+		ExperiencePoints: 0,  // 経験値を追加,
 	}
 
 	// 最初のマップを生成
