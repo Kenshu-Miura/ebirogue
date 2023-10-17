@@ -62,10 +62,11 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 
 	// Adjust diagonal movement based on block status
 	if dx != 0 && dy != 0 { // Diagonal movement
-		if (dx > 0 && dy > 0 && (blockDown || blockRight)) || // Bottom Right
-			(dx > 0 && dy < 0 && (blockUp || blockRight)) || // Top Right
-			(dx < 0 && dy > 0 && (blockDown || blockLeft)) || // Bottom Left
-			(dx < 0 && dy < 0 && (blockUp || blockLeft)) { // Top Left
+		// Check the block status for the intended diagonal movement
+		blockDiagonal := g.state.Map[newY][newX].Blocked
+		log.Printf("Block Diagonal: %v\n", blockDiagonal) // Log the block status for the intended diagonal movement
+
+		if blockDiagonal || ((dx > 0 && dy > 0 && (blockDown || blockRight)) || (dx > 0 && dy < 0 && (blockUp || blockRight)) || (dx < 0 && dy > 0 && (blockDown || blockLeft)) || (dx < 0 && dy < 0 && (blockUp || blockLeft))) {
 			// Adjust movement to be only horizontal or vertical
 			if rand.Intn(2) == 0 {
 				newY = enemy.Y // Reset vertical movement
