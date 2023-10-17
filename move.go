@@ -8,7 +8,12 @@ import (
 func moveRandomly(g *Game, i int) {
 	enemy := g.state.Enemies[i]
 	moved := false
-	for !moved {
+	attemptCount := 0
+	maxAttempts := 10 // 最大試行回数
+
+	for !moved && attemptCount < maxAttempts {
+		attemptCount++ // 試行回数をインクリメント
+
 		// If the enemy's Direction is uninitialized, select a random direction.
 		if enemy.Direction == -1 {
 			enemy.Direction = rand.Intn(4)
