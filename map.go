@@ -120,32 +120,26 @@ func drawCorridor(mapGrid [][]Tile, room1, room2 Room, rooms []Room) {
 	turnX, turnY := x1, y2
 
 	// Draw vertical corridor from the center of room1 to the turning point
-	for y := min(y1, turnY); y <= max(y1, turnY); y++ {
-		isBoundary := false
-		for _, room := range rooms {
-			if isOnBoundary(x1, y, room) {
-				isBoundary = true
-				placeDoor(mapGrid, x1, y)
-				break
-			}
-		}
-		if !isBoundary {
-			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-		}
-	}
+	drawSegment(mapGrid, x1, y1, x1, turnY, rooms)
 
 	// Draw horizontal corridor from the turning point to the center of room2
-	for x := min(turnX, x2); x <= max(turnX, x2); x++ {
-		isBoundary := false
-		for _, room := range rooms {
-			if isOnBoundary(x, turnY, room) {
-				isBoundary = true
-				placeDoor(mapGrid, x, turnY)
-				break
+	drawSegment(mapGrid, turnX, turnY, x2, turnY, rooms)
+}
+
+func drawSegment(mapGrid [][]Tile, startX, startY, endX, endY int, rooms []Room) {
+	for x := min(startX, endX); x <= max(startX, endX); x++ {
+		for y := min(startY, endY); y <= max(startY, endY); y++ {
+			isBoundary := false
+			for _, room := range rooms {
+				if isOnBoundary(x, y, room) {
+					isBoundary = true
+					placeDoor(mapGrid, x, y)
+					break
+				}
 			}
-		}
-		if !isBoundary {
-			mapGrid[turnY][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+			if !isBoundary {
+				mapGrid[y][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+			}
 		}
 	}
 }
