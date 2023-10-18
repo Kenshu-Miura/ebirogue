@@ -171,7 +171,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Down to: (%d, %d)\n", newX, newY)
 					} else {
-						newX, newY = enemy.X+1, enemy.Y+1
+						newX, newY = enemy.X+1, enemy.Y-1
 						if isPositionFree(g, newX, newY, enemyIndex) {
 							g.state.Enemies[enemyIndex].X = newX
 							g.state.Enemies[enemyIndex].Y = newY
@@ -193,7 +193,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Down to: (%d, %d)\n", newX, newY)
 					} else {
-						newX, newY = enemy.X-1, enemy.Y+1
+						newX, newY = enemy.X-1, enemy.Y-1
 						if isPositionFree(g, newX, newY, enemyIndex) {
 							g.state.Enemies[enemyIndex].X = newX
 							g.state.Enemies[enemyIndex].Y = newY
@@ -216,7 +216,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Up to: (%d, %d)\n", newX, newY)
 					} else {
-						newX, newY = enemy.X-1, enemy.Y+1
+						newX, newY = enemy.X+1, enemy.Y+1
 						if isPositionFree(g, newX, newY, enemyIndex) {
 							g.state.Enemies[enemyIndex].X = newX
 							g.state.Enemies[enemyIndex].Y = newY
@@ -232,13 +232,13 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					//log.Printf("5Enemy moved UpLeft to: (%d, %d)\n", newX, newY)
 				} else {
 					//log.Printf("5Failed to move UpLeft to: (%d, %d)\n", newX, newY)
-					newX, newY = enemy.X, enemy.Y-1
+					newX, newY = enemy.X-1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
 						g.state.Enemies[enemyIndex].X = newX
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Up to: (%d, %d)\n", newX, newY)
 					} else {
-						newX, newY = enemy.X+1, enemy.Y-1
+						newX, newY = enemy.X-1, enemy.Y+1
 						if isPositionFree(g, newX, newY, enemyIndex) {
 							g.state.Enemies[enemyIndex].X = newX
 							g.state.Enemies[enemyIndex].Y = newY
@@ -499,7 +499,7 @@ func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
 		return false
 	}
 
-	result := room1 == room2
+	result := room1.ID == room2.ID
 	//if result {
 	//log.Printf("Points are in the same room: %v\n", result) // Log result
 	//}

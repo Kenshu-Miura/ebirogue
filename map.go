@@ -142,7 +142,15 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	}
 
 	var doorPositions []Coordinate
-	corridorStartPoints := generateCorridorStartPoints(rooms)
+	var corridorStartPoints []Coordinate // Initialize an empty slice for corridor start points
+
+	// Iterate through all rooms and collect all door positions as corridor start points
+	for _, room := range rooms {
+		for _, door := range room.Doors {
+			corridorStartPoint := Coordinate{X: door.X, Y: door.Y} // Convert Door to Coordinate
+			corridorStartPoints = append(corridorStartPoints, corridorStartPoint)
+		}
+	}
 
 	// Iterate through all corridor start points and try to connect them to each other
 	for i, startPoint := range corridorStartPoints {
@@ -176,6 +184,20 @@ func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
 		return true
 	}
 	return false
+}
+
+func setDoorPositions(room *Room) {
+	// Top edge
+	room.Doors = append(room.Doors, Door{X: room.X + room.Width/2, Y: room.Y})
+
+	// Bottom edge
+	room.Doors = append(room.Doors, Door{X: room.X + room.Width/2, Y: room.Y + room.Height - 1})
+
+	// Left edge
+	room.Doors = append(room.Doors, Door{X: room.X, Y: room.Y + room.Height/2})
+
+	// Right edge
+	room.Doors = append(room.Doors, Door{X: room.X + room.Width - 1, Y: room.Y + room.Height/2})
 }
 
 func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
@@ -227,6 +249,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 			}
 
 			if valid {
+				setDoorPositions(&newRoom) // Set door positions for the new room
 				rooms = append(rooms, newRoom)
 				for y := roomY; y < roomY+roomHeight; y++ {
 					for x := roomX; x < roomX+roomWidth; x++ {
@@ -252,7 +275,7 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 		var enemyX, enemyY int
 		for {
 			enemyRoom = rooms[localRand.Intn(len(rooms))]
-			if enemyRoom != playerRoom {
+			if enemyRoom.ID != playerRoom.ID {
 				enemyX = localRand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
 				enemyY = localRand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
 				occupied := false

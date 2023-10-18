@@ -82,8 +82,12 @@ type Room struct {
 	ID            int
 	X, Y          int
 	Width, Height int
+	Doors         []Door
 }
 
+type Door struct {
+	X, Y int
+}
 type Coordinate struct {
 	X, Y int
 }
