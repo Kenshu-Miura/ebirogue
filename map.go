@@ -399,7 +399,20 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 }
 
 func setRoomCenter(room *Room) {
-	room.Center = Coordinate{room.X + room.Width/2, room.Y + room.Height/2}
+	// Calculate the center coordinates
+	centerX := room.X + room.Width/2
+	centerY := room.Y + room.Height/2
+
+	// If the calculated center coordinates are odd, decrement them by 1 to make them even
+	if centerX%2 != 0 {
+		centerX--
+	}
+	if centerY%2 != 0 {
+		centerY--
+	}
+
+	// Set the center coordinates
+	room.Center = Coordinate{X: centerX, Y: centerY}
 }
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
