@@ -16,97 +16,6 @@ func isInsideRoomOrOnBoundary(x, y int, rooms []Room) bool {
 	return false
 }
 
-func validateAndPlaceDoor(mapGrid [][]Tile, x, y int) {
-	// Check adjacent tiles to see if there is a corridor tile
-	adjacentCorridor := false
-	directions := []Coordinate{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} // Up, Down, Left, Right
-	for _, dir := range directions {
-		newX, newY := x+dir.X, y+dir.Y
-		if mapGrid[newY][newX].Type == "corridor" {
-			adjacentCorridor = true
-			break
-		}
-	}
-
-	// If adjacent to a corridor, place a door; otherwise, place a wall
-	if adjacentCorridor {
-		//mapGrid[y][x] = Tile{Type: "door", Blocked: true, BlockSight: true}
-		mapGrid[y][x] = Tile{Type: "corridor", Blocked: false, BlockSight: true}
-		//fmt.Printf("Door placed at coordinates (%d, %d)\n", x, y) // Log door position
-	} else {
-		mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
-		//fmt.Printf("Wall placed at coordinates (%d, %d) as no adjacent corridor was found\n", x, y) // Log wall position
-	}
-}
-
-func isCorridor(tile Tile) bool {
-	return tile.Type == "corridor"
-}
-
-func isCorridorConnected(mapGrid [][]Tile, x1, y1, x2, y2 int) bool {
-	// Check if the two points have the same x-coordinate (vertical corridor)
-	if x1 == x2 {
-		for y := min(y1, y2) + 1; y < max(y1, y2); y++ {
-			for dx := -1; dx <= 1; dx++ {
-				neighbor := mapGrid[y][x1+dx]
-				if neighbor.Type == "wall" {
-					return false // A wall is touching the corridor
-				}
-			}
-		}
-		return true // No walls are touching the corridor
-	}
-
-	// Check if the two points have the same y-coordinate (horizontal corridor)
-	if y1 == y2 {
-		for x := min(x1, x2) + 1; x < max(x1, x2); x++ {
-			for dy := -1; dy <= 1; dy++ {
-				neighbor := mapGrid[y1+dy][x]
-				if neighbor.Type == "wall" {
-					return false // A wall is touching the corridor
-				}
-			}
-		}
-		return true // No walls are touching the corridor
-	}
-
-	// Determine the turning points
-	turnX1, turnY1 := x1, (y1+y2)/2
-	turnX2, turnY2 := x2, (y1+y2)/2
-
-	// Check vertical corridor from the starting point to the first turning point, excluding the start and end points
-	for y := min(y1, turnY1) + 1; y < max(y1, turnY1); y++ {
-		for dx := -1; dx <= 1; dx++ {
-			neighbor := mapGrid[y][x1+dx]
-			if neighbor.Type == "wall" {
-				return false // A wall is touching the corridor
-			}
-		}
-	}
-
-	// Check horizontal corridor from the first turning point to the second turning point
-	for x := min(turnX1, turnX2) + 1; x < max(turnX1, turnX2); x++ {
-		for dy := -1; dy <= 1; dy++ {
-			neighbor := mapGrid[turnY1+dy][x]
-			if neighbor.Type == "wall" {
-				return false // A wall is touching the corridor
-			}
-		}
-	}
-
-	// Check vertical corridor from the second turning point to the end point, excluding the start and end points
-	for y := min(turnY2, y2) + 1; y < max(turnY2, y2); y++ {
-		for dx := -1; dx <= 1; dx++ {
-			neighbor := mapGrid[y][x2+dx]
-			if neighbor.Type == "wall" {
-				return false // A wall is touching the corridor
-			}
-		}
-	}
-
-	return true // No walls are touching the corridor
-}
-
 func placeDoor(mapGrid [][]Tile, x, y int) {
 	mapGrid[y][x] = Tile{Type: "door", Blocked: false, BlockSight: true}
 }
@@ -243,18 +152,6 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	fmt.Println("All rooms are connected")
 }
 
-func removeDoorAtCoord(x, y int, rooms []Room) {
-	for i, room := range rooms {
-		for j, door := range room.Doors {
-			if door.X == x && door.Y == y {
-				// Remove the door from the Doors slice
-				rooms[i].Doors = append(rooms[i].Doors[:j], rooms[i].Doors[j+1:]...)
-				return // Exit function once door is removed
-			}
-		}
-	}
-}
-
 func logCurrentRoom(player Player, rooms []Room) string {
 	for _, room := range rooms {
 		// Check if the player is within the bounds of the current room
@@ -266,13 +163,10 @@ func logCurrentRoom(player Player, rooms []Room) string {
 	return ""
 }
 
-func logDoors(rooms []Room) {
+func logRooms(rooms []Room) {
 	for _, room := range rooms {
-		fmt.Printf("Room ID: %d, Doors:\n", room.ID)
+		fmt.Printf("Room ID: %d\n", room.ID)
 		fmt.Printf("  Center: X=%d, Y=%d\n", room.Center.X, room.Center.Y)
-		for i, door := range room.Doors {
-			fmt.Printf("  Door %d: X=%d, Y=%d\n", i, door.X, door.Y)
-		}
 	}
 }
 
@@ -313,20 +207,6 @@ func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
 		return true
 	}
 	return false
-}
-
-func setDoorPositions(room *Room) {
-	// Top edge
-	room.Doors = append(room.Doors, Coordinate{X: room.X + room.Width/2, Y: room.Y})
-
-	// Bottom edge
-	room.Doors = append(room.Doors, Coordinate{X: room.X + room.Width/2, Y: room.Y + room.Height - 1})
-
-	// Left edge
-	room.Doors = append(room.Doors, Coordinate{X: room.X, Y: room.Y + room.Height/2})
-
-	// Right edge
-	room.Doors = append(room.Doors, Coordinate{X: room.X + room.Width - 1, Y: room.Y + room.Height/2})
 }
 
 // Helper function to calculate the distance between two points
@@ -401,7 +281,6 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 				if !isWithinDistanceRange(newRoom, rooms, 10, 100) { // Assume min distance is 10 and max distance is 50 for now
 					continue // Skip the rest of the loop and try again if the room is too far or too close
 				}
-				setDoorPositions(&newRoom) // Set door positions for the new room
 				setRoomCenter(&newRoom)
 				rooms = append(rooms, newRoom)
 				for y := roomY; y < roomY+roomHeight; y++ {
