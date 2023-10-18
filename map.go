@@ -126,6 +126,54 @@ func drawCorridor(mapGrid [][]Tile, room1, room2 Room, rooms []Room) {
 	drawSegment(mapGrid, turnX, turnY, x2, turnY, rooms)
 }
 
+func detectVertex(mapGrid [][]Tile, startX, startY, endX, endY int, rooms []Room) (int, int, bool) {
+	// Determine the direction of the scan based on the start and end coordinates
+	deltaX := 0
+	deltaY := 0
+	if startX != endX {
+		deltaX = increment(startX, endX)
+	} else {
+		deltaY = increment(startY, endY)
+	}
+
+	// Initialize current position to the start coordinates
+	currentX := startX
+	currentY := startY
+
+	// Continue the scan until the end point is reached or an edge is detected
+	for currentX != endX || currentY != endY {
+		// Update the current position
+		currentX += deltaX
+		currentY += deltaY
+		for _, room := range rooms {
+			// Calculate the vertices of the room
+			topLeftX, topLeftY := room.X, room.Y
+			topRightX, topRightY := room.X+room.Width-1, room.Y
+			bottomLeftX, bottomLeftY := room.X, room.Y+room.Height-1
+			bottomRightX, bottomRightY := room.X+room.Width-1, room.Y+room.Height-1
+
+			// Check if the current position is near any of the vertices of the room
+			if (currentX == topLeftX && currentY == topLeftY) ||
+				(currentX == topRightX && currentY == topRightY) ||
+				(currentX == bottomLeftX && currentY == bottomLeftY) ||
+				(currentX == bottomRightX && currentY == bottomRightY) {
+				// Vertex detected, stop the scan and return the current position
+				return currentX, currentY, true
+			}
+		}
+	}
+
+	// No vertex detected, return the original turnY value and false
+	return currentX, currentY, false
+}
+
+func increment(start, end int) int {
+	if start < end {
+		return 1 // Increment positively
+	}
+	return -1 // Increment negatively
+}
+
 func drawSegment(mapGrid [][]Tile, startX, startY, endX, endY int, rooms []Room) {
 	for x := min(startX, endX); x <= max(startX, endX); x++ {
 		for y := min(startY, endY); y <= max(startY, endY); y++ {
