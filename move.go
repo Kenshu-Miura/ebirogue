@@ -506,6 +506,30 @@ func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
 	return result
 }
 
+func (g *Game) CheetMovePlayer(dx, dy int) bool {
+	// dx と dy が両方とも0の場合、移動は発生していない
+	if dx == 0 && dy == 0 {
+		return false
+	}
+
+	newPX := g.state.Player.X + dx
+	newPY := g.state.Player.Y + dy
+
+	// 敵との戦闘チェック
+	if g.CheckForEnemies(newPX, newPY) {
+		// 戦闘が発生した場合、プレイヤーは移動しない
+		return false
+	}
+
+	// マップ範囲内およびブロックされていないタイル上にあることを確認
+
+	g.state.Player.X = newPX
+	g.state.Player.Y = newPY
+	g.IncrementMoveCount() // プレイヤーが移動するたびにカウントを増やす
+	return true
+
+}
+
 func (g *Game) MovePlayer(dx, dy int) bool {
 	// dx と dy が両方とも0の場合、移動は発生していない
 	if dx == 0 && dy == 0 {

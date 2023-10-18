@@ -25,6 +25,73 @@ func (g *Game) OpenDoor() {
 	}
 }
 
+func (g *Game) CheetHandleInput() (int, int) {
+	var dx, dy int
+
+	// キーの押下状態を取得
+	upPressed := ebiten.IsKeyPressed(ebiten.KeyUp)
+	downPressed := ebiten.IsKeyPressed(ebiten.KeyDown)
+	leftPressed := ebiten.IsKeyPressed(ebiten.KeyLeft)
+	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight)
+	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
+	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
+
+	// 足踏みロジック
+	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond {
+		g.IncrementMoveCount()
+		g.MoveEnemies()
+		g.lastIncrement = time.Now() // lastIncrementの更新
+	}
+
+	arrowPressed := upPressed || downPressed || leftPressed || rightPressed
+
+	// 矢印キーの押下ロジック
+	if arrowPressed && time.Since(g.lastArrowPress) >= 125*time.Millisecond {
+
+		if shiftPressed { // 斜め移動のロジック
+
+			if upPressed && rightPressed {
+				dy, dx = -1, 1
+			} else if upPressed && leftPressed {
+				dy, dx = -1, -1
+			} else if downPressed && leftPressed {
+				dy, dx = 1, -1
+			} else if downPressed && rightPressed {
+				dy, dx = 1, 1
+			}
+
+		} else { // 上下左右の移動のロジック
+
+			if upPressed && !downPressed {
+				dy = -1
+			}
+			if downPressed && !upPressed {
+				dy = 1
+			}
+			if leftPressed && !rightPressed {
+				dx = -1
+			}
+			if rightPressed && !leftPressed {
+				dx = 1
+			}
+
+			// 斜め移動のロジック
+			if upPressed && rightPressed {
+				dy, dx = -1, 1
+			} else if upPressed && leftPressed {
+				dy, dx = -1, -1
+			} else if downPressed && leftPressed {
+				dy, dx = 1, -1
+			} else if downPressed && rightPressed {
+				dy, dx = 1, 1
+			}
+		}
+		g.lastArrowPress = time.Now() // lastArrowPressの更新
+	}
+
+	return dx, dy
+}
+
 func (g *Game) HandleInput() (int, int) {
 	var dx, dy int
 

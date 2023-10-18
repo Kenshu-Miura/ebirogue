@@ -83,6 +83,7 @@ type Room struct {
 	X, Y          int
 	Width, Height int
 	Doors         []Coordinate
+	Center        Coordinate
 }
 type Coordinate struct {
 	X, Y int
@@ -193,9 +194,11 @@ func (g *Game) IncrementMoveCount() {
 }
 
 func (g *Game) Update() error {
-	dx, dy := g.HandleInput()
+	//dx, dy := g.HandleInput()
+	dx, dy := g.CheetHandleInput()
 
-	moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+	//moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+	moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
 
 	if moved {
 		g.MoveEnemies()
