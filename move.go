@@ -238,7 +238,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Up to: (%d, %d)\n", newX, newY)
 					} else {
-						newX, newY = enemy.X-1, enemy.Y+1
+						newX, newY = enemy.X+1, enemy.Y-1
 						if isPositionFree(g, newX, newY, enemyIndex) {
 							g.state.Enemies[enemyIndex].X = newX
 							g.state.Enemies[enemyIndex].Y = newY
