@@ -176,6 +176,8 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 							drawCorridor(mapGrid, door1.X, door1.Y, door2.X, door2.Y, rooms)
 							validateAndPlaceDoor(mapGrid, door1.X, door1.Y) // Validate and place doors
 							validateAndPlaceDoor(mapGrid, door2.X, door2.Y) // Validate and place doors
+							removeDoorAtCoord(door1.X, door1.Y, rooms)      // Remove doors from the Doors slice
+							removeDoorAtCoord(door2.X, door2.Y, rooms)      // Remove doors from the Doors slice
 						}
 					}
 				}
@@ -185,6 +187,29 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 
 	logDoors(rooms)
 	//fmt.Println("All rooms are connected")
+}
+
+func removeDoorAtCoord(x, y int, rooms []Room) {
+	for i, room := range rooms {
+		for j, door := range room.Doors {
+			if door.X == x && door.Y == y {
+				// Remove the door from the Doors slice
+				rooms[i].Doors = append(rooms[i].Doors[:j], rooms[i].Doors[j+1:]...)
+				return // Exit function once door is removed
+			}
+		}
+	}
+}
+
+func logCurrentRoom(player Player, rooms []Room) string {
+	for _, room := range rooms {
+		// Check if the player is within the bounds of the current room
+		if player.X >= room.X && player.X < room.X+room.Width &&
+			player.Y >= room.Y && player.Y < room.Y+room.Height {
+			return fmt.Sprintf("Room ID: %d\n", room.ID)
+		}
+	}
+	return ""
 }
 
 func logDoors(rooms []Room) {

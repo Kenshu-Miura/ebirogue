@@ -106,4 +106,12 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	playerLevelText := fmt.Sprintf("レベル: %d", g.state.Player.Level)
 	text.Draw(screen, playerLevelText, mplusNormalFont, 10, 50, color.White) // x座標とy座標を直接指定
 
+	// Player Coordinate
+	playerCoordinateText := fmt.Sprintf("座標: (%d, %d)", g.state.Player.X, g.state.Player.Y)
+	text.Draw(screen, playerCoordinateText, mplusNormalFont, 10, 70, color.White) // x座標とy座標を直接指定
+
+	// Player Room
+	playerRoomText := logCurrentRoom(g.state.Player, g.rooms)
+	text.Draw(screen, playerRoomText, mplusNormalFont, 10, 90, color.White) // x座標とy座標を直接指定
+
 }
