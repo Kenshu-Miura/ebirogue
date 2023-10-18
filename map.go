@@ -403,12 +403,12 @@ func setRoomCenter(room *Room) {
 	centerX := room.X + room.Width/2
 	centerY := room.Y + room.Height/2
 
-	// If the calculated center coordinates are odd, decrement them by 1 to make them even
-	if centerX%2 != 0 {
-		centerX--
+	// If the calculated center coordinates are even, increment them by 1 to make them odd
+	if centerX%2 == 0 {
+		centerX++
 	}
-	if centerY%2 != 0 {
-		centerY--
+	if centerY%2 == 0 {
+		centerY++
 	}
 
 	// Set the center coordinates
