@@ -82,7 +82,7 @@ func isCorridorConnected(mapGrid [][]Tile, x1, y1, x2, y2 int) bool {
 	return true // No walls are touching the corridor
 }
 
-func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositions []Coordinate) {
+func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room) {
 	//fmt.Printf("Drawing corridor from (%d, %d) to (%d, %d)\n", x1, y1, x2, y2) // Log the start and end points
 	// Determine the turning points
 	turnX1, turnY1 := x1, (y1+y2)/2
@@ -164,38 +164,26 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		return
 	}
 
-	var doorPositions []Coordinate
-	var corridorStartPoints []Coordinate // Initialize an empty slice for corridor start points
-
-	// Iterate through all rooms and collect all door positions as corridor start points
-	for _, room := range rooms {
-		for _, door := range room.Doors {
-			corridorStartPoint := door // No need to convert Door to Coordinate
-			corridorStartPoints = append(corridorStartPoints, corridorStartPoint)
-		}
-	}
-
-	// Iterate through all corridor start points and try to connect them to each other
-	for i, startPoint := range corridorStartPoints {
-		for j, endPoint := range corridorStartPoints {
-			// Avoid connecting a point to itself
+	// Iterate through all rooms and try to connect their doors to each other
+	for i, room1 := range rooms {
+		for j, room2 := range rooms {
+			// Avoid connecting a room to itself
 			if i != j {
-				isConnectable := isCorridorConnected(mapGrid, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y)
-				if isConnectable {
-					drawCorridor(mapGrid, startPoint.X, startPoint.Y, endPoint.X, endPoint.Y, rooms, doorPositions)
-					// Store door positions for later
-					doorPositions = append(doorPositions, startPoint, endPoint)
+				for _, door1 := range room1.Doors {
+					for _, door2 := range room2.Doors {
+						isConnectable := isCorridorConnected(mapGrid, door1.X, door1.Y, door2.X, door2.Y)
+						if isConnectable {
+							drawCorridor(mapGrid, door1.X, door1.Y, door2.X, door2.Y, rooms)
+							validateAndPlaceDoor(mapGrid, door1.X, door1.Y) // Validate and place doors
+							validateAndPlaceDoor(mapGrid, door2.X, door2.Y) // Validate and place doors
+						}
+					}
 				}
 			}
 		}
 	}
 
-	for _, pos := range doorPositions {
-		validateAndPlaceDoor(mapGrid, pos.X, pos.Y) // Use the new function to validate and place doors
-	}
-
 	logDoors(rooms)
-
 	//fmt.Println("All rooms are connected")
 }
 
