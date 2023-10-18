@@ -329,6 +329,25 @@ func setDoorPositions(room *Room) {
 	room.Doors = append(room.Doors, Coordinate{X: room.X + room.Width - 1, Y: room.Y + room.Height/2})
 }
 
+// Helper function to calculate the distance between two points
+func distance(x1, y1, x2, y2 int) int {
+	dx := x2 - x1
+	dy := y2 - y1
+	return int(math.Sqrt(float64(dx*dx + dy*dy)))
+}
+
+// Helper function to check if the distance between the center of the new room
+// and the center of any existing room is within a specific range
+func isWithinDistanceRange(newRoom Room, rooms []Room, minDistance, maxDistance int) bool {
+	for _, room := range rooms {
+		dist := distance(newRoom.Center.X, newRoom.Center.Y, room.Center.X, room.Center.Y)
+		if dist < minDistance || dist > maxDistance {
+			return false
+		}
+	}
+	return true
+}
+
 func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	var rooms []Room
 
@@ -378,6 +397,10 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 			}
 
 			if valid {
+				// New validation to ensure rooms are not too far apart
+				if !isWithinDistanceRange(newRoom, rooms, 10, 100) { // Assume min distance is 10 and max distance is 50 for now
+					continue // Skip the rest of the loop and try again if the room is too far or too close
+				}
 				setDoorPositions(&newRoom) // Set door positions for the new room
 				setRoomCenter(&newRoom)
 				rooms = append(rooms, newRoom)
