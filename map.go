@@ -103,22 +103,16 @@ func isCorridorConnected(mapGrid [][]Tile, x1, y1, x2, y2 int) bool {
 }
 
 func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositions []Coordinate) {
-	fmt.Printf("Drawing corridor from (%d, %d) to (%d, %d)\n", x1, y1, x2, y2) // Log the start and end points
+	//fmt.Printf("Drawing corridor from (%d, %d) to (%d, %d)\n", x1, y1, x2, y2) // Log the start and end points
 	// Determine the turning points
 	turnX1, turnY1 := x1, (y1+y2)/2
 	turnX2, turnY2 := x2, (y1+y2)/2
-
-	// Check if the corridor can be connected without intersecting walls
-	if !isCorridorConnected(mapGrid, x1, y1, x2, y2) {
-		fmt.Println("Corridor cannot be connected without intersecting walls")
-		return
-	}
 
 	var lastX, lastY int = -1, -1 // Update initial values to -1, -1 as an indication of no previous corridor cell
 
 	// Function to check if a cell is adjacent to an existing corridor
 	isAdjacentToCorridor := func(x, y, lastX, lastY int) bool {
-		fmt.Printf("Checking adjacency for cell (%d, %d), last drawn cell (%d, %d)\n", x, y, lastX, lastY) // Log the cells being checked
+		//fmt.Printf("Checking adjacency for cell (%d, %d), last drawn cell (%d, %d)\n", x, y, lastX, lastY) // Log the cells being checked
 		directions := []Coordinate{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
 		for _, dir := range directions {
 			adjX, adjY := x+dir.X, y+dir.Y
@@ -145,8 +139,8 @@ func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositi
 		//fmt.Printf("Vertical segment 1: Evaluating cell (%d, %d)\n", x1, y) // Log the current cell being evaluated
 		if !isInsideRoomOrOnBoundary(x1, y, rooms) && !isCorridor(mapGrid[y][x1]) {
 			if isAdjacentToCorridor(x1, y, lastX, lastY) {
-				//mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-				break // Skip to the next iteration if adjacent to an existing corridor
+				mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+				return // Skip to the next iteration if adjacent to an existing corridor
 			}
 			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
@@ -160,8 +154,8 @@ func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositi
 		//fmt.Printf("Horizontal segment: Evaluating cell (%d, %d)\n", x, turnY1) // Log the current cell being evaluated
 		if !isInsideRoomOrOnBoundary(x, turnY1, rooms) && !isCorridor(mapGrid[turnY1][x]) {
 			if isAdjacentToCorridor(x, turnY1, lastX, lastY) {
-				//mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-				break // Skip to the next iteration if adjacent to an existing corridor
+				mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+				return // Skip to the next iteration if adjacent to an existing corridor
 			}
 			mapGrid[turnY1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
@@ -175,8 +169,8 @@ func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room, doorPositi
 		//fmt.Printf("Vertical segment 2: Evaluating cell (%d, %d)\n", x2, y) // Log the current cell being evaluated
 		if !isInsideRoomOrOnBoundary(x2, y, rooms) && !isCorridor(mapGrid[y][x2]) {
 			if isAdjacentToCorridor(x2, y, lastX, lastY) {
-				//mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-				break // Skip to the next iteration if adjacent to an existing corridor
+				mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+				return // Skip to the next iteration if adjacent to an existing corridor
 			}
 			mapGrid[y][x2] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
