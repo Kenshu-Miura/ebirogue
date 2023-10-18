@@ -15,7 +15,16 @@ import (
 )
 
 const (
-	tileSize = 20 // タイルのサイズを20x20ピクセルに設定
+	tileSize      = 20 // タイルのサイズを20x20ピクセルに設定
+	Uninitialized = -1
+	Up            = 0
+	Down          = 1
+	Left          = 2
+	Right         = 3
+	UpRight       = 4
+	DownRight     = 5
+	UpLeft        = 6
+	DownLeft      = 7
 )
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -47,6 +56,7 @@ type Player struct {
 	MaxInventory     int    // 最大所持アイテム数
 	ExperiencePoints int    // 所持経験値
 	Level            int    // プレイヤーのレベル
+	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 }
 
 type Item struct {
@@ -65,7 +75,7 @@ type Enemy struct {
 	Type             string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
 	ExperiencePoints int    // Experience points enemy holds
 	PlayerDiscovered bool   // Whether the enemy has discovered the player
-	Direction        int    // -1: uninitialized, 0: Up, 1: Down, 2: Left, 3: Right
+	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 }
 
 type Room struct {
@@ -252,6 +262,7 @@ func NewGame() *Game {
 		Level:            1,
 		Power:            8,
 		MaxPower:         8,
+		Direction:        Down,
 	}
 
 	// 最初のマップを生成

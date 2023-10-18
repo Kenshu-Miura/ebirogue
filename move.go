@@ -6,57 +6,58 @@ import (
 	"math/rand"
 )
 
+func moveEnemy(g *Game, i int, dx, dy int) bool {
+	enemy := g.state.Enemies[i]
+	newX, newY := enemy.X+dx, enemy.Y+dy
+	if newX >= 0 && newX < len(g.state.Map[0]) && newY >= 0 && newY < len(g.state.Map) &&
+		!g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		g.state.Enemies[i].X = newX
+		g.state.Enemies[i].Y = newY
+		return true
+	}
+	return false
+}
+
 func moveRandomly(g *Game, i int) {
 	enemy := g.state.Enemies[i]
 	moved := false
 	attemptCount := 0
 	maxAttempts := 10 // 最大試行回数
 
+	directions := []int{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
+
 	for !moved && attemptCount < maxAttempts {
 		attemptCount++ // 試行回数をインクリメント
 
-		// If the enemy's Direction is uninitialized, select a random direction.
 		if enemy.Direction == -1 {
-			enemy.Direction = rand.Intn(4)
+			enemy.Direction = directions[rand.Intn(len(directions))]
 		}
 
+		var dx, dy int
 		switch enemy.Direction {
-		case 0: // Up
-			newY, newX := enemy.Y-1, enemy.X
-			if newY > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-				g.state.Enemies[i].Y--
-				moved = true
-				enemy.Direction = -1 // Reset direction after moving
-			} else {
-				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
-			}
-		case 1: // Down
-			newY, newX := enemy.Y+1, enemy.X
-			if newY < len(g.state.Map)-1 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-				g.state.Enemies[i].Y++
-				moved = true
-				enemy.Direction = -1 // Reset direction after moving
-			} else {
-				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
-			}
-		case 2: // Left
-			newY, newX := enemy.Y, enemy.X-1
-			if newX > 0 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-				g.state.Enemies[i].X--
-				moved = true
-				enemy.Direction = -1 // Reset direction after moving
-			} else {
-				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
-			}
-		case 3: // Right
-			newY, newX := enemy.Y, enemy.X+1
-			if newX < len(g.state.Map[0])-1 && !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
-				g.state.Enemies[i].X++
-				moved = true
-				enemy.Direction = -1 // Reset direction after moving
-			} else {
-				enemy.Direction = rand.Intn(4) // Select a new random direction if movement is blocked
-			}
+		case Up:
+			dx, dy = 0, -1
+		case Down:
+			dx, dy = 0, 1
+		case Left:
+			dx, dy = -1, 0
+		case Right:
+			dx, dy = 1, 0
+		case UpRight:
+			dx, dy = 1, -1
+		case UpLeft:
+			dx, dy = -1, -1
+		case DownRight:
+			dx, dy = 1, 1
+		case DownLeft:
+			dx, dy = -1, 1
+		}
+
+		if moveEnemy(g, i, dx, dy) {
+			moved = true
+			enemy.Direction = -1 // Reset direction after moving
+		} else {
+			enemy.Direction = directions[rand.Intn(len(directions))] // Select a new random direction if movement is blocked
 		}
 	}
 }

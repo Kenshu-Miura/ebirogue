@@ -272,6 +272,7 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 		var enemyType, enemyName, enemyChar string
 		var enemyAP, enemyDP int
 		var enemyHealth, enemyMaxHealth, enemyExperiencePoints int
+		var enemyDirection int
 		if localRand.Intn(2) == 0 { // 50% chance for each type
 			enemyType = "Shrimp"
 			enemyName = "海老"
@@ -281,6 +282,7 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 			enemyHealth = 30
 			enemyMaxHealth = 30
 			enemyExperiencePoints = 5
+			enemyDirection = Down
 		} else {
 			enemyType = "Snake"
 			enemyName = "蛇"
@@ -290,6 +292,7 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 			enemyHealth = 50
 			enemyMaxHealth = 50
 			enemyExperiencePoints = 10
+			enemyDirection = Down
 		}
 
 		enemies = append(enemies, Enemy{
@@ -301,6 +304,7 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 			DefensePower:     enemyDP,
 			Type:             enemyType,
 			ExperiencePoints: enemyExperiencePoints,
+			Direction:        enemyDirection,
 			PlayerDiscovered: false,
 		})
 	}
