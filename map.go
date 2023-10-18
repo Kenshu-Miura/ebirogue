@@ -17,26 +17,6 @@ func isInsideRoomOrOnBoundary(x, y int, rooms []Room) bool {
 	return false
 }
 
-func generateCorridorStartPoints(rooms []Room) []Coordinate {
-	var corridorStartPoints []Coordinate
-
-	for _, room := range rooms {
-		// Top edge
-		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X + room.Width/2, Y: room.Y})
-
-		// Bottom edge
-		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X + room.Width/2, Y: room.Y + room.Height - 1})
-
-		// Left edge
-		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X, Y: room.Y + room.Height/2})
-
-		// Right edge
-		corridorStartPoints = append(corridorStartPoints, Coordinate{X: room.X + room.Width - 1, Y: room.Y + room.Height/2})
-	}
-
-	return corridorStartPoints
-}
-
 func validateAndPlaceDoor(mapGrid [][]Tile, x, y int) {
 	// Check adjacent tiles to see if there is a corridor tile
 	adjacentCorridor := false
@@ -214,7 +194,18 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 		validateAndPlaceDoor(mapGrid, pos.X, pos.Y) // Use the new function to validate and place doors
 	}
 
+	logDoors(rooms)
+
 	//fmt.Println("All rooms are connected")
+}
+
+func logDoors(rooms []Room) {
+	for _, room := range rooms {
+		fmt.Printf("Room ID: %d, Doors:\n", room.ID)
+		for i, door := range room.Doors {
+			fmt.Printf("  Door %d: X=%d, Y=%d\n", i, door.X, door.Y)
+		}
+	}
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
