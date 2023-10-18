@@ -119,6 +119,17 @@ func drawCorridor(mapGrid [][]Tile, room1, room2 Room, rooms []Room) {
 	// Determine the turning point
 	turnX, turnY := x1, y2
 
+	_, _, vertexDetected := detectVertex(mapGrid, x1, y1, turnX, turnY, rooms)
+	if vertexDetected {
+		turnX, turnY = x2, y1
+	}
+
+	_, _, vertexDetected = detectVertex(mapGrid, turnX, turnY, x2, y2, rooms)
+
+	if vertexDetected {
+		turnX, turnY = x2, y1
+	}
+
 	// Draw vertical corridor from the center of room1 to the turning point
 	drawSegment(mapGrid, x1, y1, x1, turnY, rooms)
 
@@ -181,11 +192,12 @@ func drawSegment(mapGrid [][]Tile, startX, startY, endX, endY int, rooms []Room)
 			for _, room := range rooms {
 				if isOnBoundary(x, y, room) {
 					isBoundary = true
-					placeDoor(mapGrid, x, y)
+					//placeDoor(mapGrid, x, y)
+					mapGrid[y][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 					break
 				}
 			}
-			if !isBoundary {
+			if !isBoundary && !isInsideRoomOrOnBoundary(x, y, rooms) {
 				mapGrid[y][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 			}
 		}
