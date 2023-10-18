@@ -164,11 +164,17 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					log.Printf("2Enemy moved DownRight to: (%d, %d)\n", newX, newY)
 				} else {
 					//log.Printf("2Failed to move DownRight to: (%d, %d)\n", newX, newY)
-					newX, newY = enemy.X, enemy.Y+1
+					newX, newY = enemy.X+1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
+						g.state.Enemies[enemyIndex].X = newX
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Down to: (%d, %d)\n", newX, newY)
 					} else {
+						newX, newY = enemy.X+1, enemy.Y+1
+						if isPositionFree(g, newX, newY, enemyIndex) {
+							g.state.Enemies[enemyIndex].X = newX
+							g.state.Enemies[enemyIndex].Y = newY
+						}
 						//log.Printf("extra Failed to move Down to: (%d, %d)\n", newX, newY)
 					}
 				}
@@ -180,11 +186,17 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					//log.Printf("3Enemy moved DownLeft to: (%d, %d)\n", newX, newY)
 				} else {
 					//log.Printf("3Failed to move DownLeft to: (%d, %d)\n", newX, newY)
-					newX, newY = enemy.X, enemy.Y+1
+					newX, newY = enemy.X-1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
+						g.state.Enemies[enemyIndex].X = newX
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Down to: (%d, %d)\n", newX, newY)
 					} else {
+						newX, newY = enemy.X-1, enemy.Y+1
+						if isPositionFree(g, newX, newY, enemyIndex) {
+							g.state.Enemies[enemyIndex].X = newX
+							g.state.Enemies[enemyIndex].Y = newY
+						}
 						//log.Printf("extra Failed to move Down to: (%d, %d)\n", newX, newY)
 					}
 
@@ -197,11 +209,17 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					//log.Printf("4Enemy moved UpRight to: (%d, %d)\n", newX, newY)
 				} else {
 					//log.Printf("4Failed to move UpRight to: (%d, %d)\n", newX, newY)
-					newX, newY = enemy.X, enemy.Y-1
+					newX, newY = enemy.X+1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
+						g.state.Enemies[enemyIndex].X = newX
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Up to: (%d, %d)\n", newX, newY)
 					} else {
+						newX, newY = enemy.X-1, enemy.Y+1
+						if isPositionFree(g, newX, newY, enemyIndex) {
+							g.state.Enemies[enemyIndex].X = newX
+							g.state.Enemies[enemyIndex].Y = newY
+						}
 						//log.Printf("extra Failed to move Up to: (%d, %d)\n", newX, newY)
 					}
 				}
@@ -215,9 +233,15 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					//log.Printf("5Failed to move UpLeft to: (%d, %d)\n", newX, newY)
 					newX, newY = enemy.X, enemy.Y-1
 					if isPositionFree(g, newX, newY, enemyIndex) {
+						g.state.Enemies[enemyIndex].X = newX
 						g.state.Enemies[enemyIndex].Y = newY
 						//log.Printf("extra Enemy moved Up to: (%d, %d)\n", newX, newY)
 					} else {
+						newX, newY = enemy.X+1, enemy.Y-1
+						if isPositionFree(g, newX, newY, enemyIndex) {
+							g.state.Enemies[enemyIndex].X = newX
+							g.state.Enemies[enemyIndex].Y = newY
+						}
 						//log.Printf("extraFailed to move Up to: (%d, %d)\n", newX, newY)
 					}
 				}
@@ -392,7 +416,7 @@ func (g *Game) MoveEnemies() {
 		// Check if the enemy and player are in the same room
 		inSameRoom := isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms)
 
-		if distance >= 7 && !inSameRoom {
+		if distance >= 15 && !inSameRoom {
 			g.state.Enemies[i].PlayerDiscovered = false
 		} else if inSameRoom {
 			g.state.Enemies[i].PlayerDiscovered = true
