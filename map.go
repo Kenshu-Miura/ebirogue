@@ -170,7 +170,7 @@ func connectRooms(rooms []Room, mapGrid [][]Tile) {
 	// Iterate through all rooms and collect all door positions as corridor start points
 	for _, room := range rooms {
 		for _, door := range room.Doors {
-			corridorStartPoint := Coordinate{X: door.X, Y: door.Y} // Convert Door to Coordinate
+			corridorStartPoint := door // No need to convert Door to Coordinate
 			corridorStartPoints = append(corridorStartPoints, corridorStartPoint)
 		}
 	}
@@ -222,16 +222,16 @@ func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
 
 func setDoorPositions(room *Room) {
 	// Top edge
-	room.Doors = append(room.Doors, Door{X: room.X + room.Width/2, Y: room.Y})
+	room.Doors = append(room.Doors, Coordinate{X: room.X + room.Width/2, Y: room.Y})
 
 	// Bottom edge
-	room.Doors = append(room.Doors, Door{X: room.X + room.Width/2, Y: room.Y + room.Height - 1})
+	room.Doors = append(room.Doors, Coordinate{X: room.X + room.Width/2, Y: room.Y + room.Height - 1})
 
 	// Left edge
-	room.Doors = append(room.Doors, Door{X: room.X, Y: room.Y + room.Height/2})
+	room.Doors = append(room.Doors, Coordinate{X: room.X, Y: room.Y + room.Height/2})
 
 	// Right edge
-	room.Doors = append(room.Doors, Door{X: room.X + room.Width - 1, Y: room.Y + room.Height/2})
+	room.Doors = append(room.Doors, Coordinate{X: room.X + room.Width - 1, Y: room.Y + room.Height/2})
 }
 
 func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
