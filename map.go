@@ -45,6 +45,32 @@ func isCorridor(tile Tile) bool {
 }
 
 func isCorridorConnected(mapGrid [][]Tile, x1, y1, x2, y2 int) bool {
+	// Check if the two points have the same x-coordinate (vertical corridor)
+	if x1 == x2 {
+		for y := min(y1, y2) + 1; y < max(y1, y2); y++ {
+			for dx := -1; dx <= 1; dx++ {
+				neighbor := mapGrid[y][x1+dx]
+				if neighbor.Type == "wall" {
+					return false // A wall is touching the corridor
+				}
+			}
+		}
+		return true // No walls are touching the corridor
+	}
+
+	// Check if the two points have the same y-coordinate (horizontal corridor)
+	if y1 == y2 {
+		for x := min(x1, x2) + 1; x < max(x1, x2); x++ {
+			for dy := -1; dy <= 1; dy++ {
+				neighbor := mapGrid[y1+dy][x]
+				if neighbor.Type == "wall" {
+					return false // A wall is touching the corridor
+				}
+			}
+		}
+		return true // No walls are touching the corridor
+	}
+
 	// Determine the turning points
 	turnX1, turnY1 := x1, (y1+y2)/2
 	turnX2, turnY2 := x2, (y1+y2)/2
@@ -84,6 +110,23 @@ func isCorridorConnected(mapGrid [][]Tile, x1, y1, x2, y2 int) bool {
 
 func drawCorridor(mapGrid [][]Tile, x1, y1, x2, y2 int, rooms []Room) {
 	//fmt.Printf("Drawing corridor from (%d, %d) to (%d, %d)\n", x1, y1, x2, y2) // Log the start and end points
+
+	// If the two points share the same x-coordinate, draw a vertical corridor
+	if x1 == x2 {
+		for y := min(y1, y2); y <= max(y1, y2); y++ {
+			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		}
+		return
+	}
+
+	// If the two points share the same y-coordinate, draw a horizontal corridor
+	if y1 == y2 {
+		for x := min(x1, x2); x <= max(x1, x2); x++ {
+			mapGrid[y1][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
+		}
+		return
+	}
+
 	// Determine the turning points
 	turnX1, turnY1 := x1, (y1+y2)/2
 	turnX2, turnY2 := x2, (y1+y2)/2
