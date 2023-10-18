@@ -4,7 +4,6 @@ import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math"
-	"math/rand"
 )
 
 func isInsideRoomOrOnBoundary(x, y int, rooms []Room) bool {
@@ -108,6 +107,10 @@ func isCorridorConnected(mapGrid [][]Tile, x1, y1, x2, y2 int) bool {
 	return true // No walls are touching the corridor
 }
 
+func placeDoor(mapGrid [][]Tile, x, y int) {
+	mapGrid[y][x] = Tile{Type: "door", Blocked: false, BlockSight: true}
+}
+
 func drawCorridor(mapGrid [][]Tile, room1, room2 Room, rooms []Room) {
 	// Get the center coordinates of the rooms
 	x1, y1 := room1.Center.X, room1.Center.Y
@@ -118,17 +121,48 @@ func drawCorridor(mapGrid [][]Tile, room1, room2 Room, rooms []Room) {
 
 	// Draw vertical corridor from the center of room1 to the turning point
 	for y := min(y1, turnY); y <= max(y1, turnY); y++ {
-		if !isInsideRoomOrOnBoundary(x1, y, rooms) {
+		isBoundary := false
+		for _, room := range rooms {
+			if isOnBoundary(x1, y, room) {
+				isBoundary = true
+				placeDoor(mapGrid, x1, y)
+				break
+			}
+		}
+		if !isBoundary {
 			mapGrid[y][x1] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
 
 	// Draw horizontal corridor from the turning point to the center of room2
 	for x := min(turnX, x2); x <= max(turnX, x2); x++ {
-		if !isInsideRoomOrOnBoundary(x, turnY, rooms) {
+		isBoundary := false
+		for _, room := range rooms {
+			if isOnBoundary(x, turnY, room) {
+				isBoundary = true
+				placeDoor(mapGrid, x, turnY)
+				break
+			}
+		}
+		if !isBoundary {
 			mapGrid[turnY][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
 		}
 	}
+}
+
+func isOnBoundary(x, y int, room Room) bool {
+	left := room.X
+	right := room.X + room.Width - 1
+	top := room.Y
+	bottom := room.Y + room.Height - 1
+
+	// Check if (x, y) is on the left, right, top, or bottom edge of the room
+	isOnLeftEdge := x == left && y >= top && y <= bottom
+	isOnRightEdge := x == right && y >= top && y <= bottom
+	isOnTopEdge := y == top && x >= left && x <= right
+	isOnBottomEdge := y == bottom && x >= left && x <= right
+
+	return isOnLeftEdge || isOnRightEdge || isOnTopEdge || isOnBottomEdge
 }
 
 func connectRooms(rooms []Room, mapGrid [][]Tile) {
@@ -420,15 +454,15 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 	}
 
 	// Generate a random float between 0 and 1
-	randomFloat := rand.Float64()
+	//randomFloat := rand.Float64()
 
 	// Apply exponential decay
-	decayFactor := 0.5 // Adjust this value to control the rate of decay
-	prob := math.Pow(randomFloat, decayFactor)
+	//decayFactor := 0.5 // Adjust this value to control the rate of decay
+	//prob := math.Pow(randomFloat, decayFactor)
 
 	// Scale and transform to get the number of rooms between 4 and 10
-	numRooms := int(prob*7) + 4                              // This will give a value between 4 and 10 with a decreasing probability as the number of rooms increases
-	rooms := generateRooms(mapGrid, width, height, numRooms) // Step 2: Generate rooms
+	//numRooms := int(prob*7) + 4                              // This will give a value between 4 and 10 with a decreasing probability as the number of rooms increases
+	rooms := generateRooms(mapGrid, width, height, 6) // Step 2: Generate rooms
 
 	connectRooms(rooms, mapGrid)
 
