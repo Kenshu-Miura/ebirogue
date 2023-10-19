@@ -11,9 +11,9 @@ import (
 )
 
 func drawWindowWithBorder(screen *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
-	// Draw window background
+	// Draw window background with semi-transparency
 	windowBackground := ebiten.NewImage(windowWidth, windowHeight)
-	windowBackground.Fill(color.RGBA{0, 0, 0, 255})
+	windowBackground.Fill(color.RGBA{0, 0, 0, 127}) // アルファ値を127に設定
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
 	screen.DrawImage(windowBackground, opts)

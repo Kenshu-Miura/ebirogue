@@ -1,10 +1,32 @@
 package main
 
 import (
+	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
+	"time"
 )
+
+func (g *Game) IncrementMoveCount() {
+	g.moveCount++
+	// Check if moveCount has increased by 5
+	if g.moveCount%5 == 0 && g.moveCount != 0 {
+		// Recover 1 HP for the player
+		g.state.Player.Health += 1
+		// Ensure player's health does not exceed MaxHealth
+		if g.state.Player.Health > g.state.Player.MaxHealth {
+			g.state.Player.Health = g.state.Player.MaxHealth
+		}
+	}
+	// Existing satiety reduction logic
+	if g.moveCount%10 == 0 && g.moveCount != 0 {
+		g.state.Player.Satiety -= 1
+		if g.state.Player.Satiety < 0 {
+			g.state.Player.Satiety = 0
+		}
+	}
+}
 
 func moveEnemy(g *Game, i int, dx, dy int) bool {
 	enemy := g.state.Enemies[i]
@@ -691,6 +713,9 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			if netDamage < 0 { // Ensure damage does not go below 0
 				netDamage = 0
 			}
+			g.descriptionText = fmt.Sprintf("%sに%dダメージを与えた", g.state.Enemies[i].Name, netDamage)
+			g.showDescription = true
+			g.descriptionTimeout = time.Now().Add(1 * time.Second) // Set timer for 2 seconds
 			g.state.Enemies[i].Health -= netDamage
 			if g.state.Enemies[i].Health <= 0 {
 				// 敵のHealthが0以下の場合、敵を配列から削除

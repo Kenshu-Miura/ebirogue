@@ -6,6 +6,20 @@ import (
 	"math"
 )
 
+func (g *Game) checkForStairs() {
+	player := &g.state.Player
+	playerTile := g.state.Map[player.Y][player.X]
+
+	if playerTile.Type == "stairs" {
+		mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, player)
+		g.state.Map = mapGrid
+		g.state.Enemies = enemies
+		g.state.Items = items
+		g.Floor = newFloor
+		g.rooms = newRoom
+	}
+}
+
 func isInsideRoomOrOnBoundary(x, y int, rooms []Room) bool {
 	for _, room := range rooms {
 		if x >= room.X && x <= room.X+room.Width-1 &&

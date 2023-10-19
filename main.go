@@ -172,60 +172,6 @@ func init() {
 	}
 }
 
-func (g *Game) checkForStairs() {
-	player := &g.state.Player
-	playerTile := g.state.Map[player.Y][player.X]
-
-	if playerTile.Type == "stairs" {
-		mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, player)
-		g.state.Map = mapGrid
-		g.state.Enemies = enemies
-		g.state.Items = items
-		g.Floor = newFloor
-		g.rooms = newRoom
-	}
-}
-
-func (g *Game) IncrementMoveCount() {
-	g.moveCount++
-	// Check if moveCount has increased by 5
-	if g.moveCount%5 == 0 && g.moveCount != 0 {
-		// Recover 1 HP for the player
-		g.state.Player.Health += 1
-		// Ensure player's health does not exceed MaxHealth
-		if g.state.Player.Health > g.state.Player.MaxHealth {
-			g.state.Player.Health = g.state.Player.MaxHealth
-		}
-	}
-	// Existing satiety reduction logic
-	if g.moveCount%10 == 0 && g.moveCount != 0 {
-		g.state.Player.Satiety -= 1
-		if g.state.Player.Satiety < 0 {
-			g.state.Player.Satiety = 0
-		}
-	}
-}
-
-func (g *Game) PickupItem() {
-	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
-
-	// プレイヤーのインベントリサイズをチェック
-	if len(g.state.Player.Inventory) >= 20 {
-		return // インベントリが満杯の場合は、何もせずに関数を終了
-	}
-
-	for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
-		if item.X == playerX && item.Y == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
-			g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
-
-			// アイテムをGameState.Itemsから削除
-			g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
-
-			break // 一致するアイテムが見つかったらループを終了
-		}
-	}
-}
-
 func (g *Game) Update() error {
 
 	err := g.handleInventoryInput()
@@ -273,6 +219,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Draw the inventory window if the showInventory flag is set
 	if g.showInventory {
+		g.showDescription = false
 		if err := g.drawInventoryWindow(screen); err != nil {
 			log.Printf("Error drawing inventory window: %v", err)
 		}
