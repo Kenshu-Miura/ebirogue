@@ -404,7 +404,7 @@ func generateItems(rooms []Room) []Item {
 			}
 		}
 		var itemType, itemName, itemChar, itemDescription string
-		randomValue := localRand.Intn(3) // Store the random value to ensure it's only generated once
+		randomValue := localRand.Intn(4) // Store the random value to ensure it's only generated once
 		switch randomValue {
 		case 0:
 			itemType = "Kane"
@@ -416,6 +416,11 @@ func generateItems(rooms []Room) []Item {
 			itemName = "ウインナー"
 			itemChar = "!"
 			itemDescription = "ウインナー"
+		case 2:
+			itemType = "Mintia"
+			itemName = "ミンティア"
+			itemChar = "!"
+			itemDescription = "ミンティア"
 		default:
 			itemType = "Card"
 			itemName = "カード"

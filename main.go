@@ -104,6 +104,7 @@ type Game struct {
 	snakeImg       *ebiten.Image
 	kaneImg        *ebiten.Image
 	cardImg        *ebiten.Image
+	mintiaImg      *ebiten.Image
 	sausageImg     *ebiten.Image
 	tilesetImg     *ebiten.Image
 	offsetX        int
@@ -254,6 +255,7 @@ func NewGame() *Game {
 	snakeImg := loadImage("img/snake.png")
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
+	mintiaImg := loadImage("img/mintia.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -290,6 +292,7 @@ func NewGame() *Game {
 		snakeImg:   snakeImg,
 		kaneImg:    kaneImg,
 		cardImg:    cardImg,
+		mintiaImg:  mintiaImg,
 		sausageImg: sausageImg,
 		offsetX:    0,
 		offsetY:    0,

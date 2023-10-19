@@ -49,6 +49,8 @@ func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 			img = g.kaneImg
 		case "Card":
 			img = g.cardImg
+		case "Mintia":
+			img = g.mintiaImg
 		default:
 			img = g.sausageImg
 		}
