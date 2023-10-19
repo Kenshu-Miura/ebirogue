@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 func (g *Game) OpenDoor() {
@@ -23,6 +24,67 @@ func (g *Game) OpenDoor() {
 			g.IncrementMoveCount()
 		}
 	}
+}
+
+func (g *Game) handleInventoryInput() error {
+	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
+	if cPressed {
+		g.showInventory = true
+		return nil // Skip other updates when the inventory window is active
+	}
+
+	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)
+
+	if xPressed && g.showInventory && !g.showItemActions {
+		g.showInventory = false
+		return nil // Skip other updates when the inventory window is active
+	}
+
+	if g.showInventory {
+		if g.showItemActions {
+			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedActionIndex > 0 {
+				g.selectedActionIndex--
+			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedActionIndex < 3 {
+				g.selectedActionIndex++
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+				g.executeAction()
+				g.showItemActions = false
+				g.showInventory = false
+				return nil
+			}
+			if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+				g.showItemActions = false // Toggle the item actions menu
+				return nil
+			}
+		}
+
+		if !g.showItemActions {
+			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedItemIndex > 0 {
+				g.selectedItemIndex--
+			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedItemIndex < len(g.state.Player.Inventory)-1 {
+				g.selectedItemIndex++
+			} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) && g.selectedItemIndex >= 10 {
+				g.selectedItemIndex -= 10
+			} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) && g.selectedItemIndex < len(g.state.Player.Inventory)-10 {
+				g.selectedItemIndex += 10
+			}
+		}
+
+		if !g.showItemActions && inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			g.showItemActions = true // Toggle the item actions menu
+			return nil
+		}
+		if !g.showItemActions && inpututil.IsKeyJustPressed(ebiten.KeyX) {
+			g.showItemActions = false // Toggle the item actions menu
+			return nil
+		}
+
+		return nil // Skip other updates when the inventory window is active
+
+	}
+
+	return nil
 }
 
 func (g *Game) CheetHandleInput() (int, int) {

@@ -97,23 +97,26 @@ type GameState struct {
 }
 
 type Game struct {
-	state          GameState
-	rooms          []Room
-	playerImg      *ebiten.Image
-	ebiImg         *ebiten.Image
-	snakeImg       *ebiten.Image
-	kaneImg        *ebiten.Image
-	cardImg        *ebiten.Image
-	mintiaImg      *ebiten.Image
-	sausageImg     *ebiten.Image
-	tilesetImg     *ebiten.Image
-	offsetX        int
-	offsetY        int
-	moveCount      int
-	Floor          int
-	lastIncrement  time.Time
-	lastArrowPress time.Time // 矢印キーが最後に押された時間を追跡
-	showInventory  bool      // true when the inventory window should be displayed
+	state               GameState
+	rooms               []Room
+	playerImg           *ebiten.Image
+	ebiImg              *ebiten.Image
+	snakeImg            *ebiten.Image
+	kaneImg             *ebiten.Image
+	cardImg             *ebiten.Image
+	mintiaImg           *ebiten.Image
+	sausageImg          *ebiten.Image
+	tilesetImg          *ebiten.Image
+	offsetX             int
+	offsetY             int
+	moveCount           int
+	Floor               int
+	lastIncrement       time.Time
+	lastArrowPress      time.Time // 矢印キーが最後に押された時間を追跡
+	showInventory       bool      // true when the inventory window should be displayed
+	selectedItemIndex   int
+	showItemActions     bool
+	selectedActionIndex int
 }
 
 func min(a, b int) int {
@@ -218,36 +221,29 @@ func (g *Game) PickupItem() {
 	}
 }
 
-func (g *Game) ToggleInventory() {
-	g.showInventory = !g.showInventory
-}
-
 func (g *Game) Update() error {
 
-	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
-	if cPressed {
-		g.ToggleInventory()
-		return nil // Skip other updates when the inventory window is active
+	err := g.handleInventoryInput()
+	if err != nil {
+		return err
 	}
 
-	if g.showInventory {
-		return nil // Skip other updates when the inventory window is active
-	}
+	if !g.showInventory {
+		//dx, dy := g.HandleInput()
+		dx, dy := g.CheetHandleInput()
 
-	//dx, dy := g.HandleInput()
-	dx, dy := g.CheetHandleInput()
+		//moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+		moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
 
-	//moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
-	moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
+		if moved {
+			g.MoveEnemies()
+		}
 
-	if moved {
-		g.MoveEnemies()
-	}
-
-	// 扉を開く処理の追加
-	spacePressed := inpututil.IsKeyJustPressed(ebiten.KeySpace) // Spaceキーをチェック
-	if spacePressed {
-		g.OpenDoor()
+		// 扉を開く処理の追加
+		spacePressed := inpututil.IsKeyJustPressed(ebiten.KeySpace) // Spaceキーをチェック
+		if spacePressed {
+			g.OpenDoor()
+		}
 	}
 
 	g.PickupItem()
@@ -276,6 +272,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			log.Printf("Error drawing inventory window: %v", err)
 		}
 	}
+
+	g.drawActionMenu(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
