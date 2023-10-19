@@ -410,22 +410,22 @@ func generateItems(rooms []Room) []Item {
 			itemType = "Kane"
 			itemName = "小銭"
 			itemChar = "!"
-			itemDescription = "小銭。"
+			itemDescription = "小銭。それは海老さんが絆と呼ぶもの。"
 		case 1:
 			itemType = "Sausage"
 			itemName = "ウインナー"
 			itemChar = "!"
-			itemDescription = "ウインナー"
+			itemDescription = "海老さんが配信中に食べる食事"
 		case 2:
 			itemType = "Mintia"
 			itemName = "ミンティア"
 			itemChar = "!"
-			itemDescription = "ミンティア"
+			itemDescription = "海老さんを元気にする薬"
 		default:
 			itemType = "Card"
 			itemName = "カード"
 			itemChar = "!"
-			itemDescription = "カード"
+			itemDescription = "遊戯王カード"
 		}
 		items = append(items, Item{
 			Entity: Entity{

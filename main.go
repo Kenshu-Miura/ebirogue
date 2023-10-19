@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
@@ -10,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 )
@@ -117,6 +119,9 @@ type Game struct {
 	selectedItemIndex   int
 	showItemActions     bool
 	selectedActionIndex int
+	showDescription     bool
+	descriptionText     string
+	descriptionTimeout  time.Time
 }
 
 func min(a, b int) int {
@@ -271,6 +276,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if err := g.drawInventoryWindow(screen); err != nil {
 			log.Printf("Error drawing inventory window: %v", err)
 		}
+	}
+
+	if g.showDescription && time.Now().Before(g.descriptionTimeout) {
+		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+		descriptionWindowWidth, descriptionWindowHeight := 400, 120
+		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
+
+		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight)
+
+		// Draw description text
+		text.Draw(screen, g.descriptionText, mplusNormalFont, windowX+10, windowY+20, color.White)
+	} else {
+		g.showDescription = false
 	}
 
 	g.drawActionMenu(screen)

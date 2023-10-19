@@ -10,74 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text"
 )
 
-func (g *Game) drawActionMenu(screen *ebiten.Image) {
-	if g.showItemActions {
-		// Define menu window parameters
-		menuWidth, menuHeight := 200, 100
-		menuX, menuY := (screen.Bounds().Dx()-menuWidth)/2, (screen.Bounds().Dy()-menuHeight)/2
-
-		// Draw menu window background
-		menuBackground := ebiten.NewImage(menuWidth, menuHeight)
-		menuBackground.Fill(color.RGBA{0, 0, 0, 255})
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(menuX), float64(menuY))
-		screen.DrawImage(menuBackground, opts)
-
-		// Draw menu border
-		// Draw window border
-		borderSize := 2
-		borderColor := color.RGBA{255, 255, 255, 255}
-
-		borderImg := ebiten.NewImage(menuWidth, menuHeight)
-		borderImg.Fill(borderColor)
-
-		// Drawing options for border
-		borderOpts := &ebiten.DrawImageOptions{}
-
-		// Top border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(menuX-borderSize), float64(menuY-borderSize))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, menuWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
-
-		// Left border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(menuX-borderSize), float64(menuY))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, menuHeight)).(*ebiten.Image), borderOpts)
-
-		// Right border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(menuX+menuWidth), float64(menuY))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, menuHeight)).(*ebiten.Image), borderOpts)
-
-		// Bottom border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(menuX-borderSize), float64(menuY+menuHeight))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, menuWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
-
-		// Draw menu actions
-		actions := []string{"使う", "投げる", "捨てる", "説明"}
-		for i, action := range actions {
-			textColor := color.White
-			yOffset := menuY + 20 + i*20 // Adjust the offset values to position the text correctly
-			text.Draw(screen, action, mplusNormalFont, menuX+30, yOffset, textColor)
-		}
-
-		// Draw selection pointer
-		pointerX := menuX + 10                            // Adjust the X value to position the pointer correctly
-		pointerY := menuY + 20 + g.selectedActionIndex*20 // Adjust the offset values to position the pointer correctly
-		text.Draw(screen, "→", mplusNormalFont, pointerX, pointerY, color.White)
-	}
-}
-func (g *Game) executeAction() {
-	// ... Code to execute the selected action
-}
-
-func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
-
-	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-	windowWidth, windowHeight := 400, 300
-	windowX, windowY := (screenWidth-windowWidth)/2, (screenHeight-windowHeight)/2
-
+func drawWindowWithBorder(screen *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
 	// Draw window background
 	windowBackground := ebiten.NewImage(windowWidth, windowHeight)
 	windowBackground.Fill(color.RGBA{0, 0, 0, 255})
@@ -89,7 +22,7 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	borderSize := 2
 	borderColor := color.RGBA{255, 255, 255, 255}
 
-	borderImg := ebiten.NewImage(screenWidth, screenHeight)
+	borderImg := ebiten.NewImage(windowWidth+2*borderSize, windowHeight+2*borderSize)
 	borderImg.Fill(borderColor)
 
 	// Drawing options for border
@@ -114,6 +47,38 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	borderOpts.GeoM.Reset()
 	borderOpts.GeoM.Translate(float64(windowX-borderSize), float64(windowY+windowHeight))
 	screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, windowWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
+}
+
+func (g *Game) drawActionMenu(screen *ebiten.Image) {
+	if g.showItemActions {
+		// Define menu window parameters
+		menuWidth, menuHeight := 200, 100
+		menuX, menuY := (screen.Bounds().Dx()-menuWidth)/2, (screen.Bounds().Dy()-menuHeight)/2
+
+		drawWindowWithBorder(screen, menuX, menuY, menuWidth, menuHeight)
+
+		// Draw menu actions
+		actions := []string{"使う", "投げる", "捨てる", "説明"}
+		for i, action := range actions {
+			textColor := color.White
+			yOffset := menuY + 20 + i*20 // Adjust the offset values to position the text correctly
+			text.Draw(screen, action, mplusNormalFont, menuX+30, yOffset, textColor)
+		}
+
+		// Draw selection pointer
+		pointerX := menuX + 10                            // Adjust the X value to position the pointer correctly
+		pointerY := menuY + 20 + g.selectedActionIndex*20 // Adjust the offset values to position the pointer correctly
+		text.Draw(screen, "→", mplusNormalFont, pointerX, pointerY, color.White)
+	}
+}
+
+func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
+
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	windowWidth, windowHeight := 400, 300
+	windowX, windowY := (screenWidth-windowWidth)/2, (screenHeight-windowHeight)/2
+
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight)
 
 	// Draw items
 	const itemsPerColumn = 10 // 1列に表示するアイテムの数
