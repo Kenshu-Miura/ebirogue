@@ -35,20 +35,20 @@ func (g *Game) ManageDescriptions() {
 func (g *Game) DrawDescriptions(screen *ebiten.Image) {
 	if g.showDescription {
 		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-		descriptionWindowWidth, descriptionWindowHeight := 400, 120
+		descriptionWindowWidth, descriptionWindowHeight := 500, 120
 		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
 
-		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight)
+		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight, 127)
 
 		// Draw description text
 		text.Draw(screen, g.descriptionText, mplusNormalFont, windowX+10, windowY+20, color.White)
 	}
 }
 
-func drawWindowWithBorder(screen *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
-	// Draw window background with semi-transparency
+func drawWindowWithBorder(screen *ebiten.Image, windowX, windowY, windowWidth, windowHeight int, alpha uint8) {
+	// Draw window background with specified alpha value
 	windowBackground := ebiten.NewImage(windowWidth, windowHeight)
-	windowBackground.Fill(color.RGBA{0, 0, 0, 127}) // アルファ値を127に設定
+	windowBackground.Fill(color.RGBA{0, 0, 0, alpha}) // Use alpha argument here
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(windowX), float64(windowY))
 	screen.DrawImage(windowBackground, opts)
@@ -84,13 +84,27 @@ func drawWindowWithBorder(screen *ebiten.Image, windowX, windowY, windowWidth, w
 	screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, windowWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
 }
 
+func (g *Game) drawItemDescription(screen *ebiten.Image) {
+	if g.showItemDescription {
+		// Define menu window parameters
+		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+		descriptionWindowWidth, descriptionWindowHeight := 500, 120
+		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
+
+		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight, 255)
+
+		// Draw description text
+		text.Draw(screen, g.itemdescriptionText, mplusNormalFont, windowX+10, windowY+20, color.White)
+	}
+}
+
 func (g *Game) drawActionMenu(screen *ebiten.Image) {
 	if g.showItemActions {
 		// Define menu window parameters
 		menuWidth, menuHeight := 200, 100
 		menuX, menuY := (screen.Bounds().Dx()-menuWidth)/2, (screen.Bounds().Dy()-menuHeight)/2
 
-		drawWindowWithBorder(screen, menuX, menuY, menuWidth, menuHeight)
+		drawWindowWithBorder(screen, menuX, menuY, menuWidth, menuHeight, 255)
 
 		// Draw menu actions
 		actions := []string{"使う", "投げる", "捨てる", "説明"}
@@ -113,7 +127,7 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	windowWidth, windowHeight := 400, 300
 	windowX, windowY := (screenWidth-windowWidth)/2, (screenHeight-windowHeight)/2
 
-	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight)
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 127)
 
 	// Draw items
 	const itemsPerColumn = 10 // 1列に表示するアイテムの数

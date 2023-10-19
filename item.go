@@ -14,13 +14,14 @@ func (g *Game) executeAction() {
 		// Set action message
 
 		g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sを捨てた", selectedItem.Name))
+		g.showItemActions = false
+		g.showInventory = false
 	}
 
 	if g.selectedActionIndex == 3 { // Assuming 0-based index and "説明" is at index 3
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
-		g.descriptionText = selectedItem.Description
-		g.showDescription = true
-		// g.descriptionTimeout = time.Now().Add(2 * time.Second) // Remove or comment out this line
+		g.itemdescriptionText = selectedItem.Description
+		g.showItemDescription = true
 	}
 }
 

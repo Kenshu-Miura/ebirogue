@@ -26,11 +26,57 @@ func (g *Game) OpenDoor() {
 	}
 }
 
+func (g *Game) handleItemActionsInput() error {
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedActionIndex > 0 {
+		g.selectedActionIndex--
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedActionIndex < 3 {
+		g.selectedActionIndex++
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		g.executeAction()
+		return nil
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		g.showItemActions = false // Toggle the item actions menu
+		return nil
+	}
+
+	return nil
+}
+
+func (g *Game) handleInventoryNavigationInput() error {
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedItemIndex > 0 {
+		g.selectedItemIndex--
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedItemIndex < len(g.state.Player.Inventory)-1 {
+		g.selectedItemIndex++
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) && g.selectedItemIndex >= 10 {
+		g.selectedItemIndex -= 10
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) && g.selectedItemIndex < len(g.state.Player.Inventory)-10 {
+		g.selectedItemIndex += 10
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		g.showItemActions = true // Toggle the item actions menu
+	}
+
+	return nil
+}
+
+func (g *Game) handleItemDescriptionInput() error {
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		g.showItemDescription = false // Toggle the item description
+		return nil
+	}
+
+	return nil
+}
+
 func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
 	if cPressed {
 		g.showInventory = true
-		return nil // Skip other updates when the inventory window is active
+		g.descriptionQueue = []string{} // g.descriptionQueueの中身をクリア
+		return nil                      // Skip other updates when the inventory window is active
 	}
 
 	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)
@@ -41,47 +87,15 @@ func (g *Game) handleInventoryInput() error {
 	}
 
 	if g.showInventory {
-		if g.showItemActions {
-			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedActionIndex > 0 {
-				g.selectedActionIndex--
-			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedActionIndex < 3 {
-				g.selectedActionIndex++
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-				g.executeAction()
-				g.showItemActions = false
-				g.showInventory = false
-				return nil
-			}
-			if inpututil.IsKeyJustPressed(ebiten.KeyX) {
-				g.showItemActions = false // Toggle the item actions menu
-				return nil
-			}
-		}
-
-		if !g.showItemActions {
-			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedItemIndex > 0 {
-				g.selectedItemIndex--
-			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedItemIndex < len(g.state.Player.Inventory)-1 {
-				g.selectedItemIndex++
-			} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) && g.selectedItemIndex >= 10 {
-				g.selectedItemIndex -= 10
-			} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) && g.selectedItemIndex < len(g.state.Player.Inventory)-10 {
-				g.selectedItemIndex += 10
-			}
-		}
-
-		if !g.showItemActions && inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-			g.showItemActions = true // Toggle the item actions menu
-			return nil
-		}
-		if g.showItemActions && inpututil.IsKeyJustPressed(ebiten.KeyX) {
-			g.showItemActions = false // Toggle the item actions menu
-			return nil
+		if g.showItemActions && !g.showItemDescription {
+			return g.handleItemActionsInput()
+		} else if !g.showItemActions && !g.showItemDescription {
+			return g.handleInventoryNavigationInput()
+		} else if g.showItemDescription {
+			return g.handleItemDescriptionInput()
 		}
 
 		return nil // Skip other updates when the inventory window is active
-
 	}
 
 	return nil

@@ -118,8 +118,9 @@ type Game struct {
 	showItemActions     bool
 	selectedActionIndex int
 	showDescription     bool
+	showItemDescription bool
+	itemdescriptionText string
 	descriptionText     string
-	descriptionTimeout  time.Time
 	descriptionQueue    []string
 	nextDescriptionTime time.Time
 }
@@ -229,6 +230,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	g.drawActionMenu(screen)
+
+	g.drawItemDescription(screen)
 
 	g.DrawDescriptions(screen)
 }
