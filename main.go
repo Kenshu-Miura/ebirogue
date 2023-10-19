@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"image"
+	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
@@ -10,6 +13,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 )
@@ -113,6 +117,7 @@ type Game struct {
 	Floor          int
 	lastIncrement  time.Time
 	lastArrowPress time.Time // 矢印キーが最後に押された時間を追跡
+	showInventory  bool      // true when the inventory window should be displayed
 }
 
 func min(a, b int) int {
@@ -212,7 +217,22 @@ func (g *Game) PickupItem() {
 	}
 }
 
+func (g *Game) ToggleInventory() {
+	g.showInventory = !g.showInventory
+}
+
 func (g *Game) Update() error {
+
+	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
+	if cPressed {
+		g.ToggleInventory()
+		return nil // Skip other updates when the inventory window is active
+	}
+
+	if g.showInventory {
+		return nil // Skip other updates when the inventory window is active
+	}
+
 	dx, dy := g.HandleInput()
 	//dx, dy := g.CheetHandleInput()
 
@@ -248,6 +268,55 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawEnemies(screen, offsetX, offsetY)
 	g.DrawHUD(screen)
 	g.DrawPlayer(screen, centerX, centerY)
+
+	// Draw the inventory window if the showInventory flag is set
+	if g.showInventory {
+		windowWidth, windowHeight := 400, 300
+		windowX, windowY := (screenWidth-windowWidth)/2, (screenHeight-windowHeight)/2
+
+		// Draw window background
+		windowBackground := ebiten.NewImage(windowWidth, windowHeight)
+		windowBackground.Fill(color.RGBA{0, 0, 0, 255})
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(windowX), float64(windowY))
+		screen.DrawImage(windowBackground, opts)
+
+		// Draw window border
+		borderSize := 2
+		borderColor := color.RGBA{255, 255, 255, 255}
+
+		borderImg := ebiten.NewImage(screenWidth, screenHeight)
+		borderImg.Fill(borderColor)
+
+		// Drawing options for border
+		borderOpts := &ebiten.DrawImageOptions{}
+
+		// Top border
+		borderOpts.GeoM.Reset()
+		borderOpts.GeoM.Translate(float64(windowX-borderSize), float64(windowY-borderSize))
+		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, windowWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
+
+		// Left border
+		borderOpts.GeoM.Reset()
+		borderOpts.GeoM.Translate(float64(windowX-borderSize), float64(windowY))
+		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, windowHeight)).(*ebiten.Image), borderOpts)
+
+		// Right border
+		borderOpts.GeoM.Reset()
+		borderOpts.GeoM.Translate(float64(windowX+windowWidth), float64(windowY))
+		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, windowHeight)).(*ebiten.Image), borderOpts)
+
+		// Bottom border
+		borderOpts.GeoM.Reset()
+		borderOpts.GeoM.Translate(float64(windowX-borderSize), float64(windowY+windowHeight))
+		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, windowWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
+
+		// Draw items
+		for i, item := range g.state.Player.Inventory {
+			itemText := fmt.Sprintf("%d. %s", i+1, item.Name)
+			text.Draw(screen, itemText, mplusNormalFont, windowX+10, windowY+20+(i*20), color.White)
+		}
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {

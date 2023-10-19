@@ -110,15 +110,15 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White)
 
 	// Player Inventory
-	inventoryText := "所持アイテム:"
-	text.Draw(screen, inventoryText, mplusNormalFont, screenWidth-130, 180, color.White) // Adjust the y-coordinate as needed
+	//inventoryText := "所持アイテム:"
+	//text.Draw(screen, inventoryText, mplusNormalFont, screenWidth-130, 180, color.White) // Adjust the y-coordinate as needed
 
-	yCoord := 210 // Starting y-coordinate for the list of items, adjust as needed
-	for _, item := range g.state.Player.Inventory {
-		itemText := fmt.Sprintf("- %s", item.Name)
-		text.Draw(screen, itemText, mplusNormalFont, screenWidth-130, yCoord, color.White)
-		yCoord += 30 // Increment y-coordinate for the next item, adjust the increment value as needed
-	}
+	//yCoord := 210 // Starting y-coordinate for the list of items, adjust as needed
+	//for _, item := range g.state.Player.Inventory {
+	//		itemText := fmt.Sprintf("- %s", item.Name)
+	//	text.Draw(screen, itemText, mplusNormalFont, screenWidth-130, yCoord, color.White)
+	//	yCoord += 30 // Increment y-coordinate for the next item, adjust the increment value as needed
+	//}
 
 	// Floor level
 	floorText := fmt.Sprintf("階層: B%dF", g.Floor)
