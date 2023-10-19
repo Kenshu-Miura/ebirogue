@@ -9,8 +9,16 @@ import (
 func moveEnemy(g *Game, i int, dx, dy int) bool {
 	enemy := g.state.Enemies[i]
 	newX, newY := enemy.X+dx, enemy.Y+dy
+
+	// Check for blockages
+	blockUp, blockDown, blockLeft, blockRight := isBlocked(g, enemy.X, enemy.Y)
+
 	if newX >= 0 && newX < len(g.state.Map[0]) && newY >= 0 && newY < len(g.state.Map) &&
-		!g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		!g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) && ((dx > 0 && dy > 0 && !(blockDown || blockRight)) ||
+		(dx > 0 && dy < 0 && !(blockUp || blockRight)) ||
+		(dx < 0 && dy > 0 && !(blockDown || blockLeft)) ||
+		(dx < 0 && dy < 0 && !(blockUp || blockLeft)) ||
+		(dx == 0 || dy == 0)) { // Allow up, down, left, right movements without additional checks
 		g.state.Enemies[i].X = newX
 		g.state.Enemies[i].Y = newY
 		return true
@@ -19,19 +27,20 @@ func moveEnemy(g *Game, i int, dx, dy int) bool {
 }
 
 func moveRandomly(g *Game, i int) {
-	enemy := g.state.Enemies[i]
+	enemy := &g.state.Enemies[i] // Get a pointer to the enemy to update its fields
 	moved := false
 	attemptCount := 0
 	maxAttempts := 10 // 最大試行回数
 
 	directions := []int{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
 
-	for !moved && attemptCount < maxAttempts {
-		attemptCount++ // 試行回数をインクリメント
+	// If enemy has no direction, set a random one initially
+	if enemy.Direction == -1 {
+		enemy.Direction = directions[rand.Intn(len(directions))]
+	}
 
-		if enemy.Direction == -1 {
-			enemy.Direction = directions[rand.Intn(len(directions))]
-		}
+	for !moved && attemptCount < maxAttempts {
+		attemptCount++ // Increment the attempt count
 
 		var dx, dy int
 		switch enemy.Direction {
@@ -54,8 +63,7 @@ func moveRandomly(g *Game, i int) {
 		}
 
 		if moveEnemy(g, i, dx, dy) {
-			moved = true
-			enemy.Direction = -1 // Reset direction after moving
+			moved = true // Set moved to true if enemy moved successfully
 		} else {
 			enemy.Direction = directions[rand.Intn(len(directions))] // Select a new random direction if movement is blocked
 		}
