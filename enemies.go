@@ -2,6 +2,7 @@ package main
 
 type Enemy struct {
 	Entity           // Enemy inherits fields from Entity
+	ID               int
 	Name             string
 	Health           int
 	MaxHealth        int
@@ -15,12 +16,13 @@ type Enemy struct {
 
 func createEnemy(x, y int) Enemy {
 	var enemyType, enemyName, enemyChar string
-	var enemyAP, enemyDP int
+	var enemyAP, enemyDP, enemyID int
 	var enemyHealth, enemyMaxHealth, enemyExperiencePoints int
 	var enemyDirection int
 	randomValue := localRand.Intn(2) // Store the random value to ensure it's only generated once
 	switch randomValue {
 	case 0:
+		enemyID = 0
 		enemyType = "Shrimp"
 		enemyName = "海老"
 		enemyChar = "E"
@@ -31,6 +33,7 @@ func createEnemy(x, y int) Enemy {
 		enemyExperiencePoints = 5
 		enemyDirection = Down
 	case 1:
+		enemyID = 1
 		enemyType = "Snake"
 		enemyName = "蛇"
 		enemyChar = "S"
@@ -42,6 +45,7 @@ func createEnemy(x, y int) Enemy {
 		enemyDirection = Down
 
 	default:
+		enemyID = 0
 		enemyType = "Shrimp"
 		enemyName = "海老"
 		enemyChar = "E"
@@ -55,6 +59,7 @@ func createEnemy(x, y int) Enemy {
 
 	return Enemy{
 		Entity:           Entity{X: x, Y: y, Char: rune(enemyChar[0])},
+		ID:               enemyID,
 		Health:           enemyHealth,
 		MaxHealth:        enemyMaxHealth,
 		Name:             enemyName,
