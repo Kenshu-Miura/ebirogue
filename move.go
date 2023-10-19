@@ -42,30 +42,125 @@ func moveRandomly(g *Game, i int) {
 	for !moved && attemptCount < maxAttempts {
 		attemptCount++ // Increment the attempt count
 
-		var dx, dy int
+		// Check if there's a passage to the right or left
+		var passLeft, passRight bool
 		switch enemy.Direction {
 		case Up:
-			dx, dy = 0, -1
+			passLeft = g.state.Map[enemy.Y][enemy.X-1].Type == "corridor"
+			passRight = g.state.Map[enemy.Y][enemy.X+1].Type == "corridor"
 		case Down:
-			dx, dy = 0, 1
+			passLeft = g.state.Map[enemy.Y][enemy.X+1].Type == "corridor"
+			passRight = g.state.Map[enemy.Y][enemy.X-1].Type == "corridor"
 		case Left:
-			dx, dy = -1, 0
+			passLeft = g.state.Map[enemy.Y+1][enemy.X].Type == "corridor"
+			passRight = g.state.Map[enemy.Y-1][enemy.X].Type == "corridor"
 		case Right:
-			dx, dy = 1, 0
-		case UpRight:
-			dx, dy = 1, -1
-		case UpLeft:
-			dx, dy = -1, -1
-		case DownRight:
-			dx, dy = 1, 1
-		case DownLeft:
-			dx, dy = -1, 1
+			passLeft = g.state.Map[enemy.Y-1][enemy.X].Type == "corridor"
+			passRight = g.state.Map[enemy.Y+1][enemy.X].Type == "corridor"
+		}
+
+		var dx, dy int
+		if passRight {
+			switch enemy.Direction {
+			case Up:
+				dx, dy = 1, 0
+				enemy.Direction = Right
+			case Down:
+				dx, dy = -1, 0
+				enemy.Direction = Left
+			case Left:
+				dx, dy = 0, -1
+				enemy.Direction = Up
+			case Right:
+				dx, dy = 0, 1
+				enemy.Direction = Down
+			}
+		} else if passLeft {
+			switch enemy.Direction {
+			case Up:
+				dx, dy = -1, 0
+				enemy.Direction = Left
+			case Down:
+				dx, dy = 1, 0
+				enemy.Direction = Right
+			case Left:
+				dx, dy = 0, 1
+				enemy.Direction = Down
+			case Right:
+				dx, dy = 0, -1
+				enemy.Direction = Up
+			}
+		} else {
+			// If no passages to the right or left, continue with original logic
+			switch enemy.Direction {
+			case Up:
+				dx, dy = 0, -1
+			case Down:
+				dx, dy = 0, 1
+			case Left:
+				dx, dy = -1, 0
+			case Right:
+				dx, dy = 1, 0
+			case UpRight:
+				dx, dy = 1, -1
+			case UpLeft:
+				dx, dy = -1, -1
+			case DownRight:
+				dx, dy = 1, 1
+			case DownLeft:
+				dx, dy = -1, 1
+			}
 		}
 
 		if moveEnemy(g, i, dx, dy) {
 			moved = true // Set moved to true if enemy moved successfully
 		} else {
-			enemy.Direction = directions[rand.Intn(len(directions))] // Select a new random direction if movement is blocked
+			// Determine left and right based on enemy's current direction
+			switch enemy.Direction {
+			case Up:
+				dx, dy = -1, 0 // left is West
+			case Down:
+				dx, dy = 1, 0 // left is East
+			case Left:
+				dx, dy = 0, 1 // left is South
+			case Right:
+				dx, dy = 0, -1 // left is North
+			}
+
+			if moveEnemy(g, i, dx, dy) {
+				moved = true
+				// Update the enemy's direction based on the new movement
+				switch enemy.Direction {
+				case Up:
+					enemy.Direction = Left
+				case Down:
+					enemy.Direction = Right
+				case Left:
+					enemy.Direction = Down
+				case Right:
+					enemy.Direction = Up
+				}
+			} else {
+				// Try the opposite direction if left did not work
+				dx, dy = -dx, -dy // This will switch from left to right or right to left
+				if moveEnemy(g, i, dx, dy) {
+					moved = true
+					// Update the enemy's direction based on the new movement
+					switch enemy.Direction {
+					case Up:
+						enemy.Direction = Right
+					case Down:
+						enemy.Direction = Left
+					case Left:
+						enemy.Direction = Up
+					case Right:
+						enemy.Direction = Down
+					}
+				} else {
+					// If neither left nor right works, choose a new random direction
+					enemy.Direction = directions[rand.Intn(len(directions))]
+				}
+			}
 		}
 	}
 }
