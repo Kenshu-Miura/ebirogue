@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"time"
 )
 
 func (g *Game) executeAction() {
@@ -13,18 +12,16 @@ func (g *Game) executeAction() {
 		// Remove the item from inventory
 		g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 		// Set action message
-		g.descriptionText = fmt.Sprintf("%sを捨てた", selectedItem.Name)
-		g.showDescription = true
-		g.descriptionTimeout = time.Now().Add(2 * time.Second) // Set timer for 2 seconds
+
+		g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sを捨てた", selectedItem.Name))
 	}
 
 	if g.selectedActionIndex == 3 { // Assuming 0-based index and "説明" is at index 3
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
 		g.descriptionText = selectedItem.Description
 		g.showDescription = true
-		g.descriptionTimeout = time.Now().Add(2 * time.Second) // Set a timeout for 2 seconds
+		// g.descriptionTimeout = time.Now().Add(2 * time.Second) // Remove or comment out this line
 	}
-
 }
 
 func (g *Game) PickupItem() {
@@ -39,9 +36,7 @@ func (g *Game) PickupItem() {
 		if item.X == playerX && item.Y == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 			g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
 
-			g.descriptionText = fmt.Sprintf("%sを拾った", g.state.Items[i].Name)
-			g.showDescription = true
-			g.descriptionTimeout = time.Now().Add(2 * time.Second) // Set timer for 2 seconds
+			g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sを拾った", g.state.Items[i].Name))
 
 			// アイテムをGameState.Itemsから削除
 			g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)

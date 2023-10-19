@@ -75,7 +75,7 @@ func (g *Game) handleInventoryInput() error {
 			g.showItemActions = true // Toggle the item actions menu
 			return nil
 		}
-		if !g.showItemActions && inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		if g.showItemActions && inpututil.IsKeyJustPressed(ebiten.KeyX) {
 			g.showItemActions = false // Toggle the item actions menu
 			return nil
 		}

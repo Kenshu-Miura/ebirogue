@@ -5,10 +5,45 @@ import (
 	"image"
 	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 )
+
+func (g *Game) ManageDescriptions() {
+	now := time.Now()
+	if now.Before(g.nextDescriptionTime) {
+		// It's not yet time to display the next message, so return early.
+		return
+	}
+
+	if len(g.descriptionQueue) > 0 {
+		// Display the first message in the queue
+		g.descriptionText = g.descriptionQueue[0]
+		g.showDescription = true
+		// Remove the displayed message from the queue
+		g.descriptionQueue = g.descriptionQueue[1:]
+
+		// Set the time for the next message to be displayed
+		g.nextDescriptionTime = now.Add(500 * time.Millisecond)
+	} else {
+		g.showDescription = false
+	}
+}
+
+func (g *Game) DrawDescriptions(screen *ebiten.Image) {
+	if g.showDescription {
+		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+		descriptionWindowWidth, descriptionWindowHeight := 400, 120
+		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
+
+		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight)
+
+		// Draw description text
+		text.Draw(screen, g.descriptionText, mplusNormalFont, windowX+10, windowY+20, color.White)
+	}
+}
 
 func drawWindowWithBorder(screen *ebiten.Image, windowX, windowY, windowWidth, windowHeight int) {
 	// Draw window background with semi-transparency

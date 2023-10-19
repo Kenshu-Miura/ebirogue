@@ -5,7 +5,6 @@ import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
-	"time"
 )
 
 func (g *Game) IncrementMoveCount() {
@@ -530,6 +529,23 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	}
 }
 
+func (g *Game) AttackFromEnemy(enemyIndex int) {
+	enemy := g.state.Enemies[enemyIndex]
+
+	netDamage := enemy.AttackPower - g.state.Player.DefensePower
+	if netDamage < 0 { // Ensure damage does not go below 0
+		netDamage = 0
+	}
+
+	g.state.Player.Health -= netDamage
+	if g.state.Player.Health < 0 {
+		g.state.Player.Health = 0 // Ensure health does not go below 0
+	}
+
+	g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage))
+
+}
+
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
 		// Variables to store the difference in position
@@ -583,7 +599,7 @@ func (g *Game) MoveEnemies() {
 			if preventAttack {
 				g.MoveTowardsPlayer(i) // Call function to move enemy towards player
 			} else {
-				g.DamagePlayer(enemy.AttackPower) // Enemy attacks player with its AttackPower
+				g.AttackFromEnemy(i) // Call function to attack player
 			}
 
 		} else if g.state.Enemies[i].PlayerDiscovered {
@@ -693,18 +709,6 @@ func isOccupied(g *Game, x, y int) bool {
 	return false
 }
 
-func (g *Game) DamagePlayer(amount int) {
-	// Player's DefensePower is considered while receiving damage
-	netDamage := amount - g.state.Player.DefensePower
-	if netDamage < 0 { // Ensure damage does not go below 0
-		netDamage = 0
-	}
-	g.state.Player.Health -= netDamage
-	if g.state.Player.Health < 0 {
-		g.state.Player.Health = 0 // Ensure health does not go below 0
-	}
-}
-
 func (g *Game) CheckForEnemies(x, y int) bool {
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == x && enemy.Y == y {
@@ -713,9 +717,8 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			if netDamage < 0 { // Ensure damage does not go below 0
 				netDamage = 0
 			}
-			g.descriptionText = fmt.Sprintf("%sに%dダメージを与えた", g.state.Enemies[i].Name, netDamage)
-			g.showDescription = true
-			g.descriptionTimeout = time.Now().Add(1 * time.Second) // Set timer for 2 seconds
+			g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sに%dダメージを与えた", g.state.Enemies[i].Name, netDamage))
+
 			g.state.Enemies[i].Health -= netDamage
 			if g.state.Enemies[i].Health <= 0 {
 				// 敵のHealthが0以下の場合、敵を配列から削除
@@ -728,7 +731,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 			} else {
 				// Enemy retaliates with its AttackPower
-				g.DamagePlayer(enemy.AttackPower)
+				g.AttackFromEnemy(i) // Call function to attack player
 			}
 			g.IncrementMoveCount()
 			g.MoveEnemies()
