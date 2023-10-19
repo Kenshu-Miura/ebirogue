@@ -383,9 +383,9 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	return enemies
 }
 
-func generateItems(rooms []Room) []Entity {
-	var items []Entity
-	for i := 0; i < 5; i++ {
+func generateItems(rooms []Room) []Item {
+	var items []Item
+	for i := 0; i < 10; i++ {
 		var itemRoom Room
 		var itemX, itemY int
 		for {
@@ -403,16 +403,40 @@ func generateItems(rooms []Room) []Entity {
 				break
 			}
 		}
-		items = append(items, Entity{
-			X:    itemX,
-			Y:    itemY,
-			Char: '!',
+		var itemType, itemName, itemChar, itemDescription string
+		randomValue := localRand.Intn(3) // Store the random value to ensure it's only generated once
+		switch randomValue {
+		case 0:
+			itemType = "Kane"
+			itemName = "小銭"
+			itemChar = "!"
+			itemDescription = "小銭。"
+		case 1:
+			itemType = "Sausage"
+			itemName = "ウインナー"
+			itemChar = "!"
+			itemDescription = "ウインナー"
+		default:
+			itemType = "Card"
+			itemName = "カード"
+			itemChar = "!"
+			itemDescription = "カード"
+		}
+		items = append(items, Item{
+			Entity: Entity{
+				X:    itemX,
+				Y:    itemY,
+				Char: rune(itemChar[0]),
+			},
+			Type:        itemType,
+			Name:        itemName,
+			Description: itemDescription,
 		})
 	}
 	return items
 }
 
-func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Entity, int, []Room) {
+func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Item, int, []Room) {
 	// Step 1: Initialize all tiles to "other" type
 	mapGrid := make([][]Tile, height)
 	for y := range mapGrid {

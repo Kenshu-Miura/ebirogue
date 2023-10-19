@@ -43,9 +43,18 @@ func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 
 func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, item := range g.state.Items {
+		var img *ebiten.Image
+		switch item.Type {
+		case "Kane":
+			img = g.kaneImg
+		case "Card":
+			img = g.cardImg
+		default:
+			img = g.sausageImg
+		}
 		opts := &ebiten.DrawImageOptions{}
 		opts.GeoM.Translate(float64(item.X*tileSize+offsetX), float64(item.Y*tileSize+offsetY))
-		screen.DrawImage(g.itemImg, opts)
+		screen.DrawImage(img, opts)
 	}
 }
 

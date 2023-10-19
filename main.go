@@ -60,6 +60,8 @@ type Player struct {
 }
 
 type Item struct {
+	Entity
+	Type        string
 	Name        string
 	Description string
 	// 他のアイテムに関連するフィールドもここに追加できます。
@@ -91,7 +93,7 @@ type GameState struct {
 	Map     [][]Tile // ゲームのマップ
 	Player  Player   // プレイヤーキャラクター
 	Enemies []Enemy  // 敵キャラクターのリスト
-	Items   []Entity // マップ上のアイテムのリスト
+	Items   []Item   // マップ上のアイテムのリスト
 }
 
 type Game struct {
@@ -100,7 +102,9 @@ type Game struct {
 	playerImg      *ebiten.Image
 	ebiImg         *ebiten.Image
 	snakeImg       *ebiten.Image
-	itemImg        *ebiten.Image
+	kaneImg        *ebiten.Image
+	cardImg        *ebiten.Image
+	sausageImg     *ebiten.Image
 	tilesetImg     *ebiten.Image
 	offsetX        int
 	offsetY        int
@@ -246,8 +250,10 @@ func NewGame() *Game {
 	img := loadImage("img/ebisan.png")
 	tilesetImg := loadImage("img/tileset.png")
 	ebiImg := loadImage("img/ebi.png")
-	itemImg := loadImage("img/kane.png")
+	kaneImg := loadImage("img/kane.png")
 	snakeImg := loadImage("img/snake.png")
+	cardImg := loadImage("img/card.png")
+	sausageImg := loadImage("img/sausage.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -282,7 +288,9 @@ func NewGame() *Game {
 		tilesetImg: tilesetImg,
 		ebiImg:     ebiImg,
 		snakeImg:   snakeImg,
-		itemImg:    itemImg,
+		kaneImg:    kaneImg,
+		cardImg:    cardImg,
+		sausageImg: sausageImg,
 		offsetX:    0,
 		offsetY:    0,
 		Floor:      newFloor,
