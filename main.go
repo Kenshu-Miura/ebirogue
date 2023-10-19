@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"image"
-	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
@@ -13,7 +10,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 )
@@ -271,50 +267,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// Draw the inventory window if the showInventory flag is set
 	if g.showInventory {
-		windowWidth, windowHeight := 400, 300
-		windowX, windowY := (screenWidth-windowWidth)/2, (screenHeight-windowHeight)/2
-
-		// Draw window background
-		windowBackground := ebiten.NewImage(windowWidth, windowHeight)
-		windowBackground.Fill(color.RGBA{0, 0, 0, 255})
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(windowX), float64(windowY))
-		screen.DrawImage(windowBackground, opts)
-
-		// Draw window border
-		borderSize := 2
-		borderColor := color.RGBA{255, 255, 255, 255}
-
-		borderImg := ebiten.NewImage(screenWidth, screenHeight)
-		borderImg.Fill(borderColor)
-
-		// Drawing options for border
-		borderOpts := &ebiten.DrawImageOptions{}
-
-		// Top border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(windowX-borderSize), float64(windowY-borderSize))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, windowWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
-
-		// Left border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(windowX-borderSize), float64(windowY))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, windowHeight)).(*ebiten.Image), borderOpts)
-
-		// Right border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(windowX+windowWidth), float64(windowY))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, windowHeight)).(*ebiten.Image), borderOpts)
-
-		// Bottom border
-		borderOpts.GeoM.Reset()
-		borderOpts.GeoM.Translate(float64(windowX-borderSize), float64(windowY+windowHeight))
-		screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, windowWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
-
-		// Draw items
-		for i, item := range g.state.Player.Inventory {
-			itemText := fmt.Sprintf("%d. %s", i+1, item.Name)
-			text.Draw(screen, itemText, mplusNormalFont, windowX+10, windowY+20+(i*20), color.White)
+		if err := g.drawInventoryWindow(screen); err != nil {
+			log.Printf("Error drawing inventory window: %v", err)
 		}
 	}
 }
