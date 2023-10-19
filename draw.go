@@ -107,7 +107,7 @@ func (g *Game) drawActionMenu(screen *ebiten.Image) {
 		drawWindowWithBorder(screen, menuX, menuY, menuWidth, menuHeight, 255)
 
 		// Draw menu actions
-		actions := []string{"使う", "投げる", "捨てる", "説明"}
+		actions := []string{"使う", "投げる", "置く", "説明"}
 		for i, action := range actions {
 			textColor := color.White
 			yOffset := menuY + 20 + i*20 // Adjust the offset values to position the text correctly

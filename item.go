@@ -7,13 +7,24 @@ import (
 
 func (g *Game) executeAction() {
 
-	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '捨てる'
+	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
 		// Remove the item from inventory
 		g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+		// Add the item to the world at the player's current position
+		newItem := Item{
+			Entity: Entity{
+				X:    g.state.Player.X,
+				Y:    g.state.Player.Y,
+				Char: selectedItem.Char,
+			},
+			Name:        selectedItem.Name,
+			Type:        selectedItem.Type,
+			Description: selectedItem.Description,
+		}
+		g.state.Items = append(g.state.Items, newItem)
 		// Set action message
-
-		g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sを捨てた", selectedItem.Name))
+		g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sを置いた", selectedItem.Name))
 		g.showItemActions = false
 		g.showInventory = false
 	}
@@ -23,6 +34,9 @@ func (g *Game) executeAction() {
 		g.itemdescriptionText = selectedItem.Description
 		g.showItemDescription = true
 	}
+
+	g.IncrementMoveCount()
+	g.MoveEnemies()
 }
 
 func (g *Game) PickupItem() {

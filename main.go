@@ -201,8 +201,6 @@ func (g *Game) Update() error {
 	// メッセージキューを管理する
 	g.ManageDescriptions()
 
-	g.PickupItem()
-
 	g.checkForStairs()
 
 	return nil

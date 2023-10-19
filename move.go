@@ -667,6 +667,7 @@ func (g *Game) CheetMovePlayer(dx, dy int) bool {
 	g.state.Player.X = newPX
 	g.state.Player.Y = newPY
 	g.IncrementMoveCount() // プレイヤーが移動するたびにカウントを増やす
+	g.PickupItem()
 	return true
 
 }
@@ -691,6 +692,7 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 		g.state.Player.X = newPX
 		g.state.Player.Y = newPY
 		g.IncrementMoveCount() // プレイヤーが移動するたびにカウントを増やす
+		g.PickupItem()
 		return true
 	}
 	return false
