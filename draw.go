@@ -54,9 +54,20 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, windowWidth+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
 
 	// Draw items
+	const itemsPerColumn = 10 // 1列に表示するアイテムの数
+	const columnWidth = 180   // 列の幅 (ピクセル)
 	for i, item := range g.state.Player.Inventory {
 		itemText := fmt.Sprintf("%d. %s", i+1, item.Name)
-		text.Draw(screen, itemText, mplusNormalFont, windowX+10, windowY+20+(i*20), color.White)
+
+		// 現在の列と行の計算
+		column := i / itemsPerColumn
+		row := i % itemsPerColumn
+
+		// アイテムテキストの描画位置の計算
+		x := windowX + 30 + column*columnWidth
+		y := windowY + 30 + row*25
+
+		text.Draw(screen, itemText, mplusNormalFont, x, y, color.White)
 	}
 
 	return nil

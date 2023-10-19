@@ -201,6 +201,11 @@ func (g *Game) IncrementMoveCount() {
 func (g *Game) PickupItem() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
+	// プレイヤーのインベントリサイズをチェック
+	if len(g.state.Player.Inventory) >= 20 {
+		return // インベントリが満杯の場合は、何もせずに関数を終了
+	}
+
 	for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 		if item.X == playerX && item.Y == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 			g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
@@ -229,11 +234,11 @@ func (g *Game) Update() error {
 		return nil // Skip other updates when the inventory window is active
 	}
 
-	dx, dy := g.HandleInput()
-	//dx, dy := g.CheetHandleInput()
+	//dx, dy := g.HandleInput()
+	dx, dy := g.CheetHandleInput()
 
-	moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
-	//moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
+	//moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+	moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
 
 	if moved {
 		g.MoveEnemies()
