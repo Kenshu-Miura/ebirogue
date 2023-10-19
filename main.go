@@ -197,12 +197,27 @@ func (g *Game) IncrementMoveCount() {
 	}
 }
 
-func (g *Game) Update() error {
-	//dx, dy := g.HandleInput()
-	dx, dy := g.CheetHandleInput()
+func (g *Game) PickupItem() {
+	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
-	//moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
-	moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
+	for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
+		if item.X == playerX && item.Y == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
+			g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
+
+			// アイテムをGameState.Itemsから削除
+			g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
+
+			break // 一致するアイテムが見つかったらループを終了
+		}
+	}
+}
+
+func (g *Game) Update() error {
+	dx, dy := g.HandleInput()
+	//dx, dy := g.CheetHandleInput()
+
+	moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
+	//moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
 
 	if moved {
 		g.MoveEnemies()
@@ -213,6 +228,8 @@ func (g *Game) Update() error {
 	if spacePressed {
 		g.OpenDoor()
 	}
+
+	g.PickupItem()
 
 	g.checkForStairs()
 

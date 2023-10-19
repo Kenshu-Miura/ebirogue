@@ -107,7 +107,18 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	// Player Experience Points
 	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
-	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White) // Adjusted y-coordinate to place Experience Points text below Defense Power text
+	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White)
+
+	// Player Inventory
+	inventoryText := "所持アイテム:"
+	text.Draw(screen, inventoryText, mplusNormalFont, screenWidth-130, 180, color.White) // Adjust the y-coordinate as needed
+
+	yCoord := 210 // Starting y-coordinate for the list of items, adjust as needed
+	for _, item := range g.state.Player.Inventory {
+		itemText := fmt.Sprintf("- %s", item.Name)
+		text.Draw(screen, itemText, mplusNormalFont, screenWidth-130, yCoord, color.White)
+		yCoord += 30 // Increment y-coordinate for the next item, adjust the increment value as needed
+	}
 
 	// Floor level
 	floorText := fmt.Sprintf("階層: B%dF", g.Floor)
