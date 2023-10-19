@@ -354,45 +354,7 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 			}
 		}
 
-		// Randomly select enemy type
-		var enemyType, enemyName, enemyChar string
-		var enemyAP, enemyDP int
-		var enemyHealth, enemyMaxHealth, enemyExperiencePoints int
-		var enemyDirection int
-		if localRand.Intn(2) == 0 { // 50% chance for each type
-			enemyType = "Shrimp"
-			enemyName = "海老"
-			enemyChar = "E"
-			enemyAP = 4
-			enemyDP = 2
-			enemyHealth = 30
-			enemyMaxHealth = 30
-			enemyExperiencePoints = 5
-			enemyDirection = Down
-		} else {
-			enemyType = "Snake"
-			enemyName = "蛇"
-			enemyChar = "S"
-			enemyAP = 7
-			enemyDP = 1
-			enemyHealth = 50
-			enemyMaxHealth = 50
-			enemyExperiencePoints = 10
-			enemyDirection = Down
-		}
-
-		enemies = append(enemies, Enemy{
-			Entity:           Entity{X: enemyX, Y: enemyY, Char: rune(enemyChar[0])},
-			Health:           enemyHealth,
-			MaxHealth:        enemyMaxHealth,
-			Name:             enemyName,
-			AttackPower:      enemyAP,
-			DefensePower:     enemyDP,
-			Type:             enemyType,
-			ExperiencePoints: enemyExperiencePoints,
-			Direction:        enemyDirection,
-			PlayerDiscovered: false,
-		})
+		enemies = append(enemies, createEnemy(enemyX, enemyY))
 	}
 	return enemies
 }
@@ -417,40 +379,8 @@ func generateItems(rooms []Room) []Item {
 				break
 			}
 		}
-		var itemType, itemName, itemChar, itemDescription string
-		randomValue := localRand.Intn(4) // Store the random value to ensure it's only generated once
-		switch randomValue {
-		case 0:
-			itemType = "Kane"
-			itemName = "小銭"
-			itemChar = "!"
-			itemDescription = "小銭。それは海老さんが絆と呼ぶもの。"
-		case 1:
-			itemType = "Sausage"
-			itemName = "ウインナー"
-			itemChar = "!"
-			itemDescription = "海老さんが配信中に食べる食事"
-		case 2:
-			itemType = "Mintia"
-			itemName = "ミンティア"
-			itemChar = "!"
-			itemDescription = "海老さんを元気にする薬"
-		default:
-			itemType = "Card"
-			itemName = "カード"
-			itemChar = "!"
-			itemDescription = "遊戯王カード"
-		}
-		items = append(items, Item{
-			Entity: Entity{
-				X:    itemX,
-				Y:    itemY,
-				Char: rune(itemChar[0]),
-			},
-			Type:        itemType,
-			Name:        itemName,
-			Description: itemDescription,
-		})
+
+		items = append(items, createItem(itemX, itemY))
 	}
 	return items
 }
