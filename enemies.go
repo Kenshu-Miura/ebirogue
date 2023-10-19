@@ -1,5 +1,18 @@
 package main
 
+type Enemy struct {
+	Entity           // Enemy inherits fields from Entity
+	Name             string
+	Health           int
+	MaxHealth        int
+	AttackPower      int    // Attack power
+	DefensePower     int    // Defense power
+	Type             string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
+	ExperiencePoints int    // Experience points enemy holds
+	PlayerDiscovered bool   // Whether the enemy has discovered the player
+	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+}
+
 func createEnemy(x, y int) Enemy {
 	var enemyType, enemyName, enemyChar string
 	var enemyAP, enemyDP int

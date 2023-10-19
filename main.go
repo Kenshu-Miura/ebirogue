@@ -59,33 +59,6 @@ type Player struct {
 	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 }
 
-type Item struct {
-	Entity
-	Type        string
-	Name        string
-	Description string
-	// 他のアイテムに関連するフィールドもここに追加できます。
-}
-
-type Enemy struct {
-	Entity           // Enemy inherits fields from Entity
-	Name             string
-	Health           int
-	MaxHealth        int
-	AttackPower      int    // Attack power
-	DefensePower     int    // Defense power
-	Type             string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
-	ExperiencePoints int    // Experience points enemy holds
-	PlayerDiscovered bool   // Whether the enemy has discovered the player
-	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
-}
-
-type Room struct {
-	ID            int
-	X, Y          int
-	Width, Height int
-	Center        Coordinate
-}
 type Coordinate struct {
 	X, Y int
 }
@@ -273,7 +246,7 @@ func NewGame() *Game {
 		Level:            1,
 		Power:            8,
 		MaxPower:         8,
-		Direction:        Down,
+		Direction:        Up,
 	}
 
 	// 最初のマップを生成

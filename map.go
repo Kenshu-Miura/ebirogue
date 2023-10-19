@@ -6,6 +6,13 @@ import (
 	"math"
 )
 
+type Room struct {
+	ID            int
+	X, Y          int
+	Width, Height int
+	Center        Coordinate
+}
+
 func (g *Game) checkForStairs() {
 	player := &g.state.Player
 	playerTile := g.state.Map[player.Y][player.X]
@@ -370,7 +377,8 @@ func generateItems(rooms []Room) []Item {
 			itemY = localRand.Intn(itemRoom.Height-2) + itemRoom.Y + 1
 			occupied := false
 			for _, item := range items {
-				if item.X == itemX && item.Y == itemY {
+				newitemX, newitemY := item.GetPosition()
+				if itemX == newitemX && itemY == newitemY {
 					occupied = true
 					break
 				}

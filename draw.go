@@ -133,7 +133,7 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	const itemsPerColumn = 10 // 1列に表示するアイテムの数
 	const columnWidth = 180   // 列の幅 (ピクセル)
 	for i, item := range g.state.Player.Inventory {
-		itemText := fmt.Sprintf("%d. %s", i+1, item.Name)
+		itemText := fmt.Sprintf("%d. %s", i+1, item.GetName())
 
 		// 現在の列と行の計算
 		column := i / itemsPerColumn
@@ -189,7 +189,7 @@ func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, item := range g.state.Items {
 		var img *ebiten.Image
-		switch item.Type {
+		switch item.GetType() {
 		case "Kane":
 			img = g.kaneImg
 		case "Card":
@@ -200,7 +200,8 @@ func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 			img = g.sausageImg
 		}
 		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(item.X*tileSize+offsetX), float64(item.Y*tileSize+offsetY))
+		itemX, itemY := item.GetPosition()
+		opts.GeoM.Translate(float64(itemX*tileSize+offsetX), float64(itemY*tileSize+offsetY))
 		screen.DrawImage(img, opts)
 	}
 }
