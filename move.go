@@ -656,13 +656,33 @@ func (g *Game) CheetMovePlayer(dx, dy int) bool {
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
 
+	// Determine the direction based on the change in position
+	deltaX := newPX - g.state.Player.X
+	deltaY := newPY - g.state.Player.Y
+	switch {
+	case deltaX == 1 && deltaY == 0:
+		g.state.Player.Direction = Right
+	case deltaX == -1 && deltaY == 0:
+		g.state.Player.Direction = Left
+	case deltaX == 0 && deltaY == 1:
+		g.state.Player.Direction = Down
+	case deltaX == 0 && deltaY == -1:
+		g.state.Player.Direction = Up
+	case deltaX == 1 && deltaY == 1:
+		g.state.Player.Direction = DownRight
+	case deltaX == -1 && deltaY == 1:
+		g.state.Player.Direction = DownLeft
+	case deltaX == 1 && deltaY == -1:
+		g.state.Player.Direction = UpRight
+	case deltaX == -1 && deltaY == -1:
+		g.state.Player.Direction = UpLeft
+	}
+
 	// 敵との戦闘チェック
 	if g.CheckForEnemies(newPX, newPY) {
 		// 戦闘が発生した場合、プレイヤーは移動しない
 		return false
 	}
-
-	// マップ範囲内およびブロックされていないタイル上にあることを確認
 
 	g.state.Player.X = newPX
 	g.state.Player.Y = newPY
@@ -689,6 +709,28 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 
 	// マップ範囲内およびブロックされていないタイル上にあることを確認
 	if newPX >= 0 && newPX < len(g.state.Map[0]) && newPY >= 0 && newPY < len(g.state.Map) && !g.state.Map[newPY][newPX].Blocked {
+		// Determine the direction based on the change in position
+		deltaX := newPX - g.state.Player.X
+		deltaY := newPY - g.state.Player.Y
+		switch {
+		case deltaX == 1 && deltaY == 0:
+			g.state.Player.Direction = Right
+		case deltaX == -1 && deltaY == 0:
+			g.state.Player.Direction = Left
+		case deltaX == 0 && deltaY == 1:
+			g.state.Player.Direction = Down
+		case deltaX == 0 && deltaY == -1:
+			g.state.Player.Direction = Up
+		case deltaX == 1 && deltaY == 1:
+			g.state.Player.Direction = DownRight
+		case deltaX == -1 && deltaY == 1:
+			g.state.Player.Direction = DownLeft
+		case deltaX == 1 && deltaY == -1:
+			g.state.Player.Direction = UpRight
+		case deltaX == -1 && deltaY == -1:
+			g.state.Player.Direction = UpLeft
+		}
+
 		g.state.Player.X = newPX
 		g.state.Player.Y = newPY
 		g.IncrementMoveCount() // プレイヤーが移動するたびにカウントを増やす

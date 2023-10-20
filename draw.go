@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
+	"math"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -182,7 +183,28 @@ func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 
 func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(centerX), float64(centerY))
+
+	w, h := g.playerImg.Bounds().Dx(), g.playerImg.Bounds().Dy()
+	opts.GeoM.Translate(float64(-w/2), float64(-h/2)) // Move the image center to the origin
+
+	switch g.state.Player.Direction {
+	case Right:
+		opts.GeoM.Rotate(math.Pi / 2) // Rotate 90 degrees to the right
+	case Left:
+		opts.GeoM.Rotate(-math.Pi / 2) // Rotate 90 degrees to the left
+	case UpRight:
+		opts.GeoM.Rotate(math.Pi / 4) // Rotate 45 degrees to the right
+	case UpLeft:
+		opts.GeoM.Rotate(-math.Pi / 4) // Rotate 45 degrees to the left
+	case DownRight:
+		opts.GeoM.Rotate(3 * math.Pi / 4) // Rotate 135 degrees to the right
+	case DownLeft:
+		opts.GeoM.Rotate(-3 * math.Pi / 4) // Rotate 135 degrees to the left
+	case Down:
+		opts.GeoM.Rotate(math.Pi) // Rotate 180 degrees
+	}
+
+	opts.GeoM.Translate(float64(w/2)+float64(centerX), float64(h/2)+float64(centerY))
 	screen.DrawImage(g.playerImg, opts)
 }
 
