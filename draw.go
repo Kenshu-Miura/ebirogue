@@ -5,12 +5,51 @@ import (
 	"image"
 	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
+	"log"
 	"math"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 )
+
+// 敵のアニメーション進行度を更新する関数
+func (g *Game) UpdateEnemyAnimation(enemy *Enemy) {
+	if enemy.Animating {
+		enemy.AnimationProgressInt++
+		if enemy.AnimationProgressInt > 10 {
+			enemy.Animating = false
+			enemy.AnimationProgressInt = 0
+		}
+	}
+}
+
+// 敵のオフセットを計算する関数
+func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
+	animationProgress := (float64(enemy.AnimationProgressInt) / 10.0) * 2.0
+	adjustedProgress := animationProgress
+	if enemy.AnimationProgressInt == 1 {
+		adjustedProgress = 0.2 // アニメーションの初めのフレームの進行度を調整
+	}
+
+	offsetAdjustmentX, offsetAdjustmentY := 0, 0
+	if enemy.AnimationProgressInt > 0 {
+		if enemy.dx > 0 {
+			offsetAdjustmentX = -20
+		} else if enemy.dx < 0 {
+			offsetAdjustmentX = 20
+		}
+		if enemy.dy > 0 {
+			offsetAdjustmentY = -20
+		} else if enemy.dy < 0 {
+			offsetAdjustmentY = 20
+		}
+	}
+
+	offsetX := (int(adjustedProgress*10)*enemy.dx + offsetAdjustmentX)
+	offsetY := (int(adjustedProgress*10)*enemy.dy + offsetAdjustmentY)
+	return offsetX, offsetY
+}
 
 func (g *Game) ManageDescriptions() {
 	now := time.Now()
@@ -229,7 +268,18 @@ func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 }
 
 func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
-	for _, enemy := range g.state.Enemies {
+	for i := range g.state.Enemies {
+		enemy := &g.state.Enemies[i]
+
+		// 敵のアニメーションを更新
+		g.UpdateEnemyAnimation(enemy)
+
+		// 敵の描画オフセットを計算
+		enemyOffsetX, enemyOffsetY := g.CalculateEnemyOffset(enemy)
+
+		log.Printf("Enemy[%d]: X=%v, Y=%v, dx=%v, dy=%v, AnimationProgressInt=%v", i, enemy.X, enemy.Y, enemy.dx, enemy.dy, enemy.AnimationProgressInt) // Log enemy coordinates and animation progress
+		log.Printf("Calculated Offset: enemyOffsetX=%v, enemyOffsetY=%v", enemyOffsetX, enemyOffsetY)                                                   // Log calculated offsets
+
 		var img *ebiten.Image
 		switch enemy.Type {
 		case "Snake":
@@ -241,7 +291,9 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 		}
 
 		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX), float64(enemy.Y*tileSize+offsetY))
+		// 敵の位置とオフセットを適用して敵を描画
+		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX+enemyOffsetX), float64(enemy.Y*tileSize+offsetY+enemyOffsetY))
+		//opts.GeoM.Translate(float64(enemy.X*tileSize+enemyOffsetX), float64(enemy.Y*tileSize+enemyOffsetY))
 		screen.DrawImage(img, opts)
 	}
 }

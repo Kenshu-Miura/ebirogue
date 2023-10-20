@@ -135,6 +135,10 @@ func moveRandomly(g *Game, i int) {
 
 		if moveEnemy(g, i, dx, dy) {
 			moved = true // Set moved to true if enemy moved successfully
+			// Update the enemy's dx and dy fields
+			enemy.dx = dx
+			enemy.dy = dy
+			enemy.Animating = true
 		} else {
 			// Determine left and right based on enemy's current direction
 			switch enemy.Direction {
@@ -150,6 +154,10 @@ func moveRandomly(g *Game, i int) {
 
 			if moveEnemy(g, i, dx, dy) {
 				moved = true
+				// Update the enemy's dx and dy fields
+				enemy.dx = dx
+				enemy.dy = dy
+				enemy.Animating = true
 				// Update the enemy's direction based on the new movement
 				switch enemy.Direction {
 				case Up:
@@ -166,6 +174,10 @@ func moveRandomly(g *Game, i int) {
 				dx, dy = -dx, -dy // This will switch from left to right or right to left
 				if moveEnemy(g, i, dx, dy) {
 					moved = true
+					// Update the enemy's dx and dy fields
+					enemy.dx = dx
+					enemy.dy = dy
+					enemy.Animating = true
 					// Update the enemy's direction based on the new movement
 					switch enemy.Direction {
 					case Up:

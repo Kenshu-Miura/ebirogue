@@ -1,17 +1,20 @@
 package main
 
 type Enemy struct {
-	Entity           // Enemy inherits fields from Entity
-	ID               int
-	Name             string
-	Health           int
-	MaxHealth        int
-	AttackPower      int    // Attack power
-	DefensePower     int    // Defense power
-	Type             string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
-	ExperiencePoints int    // Experience points enemy holds
-	PlayerDiscovered bool   // Whether the enemy has discovered the player
-	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	Entity               // Enemy inherits fields from Entity
+	ID                   int
+	dx, dy               int // 敵の移動方向
+	Name                 string
+	Health               int
+	MaxHealth            int
+	AttackPower          int    // Attack power
+	DefensePower         int    // Defense power
+	Type                 string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
+	ExperiencePoints     int    // Experience points enemy holds
+	PlayerDiscovered     bool   // Whether the enemy has discovered the player
+	Direction            int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	AnimationProgressInt int    // アニメーション進行度
+	Animating            bool   // アニメーション中かどうか
 }
 
 func createEnemy(x, y int) Enemy {

@@ -159,9 +159,11 @@ func (g *Game) Update() error {
 	}
 
 	if !g.showInventory {
-		dx, dy := g.HandleInput()
+		//dx, dy := g.HandleInput()
+		dx, dy := g.CheetHandleInput()
 
-		moved := g.MovePlayer(dx, dy)
+		//moved := g.MovePlayer(dx, dy)
+		moved := g.CheetMovePlayer(dx, dy)
 
 		if moved {
 			g.MoveEnemies()

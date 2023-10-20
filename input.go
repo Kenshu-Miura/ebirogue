@@ -113,7 +113,7 @@ func (g *Game) CheetHandleInput() (int, int) {
 	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
 
 	// 足踏みロジック
-	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond {
+	if aPressed && time.Since(g.lastIncrement) >= 170*time.Millisecond {
 		g.IncrementMoveCount()
 		g.MoveEnemies()
 		g.lastIncrement = time.Now() // lastIncrementの更新
@@ -122,7 +122,7 @@ func (g *Game) CheetHandleInput() (int, int) {
 	arrowPressed := upPressed || downPressed || leftPressed || rightPressed
 
 	// 矢印キーの押下ロジック
-	if arrowPressed && time.Since(g.lastArrowPress) >= 125*time.Millisecond {
+	if arrowPressed && time.Since(g.lastArrowPress) >= 170*time.Millisecond {
 
 		if shiftPressed { // 斜め移動のロジック
 
@@ -180,7 +180,7 @@ func (g *Game) HandleInput() (int, int) {
 	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
 
 	// 足踏みロジック
-	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond {
+	if aPressed && time.Since(g.lastIncrement) >= 170*time.Millisecond {
 		g.IncrementMoveCount()
 		g.MoveEnemies()
 		g.lastIncrement = time.Now() // lastIncrementの更新
