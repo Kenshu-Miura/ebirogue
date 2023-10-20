@@ -17,7 +17,7 @@ import (
 func (g *Game) UpdateEnemyAnimation(enemy *Enemy) {
 	if enemy.Animating {
 		enemy.AnimationProgressInt++
-		if enemy.AnimationProgressInt > 10 {
+		if enemy.AnimationProgressInt > 10 { // 10フレームでアニメーションを完了
 			enemy.Animating = false
 			enemy.AnimationProgressInt = 0
 		}
@@ -26,10 +26,10 @@ func (g *Game) UpdateEnemyAnimation(enemy *Enemy) {
 
 // 敵のオフセットを計算する関数
 func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
-	animationProgress := (float64(enemy.AnimationProgressInt) / 10.0) * 2.0
+	animationProgress := (float64(enemy.AnimationProgressInt) / 10.0) * 20.0 // ここを変更
 	adjustedProgress := animationProgress
 	if enemy.AnimationProgressInt == 1 {
-		adjustedProgress = 0.2 // アニメーションの初めのフレームの進行度を調整
+		adjustedProgress = 2.0 // アニメーションの初めのフレームの進行度を調整
 	}
 
 	offsetAdjustmentX, offsetAdjustmentY := 0, 0
@@ -46,8 +46,8 @@ func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
 		}
 	}
 
-	offsetX := (int(adjustedProgress*10)*enemy.dx + offsetAdjustmentX)
-	offsetY := (int(adjustedProgress*10)*enemy.dy + offsetAdjustmentY)
+	offsetX := (int(adjustedProgress)*enemy.dx + offsetAdjustmentX) // ここを変更
+	offsetY := (int(adjustedProgress)*enemy.dy + offsetAdjustmentY) // ここを変更
 	return offsetX, offsetY
 }
 
@@ -279,6 +279,8 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 
 		log.Printf("Enemy[%d]: X=%v, Y=%v, dx=%v, dy=%v, AnimationProgressInt=%v", i, enemy.X, enemy.Y, enemy.dx, enemy.dy, enemy.AnimationProgressInt) // Log enemy coordinates and animation progress
 		log.Printf("Calculated Offset: enemyOffsetX=%v, enemyOffsetY=%v", enemyOffsetX, enemyOffsetY)                                                   // Log calculated offsets
+		log.Printf("Enemy Offset: X=%v, Y=%v", enemy.X*tileSize+offsetX+enemyOffsetX, enemy.Y*tileSize+offsetY+enemyOffsetY)                            // Log enemy coordinates with offsets applied
+		log.Printf("Offset: X=%v, Y=%v", offsetX, offsetY)                                                                                              // Log offsets
 
 		var img *ebiten.Image
 		switch enemy.Type {
