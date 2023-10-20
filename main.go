@@ -70,35 +70,36 @@ type GameState struct {
 }
 
 type Game struct {
-	state               GameState
-	rooms               []Room
-	playerImg           *ebiten.Image
-	ebiImg              *ebiten.Image
-	snakeImg            *ebiten.Image
-	kaneImg             *ebiten.Image
-	cardImg             *ebiten.Image
-	mintiaImg           *ebiten.Image
-	sausageImg          *ebiten.Image
-	tilesetImg          *ebiten.Image
-	offsetX             int
-	offsetY             int
-	moveCount           int
-	Floor               int
-	lastIncrement       time.Time
-	lastArrowPress      time.Time // 矢印キーが最後に押された時間を追跡
-	showInventory       bool      // true when the inventory window should be displayed
-	selectedItemIndex   int
-	showItemActions     bool
-	selectedActionIndex int
-	showDescription     bool
-	showItemDescription bool
-	itemdescriptionText string
-	descriptionText     string
-	descriptionQueue    []string
-	nextDescriptionTime time.Time
-	Animating           bool
-	AnimationProgress   float64
-	dx, dy              int
+	state                GameState
+	rooms                []Room
+	playerImg            *ebiten.Image
+	ebiImg               *ebiten.Image
+	snakeImg             *ebiten.Image
+	kaneImg              *ebiten.Image
+	cardImg              *ebiten.Image
+	mintiaImg            *ebiten.Image
+	sausageImg           *ebiten.Image
+	tilesetImg           *ebiten.Image
+	offsetX              int
+	offsetY              int
+	moveCount            int
+	Floor                int
+	lastIncrement        time.Time
+	lastArrowPress       time.Time // 矢印キーが最後に押された時間を追跡
+	showInventory        bool      // true when the inventory window should be displayed
+	selectedItemIndex    int
+	showItemActions      bool
+	selectedActionIndex  int
+	showDescription      bool
+	showItemDescription  bool
+	itemdescriptionText  string
+	descriptionText      string
+	descriptionQueue     []string
+	nextDescriptionTime  time.Time
+	Animating            bool
+	AnimationProgress    float64
+	dx, dy               int
+	AnimationProgressInt int
 }
 
 func min(a, b int) int {
@@ -176,19 +177,18 @@ func (g *Game) Update() error {
 	}
 
 	if g.Animating {
-		g.AnimationProgress += 0.1 // Update the animation progress
-		if g.AnimationProgress >= 1 {
+		g.AnimationProgressInt += 1
+		if g.AnimationProgressInt >= 10 {
 			g.Animating = false
-			g.AnimationProgress = 0
+			g.AnimationProgressInt = 0
 		}
 	}
-
 	// メッセージキューを管理する
 	g.ManageDescriptions()
 
 	g.checkForStairs()
 
-	log.Printf("Update end: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgress, g.Animating, g.dx, g.dy) // Logging added
+	log.Printf("Update end: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgressInt, g.Animating, g.dx, g.dy) // Logging added
 
 	return nil
 }
@@ -198,8 +198,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	centerX := (screenWidth-tileSize)/2 - tileSize
 	centerY := (screenHeight-tileSize)/2 - tileSize
 	// Calculate the offsets based on the animation progress and direction
-	offsetX := centerX - g.state.Player.X*tileSize - int(float64(g.dx)*g.AnimationProgress*2)*tileSize
-	offsetY := centerY - g.state.Player.Y*tileSize - int(float64(g.dy)*g.AnimationProgress*2)*tileSize
+	animationProgress := (float64(g.AnimationProgressInt) / 10.0) * 2.0
+	adjustedProgress := animationProgress
+	if g.AnimationProgressInt == 1 {
+		adjustedProgress = 0.2 // アニメーションの初めのフレームの進行度を調整
+	}
+	offsetX := centerX - g.state.Player.X*tileSize - int(adjustedProgress*10)*g.dx
+	offsetY := centerY - g.state.Player.Y*tileSize - int(adjustedProgress*10)*g.dy
 
 	log.Printf("Draw: offsetX=%v, offsetY=%v\n", offsetX, offsetY) // Logging added
 
