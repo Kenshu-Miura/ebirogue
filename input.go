@@ -189,7 +189,7 @@ func (g *Game) HandleInput() (int, int) {
 	arrowPressed := upPressed || downPressed || leftPressed || rightPressed
 
 	// 矢印キーの押下ロジック
-	if arrowPressed && time.Since(g.lastArrowPress) >= 125*time.Millisecond {
+	if arrowPressed && time.Since(g.lastArrowPress) >= 170*time.Millisecond {
 
 		player := g.state.Player
 		blockUp := g.state.Map[player.Y-1][player.X].Blocked
