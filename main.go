@@ -151,7 +151,7 @@ func init() {
 }
 
 func (g *Game) Update() error {
-	log.Printf("Update start: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgress, g.Animating, g.dx, g.dy) // Logging added
+	//log.Printf("Update start: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgressInt, g.Animating, g.dx, g.dy) // Logging added
 
 	err := g.handleInventoryInput()
 	if err != nil {
@@ -188,7 +188,7 @@ func (g *Game) Update() error {
 
 	g.checkForStairs()
 
-	log.Printf("Update end: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgressInt, g.Animating, g.dx, g.dy) // Logging added
+	//log.Printf("Update end: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgressInt, g.Animating, g.dx, g.dy) // Logging added
 
 	return nil
 }
@@ -197,16 +197,35 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	centerX := (screenWidth-tileSize)/2 - tileSize
 	centerY := (screenHeight-tileSize)/2 - tileSize
+
 	// Calculate the offsets based on the animation progress and direction
 	animationProgress := (float64(g.AnimationProgressInt) / 10.0) * 2.0
 	adjustedProgress := animationProgress
 	if g.AnimationProgressInt == 1 {
 		adjustedProgress = 0.2 // アニメーションの初めのフレームの進行度を調整
 	}
-	offsetX := centerX - g.state.Player.X*tileSize - int(adjustedProgress*10)*g.dx
-	offsetY := centerY - g.state.Player.Y*tileSize - int(adjustedProgress*10)*g.dy
 
-	log.Printf("Draw: offsetX=%v, offsetY=%v\n", offsetX, offsetY) // Logging added
+	offsetAdjustmentX := 0
+	offsetAdjustmentY := 0
+
+	if g.AnimationProgressInt > 0 {
+		if g.dx > 0 { // 右に移動する場合
+			offsetAdjustmentX = -20
+		} else if g.dx < 0 { // 左に移動する場合
+			offsetAdjustmentX = 20
+		}
+
+		if g.dy > 0 { // 下に移動する場合
+			offsetAdjustmentY = -20
+		} else if g.dy < 0 { // 上に移動する場合
+			offsetAdjustmentY = 20
+		}
+	}
+
+	offsetX := centerX - g.state.Player.X*tileSize - (int(adjustedProgress*10)*g.dx + offsetAdjustmentX)
+	offsetY := centerY - g.state.Player.Y*tileSize - (int(adjustedProgress*10)*g.dy + offsetAdjustmentY)
+
+	//log.Printf("Draw: offsetX=%v, offsetY=%v\n", offsetX, offsetY) // Logging added
 
 	g.DrawMap(screen, offsetX, offsetY)
 	g.DrawItems(screen, offsetX, offsetY)
