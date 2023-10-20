@@ -150,6 +150,7 @@ func init() {
 }
 
 func (g *Game) Update() error {
+	log.Printf("Update start: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgress, g.Animating, g.dx, g.dy) // Logging added
 
 	err := g.handleInventoryInput()
 	if err != nil {
@@ -187,6 +188,8 @@ func (g *Game) Update() error {
 
 	g.checkForStairs()
 
+	log.Printf("Update end: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgress, g.Animating, g.dx, g.dy) // Logging added
+
 	return nil
 }
 
@@ -197,6 +200,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Calculate the offsets based on the animation progress and direction
 	offsetX := centerX - g.state.Player.X*tileSize - int(float64(g.dx)*g.AnimationProgress*2)*tileSize
 	offsetY := centerY - g.state.Player.Y*tileSize - int(float64(g.dy)*g.AnimationProgress*2)*tileSize
+
+	log.Printf("Draw: offsetX=%v, offsetY=%v\n", offsetX, offsetY) // Logging added
 
 	g.DrawMap(screen, offsetX, offsetY)
 	g.DrawItems(screen, offsetX, offsetY)
