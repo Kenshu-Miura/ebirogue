@@ -96,6 +96,9 @@ type Game struct {
 	descriptionText     string
 	descriptionQueue    []string
 	nextDescriptionTime time.Time
+	Animating           bool
+	AnimationProgress   float64
+	dx, dy              int
 }
 
 func min(a, b int) int {
@@ -155,19 +158,27 @@ func (g *Game) Update() error {
 
 	if !g.showInventory {
 		dx, dy := g.HandleInput()
-		//dx, dy := g.CheetHandleInput()
 
-		moved := g.MovePlayer(dx, dy) // プレイヤーの移動を更新
-		//moved := g.CheetMovePlayer(dx, dy) // プレイヤーの移動を更新
+		moved := g.MovePlayer(dx, dy)
 
 		if moved {
 			g.MoveEnemies()
+			g.Animating = true  // Set the animating flag
+			g.dx, g.dy = dx, dy // Save the direction of movement
 		}
 
 		// 扉を開く処理の追加
 		spacePressed := inpututil.IsKeyJustPressed(ebiten.KeySpace) // Spaceキーをチェック
 		if spacePressed {
 			g.OpenDoor()
+		}
+	}
+
+	if g.Animating {
+		g.AnimationProgress += 0.1 // Update the animation progress
+		if g.AnimationProgress >= 1 {
+			g.Animating = false
+			g.AnimationProgress = 0
 		}
 	}
 
@@ -183,8 +194,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	centerX := (screenWidth-tileSize)/2 - tileSize
 	centerY := (screenHeight-tileSize)/2 - tileSize
-	offsetX := centerX - g.state.Player.X*tileSize
-	offsetY := centerY - g.state.Player.Y*tileSize
+	// Calculate the offsets based on the animation progress and direction
+	offsetX := centerX - g.state.Player.X*tileSize - int(float64(g.dx)*g.AnimationProgress*2)*tileSize
+	offsetY := centerY - g.state.Player.Y*tileSize - int(float64(g.dy)*g.AnimationProgress*2)*tileSize
 
 	g.DrawMap(screen, offsetX, offsetY)
 	g.DrawItems(screen, offsetX, offsetY)
