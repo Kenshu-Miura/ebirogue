@@ -160,11 +160,11 @@ func (g *Game) Update() error {
 	}
 
 	if !g.showInventory {
-		//dx, dy := g.HandleInput()
-		dx, dy := g.CheetHandleInput()
+		dx, dy := g.HandleInput()
+		//dx, dy := g.CheetHandleInput()
 
-		//moved := g.MovePlayer(dx, dy)
-		moved := g.CheetMovePlayer(dx, dy)
+		moved := g.MovePlayer(dx, dy)
+		//moved := g.CheetMovePlayer(dx, dy)
 
 		if moved {
 			g.MoveEnemies()
@@ -201,35 +201,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	centerX := (screenWidth-tileSize)/2 - tileSize
 	centerY := (screenHeight-tileSize)/2 - tileSize
 
-	// Calculate the offsets based on the animation progress and direction
-	animationProgress := (float64(g.AnimationProgressInt) / 10.0) * 2.0
-	adjustedProgress := animationProgress
-	if g.AnimationProgressInt == 1 {
-		adjustedProgress = 0.2 // アニメーションの初めのフレームの進行度を調整
-	}
-
-	offsetAdjustmentX := 0
-	offsetAdjustmentY := 0
-
-	if g.AnimationProgressInt > 0 {
-		if g.dx > 0 { // 右に移動する場合
-			offsetAdjustmentX = -20
-		} else if g.dx < 0 { // 左に移動する場合
-			offsetAdjustmentX = 20
-		}
-
-		if g.dy > 0 { // 下に移動する場合
-			offsetAdjustmentY = -20
-		} else if g.dy < 0 { // 上に移動する場合
-			offsetAdjustmentY = 20
-		}
-	}
-
-	offsetX := centerX - g.state.Player.X*tileSize - (int(adjustedProgress*10)*g.dx + offsetAdjustmentX)
-	offsetY := centerY - g.state.Player.Y*tileSize - (int(adjustedProgress*10)*g.dy + offsetAdjustmentY)
-
-	//log.Printf("g.AnimationProgressInt=%v, adjustedProgress=%v, offsetX=%v, offsetY=%v\n", g.AnimationProgressInt, adjustedProgress, offsetX, offsetY) // Logging added
-	//log.Printf("Draw: offsetX=%v, offsetY=%v\n", offsetX, offsetY) // Logging added
+	offsetX, offsetY := g.CalculateAnimationOffset(screen)
 
 	g.DrawMap(screen, offsetX, offsetY)
 	g.DrawItems(screen, offsetX, offsetY)

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 	"math/rand"
 )
 
@@ -139,7 +138,6 @@ func moveRandomly(g *Game, i int) {
 			enemy.dx = dx
 			enemy.dy = dy
 			enemy.Animating = true
-			enemy.AnimationProgressInt++
 		} else {
 			// Determine left and right based on enemy's current direction
 			switch enemy.Direction {
@@ -159,7 +157,6 @@ func moveRandomly(g *Game, i int) {
 				enemy.dx = dx
 				enemy.dy = dy
 				enemy.Animating = true
-				enemy.AnimationProgressInt++
 				// Update the enemy's direction based on the new movement
 				switch enemy.Direction {
 				case Up:
@@ -180,7 +177,6 @@ func moveRandomly(g *Game, i int) {
 					enemy.dx = dx
 					enemy.dy = dy
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 					// Update the enemy's direction based on the new movement
 					switch enemy.Direction {
 					case Up:
@@ -244,6 +240,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	player := g.state.Player
 
 	// Determine the direction to move based on the player's position.
+	orgX, orgY := enemy.X, enemy.Y
 	dx := player.X - enemy.X
 	dy := player.Y - enemy.Y
 
@@ -269,18 +266,14 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 		}
 	}
 
-	log.Printf("Enemy %d: (%d, %d) -> (%d, %d)\n", enemyIndex, enemy.X, enemy.Y, newX, newY)
+	//log.Printf("Enemy %d: (%d, %d) -> (%d, %d)\n", enemyIndex, enemy.X, enemy.Y, newX, newY)
 
 	if isPositionFree(g, newX, newY, enemyIndex) {
 		g.state.Enemies[enemyIndex].X = newX
 		g.state.Enemies[enemyIndex].Y = newY
-		enemy.dx = sign(dx)
-		enemy.dy = sign(dy)
+		enemy.dx = enemy.X - orgX
+		enemy.dy = enemy.Y - orgY
 		enemy.Animating = true
-		enemy.AnimationProgressInt++
-		//log.Printf("enemy.dx=%d, enemy.dy=%d\n", enemy.dx, enemy.dy)
-		//log.Printf("enemy.AnimationProgressInt=%d\n", enemy.AnimationProgressInt)
-		//log.Printf("enemy.Animating=%v\n", enemy.Animating)
 	} else {
 		blockUp, blockDown, blockLeft, blockRight = isBlocked(g, enemy.X, enemy.Y)
 		if dx != 0 && dy != 0 { // Diagonal movement
@@ -292,7 +285,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = 1
 					enemy.dy = 1
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					newX, newY = enemy.X+1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
@@ -301,7 +293,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						enemy.dx = 1
 						enemy.dy = 0
 						enemy.Animating = true
-						enemy.AnimationProgressInt++
 					} else {
 						newX, newY = enemy.X+1, enemy.Y-1
 						if isPositionFree(g, newX, newY, enemyIndex) {
@@ -310,7 +301,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 							enemy.dx = 1
 							enemy.dy = -1
 							enemy.Animating = true
-							enemy.AnimationProgressInt++
 						}
 					}
 				}
@@ -322,7 +312,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = -1
 					enemy.dy = 1
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					newX, newY = enemy.X-1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
@@ -331,7 +320,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						enemy.dx = -1
 						enemy.dy = 0
 						enemy.Animating = true
-						enemy.AnimationProgressInt++
 					} else {
 						newX, newY = enemy.X-1, enemy.Y-1
 						if isPositionFree(g, newX, newY, enemyIndex) {
@@ -340,7 +328,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 							enemy.dx = -1
 							enemy.dy = -1
 							enemy.Animating = true
-							enemy.AnimationProgressInt++
 						}
 					}
 				}
@@ -352,7 +339,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = 1
 					enemy.dy = -1
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					newX, newY = enemy.X+1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
@@ -361,7 +347,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						enemy.dx = 1
 						enemy.dy = 0
 						enemy.Animating = true
-						enemy.AnimationProgressInt++
 					} else {
 						newX, newY = enemy.X+1, enemy.Y+1
 						if isPositionFree(g, newX, newY, enemyIndex) {
@@ -370,7 +355,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 							enemy.dx = 1
 							enemy.dy = 1
 							enemy.Animating = true
-							enemy.AnimationProgressInt++
 						}
 					}
 				}
@@ -382,7 +366,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = -1
 					enemy.dy = -1
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					newX, newY = enemy.X-1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {
@@ -391,7 +374,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						enemy.dx = -1
 						enemy.dy = 0
 						enemy.Animating = true
-						enemy.AnimationProgressInt++
 					} else {
 						newX, newY = enemy.X, enemy.Y-1
 						if isPositionFree(g, newX, newY, enemyIndex) {
@@ -400,7 +382,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 							enemy.dx = 0
 							enemy.dy = -1
 							enemy.Animating = true
-							enemy.AnimationProgressInt++
 						}
 					}
 				}
@@ -411,7 +392,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = -1
 					enemy.dy = 0
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					//log.Printf("Failed to move Left to: (%d, %d)\n", newX, newY)
 				}
@@ -422,7 +402,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = 1
 					enemy.dy = 0
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					//log.Printf("Failed to move Right to: (%d, %d)\n", newX, newY)
 				}
@@ -433,19 +412,16 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = 0
 					enemy.dy = -1
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					//log.Printf("Failed to move Up to: (%d, %d)\n", newX, newY)
 				}
 			} else if !blockDown && dy > 0 { // Move Down only
 				newX, newY = enemy.X, enemy.Y+1
 				if isPositionFree(g, newX, newY, enemyIndex) {
-					log.Printf("Move Down to: (%d, %d)\n", newX, newY)
 					g.state.Enemies[enemyIndex].Y = newY
 					enemy.dx = 0
 					enemy.dy = 1
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					//log.Printf("Failed to move Down to: (%d, %d)\n", newX, newY)
 				}
@@ -457,7 +433,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 				enemy.dx = sign(dx)
 				enemy.dy = 0
 				enemy.Animating = true
-				enemy.AnimationProgressInt++
 			} else {
 				newX, newY = enemy.X, enemy.Y+sign(dy)
 				if isPositionFree(g, newX, newY, enemyIndex) && (newX != enemy.X || newY != enemy.Y) {
@@ -465,7 +440,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 					enemy.dx = 0
 					enemy.dy = sign(dy)
 					enemy.Animating = true
-					enemy.AnimationProgressInt++
 				} else {
 					if dx != 0 { // If there is horizontal distance
 						altX := enemy.X + sign(dx) // Try moving horizontally closer
@@ -474,7 +448,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 							enemy.dx = sign(dx)
 							enemy.dy = 0
 							enemy.Animating = true
-							enemy.AnimationProgressInt++
 						}
 					}
 					if dy != 0 { // If there is vertical distance
@@ -484,7 +457,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 							enemy.dx = 0
 							enemy.dy = sign(dy)
 							enemy.Animating = true
-							enemy.AnimationProgressInt++
 						}
 					}
 					// Log if the enemy failed to move closer
@@ -500,7 +472,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 								enemy.dx = diagDx
 								enemy.dy = diagDy
 								enemy.Animating = true
-								enemy.AnimationProgressInt++
 							} else {
 								diagDy = -1
 								newX, newY = enemy.X+diagDx, enemy.Y+diagDy
@@ -508,7 +479,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 									enemy.dx = diagDx
 									enemy.dy = diagDy
 									enemy.Animating = true
-									enemy.AnimationProgressInt++
 									g.state.Enemies[enemyIndex].X = newX
 									g.state.Enemies[enemyIndex].Y = newY
 								} else {
@@ -525,7 +495,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 								enemy.dx = diagDx
 								enemy.dy = diagDy
 								enemy.Animating = true
-								enemy.AnimationProgressInt++
 							} else {
 								diagDy = -1
 								newX, newY = enemy.X+diagDx, enemy.Y+diagDy
@@ -535,7 +504,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 									enemy.dx = diagDx
 									enemy.dy = diagDy
 									enemy.Animating = true
-									enemy.AnimationProgressInt++
 								} else {
 									//log.Printf("Failed to move diagonally to: (%d, %d)\n", newX, newY)
 								}
@@ -550,7 +518,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 								enemy.dx = diagDx
 								enemy.dy = diagDy
 								enemy.Animating = true
-								enemy.AnimationProgressInt++
 							} else {
 								diagDx = -1
 								newX, newY = enemy.X+diagDx, enemy.Y+diagDy
@@ -560,7 +527,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 									enemy.dx = diagDx
 									enemy.dy = diagDy
 									enemy.Animating = true
-									enemy.AnimationProgressInt++
 								} else {
 									//log.Printf("Failed to move diagonally to: (%d, %d)\n", newX, newY)
 								}
@@ -575,7 +541,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 								enemy.dx = diagDx
 								enemy.dy = diagDy
 								enemy.Animating = true
-								enemy.AnimationProgressInt++
 
 							} else {
 								diagDx = -1
@@ -586,7 +551,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 									enemy.dx = diagDx
 									enemy.dy = diagDy
 									enemy.Animating = true
-									enemy.AnimationProgressInt++
 								} else {
 									//log.Printf("Failed to move diagonally to: (%d, %d)\n", newX, newY)
 								}

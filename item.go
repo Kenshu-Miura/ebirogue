@@ -19,6 +19,8 @@ func (g *Game) executeAction() {
 		g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sを置いた", selectedItem.GetName()))
 		g.showItemActions = false
 		g.showInventory = false
+		g.IncrementMoveCount()
+		g.MoveEnemies()
 	}
 
 	if g.selectedActionIndex == 3 { // Assuming 0-based index and "説明" is at index 3
@@ -27,8 +29,6 @@ func (g *Game) executeAction() {
 		g.showItemDescription = true
 	}
 
-	g.IncrementMoveCount()
-	g.MoveEnemies()
 }
 
 func (g *Game) PickupItem() {

@@ -12,26 +12,54 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text"
 )
 
+func (g *Game) CalculateAnimationOffset(screen *ebiten.Image) (int, int) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	centerX := (screenWidth-tileSize)/2 - tileSize
+	centerY := (screenHeight-tileSize)/2 - tileSize
+
+	animationProgress := (float64(g.AnimationProgressInt) / 10.0) * 2.0
+	adjustedProgress := animationProgress
+	if g.AnimationProgressInt == 1 {
+		adjustedProgress = 0.2
+	}
+
+	offsetAdjustmentX, offsetAdjustmentY := 0, 0
+	if g.AnimationProgressInt > 0 {
+		if g.dx > 0 {
+			offsetAdjustmentX = -20
+		} else if g.dx < 0 {
+			offsetAdjustmentX = 20
+		}
+		if g.dy > 0 {
+			offsetAdjustmentY = -20
+		} else if g.dy < 0 {
+			offsetAdjustmentY = 20
+		}
+	}
+
+	offsetX := centerX - g.state.Player.X*tileSize - (int(adjustedProgress*10)*g.dx + offsetAdjustmentX)
+	offsetY := centerY - g.state.Player.Y*tileSize - (int(adjustedProgress*10)*g.dy + offsetAdjustmentY)
+
+	return offsetX, offsetY
+}
+
 // 敵のアニメーション進行度を更新する関数
 func (g *Game) UpdateEnemyAnimation(enemy *Enemy) {
 	if enemy.Animating {
-		if g.frameCount%7 == 0 {
-			enemy.AnimationProgressInt++
-		}
-		if enemy.AnimationProgressInt > 10 { // 10フレームでアニメーションを完了
+		enemy.AnimationProgressInt++
+		if enemy.AnimationProgressInt > 20 { // 20フレームでアニメーションを完了
 			enemy.Animating = false
 			enemy.AnimationProgressInt = 0
 		}
 	}
-	g.frameCount++
 }
 
 // 敵のオフセットを計算する関数
 func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
-	animationProgress := (float64(enemy.AnimationProgressInt) / 10.0) * 20.0 // ここを変更
+	animationProgress := (float64(enemy.AnimationProgressInt) / 10.0) * 10.0 // ここを変更
 	adjustedProgress := animationProgress
 	if enemy.AnimationProgressInt == 1 {
-		adjustedProgress = 2.0 // アニメーションの初めのフレームの進行度を調整
+		adjustedProgress = 1.0 // アニメーションの初めのフレームの進行度を調整
 	}
 
 	offsetAdjustmentX, offsetAdjustmentY := 0, 0
@@ -278,11 +306,6 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 
 		// 敵の描画オフセットを計算
 		enemyOffsetX, enemyOffsetY := g.CalculateEnemyOffset(enemy)
-
-		//log.Printf("Enemy[%d]: X=%v, Y=%v, dx=%v, dy=%v, AnimationProgressInt=%v", i, enemy.X, enemy.Y, enemy.dx, enemy.dy, enemy.AnimationProgressInt) // Log enemy coordinates and animation progress
-		//log.Printf("Calculated Offset: enemyOffsetX=%v, enemyOffsetY=%v", enemyOffsetX, enemyOffsetY)                                                   // Log calculated offsets
-		//log.Printf("Enemy Offset: X=%v, Y=%v", enemy.X*tileSize+offsetX+enemyOffsetX, enemy.Y*tileSize+offsetY+enemyOffsetY)                            // Log enemy coordinates with offsets applied
-		//log.Printf("Offset: X=%v, Y=%v", offsetX, offsetY)                                                                                              // Log offsets
 
 		var img *ebiten.Image
 		switch enemy.Type {
