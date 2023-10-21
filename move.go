@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 	"math/rand"
 )
 
@@ -277,7 +276,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 				if isPositionFree(g, newX, newY, enemyIndex) {
 					g.state.Enemies[enemyIndex].X = newX
 					g.state.Enemies[enemyIndex].Y = newY
-					log.Printf("2Enemy moved DownRight to: (%d, %d)\n", newX, newY)
 				} else {
 					newX, newY = enemy.X+1, enemy.Y
 					if isPositionFree(g, newX, newY, enemyIndex) {

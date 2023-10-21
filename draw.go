@@ -16,12 +16,15 @@ import (
 // 敵のアニメーション進行度を更新する関数
 func (g *Game) UpdateEnemyAnimation(enemy *Enemy) {
 	if enemy.Animating {
-		enemy.AnimationProgressInt++
+		if g.frameCount%7 == 0 {
+			enemy.AnimationProgressInt++
+		}
 		if enemy.AnimationProgressInt > 10 { // 10フレームでアニメーションを完了
 			enemy.Animating = false
 			enemy.AnimationProgressInt = 0
 		}
 	}
+	g.frameCount++
 }
 
 // 敵のオフセットを計算する関数
@@ -280,7 +283,7 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 		log.Printf("Enemy[%d]: X=%v, Y=%v, dx=%v, dy=%v, AnimationProgressInt=%v", i, enemy.X, enemy.Y, enemy.dx, enemy.dy, enemy.AnimationProgressInt) // Log enemy coordinates and animation progress
 		log.Printf("Calculated Offset: enemyOffsetX=%v, enemyOffsetY=%v", enemyOffsetX, enemyOffsetY)                                                   // Log calculated offsets
 		log.Printf("Enemy Offset: X=%v, Y=%v", enemy.X*tileSize+offsetX+enemyOffsetX, enemy.Y*tileSize+offsetY+enemyOffsetY)                            // Log enemy coordinates with offsets applied
-		log.Printf("Offset: X=%v, Y=%v", offsetX, offsetY)                                                                                              // Log offsets
+		//log.Printf("Offset: X=%v, Y=%v", offsetX, offsetY)                                                                                              // Log offsets
 
 		var img *ebiten.Image
 		switch enemy.Type {
@@ -297,6 +300,7 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX+enemyOffsetX), float64(enemy.Y*tileSize+offsetY+enemyOffsetY))
 		//opts.GeoM.Translate(float64(enemy.X*tileSize+enemyOffsetX), float64(enemy.Y*tileSize+enemyOffsetY))
 		screen.DrawImage(img, opts)
+
 	}
 }
 

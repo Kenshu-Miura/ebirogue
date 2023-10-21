@@ -100,6 +100,7 @@ type Game struct {
 	AnimationProgress    float64
 	dx, dy               int
 	AnimationProgressInt int
+	frameCount           int
 }
 
 func min(a, b int) int {
@@ -227,6 +228,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	offsetX := centerX - g.state.Player.X*tileSize - (int(adjustedProgress*10)*g.dx + offsetAdjustmentX)
 	offsetY := centerY - g.state.Player.Y*tileSize - (int(adjustedProgress*10)*g.dy + offsetAdjustmentY)
 
+	//log.Printf("g.AnimationProgressInt=%v, adjustedProgress=%v, offsetX=%v, offsetY=%v\n", g.AnimationProgressInt, adjustedProgress, offsetX, offsetY) // Logging added
 	//log.Printf("Draw: offsetX=%v, offsetY=%v\n", offsetX, offsetY) // Logging added
 
 	g.DrawMap(screen, offsetX, offsetY)
@@ -314,6 +316,7 @@ func NewGame() *Game {
 		offsetX:    0,
 		offsetY:    0,
 		Floor:      newFloor,
+		frameCount: 0,
 	}
 
 	// Log the contents of game.rooms
