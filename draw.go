@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 	"math"
 	"time"
 
@@ -280,9 +279,9 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 		// 敵の描画オフセットを計算
 		enemyOffsetX, enemyOffsetY := g.CalculateEnemyOffset(enemy)
 
-		log.Printf("Enemy[%d]: X=%v, Y=%v, dx=%v, dy=%v, AnimationProgressInt=%v", i, enemy.X, enemy.Y, enemy.dx, enemy.dy, enemy.AnimationProgressInt) // Log enemy coordinates and animation progress
-		log.Printf("Calculated Offset: enemyOffsetX=%v, enemyOffsetY=%v", enemyOffsetX, enemyOffsetY)                                                   // Log calculated offsets
-		log.Printf("Enemy Offset: X=%v, Y=%v", enemy.X*tileSize+offsetX+enemyOffsetX, enemy.Y*tileSize+offsetY+enemyOffsetY)                            // Log enemy coordinates with offsets applied
+		//log.Printf("Enemy[%d]: X=%v, Y=%v, dx=%v, dy=%v, AnimationProgressInt=%v", i, enemy.X, enemy.Y, enemy.dx, enemy.dy, enemy.AnimationProgressInt) // Log enemy coordinates and animation progress
+		//log.Printf("Calculated Offset: enemyOffsetX=%v, enemyOffsetY=%v", enemyOffsetX, enemyOffsetY)                                                   // Log calculated offsets
+		//log.Printf("Enemy Offset: X=%v, Y=%v", enemy.X*tileSize+offsetX+enemyOffsetX, enemy.Y*tileSize+offsetY+enemyOffsetY)                            // Log enemy coordinates with offsets applied
 		//log.Printf("Offset: X=%v, Y=%v", offsetX, offsetY)                                                                                              // Log offsets
 
 		var img *ebiten.Image
