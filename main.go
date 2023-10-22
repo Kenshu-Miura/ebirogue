@@ -84,11 +84,6 @@ type Action struct {
 	Execute  func(*Game) // 行動を実行する関数
 }
 
-type AttackQueue struct {
-	Queue []Attack
-	Timer float64
-}
-
 type ActionQueue struct {
 	Queue []Action
 	Timer float64

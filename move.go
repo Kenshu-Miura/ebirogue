@@ -803,8 +803,8 @@ func isOccupied(g *Game, x, y int) bool {
 }
 
 // Enqueue adds a new attack to the attack queue
-func (aq *AttackQueue) Enqueue(attack Attack) {
-	aq.Queue = append(aq.Queue, attack)
+func (aq *ActionQueue) Enqueue(action Action) {
+	aq.Queue = append(aq.Queue, action)
 }
 
 func (g *Game) CheckForEnemies(x, y int) bool {
