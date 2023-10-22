@@ -92,43 +92,44 @@ type ActionQueue struct {
 type Direction int
 
 type Game struct {
-	state                GameState
-	rooms                []Room
-	playerImg            *ebiten.Image
-	ebiImg               *ebiten.Image
-	snakeImg             *ebiten.Image
-	kaneImg              *ebiten.Image
-	cardImg              *ebiten.Image
-	mintiaImg            *ebiten.Image
-	sausageImg           *ebiten.Image
-	tilesetImg           *ebiten.Image
-	offsetX              int
-	offsetY              int
-	moveCount            int
-	Floor                int
-	lastIncrement        time.Time
-	lastArrowPress       time.Time // 矢印キーが最後に押された時間を追跡
-	showInventory        bool      // true when the inventory window should be displayed
-	selectedItemIndex    int
-	showItemActions      bool
-	selectedActionIndex  int
-	showDescription      bool
-	showItemDescription  bool
-	itemdescriptionText  string
-	descriptionText      string
-	descriptionQueue     []string
-	nextDescriptionTime  time.Time
-	Animating            bool
-	AnimationProgress    float64
-	dx, dy               int
-	AnimationProgressInt int
-	frameCount           int
-	tmpPlayerOffsetX     float64 // プレイヤーの一時的なオフセットX
-	tmpPlayerOffsetY     float64 // プレイヤーの一時的なオフセットY
-	attackTimer          float64 // 攻撃メッセージのタイマー
-	playerAttack         bool    // プレイヤーが攻撃したかどうか
-	ActionQueue          ActionQueue
-	isCombatActive       bool
+	state                 GameState
+	rooms                 []Room
+	playerImg             *ebiten.Image
+	ebiImg                *ebiten.Image
+	snakeImg              *ebiten.Image
+	kaneImg               *ebiten.Image
+	cardImg               *ebiten.Image
+	mintiaImg             *ebiten.Image
+	sausageImg            *ebiten.Image
+	tilesetImg            *ebiten.Image
+	offsetX               int
+	offsetY               int
+	moveCount             int
+	Floor                 int
+	lastIncrement         time.Time
+	lastArrowPress        time.Time // 矢印キーが最後に押された時間を追跡
+	showInventory         bool      // true when the inventory window should be displayed
+	selectedItemIndex     int
+	showItemActions       bool
+	selectedActionIndex   int
+	showDescription       bool
+	showItemDescription   bool
+	itemdescriptionText   string
+	descriptionText       string
+	descriptionQueue      []string
+	nextDescriptionTime   time.Time
+	Animating             bool
+	AnimationProgress     float64
+	dx, dy                int
+	AnimationProgressInt  int
+	frameCount            int
+	tmpPlayerOffsetX      float64 // プレイヤーの一時的なオフセットX
+	tmpPlayerOffsetY      float64 // プレイヤーの一時的なオフセットY
+	attackTimer           float64 // 攻撃メッセージのタイマー
+	playerAttack          bool    // プレイヤーが攻撃したかどうか
+	ActionQueue           ActionQueue
+	isCombatActive        bool
+	ActionDurationCounter float64
 }
 
 func min(a, b int) int {
@@ -277,12 +278,17 @@ func (g *Game) Update() error {
 			g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
 			g.processAction(action)
 			if len(g.ActionQueue.Queue) > 0 {
-				g.ActionQueue.Timer = g.ActionQueue.Queue[0].Duration // reset timer for next action
+				g.ActionQueue.Timer = g.ActionQueue.Queue[0].Duration         // reset timer for next action
+				g.ActionDurationCounter = g.ActionQueue.Queue[0].Duration * 2 // record the duration of the next action
 			}
 		}
 	}
 
-	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive {
+	if g.ActionDurationCounter > 0 {
+		g.ActionDurationCounter -= (1 / 60.0) // decrement the counter every frame
+	}
+
+	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive && g.ActionDurationCounter <= 0 {
 		g.isCombatActive = false // reset the combat active flag when the queue is empty
 	}
 
