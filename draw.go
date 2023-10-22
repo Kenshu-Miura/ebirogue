@@ -99,6 +99,8 @@ func (g *Game) ManageDescriptions() {
 		g.showDescription = true
 
 		g.nextDescriptionTime = now.Add(500 * time.Millisecond)
+		//log.Printf("ActionQueue.Queue: %v", g.ActionQueue.Queue)
+		//log.Printf("ActionQueue.Timer: %v", g.ActionQueue.Timer)
 	} else if len(g.descriptionQueue) > 0 {
 		// Existing logic for handling descriptionQueue
 		g.descriptionText = g.descriptionQueue[0]

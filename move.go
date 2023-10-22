@@ -566,13 +566,11 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 // Enqueue adds a new action to the action queue
 func (aq *Game) Enqueue(action Action) {
 	aq.ActionQueue.Queue = append(aq.ActionQueue.Queue, action)
-	//log.Printf("Enqueued action: %v. Queue length is now %d\n", action, len(aq.ActionQueue.Queue))
 }
 
 func (g *Game) processAction(action Action) {
 	// 実際のアクションの実行ロジックはアクションオブジェクトのExecuteメソッドに委譲
 	action.Execute(g)
-	//log.Printf("Processed action: %v\n", action)
 }
 
 func (g *Game) AttackFromEnemy(enemyIndex int) {

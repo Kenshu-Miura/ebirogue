@@ -89,6 +89,11 @@ type AttackQueue struct {
 	Timer float64
 }
 
+type ActionQueue struct {
+	Queue []Action
+	Timer float64
+}
+
 type Game struct {
 	state                GameState
 	rooms                []Room
@@ -125,10 +130,7 @@ type Game struct {
 	tmpPlayerOffsetY     float64 // プレイヤーの一時的なオフセットY
 	attackTimer          float64 // 攻撃メッセージのタイマー
 	playerAttack         bool    // プレイヤーが攻撃したかどうか
-	ActionQueue          struct {
-		Queue []Action
-		Timer float64
-	}
+	ActionQueue          ActionQueue
 }
 
 func min(a, b int) int {
@@ -348,6 +350,10 @@ func NewGame() *Game {
 		tmpPlayerOffsetX: 0,
 		tmpPlayerOffsetY: 0,
 		playerAttack:     false,
+		ActionQueue: ActionQueue{
+			Queue: make([]Action, 0),
+			Timer: 0.5,
+		},
 	}
 
 	// Log the contents of game.rooms
