@@ -89,6 +89,8 @@ type ActionQueue struct {
 	Timer float64
 }
 
+type Direction int
+
 type Game struct {
 	state                GameState
 	rooms                []Room
@@ -227,6 +229,45 @@ func (g *Game) Update() error {
 			g.tmpPlayerOffsetX = 0
 			g.tmpPlayerOffsetY = 0
 			g.playerAttack = false
+		}
+	}
+
+	for i := range g.state.Enemies {
+		log.Printf("Enemy %d attack timer: %f", i, g.state.Enemies[i].AttackTimer)
+		if g.state.Enemies[i].AttackTimer > 0 {
+			progress := 1 - g.state.Enemies[i].AttackTimer/0.5
+			angle := math.Pi * progress
+			value := 20 * math.Sin(angle)
+
+			log.Printf("Enemy %d attack timer: %f", i, g.state.Enemies[i].AttackTimer)
+
+			switch g.state.Enemies[i].AttackDirection {
+			case Up:
+				g.state.Enemies[i].OffsetY = int(-value)
+			case Down:
+				g.state.Enemies[i].OffsetY = int(value)
+			case Left:
+				g.state.Enemies[i].OffsetX = int(-value)
+			case Right:
+				g.state.Enemies[i].OffsetX = int(value)
+			case UpRight:
+				g.state.Enemies[i].OffsetX = int(value)
+				g.state.Enemies[i].OffsetY = int(-value)
+			case DownRight:
+				g.state.Enemies[i].OffsetX = int(value)
+				g.state.Enemies[i].OffsetY = int(value)
+			case UpLeft:
+				g.state.Enemies[i].OffsetX = int(-value)
+				g.state.Enemies[i].OffsetY = int(-value)
+			case DownLeft:
+				g.state.Enemies[i].OffsetX = int(-value)
+				g.state.Enemies[i].OffsetY = int(value)
+			}
+
+			g.state.Enemies[i].AttackTimer -= (1 / 60.0)
+		} else {
+			g.state.Enemies[i].OffsetX = 0
+			g.state.Enemies[i].OffsetY = 0
 		}
 	}
 

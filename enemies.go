@@ -7,14 +7,17 @@ type Enemy struct {
 	Name                 string
 	Health               int
 	MaxHealth            int
-	AttackPower          int    // Attack power
-	DefensePower         int    // Defense power
-	Type                 string // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
-	ExperiencePoints     int    // Experience points enemy holds
-	PlayerDiscovered     bool   // Whether the enemy has discovered the player
-	Direction            int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
-	AnimationProgressInt int    // アニメーション進行度
-	Animating            bool   // アニメーション中かどうか
+	AttackPower          int       // Attack power
+	DefensePower         int       // Defense power
+	Type                 string    // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
+	ExperiencePoints     int       // Experience points enemy holds
+	PlayerDiscovered     bool      // Whether the enemy has discovered the player
+	Direction            int       // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	AnimationProgressInt int       // アニメーション進行度
+	Animating            bool      // アニメーション中かどうか
+	AttackDirection      Direction // 敵の攻撃方向
+	AttackTimer          float64   // 敵の攻撃アニメーションを制御するタイマー (0.0 から 0.5 まで)
+	OffsetX, OffsetY     int       // アニメーションのオフセット
 }
 
 func createEnemy(x, y int) Enemy {

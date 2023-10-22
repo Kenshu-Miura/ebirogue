@@ -329,6 +329,8 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 
 		// 敵の描画オフセットを計算
 		enemyOffsetX, enemyOffsetY := g.CalculateEnemyOffset(enemy)
+		enemyOffsetX += int(enemy.OffsetX)
+		enemyOffsetY += int(enemy.OffsetY)
 
 		var img *ebiten.Image
 		switch enemy.Type {
@@ -343,9 +345,7 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 		opts := &ebiten.DrawImageOptions{}
 		// 敵の位置とオフセットを適用して敵を描画
 		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX+enemyOffsetX), float64(enemy.Y*tileSize+offsetY+enemyOffsetY))
-		//opts.GeoM.Translate(float64(enemy.X*tileSize+enemyOffsetX), float64(enemy.Y*tileSize+enemyOffsetY))
 		screen.DrawImage(img, opts)
-
 	}
 }
 

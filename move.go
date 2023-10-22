@@ -575,17 +575,21 @@ func (g *Game) processAction(action Action) {
 }
 
 func (g *Game) AttackFromEnemy(enemyIndex int) {
-	enemy := g.state.Enemies[enemyIndex]
+	enemy := &g.state.Enemies[enemyIndex]
 
 	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
 	if netDamage < 0 { // Ensure damage does not go below 0
 		netDamage = 0
 	}
 
+	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y // プレイヤーと敵の位置の差を計算
+
 	action := Action{
 		Duration: 0.5,
 		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
 		Execute: func(g *Game) {
+			enemy.AttackTimer = 0.5                            // ここでAttackTimerを設定することで、敵の攻撃アニメーションが実行される
+			enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
 			g.state.Player.Health -= netDamage
 			if g.state.Player.Health < 0 {
 				g.state.Player.Health = 0 // Ensure health does not go below 0
@@ -594,6 +598,29 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 	}
 
 	g.Enqueue(action)
+}
+
+func determineDirection(dx, dy int) Direction {
+	switch {
+	case dx == 1 && dy == 0:
+		return Right
+	case dx == -1 && dy == 0:
+		return Left
+	case dx == 0 && dy == 1:
+		return Down
+	case dx == 0 && dy == -1:
+		return Up
+	case dx == 1 && dy == 1:
+		return DownRight
+	case dx == -1 && dy == 1:
+		return DownLeft
+	case dx == 1 && dy == -1:
+		return UpRight
+	case dx == -1 && dy == -1:
+		return UpLeft
+	default:
+		return Up // or any default direction you'd prefer
+	}
 }
 
 func (g *Game) MoveEnemies() {
