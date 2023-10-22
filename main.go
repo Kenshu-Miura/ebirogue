@@ -3,6 +3,7 @@ package main
 import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -101,6 +102,10 @@ type Game struct {
 	dx, dy               int
 	AnimationProgressInt int
 	frameCount           int
+	tmpPlayerOffsetX     float64 // プレイヤーの一時的なオフセットX
+	tmpPlayerOffsetY     float64 // プレイヤーの一時的なオフセットY
+	attackTimer          float64 // 攻撃メッセージのタイマー
+	playerAttack         bool    // プレイヤーが攻撃したかどうか
 }
 
 func min(a, b int) int {
@@ -159,7 +164,7 @@ func (g *Game) Update() error {
 		return err
 	}
 
-	if !g.showInventory {
+	if !g.showInventory && !g.playerAttack {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheetHandleInput()
 
@@ -186,6 +191,25 @@ func (g *Game) Update() error {
 			g.AnimationProgressInt = 0
 		}
 	}
+
+	// Check the attack timer and reset temporary player position if needed
+	if g.attackTimer > 0 {
+		progress := 1 - g.attackTimer/0.5 // progress ranges from 0 to 1 over 0.5 seconds
+		angle := math.Pi * progress       // angle ranges from 0 to Pi
+		value := 20 * math.Sin(angle)     // value ranges from 0 to 20 to 0
+
+		g.tmpPlayerOffsetX = value
+		g.tmpPlayerOffsetY = value
+
+		g.attackTimer -= (1 / 60.0) // assuming Update is called 60 times per second
+		if g.attackTimer <= 0 {
+			g.attackTimer = 0 // reset timer
+			g.tmpPlayerOffsetX = 0
+			g.tmpPlayerOffsetY = 0
+			g.playerAttack = false
+		}
+	}
+
 	// メッセージキューを管理する
 	g.ManageDescriptions()
 
@@ -276,19 +300,22 @@ func NewGame() *Game {
 			Enemies: enemies,
 			Items:   items,
 		},
-		rooms:      newRoom,
-		playerImg:  img,
-		tilesetImg: tilesetImg,
-		ebiImg:     ebiImg,
-		snakeImg:   snakeImg,
-		kaneImg:    kaneImg,
-		cardImg:    cardImg,
-		mintiaImg:  mintiaImg,
-		sausageImg: sausageImg,
-		offsetX:    0,
-		offsetY:    0,
-		Floor:      newFloor,
-		frameCount: 0,
+		rooms:            newRoom,
+		playerImg:        img,
+		tilesetImg:       tilesetImg,
+		ebiImg:           ebiImg,
+		snakeImg:         snakeImg,
+		kaneImg:          kaneImg,
+		cardImg:          cardImg,
+		mintiaImg:        mintiaImg,
+		sausageImg:       sausageImg,
+		offsetX:          0,
+		offsetY:          0,
+		Floor:            newFloor,
+		frameCount:       0,
+		tmpPlayerOffsetX: 0,
+		tmpPlayerOffsetY: 0,
+		playerAttack:     false,
 	}
 
 	// Log the contents of game.rooms

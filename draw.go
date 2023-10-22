@@ -252,28 +252,42 @@ func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 
 func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 	opts := &ebiten.DrawImageOptions{}
+	tmpPlayerOffsetX, tmpPlayerOffsetY := 0.0, 0.0
 
 	w, h := g.playerImg.Bounds().Dx(), g.playerImg.Bounds().Dy()
 	opts.GeoM.Translate(float64(-w/2), float64(-h/2)) // Move the image center to the origin
 
 	switch g.state.Player.Direction {
 	case Right:
+		tmpPlayerOffsetX = g.tmpPlayerOffsetX
 		opts.GeoM.Rotate(math.Pi / 2) // Rotate 90 degrees to the right
 	case Left:
+		tmpPlayerOffsetX = -g.tmpPlayerOffsetX
 		opts.GeoM.Rotate(-math.Pi / 2) // Rotate 90 degrees to the left
 	case UpRight:
+		tmpPlayerOffsetX = g.tmpPlayerOffsetX
+		tmpPlayerOffsetY = -g.tmpPlayerOffsetY
 		opts.GeoM.Rotate(math.Pi / 4) // Rotate 45 degrees to the right
 	case UpLeft:
+		tmpPlayerOffsetX = -g.tmpPlayerOffsetX
+		tmpPlayerOffsetY = -g.tmpPlayerOffsetY
 		opts.GeoM.Rotate(-math.Pi / 4) // Rotate 45 degrees to the left
 	case DownRight:
+		tmpPlayerOffsetX = g.tmpPlayerOffsetX
+		tmpPlayerOffsetY = g.tmpPlayerOffsetY
 		opts.GeoM.Rotate(3 * math.Pi / 4) // Rotate 135 degrees to the right
 	case DownLeft:
+		tmpPlayerOffsetX = -g.tmpPlayerOffsetX
+		tmpPlayerOffsetY = g.tmpPlayerOffsetY
 		opts.GeoM.Rotate(-3 * math.Pi / 4) // Rotate 135 degrees to the left
 	case Down:
+		tmpPlayerOffsetY = g.tmpPlayerOffsetY
 		opts.GeoM.Rotate(math.Pi) // Rotate 180 degrees
+	case Up:
+		tmpPlayerOffsetY = -g.tmpPlayerOffsetY
 	}
 
-	opts.GeoM.Translate(float64(w/2)+float64(centerX), float64(h/2)+float64(centerY))
+	opts.GeoM.Translate(float64(w/2)+float64(centerX)+tmpPlayerOffsetX, float64(h/2)+float64(centerY)+tmpPlayerOffsetY)
 	screen.DrawImage(g.playerImg, opts)
 }
 

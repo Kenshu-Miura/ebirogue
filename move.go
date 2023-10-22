@@ -348,12 +348,12 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 						enemy.dy = 0
 						enemy.Animating = true
 					} else {
-						newX, newY = enemy.X+1, enemy.Y+1
+						newX, newY = enemy.X, enemy.Y-1
 						if isPositionFree(g, newX, newY, enemyIndex) {
 							g.state.Enemies[enemyIndex].X = newX
 							g.state.Enemies[enemyIndex].Y = newY
-							enemy.dx = 1
-							enemy.dy = 1
+							enemy.dx = 0
+							enemy.dy = -1
 							enemy.Animating = true
 						}
 					}
@@ -795,7 +795,34 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			if netDamage < 0 { // Ensure damage does not go below 0
 				netDamage = 0
 			}
+
+			dx, dy := enemy.X-g.state.Player.X, enemy.Y-g.state.Player.Y
+
+			// Determine the direction based on the change in position
+			switch {
+			case dx == 1 && dy == 0:
+				g.state.Player.Direction = Right
+			case dx == -1 && dy == 0:
+				g.state.Player.Direction = Left
+			case dx == 0 && dy == 1:
+				g.state.Player.Direction = Down
+			case dx == 0 && dy == -1:
+				g.state.Player.Direction = Up
+			case dx == 1 && dy == 1:
+				g.state.Player.Direction = DownRight
+			case dx == -1 && dy == 1:
+				g.state.Player.Direction = DownLeft
+			case dx == 1 && dy == -1:
+				g.state.Player.Direction = UpRight
+			case dx == -1 && dy == -1:
+				g.state.Player.Direction = UpLeft
+			}
+
 			g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sに%dダメージを与えた", g.state.Enemies[i].Name, netDamage))
+
+			g.playerAttack = true // プレイヤーが攻撃したことを示すフラグを設定
+
+			g.attackTimer = 0.5 // set timer for 0.5 seconds
 
 			g.state.Enemies[i].Health -= netDamage
 			if g.state.Enemies[i].Health <= 0 {
