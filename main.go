@@ -233,13 +233,10 @@ func (g *Game) Update() error {
 	}
 
 	for i := range g.state.Enemies {
-		log.Printf("Enemy %d attack timer: %f", i, g.state.Enemies[i].AttackTimer)
 		if g.state.Enemies[i].AttackTimer > 0 {
 			progress := 1 - g.state.Enemies[i].AttackTimer/0.5
 			angle := math.Pi * progress
 			value := 20 * math.Sin(angle)
-
-			log.Printf("Enemy %d attack timer: %f", i, g.state.Enemies[i].AttackTimer)
 
 			switch g.state.Enemies[i].AttackDirection {
 			case Up:
@@ -278,8 +275,10 @@ func (g *Game) Update() error {
 		if g.ActionQueue.Timer <= 0 {
 			action := g.ActionQueue.Queue[0]
 			g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
-			g.ActionQueue.Timer = action.Duration // reset timer for next action
 			g.processAction(action)
+			if len(g.ActionQueue.Queue) > 0 {
+				g.ActionQueue.Timer = g.ActionQueue.Queue[0].Duration // reset timer for next action
+			}
 		}
 	}
 
@@ -390,7 +389,7 @@ func NewGame() *Game {
 		playerAttack:     false,
 		ActionQueue: ActionQueue{
 			Queue: make([]Action, 0),
-			Timer: 0.5,
+			Timer: 0.0,
 		},
 		isCombatActive: false,
 	}
