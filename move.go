@@ -841,16 +841,18 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			g.attackTimer = 0.5 // set timer for 0.5 seconds
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sに%dダメージを与えた", g.state.Enemies[i].Name, netDamage),
+				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.state.Enemies[i].Name, netDamage),
 				Execute: func(g *Game) {
 					g.playerAttack = true
 
 					enemyIndex := i // ここでi変数の値を明示的にキャプチャ
 					g.state.Enemies[enemyIndex].Health -= netDamage
 
-					if g.state.Enemies[i].Health <= 0 {
+					if g.state.Enemies[enemyIndex].Health <= 0 {
 						// 敵のHealthが0以下の場合、敵を配列から削除
-						g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
+						g.descriptionQueue = append([]string{fmt.Sprintf("%sを倒した。", g.state.Enemies[enemyIndex].Name)}, g.descriptionQueue...)
+
+						g.state.Enemies = append(g.state.Enemies[:enemyIndex], g.state.Enemies[enemyIndex+1:]...)
 
 						// 敵の経験値をプレイヤーの所持経験値に加える
 						g.state.Player.ExperiencePoints += enemy.ExperiencePoints

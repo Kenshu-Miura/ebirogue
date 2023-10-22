@@ -177,7 +177,6 @@ func init() {
 }
 
 func (g *Game) Update() error {
-	//log.Printf("Update start: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgressInt, g.Animating, g.dx, g.dy) // Logging added
 
 	err := g.handleInventoryInput()
 	if err != nil {
@@ -243,8 +242,6 @@ func (g *Game) Update() error {
 	}
 
 	g.checkForStairs()
-
-	//log.Printf("Update end: AnimationProgress=%v, Animating=%v, dx=%v, dy=%v\n", g.AnimationProgressInt, g.Animating, g.dx, g.dy) // Logging added
 
 	return nil
 }
