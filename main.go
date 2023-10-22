@@ -70,6 +70,12 @@ type GameState struct {
 	Items   []Item   // マップ上のアイテムのリスト
 }
 
+type Attack struct {
+	EnemyIndex int
+	NetDamage  int
+	EnemyName  string
+}
+
 type Game struct {
 	state                GameState
 	rooms                []Room
@@ -106,6 +112,10 @@ type Game struct {
 	tmpPlayerOffsetY     float64 // プレイヤーの一時的なオフセットY
 	attackTimer          float64 // 攻撃メッセージのタイマー
 	playerAttack         bool    // プレイヤーが攻撃したかどうか
+	AttackQueue          struct {
+		Queue []Attack
+		Timer float64
+	}
 }
 
 func min(a, b int) int {
@@ -207,6 +217,16 @@ func (g *Game) Update() error {
 			g.tmpPlayerOffsetX = 0
 			g.tmpPlayerOffsetY = 0
 			g.playerAttack = false
+		}
+	}
+
+	if len(g.AttackQueue.Queue) > 0 {
+		g.AttackQueue.Timer -= (1 / 60.0) // assuming Update is called 60 times per second
+		if g.AttackQueue.Timer <= 0 {
+			g.AttackQueue.Timer = 0.5 // reset timer for next attack
+			attack := g.AttackQueue.Queue[0]
+			g.AttackQueue.Queue = g.AttackQueue.Queue[1:]
+			g.processAttack(attack)
 		}
 	}
 

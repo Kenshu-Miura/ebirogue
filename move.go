@@ -563,20 +563,25 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	}
 }
 
+// processAttack関数で、キューから取得した攻撃を処理
+func (g *Game) processAttack(attack Attack) {
+	g.state.Player.Health -= attack.NetDamage
+	if g.state.Player.Health < 0 {
+		g.state.Player.Health = 0 // Ensure health does not go below 0
+	}
+	g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sから%dダメージを受けた", attack.EnemyName, attack.NetDamage))
+}
+
 func (g *Game) AttackFromEnemy(enemyIndex int) {
 	enemy := g.state.Enemies[enemyIndex]
 
-	netDamage := enemy.AttackPower - g.state.Player.DefensePower
+	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
 	if netDamage < 0 { // Ensure damage does not go below 0
 		netDamage = 0
 	}
 
-	g.state.Player.Health -= netDamage
-	if g.state.Player.Health < 0 {
-		g.state.Player.Health = 0 // Ensure health does not go below 0
-	}
-
-	g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage))
+	attack := Attack{EnemyIndex: enemyIndex, NetDamage: netDamage, EnemyName: enemy.Name}
+	g.AttackQueue.Queue = append(g.AttackQueue.Queue, attack)
 
 }
 
@@ -791,7 +796,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == x && enemy.Y == y {
 			// Player's AttackPower is considered while dealing damage
-			netDamage := g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - enemy.DefensePower
+			netDamage := g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - enemy.DefensePower + rand.Intn(3) - 1
 			if netDamage < 0 { // Ensure damage does not go below 0
 				netDamage = 0
 			}
@@ -825,6 +830,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			g.attackTimer = 0.5 // set timer for 0.5 seconds
 
 			g.state.Enemies[i].Health -= netDamage
+
 			if g.state.Enemies[i].Health <= 0 {
 				// 敵のHealthが0以下の場合、敵を配列から削除
 				g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
@@ -834,10 +840,8 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 				g.state.Player.checkLevelUp() // レベルアップをチェック
 
-			} else {
-				// Enemy retaliates with its AttackPower
-				g.AttackFromEnemy(i) // Call function to attack player
 			}
+
 			g.IncrementMoveCount()
 			g.MoveEnemies()
 			return true
