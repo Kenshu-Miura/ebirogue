@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	tileSize      = 20 // タイルのサイズを20x20ピクセルに設定
+	tileSize      = 30 // タイルのサイズを20x20ピクセルに設定
 	Uninitialized = -1
 	Up            = 0
 	Down          = 1
@@ -219,7 +219,7 @@ func (g *Game) Update() error {
 	if g.attackTimer > 0 {
 		progress := 1 - g.attackTimer/0.5 // progress ranges from 0 to 1 over 0.5 seconds
 		angle := math.Pi * progress       // angle ranges from 0 to Pi
-		value := 20 * math.Sin(angle)     // value ranges from 0 to 20 to 0
+		value := 30 * math.Sin(angle)     // value ranges from 0 to 20 to 0
 
 		g.tmpPlayerOffsetX = value
 		g.tmpPlayerOffsetY = value
@@ -237,7 +237,7 @@ func (g *Game) Update() error {
 		if g.state.Enemies[i].AttackTimer > 0 {
 			progress := 1 - g.state.Enemies[i].AttackTimer/0.5
 			angle := math.Pi * progress
-			value := 20 * math.Sin(angle)
+			value := 30 * math.Sin(angle)
 
 			switch g.state.Enemies[i].AttackDirection {
 			case Up:

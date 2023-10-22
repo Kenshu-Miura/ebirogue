@@ -17,23 +17,23 @@ func (g *Game) CalculateAnimationOffset(screen *ebiten.Image) (int, int) {
 	centerX := (screenWidth-tileSize)/2 - tileSize
 	centerY := (screenHeight-tileSize)/2 - tileSize
 
-	animationProgress := (float64(g.AnimationProgressInt) / 10.0) * 2.0
+	animationProgress := (float64(g.AnimationProgressInt) / 10.0) * 3.0
 	adjustedProgress := animationProgress
 	if g.AnimationProgressInt == 1 {
-		adjustedProgress = 0.2
+		adjustedProgress = 0.3
 	}
 
 	offsetAdjustmentX, offsetAdjustmentY := 0, 0
 	if g.AnimationProgressInt > 0 {
 		if g.dx > 0 {
-			offsetAdjustmentX = -20
+			offsetAdjustmentX = -30
 		} else if g.dx < 0 {
-			offsetAdjustmentX = 20
+			offsetAdjustmentX = 30
 		}
 		if g.dy > 0 {
-			offsetAdjustmentY = -20
+			offsetAdjustmentY = -30
 		} else if g.dy < 0 {
-			offsetAdjustmentY = 20
+			offsetAdjustmentY = 30
 		}
 	}
 
@@ -65,14 +65,14 @@ func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
 	offsetAdjustmentX, offsetAdjustmentY := 0, 0
 	if enemy.AnimationProgressInt > 0 {
 		if enemy.dx > 0 {
-			offsetAdjustmentX = -20
+			offsetAdjustmentX = -30
 		} else if enemy.dx < 0 {
-			offsetAdjustmentX = 20
+			offsetAdjustmentX = 30
 		}
 		if enemy.dy > 0 {
-			offsetAdjustmentY = -20
+			offsetAdjustmentY = -30
 		} else if enemy.dy < 0 {
-			offsetAdjustmentY = 20
+			offsetAdjustmentY = 30
 		}
 	}
 
