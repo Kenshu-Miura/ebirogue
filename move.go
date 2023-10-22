@@ -564,8 +564,9 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 }
 
 // Enqueue adds a new action to the action queue
-func (aq *Game) Enqueue(action Action) {
-	aq.ActionQueue.Queue = append(aq.ActionQueue.Queue, action)
+func (g *Game) Enqueue(action Action) {
+	g.isCombatActive = true
+	g.ActionQueue.Queue = append(g.ActionQueue.Queue, action)
 }
 
 func (g *Game) processAction(action Action) {

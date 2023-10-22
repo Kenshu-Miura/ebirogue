@@ -126,6 +126,7 @@ type Game struct {
 	attackTimer          float64 // 攻撃メッセージのタイマー
 	playerAttack         bool    // プレイヤーが攻撃したかどうか
 	ActionQueue          ActionQueue
+	isCombatActive       bool
 }
 
 func min(a, b int) int {
@@ -183,7 +184,7 @@ func (g *Game) Update() error {
 		return err
 	}
 
-	if !g.showInventory && !g.playerAttack {
+	if !g.showInventory && !g.playerAttack && !g.isCombatActive {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheetHandleInput()
 
@@ -239,6 +240,10 @@ func (g *Game) Update() error {
 			g.ActionQueue.Timer = action.Duration // reset timer for next action
 			g.processAction(action)
 		}
+	}
+
+	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive {
+		g.isCombatActive = false // reset the combat active flag when the queue is empty
 	}
 
 	g.checkForStairs()
@@ -346,6 +351,7 @@ func NewGame() *Game {
 			Queue: make([]Action, 0),
 			Timer: 0.5,
 		},
+		isCombatActive: false,
 	}
 
 	// Log the contents of game.rooms
