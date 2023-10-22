@@ -878,7 +878,12 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 					if g.state.Enemies[enemyIndex].Health <= 0 {
 						// 敵のHealthが0以下の場合、敵を配列から削除
-						g.descriptionQueue = append([]string{fmt.Sprintf("%sを倒した。", g.state.Enemies[enemyIndex].Name)}, g.descriptionQueue...)
+						defeatAction := Action{
+							Duration: 0.5,
+							Message:  fmt.Sprintf("%sを倒した。", g.state.Enemies[enemyIndex].Name),
+							Execute:  func(g *Game) {},
+						}
+						g.Enqueue(defeatAction)
 
 						g.state.Enemies = append(g.state.Enemies[:enemyIndex], g.state.Enemies[enemyIndex+1:]...)
 

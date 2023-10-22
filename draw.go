@@ -90,8 +90,6 @@ func (g *Game) ManageDescriptions() {
 		return
 	}
 
-	//log.Printf("ActionQueue.Queue: %v", g.ActionQueue.Queue)
-
 	if len(g.descriptionQueue) > 0 {
 		// Existing logic for handling descriptionQueue
 		g.descriptionText = g.descriptionQueue[0]
