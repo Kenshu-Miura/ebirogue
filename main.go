@@ -71,9 +71,22 @@ type GameState struct {
 }
 
 type Attack struct {
-	EnemyIndex int
-	NetDamage  int
-	EnemyName  string
+	EnemyIndex         int
+	Attackdx, Attackdy int
+	IsPlayer           bool
+	NetDamage          int
+	EnemyName          string
+}
+
+type Action struct {
+	Duration float64     // 行動を処理する時間
+	Message  string      // 画面下に表示するメッセージ
+	Execute  func(*Game) // 行動を実行する関数
+}
+
+type AttackQueue struct {
+	Queue []Attack
+	Timer float64
 }
 
 type Game struct {
@@ -112,8 +125,8 @@ type Game struct {
 	tmpPlayerOffsetY     float64 // プレイヤーの一時的なオフセットY
 	attackTimer          float64 // 攻撃メッセージのタイマー
 	playerAttack         bool    // プレイヤーが攻撃したかどうか
-	AttackQueue          struct {
-		Queue []Attack
+	ActionQueue          struct {
+		Queue []Action
 		Timer float64
 	}
 }
@@ -220,13 +233,13 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if len(g.AttackQueue.Queue) > 0 {
-		g.AttackQueue.Timer -= (1 / 60.0) // assuming Update is called 60 times per second
-		if g.AttackQueue.Timer <= 0 {
-			g.AttackQueue.Timer = 0.5 // reset timer for next attack
-			attack := g.AttackQueue.Queue[0]
-			g.AttackQueue.Queue = g.AttackQueue.Queue[1:]
-			g.processAttack(attack)
+	if len(g.ActionQueue.Queue) > 0 {
+		g.ActionQueue.Timer -= (1 / 60.0) // assuming Update is called 60 times per second
+		if g.ActionQueue.Timer <= 0 {
+			action := g.ActionQueue.Queue[0]
+			g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
+			g.ActionQueue.Timer = action.Duration // reset timer for next action
+			g.processAction(action)
 		}
 	}
 

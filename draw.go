@@ -84,18 +84,22 @@ func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
 func (g *Game) ManageDescriptions() {
 	now := time.Now()
 	if now.Before(g.nextDescriptionTime) {
-		// It's not yet time to display the next message, so return early.
 		return
 	}
 
-	if len(g.descriptionQueue) > 0 {
-		// Display the first message in the queue
+	if len(g.ActionQueue.Queue) > 0 {
+		action := g.ActionQueue.Queue[0]
+
+		g.descriptionText = action.Message
+		g.showDescription = true
+
+		g.nextDescriptionTime = now.Add(500 * time.Millisecond)
+	} else if len(g.descriptionQueue) > 0 {
+		// Existing logic for handling descriptionQueue
 		g.descriptionText = g.descriptionQueue[0]
 		g.showDescription = true
-		// Remove the displayed message from the queue
 		g.descriptionQueue = g.descriptionQueue[1:]
 
-		// Set the time for the next message to be displayed
 		g.nextDescriptionTime = now.Add(500 * time.Millisecond)
 	} else {
 		g.showDescription = false

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
+	"log"
 	"math/rand"
 )
 
@@ -563,13 +564,14 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	}
 }
 
-// processAttack関数で、キューから取得した攻撃を処理
-func (g *Game) processAttack(attack Attack) {
-	g.state.Player.Health -= attack.NetDamage
-	if g.state.Player.Health < 0 {
-		g.state.Player.Health = 0 // Ensure health does not go below 0
-	}
-	g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sから%dダメージを受けた", attack.EnemyName, attack.NetDamage))
+// Enqueue adds a new action to the action queue
+func (aq *Game) Enqueue(action Action) {
+	aq.ActionQueue.Queue = append(aq.ActionQueue.Queue, action)
+}
+
+func (g *Game) processAction(action Action) {
+	// 実際のアクションの実行ロジックはアクションオブジェクトのExecuteメソッドに委譲
+	action.Execute(g)
 }
 
 func (g *Game) AttackFromEnemy(enemyIndex int) {
@@ -580,9 +582,19 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 		netDamage = 0
 	}
 
-	attack := Attack{EnemyIndex: enemyIndex, NetDamage: netDamage, EnemyName: enemy.Name}
-	g.AttackQueue.Queue = append(g.AttackQueue.Queue, attack)
+	action := Action{
+		Duration: 0.5,
+		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
+		Execute: func(g *Game) {
+			g.state.Player.Health -= netDamage
+			if g.state.Player.Health < 0 {
+				g.state.Player.Health = 0 // Ensure health does not go below 0
+			}
+			log.Printf("Player health: %d\n", g.state.Player.Health)
+		},
+	}
 
+	g.Enqueue(action)
 }
 
 func (g *Game) MoveEnemies() {
@@ -792,6 +804,11 @@ func isOccupied(g *Game, x, y int) bool {
 	return false
 }
 
+// Enqueue adds a new attack to the attack queue
+func (aq *AttackQueue) Enqueue(attack Attack) {
+	aq.Queue = append(aq.Queue, attack)
+}
+
 func (g *Game) CheckForEnemies(x, y int) bool {
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == x && enemy.Y == y {
@@ -823,27 +840,33 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 				g.state.Player.Direction = UpLeft
 			}
 
-			g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sに%dダメージを与えた", g.state.Enemies[i].Name, netDamage))
-
-			g.playerAttack = true // プレイヤーが攻撃したことを示すフラグを設定
-
 			g.attackTimer = 0.5 // set timer for 0.5 seconds
+			action := Action{
+				Duration: 0.5,
+				Message:  fmt.Sprintf("%sに%dダメージを与えた", g.state.Enemies[i].Name, netDamage),
+				Execute: func(g *Game) {
+					g.playerAttack = true
 
-			g.state.Enemies[i].Health -= netDamage
+					enemyIndex := i // ここでi変数の値を明示的にキャプチャ
+					g.state.Enemies[enemyIndex].Health -= netDamage
+					log.Printf("Enemy %d: %d/%d HP\n", enemyIndex, g.state.Enemies[enemyIndex].Health, g.state.Enemies[enemyIndex].MaxHealth)
+					if g.state.Enemies[i].Health <= 0 {
+						// 敵のHealthが0以下の場合、敵を配列から削除
+						g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
 
-			if g.state.Enemies[i].Health <= 0 {
-				// 敵のHealthが0以下の場合、敵を配列から削除
-				g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
+						// 敵の経験値をプレイヤーの所持経験値に加える
+						g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 
-				// 敵の経験値をプレイヤーの所持経験値に加える
-				g.state.Player.ExperiencePoints += enemy.ExperiencePoints
-
-				g.state.Player.checkLevelUp() // レベルアップをチェック
-
+						g.state.Player.checkLevelUp() // レベルアップをチェック
+					}
+					g.playerAttack = false
+					g.IncrementMoveCount()
+					g.MoveEnemies()
+				},
 			}
 
-			g.IncrementMoveCount()
-			g.MoveEnemies()
+			g.Enqueue(action)
+
 			return true
 		}
 	}
