@@ -178,10 +178,10 @@ func (g *Game) HandleInput() (int, int) {
 	leftPressed := ebiten.IsKeyPressed(ebiten.KeyLeft)
 	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight)
 	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
-	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
+	sPressed := ebiten.IsKeyPressed(ebiten.KeyS)         // Sキーが押されているかどうかをチェック
 
 	// 足踏みロジック
-	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
+	if sPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
 		!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
 		g.IncrementMoveCount()
 		g.MoveEnemies()

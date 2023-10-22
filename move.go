@@ -572,6 +572,7 @@ func (g *Game) Enqueue(action Action) {
 func (g *Game) processAction(action Action) {
 	// 実際のアクションの実行ロジックはアクションオブジェクトのExecuteメソッドに委譲
 	action.Execute(g)
+	g.ActionDurationCounter = action.Duration // record the duration of the next action
 }
 
 func (g *Game) AttackFromEnemy(enemyIndex int) {
@@ -777,6 +778,12 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
+
+	for _, enemy := range g.state.Enemies {
+		if enemy.X == newPX && enemy.Y == newPY {
+			return false
+		}
+	}
 
 	// 敵との戦闘チェック
 	if g.CheckForEnemies(newPX, newPY) {

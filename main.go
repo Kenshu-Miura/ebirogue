@@ -278,8 +278,7 @@ func (g *Game) Update() error {
 			g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
 			g.processAction(action)
 			if len(g.ActionQueue.Queue) > 0 {
-				g.ActionQueue.Timer = g.ActionQueue.Queue[0].Duration         // reset timer for next action
-				g.ActionDurationCounter = g.ActionQueue.Queue[0].Duration * 2 // record the duration of the next action
+				g.ActionQueue.Timer = g.ActionQueue.Queue[0].Duration // reset timer for next action
 			}
 		}
 	}
@@ -288,6 +287,7 @@ func (g *Game) Update() error {
 		g.ActionDurationCounter -= (1 / 60.0) // decrement the counter every frame
 	}
 
+	log.Printf("g.ActionDurationCounter: %f", g.ActionDurationCounter)
 	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive && g.ActionDurationCounter <= 0 {
 		g.isCombatActive = false // reset the combat active flag when the queue is empty
 	}
