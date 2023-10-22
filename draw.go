@@ -83,9 +83,14 @@ func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
 
 func (g *Game) ManageDescriptions() {
 	now := time.Now()
+	if g.nextDescriptionTime.IsZero() {
+		g.nextDescriptionTime = now
+	}
 	if now.Before(g.nextDescriptionTime) {
 		return
 	}
+
+	//log.Printf("ActionQueue.Queue: %v", g.ActionQueue.Queue)
 
 	if len(g.ActionQueue.Queue) > 0 {
 		action := g.ActionQueue.Queue[0]

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 	"math/rand"
 )
 
@@ -567,11 +566,13 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 // Enqueue adds a new action to the action queue
 func (aq *Game) Enqueue(action Action) {
 	aq.ActionQueue.Queue = append(aq.ActionQueue.Queue, action)
+	//log.Printf("Enqueued action: %v. Queue length is now %d\n", action, len(aq.ActionQueue.Queue))
 }
 
 func (g *Game) processAction(action Action) {
 	// 実際のアクションの実行ロジックはアクションオブジェクトのExecuteメソッドに委譲
 	action.Execute(g)
+	//log.Printf("Processed action: %v\n", action)
 }
 
 func (g *Game) AttackFromEnemy(enemyIndex int) {
@@ -590,7 +591,6 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 			if g.state.Player.Health < 0 {
 				g.state.Player.Health = 0 // Ensure health does not go below 0
 			}
-			log.Printf("Player health: %d\n", g.state.Player.Health)
 		},
 	}
 
@@ -849,7 +849,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 					enemyIndex := i // ここでi変数の値を明示的にキャプチャ
 					g.state.Enemies[enemyIndex].Health -= netDamage
-					log.Printf("Enemy %d: %d/%d HP\n", enemyIndex, g.state.Enemies[enemyIndex].Health, g.state.Enemies[enemyIndex].MaxHealth)
+
 					if g.state.Enemies[i].Health <= 0 {
 						// 敵のHealthが0以下の場合、敵を配列から削除
 						g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)

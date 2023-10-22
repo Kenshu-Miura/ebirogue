@@ -233,6 +233,8 @@ func (g *Game) Update() error {
 		}
 	}
 
+	g.ManageDescriptions()
+
 	if len(g.ActionQueue.Queue) > 0 {
 		g.ActionQueue.Timer -= (1 / 60.0) // assuming Update is called 60 times per second
 		if g.ActionQueue.Timer <= 0 {
@@ -242,9 +244,6 @@ func (g *Game) Update() error {
 			g.processAction(action)
 		}
 	}
-
-	// メッセージキューを管理する
-	g.ManageDescriptions()
 
 	g.checkForStairs()
 
