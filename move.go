@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math/rand"
 )
@@ -563,44 +562,6 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 	}
 }
 
-// Enqueue adds a new action to the action queue
-func (g *Game) Enqueue(action Action) {
-	g.isCombatActive = true
-	g.ActionQueue.Queue = append(g.ActionQueue.Queue, action)
-}
-
-func (g *Game) processAction(action Action) {
-	// 実際のアクションの実行ロジックはアクションオブジェクトのExecuteメソッドに委譲
-	action.Execute(g)
-	g.ActionDurationCounter = action.Duration // record the duration of the next action
-}
-
-func (g *Game) AttackFromEnemy(enemyIndex int) {
-	enemy := &g.state.Enemies[enemyIndex]
-
-	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
-	if netDamage < 0 { // Ensure damage does not go below 0
-		netDamage = 0
-	}
-
-	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y // プレイヤーと敵の位置の差を計算
-
-	action := Action{
-		Duration: 0.5,
-		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
-		Execute: func(g *Game) {
-			enemy.AttackTimer = 0.5                            // ここでAttackTimerを設定することで、敵の攻撃アニメーションが実行される
-			enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
-			g.state.Player.Health -= netDamage
-			if g.state.Player.Health < 0 {
-				g.state.Player.Health = 0 // Ensure health does not go below 0
-			}
-		},
-	}
-
-	g.Enqueue(action)
-}
-
 func determineDirection(dx, dy int) Direction {
 	switch {
 	case dx == 1 && dy == 0:
@@ -833,82 +794,6 @@ func isOccupied(g *Game, x, y int) bool {
 	// Check if the player is at the specified coordinates
 	if g.state.Player.X == x && g.state.Player.Y == y {
 		return true
-	}
-	return false
-}
-
-// Enqueue adds a new attack to the attack queue
-func (aq *ActionQueue) Enqueue(action Action) {
-	aq.Queue = append(aq.Queue, action)
-}
-
-func (g *Game) CheckForEnemies(x, y int) bool {
-	for i, enemy := range g.state.Enemies {
-		if enemy.X == g.state.Player.X+x && enemy.Y == g.state.Player.Y+y {
-			// Player's AttackPower is considered while dealing damage
-			netDamage := g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - enemy.DefensePower + rand.Intn(3) - 1
-			if netDamage < 0 { // Ensure damage does not go below 0
-				netDamage = 0
-			}
-
-			dx, dy := enemy.X-g.state.Player.X, enemy.Y-g.state.Player.Y
-
-			// Determine the direction based on the change in position
-			switch {
-			case dx == 1 && dy == 0:
-				g.state.Player.Direction = Right
-			case dx == -1 && dy == 0:
-				g.state.Player.Direction = Left
-			case dx == 0 && dy == 1:
-				g.state.Player.Direction = Down
-			case dx == 0 && dy == -1:
-				g.state.Player.Direction = Up
-			case dx == 1 && dy == 1:
-				g.state.Player.Direction = DownRight
-			case dx == -1 && dy == 1:
-				g.state.Player.Direction = DownLeft
-			case dx == 1 && dy == -1:
-				g.state.Player.Direction = UpRight
-			case dx == -1 && dy == -1:
-				g.state.Player.Direction = UpLeft
-			}
-
-			g.attackTimer = 0.5 // set timer for 0.5 seconds
-			action := Action{
-				Duration: 0.5,
-				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.state.Enemies[i].Name, netDamage),
-				Execute: func(g *Game) {
-					g.playerAttack = true
-
-					enemyIndex := i // ここでi変数の値を明示的にキャプチャ
-					g.state.Enemies[enemyIndex].Health -= netDamage
-
-					if g.state.Enemies[enemyIndex].Health <= 0 {
-						// 敵のHealthが0以下の場合、敵を配列から削除
-						defeatAction := Action{
-							Duration: 0.5,
-							Message:  fmt.Sprintf("%sを倒した。", g.state.Enemies[enemyIndex].Name),
-							Execute:  func(g *Game) {},
-						}
-						g.Enqueue(defeatAction)
-
-						g.state.Enemies = append(g.state.Enemies[:enemyIndex], g.state.Enemies[enemyIndex+1:]...)
-
-						// 敵の経験値をプレイヤーの所持経験値に加える
-						g.state.Player.ExperiencePoints += enemy.ExperiencePoints
-
-						g.state.Player.checkLevelUp() // レベルアップをチェック
-					}
-					g.playerAttack = false
-					g.IncrementMoveCount()
-					g.MoveEnemies()
-				},
-			}
-
-			g.Enqueue(action)
-
-			return true
-		}
 	}
 	return false
 }
