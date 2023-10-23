@@ -5,6 +5,12 @@ import (
 	_ "image/png" // PNG画像を読み込むために必要
 )
 
+func (g *Game) PickUpItem(item Item, i int) {
+	g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
+	// アイテムをGameState.Itemsから削除
+	g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
+}
+
 func (g *Game) PickupItem() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
@@ -18,14 +24,7 @@ func (g *Game) PickupItem() {
 						Duration: 0.2,
 						Message:  fmt.Sprintf("%sを拾った", g.state.Items[i].GetName()),
 						Execute: func(g *Game) {
-
-							g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
-
-							g.descriptionQueue = append(g.descriptionQueue, fmt.Sprintf("%sを拾った", g.state.Items[i].GetName()))
-
-							// アイテムをGameState.Itemsから削除
-							g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
-
+							g.PickUpItem(item, i)
 						},
 					}
 

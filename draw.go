@@ -173,7 +173,7 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 		itemWindowWidth, itemWindowHeight := 400, 26
 		itemwindowX, itemwindowY := (screenWidth-itemWindowWidth)/2, (screenHeight-itemWindowHeight)/2
-		actionWindowWidth, actionWindowHeight := 100, 70
+		actionWindowWidth, actionWindowHeight := 100, 90
 		actionWindowX, actionWindowY := (screenWidth-actionWindowWidth)/2, (screenHeight-actionWindowHeight)/2
 
 		// Draw item name window
@@ -191,7 +191,7 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 				// Draw cursor
 				text.Draw(screen, "→", mplusNormalFont, actionWindowX+10, actionWindowY+actionWindowHeight+20+(g.selectedGroundItemIndex*20), color.White)
 				// Draw actions
-				actions := []string{"拾う", "使う", "投げる"}
+				actions := []string{"拾う", "交換", "使う", "投げる"}
 				for index, action := range actions {
 					text.Draw(screen, action, mplusNormalFont, actionWindowX+30, actionWindowY+actionWindowHeight+20+(index*20), color.White)
 				}

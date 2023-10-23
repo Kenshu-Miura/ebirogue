@@ -74,8 +74,7 @@ func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
 	if cPressed && !g.ShowGroundItem {
 		g.showInventory = true
-		g.descriptionQueue = []string{} // g.descriptionQueueの中身をクリア
-		return nil                      // Skip other updates when the inventory window is active
+		return nil // Skip other updates when the inventory window is active
 	}
 
 	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)

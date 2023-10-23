@@ -116,7 +116,6 @@ type Game struct {
 	showItemDescription     bool
 	itemdescriptionText     string
 	descriptionText         string
-	descriptionQueue        []string
 	nextDescriptionTime     time.Time
 	Animating               bool
 	AnimationProgress       float64
@@ -135,7 +134,7 @@ type Game struct {
 	xPressed                bool
 	ShowGroundItem          bool
 	selectedGroundItemIndex int
-	GroundItemActions       bool
+	GroundItemActioned      bool
 	isGroundItem            bool
 }
 
@@ -198,24 +197,24 @@ func (g *Game) Update() error {
 
 	if dPressed && !g.showInventory && !g.playerAttack && !g.isCombatActive && !g.ShowGroundItem {
 		g.ShowGroundItem = true
-		g.descriptionQueue = []string{} // g.descriptionQueueの中身をクリア
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
 		g.ShowGroundItem = false
+		g.isGroundItem = false
 	}
 
 	if g.ShowGroundItem {
 		if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundItemIndex > 0 {
 			g.selectedGroundItemIndex--
-		} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundItemIndex < 2 {
+		} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundItemIndex < 3 {
 			g.selectedGroundItemIndex++
 		} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-			g.GroundItemActions = true // Toggle the item actions menu
+			g.GroundItemActioned = true // Toggle the item actions menu
 		}
-		if g.GroundItemActions {
+		if g.GroundItemActioned {
 			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-				//g.executeGroundItemAction()
+				g.executeGroundItemAction()
 				g.ShowGroundItem = false
 				g.isGroundItem = false
 			}

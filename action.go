@@ -6,6 +6,39 @@ import (
 	"math/rand"
 )
 
+func (g *Game) executeGroundItemAction() {
+	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
+
+	if g.selectedGroundItemIndex == 0 { // Assuming index 0 corresponds to '拾う'
+		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
+			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
+			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
+				// プレイヤーのインベントリサイズをチェック
+				if len(g.state.Player.Inventory) < 20 {
+					action := Action{
+						Duration: 0.2,
+						Message:  fmt.Sprintf("%sを拾った", g.state.Items[i].GetName()),
+						Execute: func(g *Game) {
+							g.PickUpItem(item, i)
+						},
+					}
+					g.Enqueue(action)
+					break // 一致するアイテムが見つかったらループを終了
+				} else {
+					action := Action{
+						Duration: 0.5,
+						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", g.state.Items[i].GetName()),
+						Execute: func(g *Game) {
+
+						},
+					}
+					g.Enqueue(action)
+				}
+			}
+		}
+	}
+}
+
 func (g *Game) executeAction() {
 
 	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
