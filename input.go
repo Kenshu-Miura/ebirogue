@@ -257,6 +257,11 @@ func (g *Game) HandleInput() (int, int) {
 			dx = 1
 		}
 
+		for _, room := range g.rooms {
+			if isOnBoundary(g.state.Player.X+dx, g.state.Player.Y+dy, room) {
+				return 0, 0
+			}
+		}
 	}
 
 	// 矢印キーの押下ロジック
