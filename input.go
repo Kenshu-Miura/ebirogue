@@ -285,6 +285,31 @@ func (g *Game) HandleInput() (int, int) {
 			blockDownLeft := blockDown || blockLeft
 			blockDownRight := blockDown || blockRight
 
+			if upPressed {
+				g.state.Player.Direction = Up
+			}
+			if downPressed {
+				g.state.Player.Direction = Down
+			}
+			if leftPressed {
+				g.state.Player.Direction = Left
+			}
+			if rightPressed {
+				g.state.Player.Direction = Right
+			}
+			if upPressed && rightPressed {
+				g.state.Player.Direction = UpRight
+			}
+			if upPressed && leftPressed {
+				g.state.Player.Direction = UpLeft
+			}
+			if downPressed && leftPressed {
+				g.state.Player.Direction = DownLeft
+			}
+			if downPressed && rightPressed {
+				g.state.Player.Direction = DownRight
+			}
+
 			if upPressed && !downPressed && !blockUp {
 				dy = -1
 			}

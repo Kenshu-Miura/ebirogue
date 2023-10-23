@@ -742,14 +742,26 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 
 	for _, enemy := range g.state.Enemies {
 		if enemy.X == newPX && enemy.Y == newPY {
+			switch {
+			case dx == 1 && dy == 0:
+				g.state.Player.Direction = Right
+			case dx == -1 && dy == 0:
+				g.state.Player.Direction = Left
+			case dx == 0 && dy == 1:
+				g.state.Player.Direction = Down
+			case dx == 0 && dy == -1:
+				g.state.Player.Direction = Up
+			case dx == 1 && dy == 1:
+				g.state.Player.Direction = DownRight
+			case dx == -1 && dy == 1:
+				g.state.Player.Direction = DownLeft
+			case dx == 1 && dy == -1:
+				g.state.Player.Direction = UpRight
+			case dx == -1 && dy == -1:
+				g.state.Player.Direction = UpLeft
+			}
 			return false
 		}
-	}
-
-	// 敵との戦闘チェック
-	if g.CheckForEnemies(newPX, newPY) {
-		// 戦闘が発生した場合、プレイヤーは移動しない
-		return false
 	}
 
 	// マップ範囲内およびブロックされていないタイル上にあることを確認
