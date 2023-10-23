@@ -10,7 +10,7 @@ func (g *Game) executeAction() {
 
 	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
 		action := Action{
-			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+			Duration: 0.2, // Assuming a duration of 0.5 seconds for this action
 			Message:  fmt.Sprintf("%sを置いた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
 			Execute: func(g *Game) {
 				selectedItem := g.state.Player.Inventory[g.selectedItemIndex]

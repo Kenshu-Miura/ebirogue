@@ -90,20 +90,13 @@ func (g *Game) ManageDescriptions() {
 		return
 	}
 
-	if len(g.descriptionQueue) > 0 {
-		// Existing logic for handling descriptionQueue
-		g.descriptionText = g.descriptionQueue[0]
-		g.showDescription = true
-		g.descriptionQueue = g.descriptionQueue[1:]
-
-		g.nextDescriptionTime = now.Add(500 * time.Millisecond)
-	} else if len(g.ActionQueue.Queue) > 0 {
+	if len(g.ActionQueue.Queue) > 0 {
 		action := g.ActionQueue.Queue[0]
 
 		g.descriptionText = action.Message
 		g.showDescription = true
 
-		g.nextDescriptionTime = now.Add(500 * time.Millisecond)
+		g.nextDescriptionTime = now.Add(time.Duration(action.Duration * float64(time.Second)))
 	} else {
 		g.showDescription = false
 	}
