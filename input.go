@@ -25,6 +25,35 @@ func (g *Game) OpenDoor() {
 	}
 }
 
+func (g *Game) HandleGroundItemInput() {
+	dPressed := inpututil.IsKeyJustPressed(ebiten.KeyD)
+	if dPressed && !g.showInventory && !g.playerAttack && !g.isCombatActive && !g.ShowGroundItem {
+		g.ShowGroundItem = true
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
+		g.ShowGroundItem = false
+		g.isGroundItem = false
+	}
+
+	if g.ShowGroundItem {
+		if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundItemIndex > 0 {
+			g.selectedGroundItemIndex--
+		} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundItemIndex < 3 {
+			g.selectedGroundItemIndex++
+		} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			g.GroundItemActioned = true // Toggle the item actions menu
+		}
+		if g.GroundItemActioned {
+			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+				g.executeGroundItemAction()
+				g.ShowGroundItem = false
+				g.isGroundItem = false
+			}
+		}
+	}
+}
+
 func (g *Game) handleItemActionsInput() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedActionIndex > 0 {
 		g.selectedActionIndex--
