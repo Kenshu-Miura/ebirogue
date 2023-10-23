@@ -170,7 +170,7 @@ func (g *Game) CheetHandleInput() (int, int) {
 }
 
 func (g *Game) HandleInput() (int, int) {
-	var dx, dy int
+	var dx, dy = 0, 0
 
 	// キーの押下状態を取得
 	upPressed := ebiten.IsKeyPressed(ebiten.KeyUp)
@@ -186,6 +186,29 @@ func (g *Game) HandleInput() (int, int) {
 		g.IncrementMoveCount()
 		g.MoveEnemies()
 		g.lastIncrement = time.Now() // lastIncrementの更新
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		g.zPressed = true
+		switch g.state.Player.Direction {
+		case Up:
+			dx, dy = 0, -1
+		case UpRight:
+			dx, dy = 1, -1
+		case Right:
+			dx, dy = 1, 0
+		case DownRight:
+			dx, dy = 1, 1
+		case Down:
+			dx, dy = 0, 1
+		case DownLeft:
+			dx, dy = -1, 1
+		case Left:
+			dx, dy = -1, 0
+		case UpLeft:
+			dx, dy = -1, -1
+		}
+		return dx, dy
 	}
 
 	arrowPressed := upPressed || downPressed || leftPressed || rightPressed

@@ -130,6 +130,7 @@ type Game struct {
 	ActionQueue           ActionQueue
 	isCombatActive        bool
 	ActionDurationCounter float64
+	zPressed              bool
 }
 
 func min(a, b int) int {
@@ -190,6 +191,13 @@ func (g *Game) Update() error {
 	if !g.showInventory && !g.playerAttack && !g.isCombatActive {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheetHandleInput()
+
+		if g.zPressed {
+			log.Printf("dx: %d, dy: %d", dx, dy)
+			g.CheckForEnemies(dx, dy)
+			g.zPressed = false
+			return nil
+		}
 
 		moved := g.MovePlayer(dx, dy)
 		//moved := g.CheetMovePlayer(dx, dy)
@@ -287,7 +295,6 @@ func (g *Game) Update() error {
 		g.ActionDurationCounter -= (1 / 60.0) // decrement the counter every frame
 	}
 
-	log.Printf("g.ActionDurationCounter: %f", g.ActionDurationCounter)
 	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive && g.ActionDurationCounter <= 0 {
 		g.isCombatActive = false // reset the combat active flag when the queue is empty
 	}
@@ -398,6 +405,7 @@ func NewGame() *Game {
 			Timer: 0.0,
 		},
 		isCombatActive: false,
+		zPressed:       false,
 	}
 
 	// Log the contents of game.rooms
