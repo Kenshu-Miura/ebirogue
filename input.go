@@ -72,7 +72,7 @@ func (g *Game) handleItemDescriptionInput() error {
 
 func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
-	if cPressed {
+	if cPressed && !g.ShowGroundItem {
 		g.showInventory = true
 		g.descriptionQueue = []string{} // g.descriptionQueueの中身をクリア
 		return nil                      // Skip other updates when the inventory window is active
@@ -238,20 +238,49 @@ func (g *Game) HandleInput() (int, int) {
 	blockDown := g.state.Map[player.Y+1][player.X].Blocked
 	blockLeft := g.state.Map[player.Y][player.X-1].Blocked
 	blockRight := g.state.Map[player.Y][player.X+1].Blocked
+	blockUpRight := blockUp || blockRight
+	blockUpLeft := blockUp || blockLeft
+	blockDownLeft := blockDown || blockLeft
+	blockDownRight := blockDown || blockRight
 
 	if arrowPressed && xPressed {
+		g.xPressed = true
+		if shiftPressed { // 斜め移動のロジック
 
-		if upPressed && !downPressed && !blockUp {
-			dy = -1
-		}
-		if downPressed && !upPressed && !blockDown {
-			dy = 1
-		}
-		if leftPressed && !rightPressed && !blockLeft {
-			dx = -1
-		}
-		if rightPressed && !leftPressed && !blockRight {
-			dx = 1
+			if upPressed && rightPressed && (!blockUp && !blockRight) {
+				dy, dx = -1, 1
+			} else if upPressed && leftPressed && (!blockUp && !blockLeft) {
+				dy, dx = -1, -1
+			} else if downPressed && leftPressed && (!blockDown && !blockLeft) {
+				dy, dx = 1, -1
+			} else if downPressed && rightPressed && (!blockDown && !blockRight) {
+				dy, dx = 1, 1
+			}
+
+		} else {
+			if upPressed && !downPressed && !blockUp {
+				dy = -1
+			}
+			if downPressed && !upPressed && !blockDown {
+				dy = 1
+			}
+			if leftPressed && !rightPressed && !blockLeft {
+				dx = -1
+			}
+			if rightPressed && !leftPressed && !blockRight {
+				dx = 1
+			}
+
+			// 斜め移動のロジック
+			if upPressed && rightPressed && !blockUpRight {
+				dy, dx = -1, 1
+			} else if upPressed && leftPressed && !blockUpLeft {
+				dy, dx = -1, -1
+			} else if downPressed && leftPressed && !blockDownLeft {
+				dy, dx = 1, -1
+			} else if downPressed && rightPressed && !blockDownRight {
+				dy, dx = 1, 1
+			}
 		}
 
 		for _, room := range g.rooms {
@@ -277,10 +306,6 @@ func (g *Game) HandleInput() (int, int) {
 			}
 
 		} else { // 上下左右の移動のロジック
-			blockUpRight := blockUp || blockRight
-			blockUpLeft := blockUp || blockLeft
-			blockDownLeft := blockDown || blockLeft
-			blockDownRight := blockDown || blockRight
 
 			if upPressed {
 				g.state.Player.Direction = Up

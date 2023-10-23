@@ -92,46 +92,50 @@ type ActionQueue struct {
 type Direction int
 
 type Game struct {
-	state                 GameState
-	rooms                 []Room
-	playerImg             *ebiten.Image
-	ebiImg                *ebiten.Image
-	snakeImg              *ebiten.Image
-	kaneImg               *ebiten.Image
-	cardImg               *ebiten.Image
-	mintiaImg             *ebiten.Image
-	sausageImg            *ebiten.Image
-	tilesetImg            *ebiten.Image
-	offsetX               int
-	offsetY               int
-	moveCount             int
-	Floor                 int
-	lastIncrement         time.Time
-	lastArrowPress        time.Time // 矢印キーが最後に押された時間を追跡
-	showInventory         bool      // true when the inventory window should be displayed
-	selectedItemIndex     int
-	showItemActions       bool
-	selectedActionIndex   int
-	showDescription       bool
-	showItemDescription   bool
-	itemdescriptionText   string
-	descriptionText       string
-	descriptionQueue      []string
-	nextDescriptionTime   time.Time
-	Animating             bool
-	AnimationProgress     float64
-	dx, dy                int
-	AnimationProgressInt  int
-	frameCount            int
-	tmpPlayerOffsetX      float64 // プレイヤーの一時的なオフセットX
-	tmpPlayerOffsetY      float64 // プレイヤーの一時的なオフセットY
-	attackTimer           float64 // 攻撃メッセージのタイマー
-	playerAttack          bool    // プレイヤーが攻撃したかどうか
-	ActionQueue           ActionQueue
-	isCombatActive        bool
-	ActionDurationCounter float64
-	isActioned            bool
-	zPressed              bool
+	state                   GameState
+	rooms                   []Room
+	playerImg               *ebiten.Image
+	ebiImg                  *ebiten.Image
+	snakeImg                *ebiten.Image
+	kaneImg                 *ebiten.Image
+	cardImg                 *ebiten.Image
+	mintiaImg               *ebiten.Image
+	sausageImg              *ebiten.Image
+	tilesetImg              *ebiten.Image
+	offsetX                 int
+	offsetY                 int
+	moveCount               int
+	Floor                   int
+	lastIncrement           time.Time
+	lastArrowPress          time.Time // 矢印キーが最後に押された時間を追跡
+	showInventory           bool      // true when the inventory window should be displayed
+	selectedItemIndex       int
+	showItemActions         bool
+	selectedActionIndex     int
+	showDescription         bool
+	showItemDescription     bool
+	itemdescriptionText     string
+	descriptionText         string
+	descriptionQueue        []string
+	nextDescriptionTime     time.Time
+	Animating               bool
+	AnimationProgress       float64
+	dx, dy                  int
+	AnimationProgressInt    int
+	frameCount              int
+	tmpPlayerOffsetX        float64 // プレイヤーの一時的なオフセットX
+	tmpPlayerOffsetY        float64 // プレイヤーの一時的なオフセットY
+	attackTimer             float64 // 攻撃メッセージのタイマー
+	playerAttack            bool    // プレイヤーが攻撃したかどうか
+	ActionQueue             ActionQueue
+	isCombatActive          bool
+	ActionDurationCounter   float64
+	isActioned              bool
+	zPressed                bool
+	xPressed                bool
+	ShowGroundItem          bool
+	selectedGroundItemIndex int
+	GroundItemActions       bool
 }
 
 func min(a, b int) int {
@@ -189,7 +193,34 @@ func (g *Game) Update() error {
 		return err
 	}
 
-	if !g.showInventory && !g.playerAttack && !g.isCombatActive {
+	dPressed := inpututil.IsKeyJustPressed(ebiten.KeyD)
+
+	if dPressed {
+		g.ShowGroundItem = true
+		g.descriptionQueue = []string{} // g.descriptionQueueの中身をクリア
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
+		g.ShowGroundItem = false
+	}
+
+	if g.ShowGroundItem {
+		if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundItemIndex > 0 {
+			g.selectedGroundItemIndex--
+		} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundItemIndex < 2 {
+			g.selectedGroundItemIndex++
+		} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			g.GroundItemActions = true // Toggle the item actions menu
+		}
+		if g.GroundItemActions {
+			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+				//g.executeGroundItemAction()
+				g.ShowGroundItem = false
+			}
+		}
+	}
+
+	if !g.showInventory && !g.playerAttack && !g.isCombatActive && !g.ShowGroundItem {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheetHandleInput()
 
@@ -205,6 +236,7 @@ func (g *Game) Update() error {
 		if moved {
 			g.isActioned = true
 			g.Animating = true  // Set the animating flag
+			g.xPressed = false  // Reset the xPressed flag
 			g.dx, g.dy = dx, dy // Save the direction of movement
 		}
 
@@ -215,13 +247,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if g.Animating {
-		g.AnimationProgressInt += 1
-		if g.AnimationProgressInt >= 10 {
-			g.Animating = false
-			g.AnimationProgressInt = 0
-		}
-	}
+	g.HandleAnimationProgress()
 
 	// Check the attack timer and reset temporary player position if needed
 	if g.attackTimer > 0 {
@@ -241,71 +267,13 @@ func (g *Game) Update() error {
 		}
 	}
 
-	for i := range g.state.Enemies {
-		if g.state.Enemies[i].AttackTimer > 0 {
-			progress := 1 - g.state.Enemies[i].AttackTimer/0.5
-			angle := math.Pi * progress
-			value := 30 * math.Sin(angle)
-
-			switch g.state.Enemies[i].AttackDirection {
-			case Up:
-				g.state.Enemies[i].OffsetY = int(-value)
-			case Down:
-				g.state.Enemies[i].OffsetY = int(value)
-			case Left:
-				g.state.Enemies[i].OffsetX = int(-value)
-			case Right:
-				g.state.Enemies[i].OffsetX = int(value)
-			case UpRight:
-				g.state.Enemies[i].OffsetX = int(value)
-				g.state.Enemies[i].OffsetY = int(-value)
-			case DownRight:
-				g.state.Enemies[i].OffsetX = int(value)
-				g.state.Enemies[i].OffsetY = int(value)
-			case UpLeft:
-				g.state.Enemies[i].OffsetX = int(-value)
-				g.state.Enemies[i].OffsetY = int(-value)
-			case DownLeft:
-				g.state.Enemies[i].OffsetX = int(-value)
-				g.state.Enemies[i].OffsetY = int(value)
-			}
-
-			g.state.Enemies[i].AttackTimer -= (1 / 60.0)
-		} else {
-			g.state.Enemies[i].OffsetX = 0
-			g.state.Enemies[i].OffsetY = 0
-		}
-	}
+	g.HandleEnemyAttackTimers()
 
 	g.ManageDescriptions()
 
-	if len(g.ActionQueue.Queue) > 0 {
-		g.ActionQueue.Timer -= (1 / 60.0) // assuming Update is called 60 times per second
-		if g.ActionQueue.Timer <= 0 {
-			action := g.ActionQueue.Queue[0]
-			g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
-			g.processAction(action)
-			if len(g.ActionQueue.Queue) > 0 {
-				g.ActionQueue.Timer = g.ActionQueue.Queue[0].Duration // reset timer for next action
-			}
-		}
-	}
+	g.HandleActionQueue()
 
-	if g.ActionDurationCounter > 0 {
-		g.ActionDurationCounter -= (1 / 60.0) // decrement the counter every frame
-	}
-
-	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive && g.ActionDurationCounter <= 0 {
-		g.isCombatActive = false // reset the combat active flag when the queue is empty
-	}
-
-	if g.isActioned {
-		if !g.isCombatActive {
-			g.IncrementMoveCount()
-			g.MoveEnemies()
-			g.isActioned = false
-		}
-	}
+	g.CheckCombatState()
 
 	g.checkForStairs()
 
@@ -338,6 +306,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.drawItemDescription(screen)
 
 	g.DrawDescriptions(screen)
+
+	g.DrawGroundItem(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
