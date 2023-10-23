@@ -224,22 +224,34 @@ func (g *Game) HandleInput() (int, int) {
 	}
 
 	if aPressed && !g.zPressed {
-		if upPressed && rightPressed {
-			g.state.Player.Direction = UpRight
-		} else if upPressed && leftPressed {
-			g.state.Player.Direction = UpLeft
-		} else if downPressed && rightPressed {
-			g.state.Player.Direction = DownRight
-		} else if downPressed && leftPressed {
-			g.state.Player.Direction = DownLeft
-		} else if upPressed {
-			g.state.Player.Direction = Up
-		} else if downPressed {
-			g.state.Player.Direction = Down
-		} else if leftPressed {
-			g.state.Player.Direction = Left
-		} else if rightPressed {
-			g.state.Player.Direction = Right
+		if shiftPressed {
+			if upPressed && rightPressed {
+				g.state.Player.Direction = UpRight
+			} else if upPressed && leftPressed {
+				g.state.Player.Direction = UpLeft
+			} else if downPressed && leftPressed {
+				g.state.Player.Direction = DownLeft
+			} else if downPressed && rightPressed {
+				g.state.Player.Direction = DownRight
+			}
+		} else {
+			if upPressed && rightPressed {
+				g.state.Player.Direction = UpRight
+			} else if upPressed && leftPressed {
+				g.state.Player.Direction = UpLeft
+			} else if downPressed && rightPressed {
+				g.state.Player.Direction = DownRight
+			} else if downPressed && leftPressed {
+				g.state.Player.Direction = DownLeft
+			} else if upPressed {
+				g.state.Player.Direction = Up
+			} else if downPressed {
+				g.state.Player.Direction = Down
+			} else if leftPressed {
+				g.state.Player.Direction = Left
+			} else if rightPressed {
+				g.state.Player.Direction = Right
+			}
 		}
 		return dx, dy
 	}
