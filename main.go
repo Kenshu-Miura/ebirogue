@@ -193,7 +193,6 @@ func (g *Game) Update() error {
 		//dx, dy := g.CheetHandleInput()
 
 		if g.zPressed {
-			log.Printf("dx: %d, dy: %d", dx, dy)
 			g.CheckForEnemies(dx, dy)
 			g.zPressed = false
 			return nil

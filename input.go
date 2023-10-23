@@ -178,6 +178,7 @@ func (g *Game) HandleInput() (int, int) {
 	leftPressed := ebiten.IsKeyPressed(ebiten.KeyLeft)
 	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight)
 	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
+	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
 	sPressed := ebiten.IsKeyPressed(ebiten.KeyS)         // Sキーが押されているかどうかをチェック
 
 	// 足踏みロジック
@@ -188,7 +189,28 @@ func (g *Game) HandleInput() (int, int) {
 		g.lastIncrement = time.Now() // lastIncrementの更新
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+	if aPressed && !g.zPressed {
+		if upPressed && rightPressed {
+			g.state.Player.Direction = UpRight
+		} else if upPressed && leftPressed {
+			g.state.Player.Direction = UpLeft
+		} else if downPressed && rightPressed {
+			g.state.Player.Direction = DownRight
+		} else if downPressed && leftPressed {
+			g.state.Player.Direction = DownLeft
+		} else if upPressed {
+			g.state.Player.Direction = Up
+		} else if downPressed {
+			g.state.Player.Direction = Down
+		} else if leftPressed {
+			g.state.Player.Direction = Left
+		} else if rightPressed {
+			g.state.Player.Direction = Right
+		}
+		return dx, dy
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) && !aPressed {
 		g.zPressed = true
 		switch g.state.Player.Direction {
 		case Up:
