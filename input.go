@@ -179,6 +179,7 @@ func (g *Game) HandleInput() (int, int) {
 	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight)
 	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
 	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
+	xPressed := ebiten.IsKeyPressed(ebiten.KeyX)         // Xキーが押されているかどうかをチェック
 	sPressed := ebiten.IsKeyPressed(ebiten.KeyS)         // Sキーが押されているかどうかをチェック
 
 	// 足踏みロジック
@@ -235,14 +236,31 @@ func (g *Game) HandleInput() (int, int) {
 
 	arrowPressed := upPressed || downPressed || leftPressed || rightPressed
 
+	player := g.state.Player
+	blockUp := g.state.Map[player.Y-1][player.X].Blocked
+	blockDown := g.state.Map[player.Y+1][player.X].Blocked
+	blockLeft := g.state.Map[player.Y][player.X-1].Blocked
+	blockRight := g.state.Map[player.Y][player.X+1].Blocked
+
+	if arrowPressed && xPressed {
+
+		if upPressed && !downPressed && !blockUp {
+			dy = -1
+		}
+		if downPressed && !upPressed && !blockDown {
+			dy = 1
+		}
+		if leftPressed && !rightPressed && !blockLeft {
+			dx = -1
+		}
+		if rightPressed && !leftPressed && !blockRight {
+			dx = 1
+		}
+
+	}
+
 	// 矢印キーの押下ロジック
 	if arrowPressed && time.Since(g.lastArrowPress) >= 180*time.Millisecond {
-
-		player := g.state.Player
-		blockUp := g.state.Map[player.Y-1][player.X].Blocked
-		blockDown := g.state.Map[player.Y+1][player.X].Blocked
-		blockLeft := g.state.Map[player.Y][player.X-1].Blocked
-		blockRight := g.state.Map[player.Y][player.X+1].Blocked
 
 		if shiftPressed { // 斜め移動のロジック
 
