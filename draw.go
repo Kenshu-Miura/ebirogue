@@ -178,15 +178,16 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 
 		// Draw item name window
 		drawWindowWithBorder(screen, itemwindowX, itemwindowY, itemWindowWidth, itemWindowHeight, 127)
-		// Draw actions window
-		drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
 
 		for _, item := range g.state.Items {
 			itemX, itemY := item.GetPosition()
 			if itemX == g.state.Player.X && itemY == g.state.Player.Y {
+				g.isGroundItem = true
 				// Draw item name
 				itemtext := fmt.Sprintf("%sが落ちている", item.GetName())
 				text.Draw(screen, itemtext, mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
+				// Draw actions window
+				drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
 				// Draw cursor
 				text.Draw(screen, "→", mplusNormalFont, actionWindowX+10, actionWindowY+actionWindowHeight+20+(g.selectedGroundItemIndex*20), color.White)
 				// Draw actions
@@ -196,6 +197,9 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 				}
 				break
 			}
+		}
+		if !g.isGroundItem {
+			text.Draw(screen, "何も落ちていない", mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
 		}
 	}
 }
@@ -234,24 +238,29 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	// Draw items
 	const itemsPerColumn = 10 // 1列に表示するアイテムの数
 	const columnWidth = 180   // 列の幅 (ピクセル)
-	for i, item := range g.state.Player.Inventory {
-		itemText := fmt.Sprintf("%d. %s", i+1, item.GetName())
 
-		// 現在の列と行の計算
-		column := i / itemsPerColumn
-		row := i % itemsPerColumn
+	if len(g.state.Player.Inventory) > 0 {
+		for i, item := range g.state.Player.Inventory {
+			itemText := fmt.Sprintf("%d. %s", i+1, item.GetName())
 
-		// アイテムテキストの描画位置の計算
-		x := windowX + 30 + column*columnWidth
-		y := windowY + 30 + row*25
+			// 現在の列と行の計算
+			column := i / itemsPerColumn
+			row := i % itemsPerColumn
 
-		text.Draw(screen, itemText, mplusNormalFont, x, y, color.White)
+			// アイテムテキストの描画位置の計算
+			x := windowX + 30 + column*columnWidth
+			y := windowY + 30 + row*25
 
-		if i == g.selectedItemIndex {
-			// Step 3: Draw the pointer next to the selected item
-			pointerText := "→"
-			text.Draw(screen, pointerText, mplusNormalFont, x-20, y, color.White)
+			text.Draw(screen, itemText, mplusNormalFont, x, y, color.White)
+
+			if i == g.selectedItemIndex {
+				// Step 3: Draw the pointer next to the selected item
+				pointerText := "→"
+				text.Draw(screen, pointerText, mplusNormalFont, x-20, y, color.White)
+			}
 		}
+	} else {
+		text.Draw(screen, "何も持っていない", mplusNormalFont, windowX+10, windowY+20, color.White)
 	}
 
 	return nil

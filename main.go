@@ -136,6 +136,7 @@ type Game struct {
 	ShowGroundItem          bool
 	selectedGroundItemIndex int
 	GroundItemActions       bool
+	isGroundItem            bool
 }
 
 func min(a, b int) int {
@@ -195,7 +196,7 @@ func (g *Game) Update() error {
 
 	dPressed := inpututil.IsKeyJustPressed(ebiten.KeyD)
 
-	if dPressed {
+	if dPressed && !g.showInventory && !g.playerAttack && !g.isCombatActive && !g.ShowGroundItem {
 		g.ShowGroundItem = true
 		g.descriptionQueue = []string{} // g.descriptionQueueの中身をクリア
 	}
@@ -216,6 +217,7 @@ func (g *Game) Update() error {
 			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
 				//g.executeGroundItemAction()
 				g.ShowGroundItem = false
+				g.isGroundItem = false
 			}
 		}
 	}
