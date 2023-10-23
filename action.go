@@ -23,8 +23,7 @@ func (g *Game) executeAction() {
 
 				g.showItemActions = false
 				g.showInventory = false
-				g.IncrementMoveCount()
-				g.MoveEnemies()
+				g.isActioned = true
 			},
 		}
 		g.Enqueue(action)
@@ -138,8 +137,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 						g.state.Player.checkLevelUp() // レベルアップをチェック
 					}
 					g.playerAttack = false
-					g.IncrementMoveCount()
-					g.MoveEnemies()
+					g.isActioned = true
 				},
 			}
 

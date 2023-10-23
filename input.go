@@ -20,8 +20,7 @@ func (g *Game) OpenDoor() {
 		tile := g.state.Map[playerY+dir.dy][playerX+dir.dx]
 		if tile.Type == "door" {
 			g.state.Map[playerY+dir.dy][playerX+dir.dx] = Tile{Type: "corridor"}
-			g.MoveEnemies()
-			g.IncrementMoveCount()
+			g.isActioned = true
 		}
 	}
 }
@@ -115,8 +114,7 @@ func (g *Game) CheetHandleInput() (int, int) {
 	// 足踏みロジック
 	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
 		!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
-		g.IncrementMoveCount()
-		g.MoveEnemies()
+		g.isActioned = true
 		g.lastIncrement = time.Now() // lastIncrementの更新
 	}
 
@@ -185,8 +183,7 @@ func (g *Game) HandleInput() (int, int) {
 	// 足踏みロジック
 	if sPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
 		!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
-		g.IncrementMoveCount()
-		g.MoveEnemies()
+		g.isActioned = true
 		g.lastIncrement = time.Now() // lastIncrementの更新
 	}
 

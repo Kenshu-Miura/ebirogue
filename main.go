@@ -130,6 +130,7 @@ type Game struct {
 	ActionQueue           ActionQueue
 	isCombatActive        bool
 	ActionDurationCounter float64
+	isActioned            bool
 	zPressed              bool
 }
 
@@ -202,7 +203,7 @@ func (g *Game) Update() error {
 		//moved := g.CheetMovePlayer(dx, dy)
 
 		if moved {
-			g.MoveEnemies()
+			g.isActioned = true
 			g.Animating = true  // Set the animating flag
 			g.dx, g.dy = dx, dy // Save the direction of movement
 		}
@@ -296,6 +297,14 @@ func (g *Game) Update() error {
 
 	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive && g.ActionDurationCounter <= 0 {
 		g.isCombatActive = false // reset the combat active flag when the queue is empty
+	}
+
+	if g.isActioned {
+		if !g.isCombatActive {
+			g.IncrementMoveCount()
+			g.MoveEnemies()
+			g.isActioned = false
+		}
 	}
 
 	g.checkForStairs()
