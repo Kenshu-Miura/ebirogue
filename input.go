@@ -34,6 +34,7 @@ func (g *Game) HandleGroundItemInput() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
 		g.ShowGroundItem = false
 		g.isGroundItem = false
+		g.selectedGroundItemIndex = 0
 	}
 
 	if g.ShowGroundItem {
@@ -49,6 +50,7 @@ func (g *Game) HandleGroundItemInput() {
 				g.executeGroundItemAction()
 				g.ShowGroundItem = false
 				g.isGroundItem = false
+				g.selectedGroundItemIndex = 0
 			}
 		}
 	}
@@ -68,6 +70,8 @@ func (g *Game) handleItemActionsInput() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showItemActions = false // Toggle the item actions menu
+		g.selectedItemIndex = 0
+		g.selectedActionIndex = 0
 		return nil
 	}
 
@@ -93,6 +97,8 @@ func (g *Game) handleInventoryNavigationInput() error {
 func (g *Game) handleItemDescriptionInput() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showItemDescription = false // Toggle the item description
+		g.selectedItemIndex = 0
+		g.selectedActionIndex = 0
 		return nil
 	}
 
@@ -109,6 +115,8 @@ func (g *Game) handleInventoryInput() error {
 	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)
 
 	if xPressed && g.showInventory && !g.showItemActions {
+		g.selectedItemIndex = 0
+		g.selectedActionIndex = 0
 		g.showInventory = false
 		return nil // Skip other updates when the inventory window is active
 	}
