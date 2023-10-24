@@ -36,6 +36,14 @@ func (g *Game) executeGroundItemAction() {
 				}
 			}
 		}
+		g.ShowGroundItem = false
+		g.GroundItemActioned = false
+		g.selectedGroundItemIndex = 0
+	}
+
+	if g.selectedGroundItemIndex == 1 { // Assuming index 1 corresponds to '交換'
+		g.ShowGroundItem = false
+		g.showInventory = true
 	}
 }
 

@@ -180,27 +180,22 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 
 		// Draw item name window
 		drawWindowWithBorder(screen, itemwindowX, itemwindowY, itemWindowWidth, itemWindowHeight, 127)
+		if g.currentGroundItem != nil {
 
-		for _, item := range g.state.Items {
-			itemX, itemY := item.GetPosition()
-			if itemX == g.state.Player.X && itemY == g.state.Player.Y {
-				g.isGroundItem = true
-				// Draw item name
-				itemtext := fmt.Sprintf("%sが落ちている", item.GetName())
-				text.Draw(screen, itemtext, mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
-				// Draw actions window
-				drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
-				// Draw cursor
-				text.Draw(screen, "→", mplusNormalFont, actionWindowX+10, actionWindowY+actionWindowHeight+20+(g.selectedGroundItemIndex*20), color.White)
-				// Draw actions
-				actions := []string{"拾う", "交換", "使う", "投げる"}
-				for index, action := range actions {
-					text.Draw(screen, action, mplusNormalFont, actionWindowX+30, actionWindowY+actionWindowHeight+20+(index*20), color.White)
-				}
-				break
+			// Draw item name
+			itemtext := fmt.Sprintf("%sが落ちている", g.currentGroundItem.GetName())
+			text.Draw(screen, itemtext, mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
+			// Draw actions window
+			drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
+			// Draw cursor
+			text.Draw(screen, "→", mplusNormalFont, actionWindowX+10, actionWindowY+actionWindowHeight+20+(g.selectedGroundItemIndex*20), color.White)
+			// Draw actions
+			actions := []string{"拾う", "交換", "使う", "投げる"}
+			for index, action := range actions {
+				text.Draw(screen, action, mplusNormalFont, actionWindowX+30, actionWindowY+actionWindowHeight+20+(index*20), color.White)
 			}
-		}
-		if !g.isGroundItem {
+
+		} else {
 			text.Draw(screen, "何も落ちていない", mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
 		}
 	}

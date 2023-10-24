@@ -33,7 +33,6 @@ func (g *Game) HandleGroundItemInput() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
 		g.ShowGroundItem = false
-		g.isGroundItem = false
 		g.selectedGroundItemIndex = 0
 	}
 
@@ -48,9 +47,6 @@ func (g *Game) HandleGroundItemInput() {
 		if g.GroundItemActioned {
 			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
 				g.executeGroundItemAction()
-				g.ShowGroundItem = false
-				g.isGroundItem = false
-				g.selectedGroundItemIndex = 0
 			}
 		}
 	}

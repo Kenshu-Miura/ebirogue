@@ -135,8 +135,8 @@ type Game struct {
 	ShowGroundItem          bool
 	selectedGroundItemIndex int
 	GroundItemActioned      bool
-	isGroundItem            bool
 	isFrontEnemy            bool
+	currentGroundItem       Item
 }
 
 func min(a, b int) int {
@@ -189,18 +189,11 @@ func init() {
 
 func (g *Game) Update() error {
 
-	err := g.handleInventoryInput()
-	if err != nil {
-		return err
-	}
-
-	g.HandleGroundItemInput()
-
 	if !g.showInventory && !g.playerAttack && !g.isCombatActive && !g.ShowGroundItem {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheetHandleInput()
 
-		if g.zPressed {
+		if g.zPressed && !g.ShowGroundItem {
 			g.CheckForEnemies(dx, dy)
 			g.zPressed = false
 			return nil
@@ -222,6 +215,25 @@ func (g *Game) Update() error {
 			g.OpenDoor()
 		}
 	}
+
+	// Find item at player's position
+	playerX, playerY := g.state.Player.X, g.state.Player.Y
+	for _, item := range g.state.Items {
+		itemX, itemY := item.GetPosition()
+		if itemX == playerX && itemY == playerY {
+			g.currentGroundItem = item // Assuming g.currentGroundItem is a field of *Game
+			break
+		} else {
+			g.currentGroundItem = nil
+		}
+	}
+
+	err := g.handleInventoryInput()
+	if err != nil {
+		return err
+	}
+
+	g.HandleGroundItemInput()
 
 	g.HandleAnimationProgress()
 
