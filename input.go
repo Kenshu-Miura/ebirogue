@@ -84,7 +84,13 @@ func (g *Game) handleInventoryNavigationInput() error {
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) && g.selectedItemIndex < len(g.state.Player.Inventory)-10 {
 		g.selectedItemIndex += 10
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-		g.showItemActions = true // Toggle the item actions menu
+		if g.selectedGroundItemIndex == 1 && g.showInventory {
+			g.executeItemSwap() // execute your item swapping function here
+			g.selectedGroundItemIndex = 0
+			g.showInventory = false
+		} else {
+			g.showItemActions = true // Toggle the item actions menu
+		}
 	}
 
 	return nil
@@ -94,7 +100,6 @@ func (g *Game) handleItemDescriptionInput() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showItemDescription = false // Toggle the item description
 		g.selectedItemIndex = 0
-		g.selectedActionIndex = 0
 		return nil
 	}
 
@@ -113,6 +118,7 @@ func (g *Game) handleInventoryInput() error {
 	if xPressed && g.showInventory && !g.showItemActions {
 		g.selectedItemIndex = 0
 		g.selectedActionIndex = 0
+		g.selectedGroundItemIndex = 0
 		g.showInventory = false
 		return nil // Skip other updates when the inventory window is active
 	}

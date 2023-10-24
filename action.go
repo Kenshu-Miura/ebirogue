@@ -16,10 +16,11 @@ func (g *Game) executeGroundItemAction() {
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{
-						Duration: 0.2,
+						Duration: 0.3,
 						Message:  fmt.Sprintf("%sを拾った", g.state.Items[i].GetName()),
 						Execute: func(g *Game) {
 							g.PickUpItem(item, i)
+							g.isActioned = true
 						},
 					}
 					g.Enqueue(action)

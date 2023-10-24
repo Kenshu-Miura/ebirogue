@@ -5,6 +5,33 @@ import (
 	_ "image/png" // PNG画像を読み込むために必要
 )
 
+func (g *Game) executeItemSwap() {
+	playerX, playerY := g.state.Player.X, g.state.Player.Y
+
+	for i, item := range g.state.Items {
+		itemX, itemY := item.GetPosition()
+		if itemX == playerX && itemY == playerY {
+			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
+
+			action := Action{
+				Duration: 0.3,
+				Message:  fmt.Sprintf("%sと%sを交換しました", item.GetName(), selectedInventoryItem.GetName()),
+				Execute: func(g *Game) {
+					// Set the position of the selected inventory item to the player's position
+					selectedInventoryItem.SetPosition(playerX, playerY)
+					// Swap the positions of the items
+					g.state.Items[i] = selectedInventoryItem
+					g.state.Player.Inventory[g.selectedItemIndex] = item
+					g.isActioned = true
+				},
+			}
+
+			g.ActionQueue.Enqueue(action)
+			break
+		}
+	}
+}
+
 func (g *Game) PickUpItem(item Item, i int) {
 	g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
 	// アイテムをGameState.Itemsから削除
