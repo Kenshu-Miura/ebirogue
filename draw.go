@@ -93,8 +93,10 @@ func (g *Game) ManageDescriptions() {
 	if len(g.ActionQueue.Queue) > 0 {
 		action := g.ActionQueue.Queue[0]
 
-		g.descriptionText = action.Message
-		g.showDescription = true
+		if action.Message != "" {
+			g.descriptionText = action.Message
+			g.showDescription = true
+		}
 
 		g.nextDescriptionTime = now.Add(time.Duration(action.Duration * float64(time.Second)))
 	} else {

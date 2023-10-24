@@ -113,8 +113,12 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 }
 
 func (g *Game) CheckForEnemies(x, y int) bool {
+
+	g.isFrontEnemy = false
+
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == g.state.Player.X+x && enemy.Y == g.state.Player.Y+y {
+			g.isFrontEnemy = true
 			// Player's AttackPower is considered while dealing damage
 			netDamage := g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - enemy.DefensePower + rand.Intn(3) - 1
 			if netDamage < 0 { // Ensure damage does not go below 0
@@ -178,6 +182,25 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 			return true
 		}
+	}
+	if !g.isFrontEnemy {
+		g.attackTimer = 0.5 // set timer for 0.5 seconds
+		action := Action{
+			Duration: 0.5,
+			Message:  "",
+			Execute: func(g *Game) {
+				g.playerAttack = true
+
+				g.playerAttack = false
+				g.isActioned = true
+			},
+		}
+
+		g.Enqueue(action)
+
+		g.isFrontEnemy = false
+
+		return true
 	}
 	return false
 }

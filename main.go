@@ -136,6 +136,7 @@ type Game struct {
 	selectedGroundItemIndex int
 	GroundItemActioned      bool
 	isGroundItem            bool
+	isFrontEnemy            bool
 }
 
 func min(a, b int) int {
