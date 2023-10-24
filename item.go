@@ -14,7 +14,7 @@ func (g *Game) executeItemSwap() {
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
 
 			action := Action{
-				Duration: 0.3,
+				Duration: 0.5,
 				Message:  fmt.Sprintf("%sと%sを交換しました", item.GetName(), selectedInventoryItem.GetName()),
 				Execute: func(g *Game) {
 					// Set the position of the selected inventory item to the player's position

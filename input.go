@@ -36,7 +36,7 @@ func (g *Game) HandleGroundItemInput() {
 		g.selectedGroundItemIndex = 0
 	}
 
-	if g.ShowGroundItem {
+	if g.ShowGroundItem && g.currentGroundItem != nil {
 		if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundItemIndex > 0 {
 			g.selectedGroundItemIndex--
 		} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundItemIndex < 3 {
@@ -85,9 +85,11 @@ func (g *Game) handleInventoryNavigationInput() error {
 		g.selectedItemIndex += 10
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
 		if g.selectedGroundItemIndex == 1 && g.showInventory {
-			g.executeItemSwap() // execute your item swapping function here
-			g.selectedGroundItemIndex = 0
-			g.showInventory = false
+			if len(g.state.Player.Inventory) > 0 {
+				g.executeItemSwap() // execute your item swapping function here
+				g.selectedGroundItemIndex = 0
+				g.showInventory = false
+			}
 		} else {
 			g.showItemActions = true // Toggle the item actions menu
 		}

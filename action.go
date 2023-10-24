@@ -51,24 +51,46 @@ func (g *Game) executeGroundItemAction() {
 func (g *Game) executeAction() {
 
 	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
-		action := Action{
-			Duration: 0.2, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sを置いた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-			Execute: func(g *Game) {
-				selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
-				// Remove the item from inventory
-				g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-				// Add the item to the world at the player's current position
-				selectedItem.SetPosition(g.state.Player.X, g.state.Player.Y)
-				newItem := selectedItem
-				g.state.Items = append(g.state.Items, newItem)
-
-				g.showItemActions = false
-				g.showInventory = false
-				g.isActioned = true
-			},
+		itemExistsAtPlayerPos := false
+		playerX, playerY := g.state.Player.X, g.state.Player.Y
+		for _, item := range g.state.Items {
+			itemX, itemY := item.GetPosition()
+			if itemX == playerX && itemY == playerY {
+				itemExistsAtPlayerPos = true
+				break
+			}
 		}
-		g.Enqueue(action)
+		if !itemExistsAtPlayerPos {
+			action := Action{
+				Duration: 0.4, // Assuming a duration of 0.5 seconds for this action
+				Message:  fmt.Sprintf("%sを置いた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+				Execute: func(g *Game) {
+					selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
+					// Remove the item from inventory
+					g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+					// Add the item to the world at the player's current position
+					selectedItem.SetPosition(g.state.Player.X, g.state.Player.Y)
+					newItem := selectedItem
+					g.state.Items = append(g.state.Items, newItem)
+
+					g.showItemActions = false
+					g.showInventory = false
+					g.isActioned = true
+				},
+			}
+			g.Enqueue(action)
+		} else {
+			action := Action{
+				Duration: 0.4,
+				Message:  fmt.Sprintf("ここには%sを置けない", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+				Execute: func(g *Game) {
+					g.showItemActions = false
+					g.showInventory = false
+					g.isActioned = true
+				},
+			}
+			g.Enqueue(action)
+		}
 	}
 
 	if g.selectedActionIndex == 3 { // Assuming 0-based index and "説明" is at index 3
