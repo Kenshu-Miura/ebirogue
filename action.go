@@ -57,6 +57,11 @@ func (g *Game) executeAction() {
 			g.showItemActions = false
 			g.showInventory = false
 			g.isActioned = true
+		} else if potionItem, ok := item.(*Potion); ok {
+			potionItem.Use(g)
+			g.showItemActions = false
+			g.showInventory = false
+			g.isActioned = true
 		} else {
 			// Handle the case where the item is not useable, if necessary
 		}

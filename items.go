@@ -99,7 +99,7 @@ var restoreSatiety50 = func(g *Game) {
 		foodItem := g.state.Player.Inventory[g.selectedItemIndex].(*Food) // Assumes item is of type *Food
 		action := Action{
 			Duration: 0.4,
-			Message:  fmt.Sprintf("満腹度が%d上昇した。", foodItem.Satiety),
+			Message:  fmt.Sprintf("満腹度が%d回復した。", foodItem.Satiety),
 			Execute: func(g *Game) {
 				g.state.Player.Satiety += foodItem.Satiety
 				if g.state.Player.Satiety > g.state.Player.MaxSatiety {
@@ -124,11 +124,71 @@ func (p *Potion) Use(g *Game) {
 }
 
 var restoreHP30 = func(g *Game) {
-	// logic to restore 30 HP
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Execute: func(g *Game) {
+		},
+	}
+	g.Enqueue(action)
+	if g.state.Player.Health == g.state.Player.MaxHealth {
+		action := Action{
+			Duration: 0.4,
+			Message:  "最大HPが1上昇した。",
+			Execute: func(g *Game) {
+				g.state.Player.MaxHealth++
+			},
+		}
+		g.Enqueue(action)
+	} else {
+		potionItem := g.state.Player.Inventory[g.selectedItemIndex].(*Potion) // Assumes item is of type *Food
+		action := Action{
+			Duration: 0.4,
+			Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
+			Execute: func(g *Game) {
+				g.state.Player.Health += potionItem.Health
+				if g.state.Player.Health > g.state.Player.MaxHealth {
+					g.state.Player.Health = g.state.Player.MaxHealth
+				}
+			},
+		}
+		g.Enqueue(action)
+	}
+	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
 var restoreHP100 = func(g *Game) {
-	// logic to restore 100 HP
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Execute: func(g *Game) {
+		},
+	}
+	g.Enqueue(action)
+	if g.state.Player.Health == g.state.Player.MaxHealth {
+		action := Action{
+			Duration: 0.4,
+			Message:  "最大HPが2上昇した。",
+			Execute: func(g *Game) {
+				g.state.Player.MaxHealth += 2
+			},
+		}
+		g.Enqueue(action)
+	} else {
+		potionItem := g.state.Player.Inventory[g.selectedItemIndex].(*Potion) // Assumes item is of type *Food
+		action := Action{
+			Duration: 0.4,
+			Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
+			Execute: func(g *Game) {
+				g.state.Player.Health += potionItem.Health
+				if g.state.Player.Health > g.state.Player.MaxHealth {
+					g.state.Player.Health = g.state.Player.MaxHealth
+				}
+			},
+		}
+		g.Enqueue(action)
+	}
+	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
 type Card struct {

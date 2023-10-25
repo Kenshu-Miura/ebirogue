@@ -34,8 +34,8 @@ func createEnemy(x, y int) Enemy {
 		enemyChar = "E"
 		enemyAP = 4
 		enemyDP = 2
-		enemyHealth = 30
-		enemyMaxHealth = 30
+		enemyHealth = 20
+		enemyMaxHealth = 20
 		enemyExperiencePoints = 5
 		enemyDirection = Down
 	case 1:
@@ -45,8 +45,8 @@ func createEnemy(x, y int) Enemy {
 		enemyChar = "S"
 		enemyAP = 7
 		enemyDP = 1
-		enemyHealth = 50
-		enemyMaxHealth = 50
+		enemyHealth = 30
+		enemyMaxHealth = 30
 		enemyExperiencePoints = 10
 		enemyDirection = Down
 
@@ -57,8 +57,8 @@ func createEnemy(x, y int) Enemy {
 		enemyChar = "E"
 		enemyAP = 4
 		enemyDP = 2
-		enemyHealth = 30
-		enemyMaxHealth = 30
+		enemyHealth = 20
+		enemyMaxHealth = 20
 		enemyExperiencePoints = 5
 		enemyDirection = Down
 	}
