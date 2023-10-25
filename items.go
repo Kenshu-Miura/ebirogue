@@ -202,7 +202,70 @@ func (c *Card) Use(g *Game) {
 }
 
 var damageHP30 = func(g *Game) {
-	// logic to restore 30 HP
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使った。", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Execute: func(g *Game) {
+		},
+	}
+	g.Enqueue(action)
+
+	action = Action{
+		Duration: 0.4,
+		Message:  "",
+		Execute: func(g *Game) {
+			var targetX, targetY int
+			switch g.state.Player.Direction {
+			case Up:
+				targetX, targetY = g.state.Player.X, g.state.Player.Y-1
+			case Down:
+				targetX, targetY = g.state.Player.X, g.state.Player.Y+1
+			case Left:
+				targetX, targetY = g.state.Player.X-1, g.state.Player.Y
+			case Right:
+				targetX, targetY = g.state.Player.X+1, g.state.Player.Y
+			case UpRight:
+				targetX, targetY = g.state.Player.X+1, g.state.Player.Y-1
+			case DownRight:
+				targetX, targetY = g.state.Player.X+1, g.state.Player.Y+1
+			case UpLeft:
+				targetX, targetY = g.state.Player.X-1, g.state.Player.Y-1
+			case DownLeft:
+				targetX, targetY = g.state.Player.X-1, g.state.Player.Y+1
+			}
+			for i, enemy := range g.state.Enemies {
+				if enemy.X == targetX && enemy.Y == targetY {
+					action := Action{
+						Duration: 0.5,
+						Message:  fmt.Sprintf("%sに30ダメージを与えた。", g.state.Enemies[i].Name),
+						Execute: func(g *Game) {
+							g.state.Enemies[i].Health -= 30
+							if g.state.Enemies[i].Health <= 0 {
+								// 敵のHealthが0以下の場合、敵を配列から削除
+								defeatAction := Action{
+									Duration: 0.5,
+									Message:  fmt.Sprintf("%sを倒した。", g.state.Enemies[i].Name),
+									Execute:  func(g *Game) {},
+								}
+								g.Enqueue(defeatAction)
+
+								g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
+
+								// 敵の経験値をプレイヤーの所持経験値に加える
+								g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+
+								g.state.Player.checkLevelUp() // レベルアップをチェック
+							}
+						},
+					}
+					g.Enqueue(action)
+					break
+				}
+			}
+		},
+	}
+	g.Enqueue(action)
+	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
 type Money struct {
@@ -216,7 +279,21 @@ func (m *Money) Use(g *Game) {
 }
 
 var money30 = func(g *Game) {
-	// logic to restore 30 HP
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使った。", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Execute: func(g *Game) {
+		},
+	}
+	g.Enqueue(action)
+	action = Action{
+		Duration: 0.4,
+		Message:  "リスナーとの絆が深まった。",
+		Execute: func(g *Game) {
+		},
+	}
+	g.Enqueue(action)
+	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
 type Ring struct {
@@ -312,8 +389,8 @@ func createItem(x, y int) Item {
 				},
 				ID:          4,
 				Type:        "Card",
-				Name:        "カード",
-				Description: "遊戯王カード。眼の前の敵に30ダメージを与える。",
+				Name:        "黒炎弾のカード",
+				Description: "魔法カード。眼の前の敵に30ダメージを与える。",
 				UseActions: map[string]UseAction{
 					"UseCard": damageHP30,
 				},

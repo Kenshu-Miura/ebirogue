@@ -62,8 +62,16 @@ func (g *Game) executeAction() {
 			g.showItemActions = false
 			g.showInventory = false
 			g.isActioned = true
-		} else {
-			// Handle the case where the item is not useable, if necessary
+		} else if cardItem, ok := item.(*Card); ok {
+			cardItem.Use(g)
+			g.showItemActions = false
+			g.showInventory = false
+			g.isActioned = true
+		} else if moneyItem, ok := item.(*Money); ok {
+			moneyItem.Use(g)
+			g.showItemActions = false
+			g.showInventory = false
+			g.isActioned = true
 		}
 		g.selectedItemIndex = 0
 	}
