@@ -374,11 +374,6 @@ func NewGame() *Game {
 		zPressed:       false,
 	}
 
-	// Log the contents of game.rooms
-	//for i, room := range game.rooms {
-	//	log.Printf("Room %d: %+v\n", i, room)
-	//}
-
 	return game
 }
 

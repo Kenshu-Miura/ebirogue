@@ -329,19 +329,24 @@ func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 	screen.DrawImage(g.playerImg, opts)
 }
 
+func (g *Game) getItemImage(item Item) *ebiten.Image {
+	var img *ebiten.Image
+	switch item.GetType() {
+	case "Kane":
+		img = g.kaneImg
+	case "Card":
+		img = g.cardImg
+	case "Mintia":
+		img = g.mintiaImg
+	default:
+		img = g.sausageImg
+	}
+	return img
+}
+
 func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, item := range g.state.Items {
-		var img *ebiten.Image
-		switch item.GetType() {
-		case "Kane":
-			img = g.kaneImg
-		case "Card":
-			img = g.cardImg
-		case "Mintia":
-			img = g.mintiaImg
-		default:
-			img = g.sausageImg
-		}
+		img := g.getItemImage(item)
 		opts := &ebiten.DrawImageOptions{}
 		itemX, itemY := item.GetPosition()
 		opts.GeoM.Translate(float64(itemX*tileSize+offsetX), float64(itemY*tileSize+offsetY))

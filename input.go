@@ -82,7 +82,7 @@ func (g *Game) handleInventoryNavigationInput() error {
 		g.selectedItemIndex -= 10
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) && g.selectedItemIndex < len(g.state.Player.Inventory)-10 {
 		g.selectedItemIndex += 10
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) && len(g.state.Player.Inventory) > 0 {
 		if g.selectedGroundItemIndex == 1 && g.showInventory {
 			if len(g.state.Player.Inventory) > 0 {
 				g.executeItemSwap() // execute your item swapping function here

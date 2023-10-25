@@ -76,6 +76,71 @@ func (g *Game) executeAction() {
 		g.selectedItemIndex = 0
 	}
 
+	if g.selectedActionIndex == 1 { // Assuming index 1 corresponds to '投げる'
+		item := g.state.Player.Inventory[g.selectedItemIndex]
+		var dx, dy int
+		switch g.state.Player.Direction {
+		case Up:
+			dx, dy = 0, -1
+		case Down:
+			dx, dy = 0, 1
+		case Left:
+			dx, dy = -1, 0
+		case Right:
+			dx, dy = 1, 0
+		case UpRight:
+			dx, dy = 1, -1
+		case DownRight:
+			dx, dy = 1, 1
+		case UpLeft:
+			dx, dy = -1, -1
+		case DownLeft:
+			dx, dy = -1, 1
+		}
+
+		action := Action{
+			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+			Message:  fmt.Sprintf("%sを投げた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+			Execute: func(g *Game) {
+
+				var i int
+				for i = 1; i <= 10; i++ {
+					targetX := g.state.Player.X + i*dx
+					targetY := g.state.Player.Y + i*dy
+					tile := g.state.Map[targetY][targetX]
+					if tile.Type == "wall" {
+						// Append item to g.state.Items at the position before hitting the wall
+						item.SetPosition(g.state.Player.X+(i-1)*dx, g.state.Player.Y+(i-1)*dy)
+						g.state.Items = append(g.state.Items, item)
+						g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+						g.showItemActions = false
+						g.showInventory = false
+						g.isActioned = true
+						g.selectedItemIndex = 0
+						g.selectedActionIndex = 0
+						return // Exit if a wall is encountered
+					}
+					for _, enemy := range g.state.Enemies {
+						if enemy.X == targetX && enemy.Y == targetY {
+							return // Exit if an enemy is encountered
+						}
+					}
+				}
+				if i == 11 {
+					item.SetPosition(g.state.Player.X+i*dx, g.state.Player.Y+i*dy)
+					g.state.Items = append(g.state.Items, item)
+					g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+					g.showItemActions = false
+					g.showInventory = false
+					g.isActioned = true
+					g.selectedItemIndex = 0
+					g.selectedActionIndex = 0
+				}
+			},
+		}
+		g.Enqueue(action)
+	}
+
 	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
 		itemExistsAtPlayerPos := false
 		playerX, playerY := g.state.Player.X, g.state.Player.Y
