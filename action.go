@@ -50,6 +50,19 @@ func (g *Game) executeGroundItemAction() {
 
 func (g *Game) executeAction() {
 
+	if g.selectedActionIndex == 0 { // Assuming index 0 corresponds to '使う'
+		item := g.state.Player.Inventory[g.selectedItemIndex]
+		if foodItem, ok := item.(*Food); ok {
+			foodItem.Use(g)
+			g.showItemActions = false
+			g.showInventory = false
+			g.isActioned = true
+		} else {
+			// Handle the case where the item is not useable, if necessary
+		}
+		g.selectedItemIndex = 0
+	}
+
 	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
 		itemExistsAtPlayerPos := false
 		playerX, playerY := g.state.Player.X, g.state.Player.Y

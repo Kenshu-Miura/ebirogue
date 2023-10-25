@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type UseAction func(g *Game)
 
 type Item interface {
@@ -77,7 +79,37 @@ func (f *Food) Use(g *Game) {
 }
 
 var restoreSatiety50 = func(g *Game) {
-	// logic to restore 50 satiety
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Execute: func(g *Game) {
+		},
+	}
+	g.Enqueue(action)
+	if g.state.Player.Satiety == g.state.Player.MaxSatiety {
+		action := Action{
+			Duration: 0.4,
+			Message:  "最大満腹度が1上昇した。",
+			Execute: func(g *Game) {
+				g.state.Player.MaxSatiety++
+			},
+		}
+		g.Enqueue(action)
+	} else {
+		foodItem := g.state.Player.Inventory[g.selectedItemIndex].(*Food) // Assumes item is of type *Food
+		action := Action{
+			Duration: 0.4,
+			Message:  fmt.Sprintf("満腹度が%d上昇した。", foodItem.Satiety),
+			Execute: func(g *Game) {
+				g.state.Player.Satiety += foodItem.Satiety
+				if g.state.Player.Satiety > g.state.Player.MaxSatiety {
+					g.state.Player.Satiety = g.state.Player.MaxSatiety
+				}
+			},
+		}
+		g.Enqueue(action)
+	}
+	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
 type Potion struct {

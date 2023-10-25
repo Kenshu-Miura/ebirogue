@@ -66,7 +66,6 @@ func (g *Game) handleItemActionsInput() error {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showItemActions = false // Toggle the item actions menu
-		g.selectedItemIndex = 0
 		g.selectedActionIndex = 0
 		return nil
 	}
@@ -101,7 +100,6 @@ func (g *Game) handleInventoryNavigationInput() error {
 func (g *Game) handleItemDescriptionInput() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showItemDescription = false // Toggle the item description
-		g.selectedItemIndex = 0
 		return nil
 	}
 
