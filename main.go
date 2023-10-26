@@ -91,6 +91,13 @@ type ActionQueue struct {
 
 type Direction int
 
+type ThrownItem struct {
+	Item   Item
+	Image  *ebiten.Image
+	X, Y   int // 投げられたアイテムの現在の位置
+	DX, DY int // アイテムの移動方向と速度
+}
+
 type Game struct {
 	state                   GameState
 	rooms                   []Room
@@ -137,6 +144,8 @@ type Game struct {
 	GroundItemActioned      bool
 	isFrontEnemy            bool
 	currentGroundItem       Item
+	ThrownItem              ThrownItem
+	ThrownItemDestination   Coordinate
 }
 
 func min(a, b int) int {
@@ -255,6 +264,23 @@ func (g *Game) Update() error {
 		}
 	}
 
+	if g.ThrownItem.Image != nil {
+		g.ThrownItem.X += g.ThrownItem.DX
+		g.ThrownItem.Y += g.ThrownItem.DY
+		//log.Printf("g.state.Player.X: %d, g.state.Player.Y: %d", g.state.Player.X, g.state.Player.Y)
+		//log.Printf("ThrownItem.X: %d, ThrownItem.Y: %d", g.ThrownItem.X, g.ThrownItem.Y)
+		//log.Printf("ThrownItemDestination.X: %d, ThrownItemDestination.Y: %d", g.ThrownItemDestination.X, g.ThrownItemDestination.Y)
+		//log.Printf("ThrownItem.DX: %d, ThrownItem.DY: %d", g.ThrownItem.DX, g.ThrownItem.DY)
+		// 必要に応じてアイテムが目的地に到達したかどうかをチェックし、到達したらリストから削除
+		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) || (g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
+			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
+				g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+				g.ThrownItem = ThrownItem{}
+				g.ThrownItemDestination = Coordinate{}
+			}
+		}
+	}
+
 	g.HandleEnemyAttackTimers()
 
 	g.ManageDescriptions()
@@ -277,6 +303,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	g.DrawMap(screen, offsetX, offsetY)
 	g.DrawItems(screen, offsetX, offsetY)
+	g.DrawThrownItem(screen, offsetX, offsetY)
 	g.DrawEnemies(screen, offsetX, offsetY)
 	g.DrawHUD(screen)
 	g.DrawPlayer(screen, centerX, centerY)

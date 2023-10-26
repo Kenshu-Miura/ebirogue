@@ -344,6 +344,16 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 	return img
 }
 
+func (g *Game) DrawThrownItem(screen *ebiten.Image, offsetX, offsetY int) {
+
+	if g.ThrownItem.Image != nil {
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(g.ThrownItem.X*tileSize+offsetX), float64(g.ThrownItem.Y*tileSize+offsetY))
+		screen.DrawImage(g.ThrownItem.Image, opts)
+	}
+
+}
+
 func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, item := range g.state.Items {
 		img := g.getItemImage(item)

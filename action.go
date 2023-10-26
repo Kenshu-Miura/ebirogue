@@ -103,6 +103,15 @@ func (g *Game) executeAction() {
 			Message:  fmt.Sprintf("%sを投げた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
 			Execute: func(g *Game) {
 
+				g.ThrownItem = ThrownItem{
+					Item:  item,
+					Image: g.getItemImage(item),
+					X:     g.state.Player.X,
+					Y:     g.state.Player.Y,
+					DX:    dx,
+					DY:    dy,
+				}
+
 				var i int
 				for i = 1; i <= 10; i++ {
 					targetX := g.state.Player.X + i*dx
@@ -111,7 +120,11 @@ func (g *Game) executeAction() {
 					if tile.Type == "wall" {
 						// Append item to g.state.Items at the position before hitting the wall
 						item.SetPosition(g.state.Player.X+(i-1)*dx, g.state.Player.Y+(i-1)*dy)
-						g.state.Items = append(g.state.Items, item)
+						g.ThrownItemDestination = Coordinate{
+							X: g.state.Player.X + (i-1)*dx,
+							Y: g.state.Player.Y + (i-1)*dy,
+						}
+						//g.state.Items = append(g.state.Items, item)
 						g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 						g.showItemActions = false
 						g.showInventory = false
@@ -127,8 +140,12 @@ func (g *Game) executeAction() {
 					}
 				}
 				if i == 11 {
-					item.SetPosition(g.state.Player.X+i*dx, g.state.Player.Y+i*dy)
-					g.state.Items = append(g.state.Items, item)
+					item.SetPosition(g.state.Player.X+(i-1)*dx, g.state.Player.Y+(i-1)*dy)
+					//g.state.Items = append(g.state.Items, item)
+					g.ThrownItemDestination = Coordinate{
+						X: g.state.Player.X + (i-1)*dx,
+						Y: g.state.Player.Y + (i-1)*dy,
+					}
 					g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 					g.showItemActions = false
 					g.showInventory = false
