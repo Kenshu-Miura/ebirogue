@@ -13,11 +13,23 @@ func (g *Game) executeGroundItemAction() {
 		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
+				var itemName string
+				if weaponItem, ok := g.state.Items[i].(*Weapon); ok {
+					sharpnessSign := ""
+					if weaponItem.Sharpness > 0 {
+						sharpnessSign = fmt.Sprintf("+%d", weaponItem.Sharpness)
+					} else if weaponItem.Sharpness < 0 {
+						sharpnessSign = fmt.Sprintf("%d", weaponItem.Sharpness) // Negative sign is included
+					}
+					itemName = fmt.Sprintf("%s%s", weaponItem.GetName(), sharpnessSign)
+				} else {
+					itemName = g.state.Items[i].GetName()
+				}
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{
 						Duration: 0.3,
-						Message:  fmt.Sprintf("%sを拾った", g.state.Items[i].GetName()),
+						Message:  fmt.Sprintf("%sを拾った", itemName),
 						Execute: func(g *Game) {
 							g.PickUpItem(item, i)
 							g.isActioned = true
@@ -28,7 +40,7 @@ func (g *Game) executeGroundItemAction() {
 				} else {
 					action := Action{
 						Duration: 0.5,
-						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", g.state.Items[i].GetName()),
+						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName),
 						Execute: func(g *Game) {
 
 						},
@@ -62,11 +74,21 @@ func (g *Game) executeAction() {
 			moneyItem.Use(g)
 		} else if weaponItem, ok := item.(*Weapon); ok {
 			var message string
-			if g.state.Player.EquippedWeapon != nil {
-				message = fmt.Sprintf("%sをはずした。", g.state.Player.EquippedWeapon.GetName())
+			itemName := getItemNameWithSharpness(weaponItem)
+			if g.state.Player.EquippedWeapon != nil && g.state.Player.Inventory[g.selectedItemIndex] == g.state.Player.EquippedWeapon {
+				equippeditemName := getItemNameWithSharpness(g.state.Player.EquippedWeapon)
+				message = fmt.Sprintf("%sをはずした。", equippeditemName)
+				g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.AttackPower
+				g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.Sharpness // Update AttackPower when unequipping
 				g.state.Player.EquippedWeapon = nil
 			} else {
-				message = fmt.Sprintf("%sを装備した。", weaponItem.GetName())
+				message = fmt.Sprintf("%sを装備した。", itemName)
+				if g.state.Player.EquippedWeapon != nil {
+					g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.AttackPower
+					g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.Sharpness // Update AttackPower when unequipping
+				}
+				g.state.Player.AttackPower += weaponItem.AttackPower
+				g.state.Player.AttackPower += weaponItem.Sharpness // Update AttackPower when equipping
 				g.state.Player.EquippedWeapon = weaponItem
 			}
 

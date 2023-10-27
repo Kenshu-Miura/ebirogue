@@ -6,6 +6,19 @@ import (
 	"math/rand"
 )
 
+func getItemNameWithSharpness(item Item) string {
+	if weaponItem, ok := item.(*Weapon); ok {
+		sharpnessSign := ""
+		if weaponItem.Sharpness > 0 {
+			sharpnessSign = fmt.Sprintf("+%d", weaponItem.Sharpness)
+		} else if weaponItem.Sharpness < 0 {
+			sharpnessSign = fmt.Sprintf("%d", weaponItem.Sharpness) // Negative sign is included
+		}
+		return fmt.Sprintf("%s%s", weaponItem.GetName(), sharpnessSign)
+	}
+	return item.GetName()
+}
+
 func (g *Game) hitEnemyWithItem() {
 	if potion, ok := g.ThrownItem.Item.(*Potion); ok {
 		action := Action{
@@ -64,9 +77,12 @@ func (g *Game) executeItemSwap() {
 		if itemX == playerX && itemY == playerY {
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
 
+			itemName := getItemNameWithSharpness(item)
+			selecteditemName := getItemNameWithSharpness(selectedInventoryItem)
+
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sと%sを交換しました", item.GetName(), selectedInventoryItem.GetName()),
+				Message:  fmt.Sprintf("%sと%sを交換しました", itemName, selecteditemName),
 				Execute: func(g *Game) {
 					// Set the position of the selected inventory item to the player's position
 					selectedInventoryItem.SetPosition(playerX, playerY)
@@ -96,11 +112,12 @@ func (g *Game) PickupItem() {
 		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
+				itemName := getItemNameWithSharpness(item)
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{
 						Duration: 0.3,
-						Message:  fmt.Sprintf("%sを拾った", g.state.Items[i].GetName()),
+						Message:  fmt.Sprintf("%sを拾った", itemName),
 						Execute: func(g *Game) {
 							g.PickUpItem(item, i)
 						},
@@ -111,7 +128,7 @@ func (g *Game) PickupItem() {
 				} else {
 					action := Action{
 						Duration: 0.5,
-						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", g.state.Items[i].GetName()),
+						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName),
 						Execute: func(g *Game) {
 
 						},
@@ -121,12 +138,13 @@ func (g *Game) PickupItem() {
 			}
 		}
 	} else {
-		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
+		for _, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
+				itemName := getItemNameWithSharpness(item)
 				action := Action{
 					Duration: 0.5,
-					Message:  fmt.Sprintf("%sに乗った", g.state.Items[i].GetName()),
+					Message:  fmt.Sprintf("%sに乗った", itemName),
 					Execute: func(g *Game) {
 					},
 				}

@@ -182,8 +182,10 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 		drawWindowWithBorder(screen, itemwindowX, itemwindowY, itemWindowWidth, itemWindowHeight, 127)
 		if g.currentGroundItem != nil {
 
+			groundItemName := getItemNameWithSharpness(g.currentGroundItem)
+
 			// Draw item name
-			itemtext := fmt.Sprintf("%sが落ちている", g.currentGroundItem.GetName())
+			itemtext := fmt.Sprintf("%sが落ちている", groundItemName)
 			text.Draw(screen, itemtext, mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
 			// Draw actions window
 			drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
@@ -247,8 +249,7 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 
 	if len(g.state.Player.Inventory) > 0 {
 		for i, item := range g.state.Player.Inventory {
-			itemText := fmt.Sprintf("%d. %s", i+1, item.GetName())
-
+			itemText := getItemNameWithSharpness(item)
 			// 現在の列と行の計算
 			column := i / itemsPerColumn
 			row := i % itemsPerColumn
