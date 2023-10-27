@@ -146,6 +146,8 @@ type Game struct {
 	currentGroundItem       Item
 	ThrownItem              ThrownItem
 	ThrownItemDestination   Coordinate
+	TargetEnemy             *Enemy
+	TargetEnemyIndex        int
 }
 
 func min(a, b int) int {
@@ -267,19 +269,22 @@ func (g *Game) Update() error {
 	if g.ThrownItem.Image != nil {
 		g.ThrownItem.X += g.ThrownItem.DX
 		g.ThrownItem.Y += g.ThrownItem.DY
-		//log.Printf("g.state.Player.X: %d, g.state.Player.Y: %d", g.state.Player.X, g.state.Player.Y)
-		//log.Printf("ThrownItem.X: %d, ThrownItem.Y: %d", g.ThrownItem.X, g.ThrownItem.Y)
-		//log.Printf("ThrownItemDestination.X: %d, ThrownItemDestination.Y: %d", g.ThrownItemDestination.X, g.ThrownItemDestination.Y)
-		//log.Printf("ThrownItem.DX: %d, ThrownItem.DY: %d", g.ThrownItem.DX, g.ThrownItem.DY)
 		// 必要に応じてアイテムが目的地に到達したかどうかをチェックし、到達したらリストから削除
 		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) || (g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
 			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
-				g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+				if g.TargetEnemy != nil {
+					// 敵にアイテムが当たった時の処理を実行
+					g.hitEnemyWithItem()
+				} else {
+					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+				}
 				g.ThrownItem = ThrownItem{}
 				g.ThrownItemDestination = Coordinate{}
 			}
 		}
 	}
+
+	log.Printf("g.ActionQueue = %+v", g.ActionQueue)
 
 	g.HandleEnemyAttackTimers()
 

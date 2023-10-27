@@ -3,7 +3,58 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
+	"math/rand"
 )
+
+func (g *Game) hitEnemyWithItem() {
+	if potion, ok := g.ThrownItem.Item.(*Potion); ok {
+		action := Action{
+			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+			Message:  fmt.Sprintf("%sのHPが%d回復した。", g.state.Enemies[g.TargetEnemyIndex].Name, potion.Health),
+			Execute: func(*Game) {
+				g.state.Enemies[g.TargetEnemyIndex].Health += potion.Health
+				if g.state.Enemies[g.TargetEnemyIndex].Health > g.state.Enemies[g.TargetEnemyIndex].MaxHealth {
+					g.state.Enemies[g.TargetEnemyIndex].Health = g.state.Enemies[g.TargetEnemyIndex].MaxHealth
+				}
+				g.isActioned = true
+				g.TargetEnemy = nil // Reset the target enemy after processing
+			},
+		}
+		g.Enqueue(action)
+	} else {
+		damage := rand.Intn(3) + 1
+		action := Action{
+			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", g.state.Enemies[g.TargetEnemyIndex].Name, damage),
+			Execute: func(*Game) {
+				g.state.Enemies[g.TargetEnemyIndex].Health -= damage
+				if g.state.Enemies[g.TargetEnemyIndex].Health < 0 {
+					g.state.Enemies[g.TargetEnemyIndex].Health = 0
+				}
+				if g.state.Enemies[g.TargetEnemyIndex].Health <= 0 {
+					// 敵のHealthが0以下の場合、敵を配列から削除
+					defeatAction := Action{
+						Duration: 0.5,
+						Message:  fmt.Sprintf("%sを倒した。", g.state.Enemies[g.TargetEnemyIndex].Name),
+						Execute:  func(g *Game) {},
+					}
+					g.Enqueue(defeatAction)
+
+					g.state.Enemies = append(g.state.Enemies[:g.TargetEnemyIndex], g.state.Enemies[g.TargetEnemyIndex+1:]...)
+
+					// 敵の経験値をプレイヤーの所持経験値に加える
+					g.state.Player.ExperiencePoints += g.TargetEnemy.ExperiencePoints
+
+					g.state.Player.checkLevelUp() // レベルアップをチェック
+
+					g.TargetEnemy = nil // Reset the target enemy after processing
+				}
+				g.isActioned = true
+			},
+		}
+		g.Enqueue(action)
+	}
+}
 
 func (g *Game) executeItemSwap() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y

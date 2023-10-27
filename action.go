@@ -133,8 +133,23 @@ func (g *Game) executeAction() {
 						g.selectedActionIndex = 0
 						return // Exit if a wall is encountered
 					}
-					for _, enemy := range g.state.Enemies {
+					for index, enemy := range g.state.Enemies {
 						if enemy.X == targetX && enemy.Y == targetY {
+
+							g.TargetEnemy = &enemy
+							g.TargetEnemyIndex = index
+
+							g.ThrownItemDestination = Coordinate{
+								X: g.state.Player.X + (i)*dx,
+								Y: g.state.Player.Y + (i)*dy,
+							}
+							g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+							g.showItemActions = false
+							g.showInventory = false
+
+							g.selectedItemIndex = 0
+							g.selectedActionIndex = 0
+
 							return // Exit if an enemy is encountered
 						}
 					}
@@ -149,7 +164,7 @@ func (g *Game) executeAction() {
 					g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 					g.showItemActions = false
 					g.showInventory = false
-					g.isActioned = true
+
 					g.selectedItemIndex = 0
 					g.selectedActionIndex = 0
 				}
