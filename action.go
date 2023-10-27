@@ -50,29 +50,38 @@ func (g *Game) executeGroundItemAction() {
 
 func (g *Game) executeAction() {
 
-	if g.selectedActionIndex == 0 { // Assuming index 0 corresponds to '使う'
+	if g.selectedActionIndex == 0 { // Assuming index 0 corresponds to '使う' or '装備'
 		item := g.state.Player.Inventory[g.selectedItemIndex]
 		if foodItem, ok := item.(*Food); ok {
 			foodItem.Use(g)
-			g.showItemActions = false
-			g.showInventory = false
-			g.isActioned = true
 		} else if potionItem, ok := item.(*Potion); ok {
 			potionItem.Use(g)
-			g.showItemActions = false
-			g.showInventory = false
-			g.isActioned = true
 		} else if cardItem, ok := item.(*Card); ok {
 			cardItem.Use(g)
-			g.showItemActions = false
-			g.showInventory = false
-			g.isActioned = true
 		} else if moneyItem, ok := item.(*Money); ok {
 			moneyItem.Use(g)
-			g.showItemActions = false
-			g.showInventory = false
-			g.isActioned = true
+		} else if weaponItem, ok := item.(*Weapon); ok {
+			var message string
+			if g.state.Player.EquippedWeapon != nil {
+				message = fmt.Sprintf("%sをはずした。", g.state.Player.EquippedWeapon.GetName())
+				g.state.Player.EquippedWeapon = nil
+			} else {
+				message = fmt.Sprintf("%sを装備した。", weaponItem.GetName())
+				g.state.Player.EquippedWeapon = weaponItem
+			}
+
+			action := Action{
+				Duration: 0.5,
+				Message:  message,
+				Execute: func(g *Game) {
+					// The equipped weapon is already set above
+				},
+			}
+			g.Enqueue(action)
 		}
+		g.showItemActions = false
+		g.showInventory = false
+		g.isActioned = true
 		g.selectedItemIndex = 0
 	}
 

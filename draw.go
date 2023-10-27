@@ -210,7 +210,16 @@ func (g *Game) drawActionMenu(screen *ebiten.Image) {
 		drawWindowWithBorder(screen, menuX, menuY, menuWidth, menuHeight, 255)
 
 		// Draw menu actions
-		actions := []string{"使う", "投げる", "置く", "説明"}
+		var actions []string
+		if weapon, isWeapon := g.state.Player.Inventory[g.selectedItemIndex].(*Weapon); isWeapon {
+			if g.state.Player.EquippedWeapon == weapon {
+				actions = []string{"はずす", "投げる", "置く", "説明"}
+			} else {
+				actions = []string{"装備", "投げる", "置く", "説明"}
+			}
+		} else {
+			actions = []string{"使う", "投げる", "置く", "説明"}
+		}
 		for i, action := range actions {
 			textColor := color.White
 			yOffset := menuY + 20 + i*20 // Adjust the offset values to position the text correctly
@@ -422,20 +431,22 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	playerPowerText := fmt.Sprintf("パワー: %2d/%2d", g.state.Player.Power, g.state.Player.MaxPower)
 	text.Draw(screen, playerPowerText, mplusNormalFont, screenWidth-130, 130, color.White)
 
+	// Equipped Weapon
+	equippedWeaponName := "なし"
+	sharpnessText := ""
+	if g.state.Player.EquippedWeapon != nil {
+		equippedWeaponName = g.state.Player.EquippedWeapon.Name
+		if g.state.Player.EquippedWeapon.Sharpness != 0 {
+			sharpnessText = fmt.Sprintf("%+d", g.state.Player.EquippedWeapon.Sharpness) // %+d will include the sign for negative and positive numbers
+		}
+	}
+
+	equippedWeaponText := fmt.Sprintf("武器: %s%s", equippedWeaponName, sharpnessText)
+	text.Draw(screen, equippedWeaponText, mplusNormalFont, screenWidth-130, 170, color.White)
+
 	// Player Experience Points
 	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
 	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White)
-
-	// Player Inventory
-	//inventoryText := "所持アイテム:"
-	//text.Draw(screen, inventoryText, mplusNormalFont, screenWidth-130, 180, color.White) // Adjust the y-coordinate as needed
-
-	//yCoord := 210 // Starting y-coordinate for the list of items, adjust as needed
-	//for _, item := range g.state.Player.Inventory {
-	//		itemText := fmt.Sprintf("- %s", item.Name)
-	//	text.Draw(screen, itemText, mplusNormalFont, screenWidth-130, yCoord, color.White)
-	//	yCoord += 30 // Increment y-coordinate for the next item, adjust the increment value as needed
-	//}
 
 	// Floor level
 	floorText := fmt.Sprintf("階層: B%dF", g.Floor)
