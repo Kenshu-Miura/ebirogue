@@ -273,8 +273,10 @@ func (g *Game) Update() error {
 		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) || (g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
 			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
 				if g.TargetEnemy != nil {
+					g.ActionQueue.Timer = 0.5
 					// 敵にアイテムが当たった時の処理を実行
 					g.hitEnemyWithItem()
+					g.TargetEnemy = nil
 				} else {
 					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
 				}
@@ -282,9 +284,11 @@ func (g *Game) Update() error {
 				g.ThrownItemDestination = Coordinate{}
 			}
 		}
+
 	}
 
 	log.Printf("g.ActionQueue = %+v", g.ActionQueue)
+	log.Printf("g.DuractionCounter = %+v", g.ActionDurationCounter)
 
 	g.HandleEnemyAttackTimers()
 
