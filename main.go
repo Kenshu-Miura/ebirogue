@@ -86,7 +86,6 @@ type Action struct {
 
 type ActionQueue struct {
 	Queue []Action
-	Timer float64
 }
 
 type Direction int
@@ -273,7 +272,6 @@ func (g *Game) Update() error {
 		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) || (g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
 			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
 				if g.TargetEnemy != nil {
-					g.ActionQueue.Timer = 0.5
 					// 敵にアイテムが当たった時の処理を実行
 					g.hitEnemyWithItem()
 					g.TargetEnemy = nil
@@ -401,7 +399,6 @@ func NewGame() *Game {
 		playerAttack:     false,
 		ActionQueue: ActionQueue{
 			Queue: make([]Action, 0),
-			Timer: 0.0,
 		},
 		isCombatActive: false,
 		zPressed:       false,

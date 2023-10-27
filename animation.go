@@ -55,14 +55,10 @@ func (g *Game) HandleEnemyAttackTimers() {
 
 func (g *Game) HandleActionQueue() {
 	if len(g.ActionQueue.Queue) > 0 {
-		g.ActionQueue.Timer -= (1 / 60.0) // assuming Update is called 60 times per second
-		if g.ActionQueue.Timer <= 0 {
+		if g.ActionDurationCounter <= 0 {
 			action := g.ActionQueue.Queue[0]
 			g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
 			g.processAction(action)
-			if len(g.ActionQueue.Queue) > 0 {
-				g.ActionQueue.Timer = g.ActionQueue.Queue[0].Duration // reset timer for next action
-			}
 		}
 	}
 
