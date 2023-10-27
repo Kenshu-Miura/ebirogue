@@ -58,6 +58,7 @@ type Player struct {
 	ExperiencePoints int    // 所持経験値
 	Level            int    // プレイヤーのレベル
 	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	EquippedWeapon   *Weapon
 }
 
 type Coordinate struct {
@@ -108,6 +109,7 @@ type Game struct {
 	mintiaImg               *ebiten.Image
 	sausageImg              *ebiten.Image
 	tilesetImg              *ebiten.Image
+	weaponImg               *ebiten.Image
 	offsetX                 int
 	offsetY                 int
 	moveCount               int
@@ -352,6 +354,7 @@ func NewGame() *Game {
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
+	weaponImg := loadImage("img/weapon.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -390,6 +393,7 @@ func NewGame() *Game {
 		cardImg:          cardImg,
 		mintiaImg:        mintiaImg,
 		sausageImg:       sausageImg,
+		weaponImg:        weaponImg,
 		offsetX:          0,
 		offsetY:          0,
 		Floor:            newFloor,

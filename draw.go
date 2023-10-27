@@ -338,6 +338,8 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 		img = g.cardImg
 	case "Mintia":
 		img = g.mintiaImg
+	case "Weapon":
+		img = g.weaponImg
 	default:
 		img = g.sausageImg
 	}
