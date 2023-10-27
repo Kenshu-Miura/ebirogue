@@ -338,6 +338,12 @@ func (g *Game) HandleInput() (int, int) {
 				return 0, 0
 			}
 		}
+
+		nowX, nowY := g.state.Player.X, g.state.Player.Y
+		if (g.state.Player.Direction == Up || g.state.Player.Direction == Down) && (g.state.Map[nowY][nowX+1].Type == "corridor" || g.state.Map[nowY][nowX-1].Type == "corridor") ||
+			((g.state.Player.Direction == Left || g.state.Player.Direction == Right) && (g.state.Map[nowY+1][nowX].Type == "corridor" || g.state.Map[nowY-1][nowX].Type == "corridor")) {
+			return 0, 0
+		}
 	}
 
 	// 矢印キーの押下ロジック

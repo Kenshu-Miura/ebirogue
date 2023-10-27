@@ -287,9 +287,6 @@ func (g *Game) Update() error {
 
 	}
 
-	log.Printf("g.ActionQueue = %+v", g.ActionQueue)
-	log.Printf("g.DuractionCounter = %+v", g.ActionDurationCounter)
-
 	g.HandleEnemyAttackTimers()
 
 	g.ManageDescriptions()

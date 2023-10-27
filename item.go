@@ -99,7 +99,7 @@ func (g *Game) PickupItem() {
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{
-						Duration: 0.2,
+						Duration: 0.3,
 						Message:  fmt.Sprintf("%sを拾った", g.state.Items[i].GetName()),
 						Execute: func(g *Game) {
 							g.PickUpItem(item, i)
@@ -125,7 +125,7 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 				action := Action{
-					Duration: 0.4,
+					Duration: 0.5,
 					Message:  fmt.Sprintf("%sに乗った", g.state.Items[i].GetName()),
 					Execute: func(g *Game) {
 					},
