@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type SpecialAttackFunc func(e *Enemy, g *Game)
 
 type Enemy struct {
@@ -59,7 +61,15 @@ func createEnemy(x, y int) Enemy {
 		enemyDirection = Down
 		specialAttack = func(e *Enemy, g *Game) {
 			if g.state.Player.Power > 0 {
-				g.state.Player.Power--
+				action := Action{
+					Duration: 0.5,
+					Message:  fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", e.Name),
+					Execute: func(g *Game) {
+						g.state.Player.Power--
+
+					},
+				}
+				g.Enqueue(action)
 			}
 		}
 		specialAttackProbability = 0.3 // Assuming a 100% chance to use special attack for simplicity, adjust as necessary

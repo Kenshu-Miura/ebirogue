@@ -309,27 +309,37 @@ func (aq *ActionQueue) Enqueue(action Action) {
 func (g *Game) AttackFromEnemy(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 
-	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
-	if netDamage < 0 { // Ensure damage does not go below 0
-		netDamage = 0
+	// Generate a random float number between 0 and 1 to compare with specialAttackProbability
+	randomValue := rand.Float64()
+
+	// Check if the enemy will perform a special attack
+	if enemy.SpecialAttack != nil && randomValue <= enemy.SpecialAttackProbability {
+		// Perform the special attack
+		enemy.SpecialAttack(enemy, g)
+	} else {
+		// Perform the normal attack
+		netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
+		if netDamage < 0 { // Ensure damage does not go below 0
+			netDamage = 0
+		}
+
+		dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y // プレイヤーと敵の位置の差を計算
+
+		action := Action{
+			Duration: 0.5,
+			Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
+			Execute: func(g *Game) {
+				enemy.AttackTimer = 0.5                            // ここでAttackTimerを設定することで、敵の攻撃アニメーションが実行される
+				enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
+				g.state.Player.Health -= netDamage
+				if g.state.Player.Health < 0 {
+					g.state.Player.Health = 0 // Ensure health does not go below 0
+				}
+			},
+		}
+
+		g.Enqueue(action)
 	}
-
-	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y // プレイヤーと敵の位置の差を計算
-
-	action := Action{
-		Duration: 0.5,
-		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
-		Execute: func(g *Game) {
-			enemy.AttackTimer = 0.5                            // ここでAttackTimerを設定することで、敵の攻撃アニメーションが実行される
-			enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
-			g.state.Player.Health -= netDamage
-			if g.state.Player.Health < 0 {
-				g.state.Player.Health = 0 // Ensure health does not go below 0
-			}
-		},
-	}
-
-	g.Enqueue(action)
 }
 
 func (g *Game) CheckForEnemies(x, y int) bool {
