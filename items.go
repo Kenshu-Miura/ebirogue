@@ -15,6 +15,12 @@ type Item interface {
 	// 他にも共通のメソッドがあればここに追加します。
 }
 
+// Equipable interface
+type Equipable interface {
+	Item                                          // Embed the Item interface
+	UpdatePlayerStats(player *Player, equip bool) // Method to update player stats when equipping/unequipping
+}
+
 type BaseItem struct {
 	Entity
 	ID          int

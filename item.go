@@ -6,6 +6,34 @@ import (
 	"math/rand"
 )
 
+// UpdatePlayerStats is a method to update player stats when equipping/unequipping an item
+// This method needs to be implemented by each equipable item type (Weapon, Armor, Arrow, Accessory)
+func (w *Weapon) UpdatePlayerStats(player *Player, equip bool) {
+	if equip {
+		player.AttackPower += w.AttackPower + w.Sharpness
+	} else {
+		player.AttackPower -= w.AttackPower + w.Sharpness
+	}
+}
+
+func (a *Armor) UpdatePlayerStats(player *Player, equip bool) {
+	if equip {
+		player.DefensePower += a.DefensePower + a.Sharpness
+	} else {
+		player.DefensePower -= a.DefensePower + a.Sharpness
+	}
+}
+
+func (ar *Arrow) UpdatePlayerStats(player *Player, equip bool) {
+	// Arrows might not affect player stats but can affect other stats like ammo count
+	// Implement logic accordingly
+}
+
+func (ac *Accessory) UpdatePlayerStats(player *Player, equip bool) {
+	// Accessories might affect various stats
+	// Implement logic accordingly
+}
+
 func getItemNameWithSharpness(item Item) string {
 	// Helper function to format sharpness
 	formatSharpness := func(sharpness int) string {

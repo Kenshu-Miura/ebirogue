@@ -72,63 +72,55 @@ func (g *Game) executeAction() {
 			cardItem.Use(g)
 		} else if moneyItem, ok := item.(*Money); ok {
 			moneyItem.Use(g)
-		} else if weaponItem, ok := item.(*Weapon); ok {
+		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
-			itemName := getItemNameWithSharpness(weaponItem)
-			if g.state.Player.EquippedWeapon != nil && g.state.Player.Inventory[g.selectedItemIndex] == g.state.Player.EquippedWeapon {
-				equippeditemName := getItemNameWithSharpness(g.state.Player.EquippedWeapon)
-				message = fmt.Sprintf("%sをはずした。", equippeditemName)
-				g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.AttackPower
-				g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.Sharpness // Update AttackPower when unequipping
-				g.state.Player.EquippedWeapon = nil
-			} else {
-				message = fmt.Sprintf("%sを装備した。", itemName)
-				if g.state.Player.EquippedWeapon != nil {
-					g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.AttackPower
-					g.state.Player.AttackPower -= g.state.Player.EquippedWeapon.Sharpness // Update AttackPower when unequipping
+			itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
+
+			// Find an empty slot or use the last slot
+			equipIndex := -1
+			for i := 0; i < 4; i++ { // Search for an empty slot in EquippedItems[0] to EquippedItems[3]
+				if g.state.Player.EquippedItems[i] == nil {
+					equipIndex = i
+					break
 				}
-				g.state.Player.AttackPower += weaponItem.AttackPower
-				g.state.Player.AttackPower += weaponItem.Sharpness // Update AttackPower when equipping
-				g.state.Player.EquippedWeapon = weaponItem
+			}
+			if equipIndex == -1 { // If no empty slot found, use the last slot
+				equipIndex = 4
+			}
+
+			// Check if the item is already equipped
+			alreadyEquipped := false
+			for i := 0; i < 5; i++ {
+				if g.state.Player.EquippedItems[i] == equipableItem {
+					alreadyEquipped = true
+					equipIndex = i // Update the equipIndex to the slot where the item is already equipped
+					break
+				}
+			}
+
+			if alreadyEquipped {
+				// Unequip the item
+				message = fmt.Sprintf("%sをはずした。", itemName)
+				equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
+				g.state.Player.EquippedItems[equipIndex] = nil          // Remove item from equipped items
+			} else {
+				// Equip the item
+				message = fmt.Sprintf("%sを装備した。", itemName)
+				equipableItem.UpdatePlayerStats(&g.state.Player, true)   // Update player's stats when equipping
+				g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
+				g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
 			}
 
 			action := Action{
 				Duration: 0.5,
 				Message:  message,
 				Execute: func(g *Game) {
-					// The equipped weapon is already set above
-				},
-			}
-			g.Enqueue(action)
-		} else if armorItem, ok := item.(*Armor); ok {
-			var message string
-			itemName := getItemNameWithSharpness(armorItem)
-			if g.state.Player.EquippedArmor != nil && g.state.Player.Inventory[g.selectedItemIndex] == g.state.Player.EquippedArmor {
-				equippeditemName := getItemNameWithSharpness(g.state.Player.EquippedArmor)
-				message = fmt.Sprintf("%sをはずした。", equippeditemName)
-				g.state.Player.DefensePower -= g.state.Player.EquippedArmor.DefensePower
-				g.state.Player.DefensePower -= g.state.Player.EquippedArmor.Sharpness // Update DefensePower when unequipping
-				g.state.Player.EquippedArmor = nil
-			} else {
-				message = fmt.Sprintf("%sを装備した。", itemName)
-				if g.state.Player.EquippedArmor != nil {
-					g.state.Player.DefensePower -= g.state.Player.EquippedArmor.DefensePower
-					g.state.Player.DefensePower -= g.state.Player.EquippedArmor.Sharpness // Update DefensePower when unequipping
-				}
-				g.state.Player.DefensePower += armorItem.DefensePower
-				g.state.Player.DefensePower += armorItem.Sharpness // Update DefensePower when equipping
-				g.state.Player.EquippedArmor = armorItem
-			}
-
-			action := Action{
-				Duration: 0.5,
-				Message:  message,
-				Execute: func(g *Game) {
-					// The equipped armor is already set above
+					// The equipped/unequipped item is already set above
 				},
 			}
 			g.Enqueue(action)
 		}
+
 		g.showItemActions = false
 		g.showInventory = false
 		g.isActioned = true

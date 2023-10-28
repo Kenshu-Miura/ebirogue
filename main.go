@@ -60,6 +60,7 @@ type Player struct {
 	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 	EquippedWeapon   *Weapon
 	EquippedArmor    *Armor
+	EquippedItems    [5]Item // Array to hold equipped items
 }
 
 type Coordinate struct {
