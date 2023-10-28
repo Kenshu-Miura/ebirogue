@@ -155,6 +155,16 @@ func (g *Game) executeAction() {
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
 			Message:  fmt.Sprintf("%sを投げた", itemName),
 			Execute: func(g *Game) {
+				// Check if the item is equipped and unequip if necessary
+				if equipableItem, ok := item.(Equipable); ok {
+					for i, equippedItem := range g.state.Player.EquippedItems {
+						if equippedItem == equipableItem {
+							g.state.Player.EquippedItems[i] = nil
+							equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
+							break
+						}
+					}
+				}
 
 				g.ThrownItem = ThrownItem{
 					Item:  item,
@@ -243,6 +253,18 @@ func (g *Game) executeAction() {
 				Message:  fmt.Sprintf("%sを置いた", itemName),
 				Execute: func(g *Game) {
 					selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
+
+					// Check if the item is equipped and unequip if necessary
+					if equipableItem, ok := selectedItem.(Equipable); ok {
+						for i, equippedItem := range g.state.Player.EquippedItems {
+							if equippedItem == equipableItem {
+								g.state.Player.EquippedItems[i] = nil
+								equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
+								break
+							}
+						}
+					}
+
 					// Remove the item from inventory
 					g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 					// Add the item to the world at the player's current position
