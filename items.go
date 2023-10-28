@@ -314,7 +314,7 @@ var money30 = func(g *Game) {
 	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
-type Ring struct {
+type Accessory struct {
 	BaseItem
 }
 
