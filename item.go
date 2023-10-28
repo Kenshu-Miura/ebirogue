@@ -6,6 +6,16 @@ import (
 	"math/rand"
 )
 
+// Additional function to check if item is equipped
+func isEquipped(equippedItems []Item, item Equipable) bool {
+	for _, equippedItem := range equippedItems {
+		if equippedItem == item {
+			return true
+		}
+	}
+	return false
+}
+
 // UpdatePlayerStats is a method to update player stats when equipping/unequipping an item
 // This method needs to be implemented by each equipable item type (Weapon, Armor, Arrow, Accessory)
 func (w *Weapon) UpdatePlayerStats(player *Player, equip bool) {

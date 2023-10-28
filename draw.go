@@ -213,8 +213,11 @@ func (g *Game) drawActionMenu(screen *ebiten.Image) {
 
 		// Draw menu actions
 		var actions []string
-		if weapon, isWeapon := g.state.Player.Inventory[g.selectedItemIndex].(*Weapon); isWeapon {
-			if g.state.Player.EquippedWeapon == weapon {
+		item := g.state.Player.Inventory[g.selectedItemIndex]
+
+		if equipableItem, isEquipable := item.(Equipable); isEquipable {
+			// Assume function isEquipped returns true if the item is equipped, false otherwise
+			if isEquipped(g.state.Player.EquippedItems[:], equipableItem) {
 				actions = []string{"はずす", "投げる", "置く", "説明"}
 			} else {
 				actions = []string{"装備", "投げる", "置く", "説明"}
@@ -222,6 +225,7 @@ func (g *Game) drawActionMenu(screen *ebiten.Image) {
 		} else {
 			actions = []string{"使う", "投げる", "置く", "説明"}
 		}
+
 		for i, action := range actions {
 			textColor := color.White
 			yOffset := menuY + 20 + i*20 // Adjust the offset values to position the text correctly
@@ -259,6 +263,13 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 			y := windowY + 30 + row*25
 
 			text.Draw(screen, itemText, mplusNormalFont, x, y, color.White)
+
+			// Check if the item is equipped and draw "E" if it is
+			if equipableItem, ok := item.(Equipable); ok {
+				if isEquipped(g.state.Player.EquippedItems[:], equipableItem) {
+					text.Draw(screen, "E", mplusNormalFont, x+len(itemText)*10+10, y, color.White) // Adjust the x coordinate based on the length of itemText and a small offset
+				}
+			}
 
 			if i == g.selectedItemIndex {
 				// Step 3: Draw the pointer next to the selected item
@@ -434,31 +445,26 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	playerPowerText := fmt.Sprintf("パワー: %2d/%2d", g.state.Player.Power, g.state.Player.MaxPower)
 	text.Draw(screen, playerPowerText, mplusNormalFont, screenWidth-130, 130, color.White)
 
-	// Equipped Weapon
-	equippedWeaponName := "なし"
-	sharpnessText := ""
-	if g.state.Player.EquippedWeapon != nil {
-		equippedWeaponName = g.state.Player.EquippedWeapon.Name
-		if g.state.Player.EquippedWeapon.Sharpness != 0 {
-			sharpnessText = fmt.Sprintf("%+d", g.state.Player.EquippedWeapon.Sharpness) // %+d will include the sign for negative and positive numbers
+	yCoordinate := 170 // Initial Y-coordinate
+
+	for i, equippedItem := range g.state.Player.EquippedItems {
+		equippedItemName := "なし"
+		sharpnessText := ""
+
+		// Check if the equipped item is not nil and is of type *Weapon or *Armor to display sharpness
+		if equippedItem != nil {
+			equippedItemName = equippedItem.GetName()
+			if weaponItem, ok := equippedItem.(*Weapon); ok && weaponItem.Sharpness != 0 {
+				sharpnessText = fmt.Sprintf("%+d", weaponItem.Sharpness) // %+d will include the sign for negative and positive numbers
+			} else if armorItem, ok := equippedItem.(*Armor); ok && armorItem.Sharpness != 0 {
+				sharpnessText = fmt.Sprintf("%+d", armorItem.Sharpness) // %+d will include the sign for negative and positive numbers
+			}
 		}
+
+		equippedItemText := fmt.Sprintf("装備%d: %s%s", i+1, equippedItemName, sharpnessText) // i+1 to display item number starting from 1
+		text.Draw(screen, equippedItemText, mplusNormalFont, screenWidth-130, yCoordinate, color.White)
+		yCoordinate += 20 // Increment the Y-coordinate to position text below the previous item
 	}
-
-	equippedWeaponText := fmt.Sprintf("武器: %s%s", equippedWeaponName, sharpnessText)
-	text.Draw(screen, equippedWeaponText, mplusNormalFont, screenWidth-130, 170, color.White)
-
-	// Equipped Armor
-	equippedArmorName := "なし"
-	armorSharpnessText := ""
-	if g.state.Player.EquippedArmor != nil {
-		equippedArmorName = g.state.Player.EquippedArmor.Name
-		if g.state.Player.EquippedArmor.Sharpness != 0 {
-			armorSharpnessText = fmt.Sprintf("%+d", g.state.Player.EquippedArmor.Sharpness) // %+d will include the sign for negative and positive numbers
-		}
-	}
-
-	equippedArmorText := fmt.Sprintf("防具: %s%s", equippedArmorName, armorSharpnessText)
-	text.Draw(screen, equippedArmorText, mplusNormalFont, screenWidth-130, 190, color.White) // Adjust the Y-coordinate to position below the weapon text
 
 	// Player Experience Points
 	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
