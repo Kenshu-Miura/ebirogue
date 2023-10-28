@@ -350,6 +350,8 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 		img = g.mintiaImg
 	case "Weapon":
 		img = g.weaponImg
+	case "Armor":
+		img = g.armorImg
 	default:
 		img = g.sausageImg
 	}
@@ -444,6 +446,19 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	equippedWeaponText := fmt.Sprintf("武器: %s%s", equippedWeaponName, sharpnessText)
 	text.Draw(screen, equippedWeaponText, mplusNormalFont, screenWidth-130, 170, color.White)
+
+	// Equipped Armor
+	equippedArmorName := "なし"
+	armorSharpnessText := ""
+	if g.state.Player.EquippedArmor != nil {
+		equippedArmorName = g.state.Player.EquippedArmor.Name
+		if g.state.Player.EquippedArmor.Sharpness != 0 {
+			armorSharpnessText = fmt.Sprintf("%+d", g.state.Player.EquippedArmor.Sharpness) // %+d will include the sign for negative and positive numbers
+		}
+	}
+
+	equippedArmorText := fmt.Sprintf("防具: %s%s", equippedArmorName, armorSharpnessText)
+	text.Draw(screen, equippedArmorText, mplusNormalFont, screenWidth-130, 190, color.White) // Adjust the Y-coordinate to position below the weapon text
 
 	// Player Experience Points
 	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)

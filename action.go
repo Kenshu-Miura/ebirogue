@@ -100,6 +100,34 @@ func (g *Game) executeAction() {
 				},
 			}
 			g.Enqueue(action)
+		} else if armorItem, ok := item.(*Armor); ok {
+			var message string
+			itemName := getItemNameWithSharpness(armorItem)
+			if g.state.Player.EquippedArmor != nil && g.state.Player.Inventory[g.selectedItemIndex] == g.state.Player.EquippedArmor {
+				equippeditemName := getItemNameWithSharpness(g.state.Player.EquippedArmor)
+				message = fmt.Sprintf("%sをはずした。", equippeditemName)
+				g.state.Player.DefensePower -= g.state.Player.EquippedArmor.DefensePower
+				g.state.Player.DefensePower -= g.state.Player.EquippedArmor.Sharpness // Update DefensePower when unequipping
+				g.state.Player.EquippedArmor = nil
+			} else {
+				message = fmt.Sprintf("%sを装備した。", itemName)
+				if g.state.Player.EquippedArmor != nil {
+					g.state.Player.DefensePower -= g.state.Player.EquippedArmor.DefensePower
+					g.state.Player.DefensePower -= g.state.Player.EquippedArmor.Sharpness // Update DefensePower when unequipping
+				}
+				g.state.Player.DefensePower += armorItem.DefensePower
+				g.state.Player.DefensePower += armorItem.Sharpness // Update DefensePower when equipping
+				g.state.Player.EquippedArmor = armorItem
+			}
+
+			action := Action{
+				Duration: 0.5,
+				Message:  message,
+				Execute: func(g *Game) {
+					// The equipped armor is already set above
+				},
+			}
+			g.Enqueue(action)
 		}
 		g.showItemActions = false
 		g.showInventory = false
@@ -129,9 +157,11 @@ func (g *Game) executeAction() {
 			dx, dy = -1, 1
 		}
 
+		itemName := getItemNameWithSharpness(item)
+
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sを投げた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+			Message:  fmt.Sprintf("%sを投げた", itemName),
 			Execute: func(g *Game) {
 
 				g.ThrownItem = ThrownItem{
@@ -214,10 +244,11 @@ func (g *Game) executeAction() {
 				break
 			}
 		}
+		itemName := getItemNameWithSharpness(g.state.Player.Inventory[g.selectedItemIndex])
 		if !itemExistsAtPlayerPos {
 			action := Action{
 				Duration: 0.4, // Assuming a duration of 0.5 seconds for this action
-				Message:  fmt.Sprintf("%sを置いた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+				Message:  fmt.Sprintf("%sを置いた", itemName),
 				Execute: func(g *Game) {
 					selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
 					// Remove the item from inventory
@@ -227,6 +258,8 @@ func (g *Game) executeAction() {
 					newItem := selectedItem
 					g.state.Items = append(g.state.Items, newItem)
 
+					g.selectedItemIndex = 0
+					g.selectedActionIndex = 0
 					g.showItemActions = false
 					g.showInventory = false
 					g.isActioned = true
@@ -236,8 +269,10 @@ func (g *Game) executeAction() {
 		} else {
 			action := Action{
 				Duration: 0.4,
-				Message:  fmt.Sprintf("ここには%sを置けない", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+				Message:  fmt.Sprintf("ここには%sを置けない", itemName),
 				Execute: func(g *Game) {
+					g.selectedItemIndex = 0
+					g.selectedActionIndex = 0
 					g.showItemActions = false
 					g.showInventory = false
 					g.isActioned = true

@@ -59,6 +59,7 @@ type Player struct {
 	Level            int    // プレイヤーのレベル
 	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 	EquippedWeapon   *Weapon
+	EquippedArmor    *Armor
 }
 
 type Coordinate struct {
@@ -110,6 +111,7 @@ type Game struct {
 	sausageImg              *ebiten.Image
 	tilesetImg              *ebiten.Image
 	weaponImg               *ebiten.Image
+	armorImg                *ebiten.Image
 	offsetX                 int
 	offsetY                 int
 	moveCount               int
@@ -355,6 +357,7 @@ func NewGame() *Game {
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
 	weaponImg := loadImage("img/weapon.png")
+	armorImg := loadImage("img/armor.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -394,6 +397,7 @@ func NewGame() *Game {
 		mintiaImg:        mintiaImg,
 		sausageImg:       sausageImg,
 		weaponImg:        weaponImg,
+		armorImg:         armorImg,
 		offsetX:          0,
 		offsetY:          0,
 		Floor:            newFloor,

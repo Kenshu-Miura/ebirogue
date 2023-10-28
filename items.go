@@ -69,6 +69,15 @@ func (c *Weapon) Use(g *Game) {
 type Armor struct {
 	BaseItem
 	DefensePower int
+	Sharpness    int
+	Element      string
+	Cursed       bool
+}
+
+func (c *Armor) Use(g *Game) {
+	if action, exists := c.UseActions["ArmorEffect"]; exists {
+		action(g)
+	}
 }
 
 type Arrow struct {
@@ -315,7 +324,7 @@ type Cane struct {
 
 func createItem(x, y int) Item {
 	var item Item
-	randomValue := localRand.Intn(5) // Store the random value to ensure it's only generated once
+	randomValue := localRand.Intn(6) // Store the random value to ensure it's only generated once
 	sharpnessValue := localRand.Intn(5) - 1
 	switch randomValue {
 	case 0:
@@ -411,6 +420,29 @@ func createItem(x, y int) Item {
 			Element:     "None",
 			Cursed:      sharpnessValue == -1,
 		}
+	case 5:
+		item = &Armor{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          5,
+				Type:        "Armor",
+				Name:        "光の角",
+				Description: "光の角。防御力が8上昇する。",
+				UseActions: map[string]UseAction{
+					"ArmorEffect": func(g *Game) {
+					},
+				},
+			},
+			DefensePower: 8,
+			Sharpness:    sharpnessValue,
+			Element:      "None",
+			Cursed:       sharpnessValue == -1,
+		}
+
 	default:
 		item = &Card{
 			BaseItem: BaseItem{
@@ -419,7 +451,7 @@ func createItem(x, y int) Item {
 					Y:    y,
 					Char: '!',
 				},
-				ID:          5,
+				ID:          6,
 				Type:        "Card",
 				Name:        "黒炎弾のカード",
 				Description: "魔法カード。眼の前の敵に30ダメージを与える。",

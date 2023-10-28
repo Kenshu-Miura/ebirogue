@@ -7,16 +7,24 @@ import (
 )
 
 func getItemNameWithSharpness(item Item) string {
-	if weaponItem, ok := item.(*Weapon); ok {
-		sharpnessSign := ""
-		if weaponItem.Sharpness > 0 {
-			sharpnessSign = fmt.Sprintf("+%d", weaponItem.Sharpness)
-		} else if weaponItem.Sharpness < 0 {
-			sharpnessSign = fmt.Sprintf("%d", weaponItem.Sharpness) // Negative sign is included
+	// Helper function to format sharpness
+	formatSharpness := func(sharpness int) string {
+		if sharpness > 0 {
+			return fmt.Sprintf("+%d", sharpness)
+		} else if sharpness < 0 {
+			return fmt.Sprintf("%d", sharpness) // Negative sign is included
 		}
-		return fmt.Sprintf("%s%s", weaponItem.GetName(), sharpnessSign)
+		return ""
 	}
-	return item.GetName()
+
+	switch item := item.(type) {
+	case *Weapon:
+		return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
+	case *Armor:
+		return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
+	default:
+		return item.GetName()
+	}
 }
 
 func (g *Game) hitEnemyWithItem() {
