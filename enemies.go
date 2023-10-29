@@ -16,7 +16,7 @@ type Enemy struct {
 	Type                     string            // Type of enemy (e.g., "orc", "goblin", "slime", etc.)
 	ExperiencePoints         int               // Experience points enemy holds
 	PlayerDiscovered         bool              // Whether the enemy has discovered the player
-	Direction                int               // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	Direction                Direction         // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 	AnimationProgressInt     int               // アニメーション進行度
 	Animating                bool              // アニメーション中かどうか
 	AttackDirection          Direction         // 敵の攻撃方向
@@ -26,11 +26,28 @@ type Enemy struct {
 	SpecialAttackProbability float64           // 敵が特殊攻撃を使ってくる確率 (0.0 to 1.0)
 }
 
+func (e *Enemy) GetPosition() (int, int) {
+	return e.X, e.Y
+}
+
+func (e *Enemy) SetPosition(x, y int) {
+	e.X = x
+	e.Y = y
+}
+
+func (e *Enemy) GetDirection() Direction {
+	return e.Direction
+}
+
+func (e *Enemy) SetDirection(direction Direction) {
+	e.Direction = direction
+}
+
 func createEnemy(x, y int) Enemy {
 	var enemyType, enemyName, enemyChar string
 	var enemyAP, enemyDP, enemyID int
 	var enemyHealth, enemyMaxHealth, enemyExperiencePoints int
-	var enemyDirection int
+	var enemyDirection Direction
 	var specialAttack SpecialAttackFunc
 	var specialAttackProbability float64
 	randomValue := localRand.Intn(2) // Store the random value to ensure it's only generated once and correct the range to 2 for two cases

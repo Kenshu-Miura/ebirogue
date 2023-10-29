@@ -129,111 +129,20 @@ func (g *Game) executeAction() {
 
 	if g.selectedActionIndex == 1 { // Assuming index 1 corresponds to '投げる'
 		item := g.state.Player.Inventory[g.selectedItemIndex]
-		var dx, dy int
-		switch g.state.Player.Direction {
-		case Up:
-			dx, dy = 0, -1
-		case Down:
-			dx, dy = 0, 1
-		case Left:
-			dx, dy = -1, 0
-		case Right:
-			dx, dy = 1, 0
-		case UpRight:
-			dx, dy = 1, -1
-		case DownRight:
-			dx, dy = 1, 1
-		case UpLeft:
-			dx, dy = -1, -1
-		case DownLeft:
-			dx, dy = -1, 1
+		throwRange := 10
+		character := &g.state.Player
+		mapState := g.state.Map
+		enemies := g.state.Enemies
+
+		onWallHit := func(item Item, position Coordinate, itemIndex int) {
+			g.onWallHit(item, position, itemIndex)
 		}
 
-		itemName := getItemNameWithSharpness(item)
-
-		action := Action{
-			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sを投げた", itemName),
-			Execute: func(g *Game) {
-				// Check if the item is equipped and unequip if necessary
-				if equipableItem, ok := item.(Equipable); ok {
-					for i, equippedItem := range g.state.Player.EquippedItems {
-						if equippedItem == equipableItem {
-							g.state.Player.EquippedItems[i] = nil
-							equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
-							break
-						}
-					}
-				}
-
-				g.ThrownItem = ThrownItem{
-					Item:  item,
-					Image: g.getItemImage(item),
-					X:     g.state.Player.X,
-					Y:     g.state.Player.Y,
-					DX:    dx,
-					DY:    dy,
-				}
-
-				var i int
-				for i = 1; i <= 10; i++ {
-					targetX := g.state.Player.X + i*dx
-					targetY := g.state.Player.Y + i*dy
-					tile := g.state.Map[targetY][targetX]
-					if tile.Type == "wall" {
-						// Append item to g.state.Items at the position before hitting the wall
-						item.SetPosition(g.state.Player.X+(i-1)*dx, g.state.Player.Y+(i-1)*dy)
-						g.ThrownItemDestination = Coordinate{
-							X: g.state.Player.X + (i-1)*dx,
-							Y: g.state.Player.Y + (i-1)*dy,
-						}
-						//g.state.Items = append(g.state.Items, item)
-						g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-						g.showItemActions = false
-						g.showInventory = false
-						g.isActioned = true
-						g.selectedItemIndex = 0
-						g.selectedActionIndex = 0
-						return // Exit if a wall is encountered
-					}
-					for index, enemy := range g.state.Enemies {
-						if enemy.X == targetX && enemy.Y == targetY {
-
-							g.TargetEnemy = &enemy
-							g.TargetEnemyIndex = index
-
-							g.ThrownItemDestination = Coordinate{
-								X: g.state.Player.X + (i)*dx,
-								Y: g.state.Player.Y + (i)*dy,
-							}
-							g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-							g.showItemActions = false
-							g.showInventory = false
-
-							g.selectedItemIndex = 0
-							g.selectedActionIndex = 0
-
-							return // Exit if an enemy is encountered
-						}
-					}
-				}
-				if i == 11 {
-					item.SetPosition(g.state.Player.X+(i-1)*dx, g.state.Player.Y+(i-1)*dy)
-					//g.state.Items = append(g.state.Items, item)
-					g.ThrownItemDestination = Coordinate{
-						X: g.state.Player.X + (i-1)*dx,
-						Y: g.state.Player.Y + (i-1)*dy,
-					}
-					g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-					g.showItemActions = false
-					g.showInventory = false
-
-					g.selectedItemIndex = 0
-					g.selectedActionIndex = 0
-				}
-			},
+		onTargetHit := func(enemy *Enemy, item Item, index int) {
+			g.onTargetHit(enemy, item, index)
 		}
-		g.Enqueue(action)
+
+		g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
 	}
 
 	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'

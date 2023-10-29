@@ -6,6 +6,157 @@ import (
 	"math/rand"
 )
 
+func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapState [][]Tile, enemies []Enemy, onWallHit func(Item, Coordinate, int), onEnemyHit func(*Enemy, Item, int)) {
+	var dx, dy int
+	switch character.GetDirection() {
+	case Up:
+		dx, dy = 0, -1
+	case Down:
+		dx, dy = 0, 1
+	case Left:
+		dx, dy = -1, 0
+	case Right:
+		dx, dy = 1, 0
+	case UpRight:
+		dx, dy = 1, -1
+	case DownRight:
+		dx, dy = 1, 1
+	case UpLeft:
+		dx, dy = -1, -1
+	case DownLeft:
+		dx, dy = -1, 1
+	}
+
+	x, y := character.GetPosition()
+	itemName := getItemNameWithSharpness(item)
+	action := Action{
+		Duration: 0.5,
+		Message:  fmt.Sprintf("%sを投げた", itemName),
+		Execute: func(g *Game) {
+			g.ThrownItem = ThrownItem{
+				Item:  item,
+				Image: g.getItemImage(item),
+				X:     x,
+				Y:     y,
+				DX:    dx,
+				DY:    dy,
+			}
+
+			var i int
+			for i = 1; i <= throwRange; i++ {
+				targetX := x + i*dx
+				targetY := y + i*dy
+				tile := mapState[targetY][targetX]
+				if tile.Type == "wall" {
+					position := Coordinate{
+						X: x + (i-1)*dx,
+						Y: y + (i-1)*dy,
+					}
+					onWallHit(item, position, g.selectedItemIndex)
+					return
+				}
+				for index, enemy := range enemies {
+					if enemy.X == targetX && enemy.Y == targetY {
+
+						g.ThrownItemDestination = Coordinate{
+							X: targetX,
+							Y: targetY,
+						}
+
+						g.TargetEnemy = &enemy
+						g.TargetEnemyIndex = index
+						g.onEnemyHit = onEnemyHit
+
+						g.showItemActions = false
+						g.showInventory = false
+
+						g.selectedItemIndex = 0
+						g.selectedActionIndex = 0
+						return
+					}
+				}
+			}
+			if i == throwRange+1 {
+				position := Coordinate{
+					X: x + (i-1)*dx,
+					Y: y + (i-1)*dy,
+				}
+				onWallHit(item, position, g.selectedItemIndex) // Assuming the item will stop at the maximum range if no wall or enemy is encountered
+			}
+		},
+	}
+	g.Enqueue(action)
+}
+
+func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
+	// Set the position of the item to the position before hitting the wall
+	item.SetPosition(position.X, position.Y)
+
+	// Update the ThrownItemDestination to the position before hitting the wall
+	g.ThrownItemDestination = position
+
+	// Remove the item from the player's inventory
+	g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+
+	// Update the UI flags
+	g.showItemActions = false
+	g.showInventory = false
+	g.isActioned = true
+	g.selectedItemIndex = 0
+	g.selectedActionIndex = 0
+}
+
+func (g *Game) onTargetHit(enemy *Enemy, item Item, index int) {
+	if potion, ok := item.(*Potion); ok {
+		action := Action{
+			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+			Message:  fmt.Sprintf("%sのHPが%d回復した。", enemy.Name, potion.Health),
+			Execute: func(*Game) {
+				enemy.Health += potion.Health
+				if enemy.Health > enemy.MaxHealth {
+					enemy.Health = enemy.MaxHealth
+				}
+				g.isActioned = true
+				// Reset the target enemy after processing
+			},
+		}
+		g.Enqueue(action)
+	} else {
+		damage := rand.Intn(3) + 1
+		action := Action{
+			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", enemy.Name, damage),
+			Execute: func(*Game) {
+				enemy.Health -= damage
+				if enemy.Health < 0 {
+					enemy.Health = 0
+				}
+				if enemy.Health <= 0 {
+					// 敵のHealthが0以下の場合、敵を配列から削除
+					defeatAction := Action{
+						Duration: 0.5,
+						Message:  fmt.Sprintf("%sを倒した。", enemy.Name),
+						Execute:  func(g *Game) {},
+					}
+					g.Enqueue(defeatAction)
+
+					g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
+
+					// 敵の経験値をプレイヤーの所持経験値に加える
+					g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+
+					g.state.Player.checkLevelUp() // レベルアップをチェック
+
+					// Reset the target enemy after processing
+					// (If necessary. This part may need to be adjusted based on your game's logic)
+				}
+				g.isActioned = true
+			},
+		}
+		g.Enqueue(action)
+	}
+}
+
 // Additional function to check if item is equipped
 func isEquipped(equippedItems []Item, item Equipable) bool {
 	for _, equippedItem := range equippedItems {

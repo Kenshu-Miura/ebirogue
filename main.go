@@ -43,23 +43,48 @@ type Entity struct {
 	Char rune // エンティティを表現する文字
 }
 
+type Character interface {
+	GetPosition() (int, int)          // X, Y座標を返す
+	SetPosition(x, y int)             // X, Y座標を設定する
+	GetDirection() Direction          // Directionを返す
+	SetDirection(direction Direction) // Directionを設定する
+	// 他にも必要なメソッドを定義します（例: GetHealth(), SetHealth(), GetName(), etc.）
+}
+
+func (p *Player) GetPosition() (int, int) {
+	return p.X, p.Y
+}
+
+func (p *Player) SetPosition(x, y int) {
+	p.X = x
+	p.Y = y
+}
+
+func (p *Player) GetDirection() Direction {
+	return p.Direction
+}
+
+func (p *Player) SetDirection(direction Direction) {
+	p.Direction = direction
+}
+
 type Player struct {
 	Entity           // PlayerはEntityのフィールドを継承します
 	Health           int
 	MaxHealth        int
-	AttackPower      int     // 攻撃力
-	DefensePower     int     // 防御力
-	Power            int     // プレイヤーのパワー
-	MaxPower         int     // プレイヤーの最大パワー
-	Satiety          int     // 満腹度
-	MaxSatiety       int     // 最大満腹度
-	Inventory        []Item  // 所持アイテム
-	MaxInventory     int     // 最大所持アイテム数
-	ExperiencePoints int     // 所持経験値
-	Level            int     // プレイヤーのレベル
-	Direction        int     // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
-	EquippedItems    [5]Item // Array to hold equipped items
-	Cash             int     // 所持金
+	AttackPower      int       // 攻撃力
+	DefensePower     int       // 防御力
+	Power            int       // プレイヤーのパワー
+	MaxPower         int       // プレイヤーの最大パワー
+	Satiety          int       // 満腹度
+	MaxSatiety       int       // 最大満腹度
+	Inventory        []Item    // 所持アイテム
+	MaxInventory     int       // 最大所持アイテム数
+	ExperiencePoints int       // 所持経験値
+	Level            int       // プレイヤーのレベル
+	Direction        Direction // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	EquippedItems    [5]Item   // Array to hold equipped items
+	Cash             int       // 所持金
 }
 
 type Coordinate struct {
@@ -151,6 +176,7 @@ type Game struct {
 	ThrownItemDestination   Coordinate
 	TargetEnemy             *Enemy
 	TargetEnemyIndex        int
+	onEnemyHit              func(*Enemy, Item, int)
 }
 
 func min(a, b int) int {
@@ -277,7 +303,9 @@ func (g *Game) Update() error {
 			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
 				if g.TargetEnemy != nil {
 					// 敵にアイテムが当たった時の処理を実行
-					g.hitEnemyWithItem()
+					if g.onEnemyHit != nil {
+						g.onEnemyHit(g.TargetEnemy, g.ThrownItem.Item, g.TargetEnemyIndex) // g.TargetEnemyIndexは敵のインデックスを指定する仮定の変数です
+					}
 					g.TargetEnemy = nil
 				} else {
 					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
@@ -286,7 +314,6 @@ func (g *Game) Update() error {
 				g.ThrownItemDestination = Coordinate{}
 			}
 		}
-
 	}
 
 	g.HandleEnemyAttackTimers()

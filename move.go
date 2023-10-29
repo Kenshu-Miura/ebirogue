@@ -51,10 +51,10 @@ func moveRandomly(g *Game, i int) {
 	attemptCount := 0
 	maxAttempts := 10 // 最大試行回数
 
-	directions := []int{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
+	directions := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
 
 	// If enemy has no direction, set a random one initially
-	if enemy.Direction == -1 {
+	if enemy.Direction == Uninitialized { // Assuming Uninitialized is a valid value of Direction
 		enemy.Direction = directions[rand.Intn(len(directions))]
 	}
 
