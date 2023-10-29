@@ -27,7 +27,8 @@ type Armor struct {
 
 type Arrow struct {
 	BaseItem
-	ShotCount int
+	ShotCount   int
+	AttackPower int
 }
 
 type Food struct {
@@ -59,7 +60,7 @@ type Cane struct {
 
 func createItem(x, y int) Item {
 	var item Item
-	randomValue := localRand.Intn(6) // Store the random value to ensure it's only generated once
+	randomValue := localRand.Intn(7) // Store the random value to ensure it's only generated once
 	sharpnessValue := localRand.Intn(5) - 1
 	switch randomValue {
 	case 0:
@@ -179,6 +180,27 @@ func createItem(x, y int) Item {
 			Cursed:       sharpnessValue == -1,
 		}
 
+	case 6:
+		item = &Arrow{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          6,
+				Type:        "Arrow",
+				Name:        "銀の弓矢",
+				Description: "銀の弓矢。攻撃力が5上昇する。",
+				UseActions: map[string]UseAction{
+					"ArrowEffect": func(g *Game) {
+					},
+				},
+			},
+			ShotCount:   localRand.Intn(11) + 5, // Generates a random number between 5 and 15
+			AttackPower: 5,
+		}
+
 	default:
 		item = &Card{
 			BaseItem: BaseItem{
@@ -187,7 +209,7 @@ func createItem(x, y int) Item {
 					Y:    y,
 					Char: '!',
 				},
-				ID:          6,
+				ID:          7,
 				Type:        "Card",
 				Name:        "黒炎弾のカード",
 				Description: "魔法カード。眼の前の敵に30ダメージを与える。",

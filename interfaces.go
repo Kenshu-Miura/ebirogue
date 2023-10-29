@@ -149,6 +149,12 @@ func (p *Potion) Use(g *Game) {
 	}
 }
 
+func (a *Arrow) Use(g *Game) {
+	if action, exists := a.UseActions["ArrowEffect"]; exists {
+		action(g)
+	}
+}
+
 func (c *Card) Use(g *Game) {
 	if action, exists := c.UseActions["UseCard"]; exists {
 		action(g)
