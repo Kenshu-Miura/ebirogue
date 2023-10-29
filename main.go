@@ -43,32 +43,8 @@ type Entity struct {
 	Char rune // エンティティを表現する文字
 }
 
-type Character interface {
-	GetPosition() (int, int)          // X, Y座標を返す
-	SetPosition(x, y int)             // X, Y座標を設定する
-	GetDirection() Direction          // Directionを返す
-	SetDirection(direction Direction) // Directionを設定する
-	// 他にも必要なメソッドを定義します（例: GetHealth(), SetHealth(), GetName(), etc.）
-}
-
-func (p *Player) GetPosition() (int, int) {
-	return p.X, p.Y
-}
-
-func (p *Player) SetPosition(x, y int) {
-	p.X = x
-	p.Y = y
-}
-
-func (p *Player) GetDirection() Direction {
-	return p.Direction
-}
-
-func (p *Player) SetDirection(direction Direction) {
-	p.Direction = direction
-}
-
 type Player struct {
+	Name             string
 	Entity           // PlayerはEntityのフィールドを継承します
 	Health           int
 	MaxHealth        int
@@ -176,7 +152,7 @@ type Game struct {
 	ThrownItemDestination   Coordinate
 	TargetEnemy             *Enemy
 	TargetEnemyIndex        int
-	onEnemyHit              func(*Enemy, Item, int)
+	onEnemyHit              func(Character, Item, int)
 }
 
 func min(a, b int) int {
@@ -388,6 +364,7 @@ func NewGame() *Game {
 
 	// プレイヤーの初期化
 	player := Player{
+		Name:             "海老さん",
 		Entity:           Entity{Char: '@'},
 		Health:           100,
 		MaxHealth:        100,

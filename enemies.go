@@ -26,23 +26,6 @@ type Enemy struct {
 	SpecialAttackProbability float64           // 敵が特殊攻撃を使ってくる確率 (0.0 to 1.0)
 }
 
-func (e *Enemy) GetPosition() (int, int) {
-	return e.X, e.Y
-}
-
-func (e *Enemy) SetPosition(x, y int) {
-	e.X = x
-	e.Y = y
-}
-
-func (e *Enemy) GetDirection() Direction {
-	return e.Direction
-}
-
-func (e *Enemy) SetDirection(direction Direction) {
-	e.Direction = direction
-}
-
 func createEnemy(x, y int) Enemy {
 	var enemyType, enemyName, enemyChar string
 	var enemyAP, enemyDP, enemyID int

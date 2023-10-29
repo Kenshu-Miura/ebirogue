@@ -1,26 +1,5 @@
 package main
 
-import "fmt"
-
-type UseAction func(g *Game)
-
-type Item interface {
-	GetType() string
-	GetName() string
-	GetDescription() string
-	GetChar() rune
-	GetPosition() (int, int)
-	SetPosition(x, y int)
-	Use(g *Game) // Now, Use will call the appropriate function from the UseActions map
-	// 他にも共通のメソッドがあればここに追加します。
-}
-
-// Equipable interface
-type Equipable interface {
-	Item                                          // Embed the Item interface
-	UpdatePlayerStats(player *Player, equip bool) // Method to update player stats when equipping/unequipping
-}
-
 type BaseItem struct {
 	Entity
 	ID          int
@@ -28,34 +7,6 @@ type BaseItem struct {
 	Name        string
 	Description string
 	UseActions  map[string]UseAction
-}
-
-func (bi BaseItem) GetID() int {
-	return bi.ID
-}
-
-func (bi BaseItem) GetType() string {
-	return bi.Type
-}
-
-func (bi BaseItem) GetName() string {
-	return bi.Name
-}
-
-func (bi BaseItem) GetDescription() string {
-	return bi.Description
-}
-
-func (bi BaseItem) GetChar() rune {
-	return bi.Char
-}
-
-func (bi BaseItem) GetPosition() (int, int) {
-	return bi.X, bi.Y
-}
-
-func (bi *BaseItem) SetPosition(x, y int) {
-	bi.X, bi.Y = x, y
 }
 
 type Weapon struct {
@@ -66,24 +17,12 @@ type Weapon struct {
 	Cursed      bool   // 武器が呪われているかどうか
 }
 
-func (c *Weapon) Use(g *Game) {
-	if action, exists := c.UseActions["WeaponEffect"]; exists {
-		action(g)
-	}
-}
-
 type Armor struct {
 	BaseItem
 	DefensePower int
 	Sharpness    int
 	Element      string
 	Cursed       bool
-}
-
-func (c *Armor) Use(g *Game) {
-	if action, exists := c.UseActions["ArmorEffect"]; exists {
-		action(g)
-	}
 }
 
 type Arrow struct {
@@ -96,224 +35,18 @@ type Food struct {
 	Satiety int
 }
 
-func (f *Food) Use(g *Game) {
-	if action, exists := f.UseActions["RestoreSatiety"]; exists {
-		action(g)
-	}
-}
-
-var restoreSatiety50 = func(g *Game) {
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-		Execute: func(g *Game) {
-		},
-	}
-	g.Enqueue(action)
-	if g.state.Player.Satiety == g.state.Player.MaxSatiety {
-		action := Action{
-			Duration: 0.4,
-			Message:  "最大満腹度が1上昇した。",
-			Execute: func(g *Game) {
-				g.state.Player.MaxSatiety++
-			},
-		}
-		g.Enqueue(action)
-	} else {
-		foodItem := g.state.Player.Inventory[g.selectedItemIndex].(*Food) // Assumes item is of type *Food
-		action := Action{
-			Duration: 0.4,
-			Message:  fmt.Sprintf("満腹度が%d回復した。", foodItem.Satiety),
-			Execute: func(g *Game) {
-				g.state.Player.Satiety += foodItem.Satiety
-				if g.state.Player.Satiety > g.state.Player.MaxSatiety {
-					g.state.Player.Satiety = g.state.Player.MaxSatiety
-				}
-			},
-		}
-		g.Enqueue(action)
-	}
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-}
-
 type Potion struct {
 	BaseItem
 	Health int
-}
-
-func (p *Potion) Use(g *Game) {
-	if action, exists := p.UseActions["RestoreHealth"]; exists {
-		action(g)
-	}
-}
-
-var restoreHP30 = func(g *Game) {
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-		Execute: func(g *Game) {
-		},
-	}
-	g.Enqueue(action)
-	if g.state.Player.Health == g.state.Player.MaxHealth {
-		action := Action{
-			Duration: 0.4,
-			Message:  "最大HPが1上昇した。",
-			Execute: func(g *Game) {
-				g.state.Player.MaxHealth++
-			},
-		}
-		g.Enqueue(action)
-	} else {
-		potionItem := g.state.Player.Inventory[g.selectedItemIndex].(*Potion) // Assumes item is of type *Food
-		action := Action{
-			Duration: 0.4,
-			Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
-			Execute: func(g *Game) {
-				g.state.Player.Health += potionItem.Health
-				if g.state.Player.Health > g.state.Player.MaxHealth {
-					g.state.Player.Health = g.state.Player.MaxHealth
-				}
-			},
-		}
-		g.Enqueue(action)
-	}
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-}
-
-var restoreHP100 = func(g *Game) {
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-		Execute: func(g *Game) {
-		},
-	}
-	g.Enqueue(action)
-	if g.state.Player.Health == g.state.Player.MaxHealth {
-		action := Action{
-			Duration: 0.4,
-			Message:  "最大HPが2上昇した。",
-			Execute: func(g *Game) {
-				g.state.Player.MaxHealth += 2
-			},
-		}
-		g.Enqueue(action)
-	} else {
-		potionItem := g.state.Player.Inventory[g.selectedItemIndex].(*Potion) // Assumes item is of type *Food
-		action := Action{
-			Duration: 0.4,
-			Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
-			Execute: func(g *Game) {
-				g.state.Player.Health += potionItem.Health
-				if g.state.Player.Health > g.state.Player.MaxHealth {
-					g.state.Player.Health = g.state.Player.MaxHealth
-				}
-			},
-		}
-		g.Enqueue(action)
-	}
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
 type Card struct {
 	BaseItem
 }
 
-func (c *Card) Use(g *Game) {
-	if action, exists := c.UseActions["UseCard"]; exists {
-		action(g)
-	}
-}
-
-var damageHP30 = func(g *Game) {
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを使った。", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-		Execute: func(g *Game) {
-		},
-	}
-	g.Enqueue(action)
-
-	action = Action{
-		Duration: 0.4,
-		Message:  "",
-		Execute: func(g *Game) {
-			var targetX, targetY int
-			switch g.state.Player.Direction {
-			case Up:
-				targetX, targetY = g.state.Player.X, g.state.Player.Y-1
-			case Down:
-				targetX, targetY = g.state.Player.X, g.state.Player.Y+1
-			case Left:
-				targetX, targetY = g.state.Player.X-1, g.state.Player.Y
-			case Right:
-				targetX, targetY = g.state.Player.X+1, g.state.Player.Y
-			case UpRight:
-				targetX, targetY = g.state.Player.X+1, g.state.Player.Y-1
-			case DownRight:
-				targetX, targetY = g.state.Player.X+1, g.state.Player.Y+1
-			case UpLeft:
-				targetX, targetY = g.state.Player.X-1, g.state.Player.Y-1
-			case DownLeft:
-				targetX, targetY = g.state.Player.X-1, g.state.Player.Y+1
-			}
-			for i, enemy := range g.state.Enemies {
-				if enemy.X == targetX && enemy.Y == targetY {
-					action := Action{
-						Duration: 0.5,
-						Message:  fmt.Sprintf("%sに30ダメージを与えた。", g.state.Enemies[i].Name),
-						Execute: func(g *Game) {
-							g.state.Enemies[i].Health -= 30
-							if g.state.Enemies[i].Health <= 0 {
-								// 敵のHealthが0以下の場合、敵を配列から削除
-								defeatAction := Action{
-									Duration: 0.5,
-									Message:  fmt.Sprintf("%sを倒した。", g.state.Enemies[i].Name),
-									Execute:  func(g *Game) {},
-								}
-								g.Enqueue(defeatAction)
-
-								g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
-
-								// 敵の経験値をプレイヤーの所持経験値に加える
-								g.state.Player.ExperiencePoints += enemy.ExperiencePoints
-
-								g.state.Player.checkLevelUp() // レベルアップをチェック
-							}
-						},
-					}
-					g.Enqueue(action)
-					break
-				}
-			}
-		},
-	}
-	g.Enqueue(action)
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-}
-
 type Money struct {
 	BaseItem
 	Amount int // 金額を保持するフィールド
-}
-
-func (m *Money) Use(g *Game) {
-	if action, exists := m.UseActions["UseMoney"]; exists {
-		action(g)
-	}
-}
-
-var money = func(g *Game) {
-	moneyItem := g.state.Player.Inventory[g.selectedItemIndex].(*Money)
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%dを入手した。", moneyItem.Amount),
-		Execute: func(g *Game) {
-			g.state.Player.Cash += moneyItem.Amount
-		},
-	}
-	g.Enqueue(action)
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 }
 
 type Accessory struct {

@@ -6,7 +6,7 @@ import (
 	"math/rand"
 )
 
-func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapState [][]Tile, enemies []Enemy, onWallHit func(Item, Coordinate, int), onEnemyHit func(*Enemy, Item, int)) {
+func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapState [][]Tile, enemies []Enemy, onWallHit func(Item, Coordinate, int), onTargetHit func(Character, Item, int)) {
 	var dx, dy int
 	switch character.GetDirection() {
 	case Up:
@@ -63,9 +63,11 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 							Y: targetY,
 						}
 
+						g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+
 						g.TargetEnemy = &enemy
 						g.TargetEnemyIndex = index
-						g.onEnemyHit = onEnemyHit
+						g.onEnemyHit = onTargetHit
 
 						g.showItemActions = false
 						g.showInventory = false
@@ -74,6 +76,15 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 						g.selectedActionIndex = 0
 						return
 					}
+				}
+				// Check if the item hits the player
+				if targetX == g.state.Player.X && targetY == g.state.Player.Y {
+					g.ThrownItemDestination = Coordinate{
+						X: targetX,
+						Y: targetY,
+					}
+					onTargetHit(&g.state.Player, item, g.selectedItemIndex) // Passing a pointer to g.state.Player
+					return
 				}
 			}
 			if i == throwRange+1 {
@@ -106,18 +117,18 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 	g.selectedActionIndex = 0
 }
 
-func (g *Game) onTargetHit(enemy *Enemy, item Item, index int) {
+func (g *Game) onTargetHit(target Character, item Item, index int) {
 	if potion, ok := item.(*Potion); ok {
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sのHPが%d回復した。", enemy.Name, potion.Health),
+			Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), potion.Health),
 			Execute: func(*Game) {
-				enemy.Health += potion.Health
-				if enemy.Health > enemy.MaxHealth {
-					enemy.Health = enemy.MaxHealth
+				target.SetHealth(target.GetHealth() + potion.Health)
+				if target.GetHealth() > target.GetMaxHealth() {
+					target.SetHealth(target.GetMaxHealth())
 				}
 				g.isActioned = true
-				// Reset the target enemy after processing
+				// Reset the target character after processing
 			},
 		}
 		g.Enqueue(action)
@@ -125,17 +136,17 @@ func (g *Game) onTargetHit(enemy *Enemy, item Item, index int) {
 		damage := rand.Intn(3) + 1
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", enemy.Name, damage),
+			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", target.GetName(), damage),
 			Execute: func(*Game) {
-				enemy.Health -= damage
-				if enemy.Health < 0 {
-					enemy.Health = 0
+				target.SetHealth(target.GetHealth() - damage)
+				if target.GetHealth() < 0 {
+					target.SetHealth(0)
 				}
-				if enemy.Health <= 0 {
+				if enemy, isEnemy := target.(*Enemy); isEnemy && target.GetHealth() <= 0 {
 					// 敵のHealthが0以下の場合、敵を配列から削除
 					defeatAction := Action{
 						Duration: 0.5,
-						Message:  fmt.Sprintf("%sを倒した。", enemy.Name),
+						Message:  fmt.Sprintf("%sを倒した。", target.GetName()),
 						Execute:  func(g *Game) {},
 					}
 					g.Enqueue(defeatAction)

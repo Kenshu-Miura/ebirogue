@@ -138,8 +138,8 @@ func (g *Game) executeAction() {
 			g.onWallHit(item, position, itemIndex)
 		}
 
-		onTargetHit := func(enemy *Enemy, item Item, index int) {
-			g.onTargetHit(enemy, item, index)
+		onTargetHit := func(target Character, item Item, index int) {
+			g.onTargetHit(target, item, index)
 		}
 
 		g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
