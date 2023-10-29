@@ -303,18 +303,13 @@ func (m *Money) Use(g *Game) {
 	}
 }
 
-var money30 = func(g *Game) {
+var money = func(g *Game) {
+	moneyItem := g.state.Player.Inventory[g.selectedItemIndex].(*Money)
 	action := Action{
 		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを使った。", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Message:  fmt.Sprintf("%dを入手した。", moneyItem.Amount),
 		Execute: func(g *Game) {
-		},
-	}
-	g.Enqueue(action)
-	action = Action{
-		Duration: 0.4,
-		Message:  "リスナーとの絆が深まった。",
-		Execute: func(g *Game) {
+			g.state.Player.Cash += moneyItem.Amount
 		},
 	}
 	g.Enqueue(action)
@@ -347,7 +342,7 @@ func createItem(x, y int) Item {
 				Name:        "小銭",
 				Description: "小銭。それは海老さんが絆と呼ぶもの。",
 				UseActions: map[string]UseAction{
-					"UseMoney": money30,
+					"UseMoney": money,
 				},
 			},
 			Amount: localRand.Intn(2001), // Generates a random integer between 0 and 2000
