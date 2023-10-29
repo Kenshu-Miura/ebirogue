@@ -294,6 +294,7 @@ var damageHP30 = func(g *Game) {
 
 type Money struct {
 	BaseItem
+	Amount int // 金額を保持するフィールド
 }
 
 func (m *Money) Use(g *Game) {
@@ -349,6 +350,7 @@ func createItem(x, y int) Item {
 					"UseMoney": money30,
 				},
 			},
+			Amount: localRand.Intn(2001), // Generates a random integer between 0 and 2000
 		}
 	case 1:
 		item = &Food{

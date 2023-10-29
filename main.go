@@ -47,20 +47,19 @@ type Player struct {
 	Entity           // PlayerはEntityのフィールドを継承します
 	Health           int
 	MaxHealth        int
-	AttackPower      int    // 攻撃力
-	DefensePower     int    // 防御力
-	Power            int    // プレイヤーのパワー
-	MaxPower         int    // プレイヤーの最大パワー
-	Satiety          int    // 満腹度
-	MaxSatiety       int    // 最大満腹度
-	Inventory        []Item // 所持アイテム
-	MaxInventory     int    // 最大所持アイテム数
-	ExperiencePoints int    // 所持経験値
-	Level            int    // プレイヤーのレベル
-	Direction        int    // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
-	EquippedWeapon   *Weapon
-	EquippedArmor    *Armor
+	AttackPower      int     // 攻撃力
+	DefensePower     int     // 防御力
+	Power            int     // プレイヤーのパワー
+	MaxPower         int     // プレイヤーの最大パワー
+	Satiety          int     // 満腹度
+	MaxSatiety       int     // 最大満腹度
+	Inventory        []Item  // 所持アイテム
+	MaxInventory     int     // 最大所持アイテム数
+	ExperiencePoints int     // 所持経験値
+	Level            int     // プレイヤーのレベル
+	Direction        int     // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 	EquippedItems    [5]Item // Array to hold equipped items
+	Cash             int     // 所持金
 }
 
 type Coordinate struct {
@@ -376,6 +375,7 @@ func NewGame() *Game {
 		Power:            8,
 		MaxPower:         8,
 		Direction:        Up,
+		Cash:             0,
 	}
 
 	// 最初のマップを生成

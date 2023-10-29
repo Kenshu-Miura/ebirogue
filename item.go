@@ -146,7 +146,13 @@ func (g *Game) executeItemSwap() {
 }
 
 func (g *Game) PickUpItem(item Item, i int) {
-	g.state.Player.Inventory = append(g.state.Player.Inventory, item) // アイテムをプレイヤーのインベントリに追加
+	if money, isMoney := item.(*Money); isMoney {
+		// itemがMoney型である場合、プレイヤーの所持金を増加させる
+		g.state.Player.Cash += money.Amount
+	} else {
+		// それ以外の場合、アイテムをプレイヤーのインベントリに追加
+		g.state.Player.Inventory = append(g.state.Player.Inventory, item)
+	}
 	// アイテムをGameState.Itemsから削除
 	g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
 }
@@ -158,12 +164,11 @@ func (g *Game) PickupItem() {
 		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
-				itemName := getItemNameWithSharpness(item)
-				// プレイヤーのインベントリサイズをチェック
-				if len(g.state.Player.Inventory) < 20 {
+				// Check if the item is of type Money
+				if money, isMoney := item.(*Money); isMoney {
 					action := Action{
 						Duration: 0.3,
-						Message:  fmt.Sprintf("%sを拾った", itemName),
+						Message:  fmt.Sprintf("%d円を拾った", money.Amount),
 						Execute: func(g *Game) {
 							g.PickUpItem(item, i)
 						},
@@ -172,14 +177,29 @@ func (g *Game) PickupItem() {
 					g.Enqueue(action)
 					break // 一致するアイテムが見つかったらループを終了
 				} else {
-					action := Action{
-						Duration: 0.5,
-						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName),
-						Execute: func(g *Game) {
+					itemName := getItemNameWithSharpness(item)
+					// プレイヤーのインベントリサイズをチェック
+					if len(g.state.Player.Inventory) < 20 {
+						action := Action{
+							Duration: 0.3,
+							Message:  fmt.Sprintf("%sを拾った", itemName),
+							Execute: func(g *Game) {
+								g.PickUpItem(item, i)
+							},
+						}
 
-						},
+						g.Enqueue(action)
+						break // 一致するアイテムが見つかったらループを終了
+					} else {
+						action := Action{
+							Duration: 0.5,
+							Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName),
+							Execute: func(g *Game) {
+
+							},
+						}
+						g.Enqueue(action)
 					}
-					g.Enqueue(action)
 				}
 			}
 		}
@@ -187,15 +207,28 @@ func (g *Game) PickupItem() {
 		for _, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
-				itemName := getItemNameWithSharpness(item)
-				action := Action{
-					Duration: 0.5,
-					Message:  fmt.Sprintf("%sに乗った", itemName),
-					Execute: func(g *Game) {
-					},
+
+				// Check if the item is of type Money
+				if money, isMoney := item.(*Money); isMoney {
+					action := Action{
+						Duration: 0.5,
+						Message:  fmt.Sprintf("%d円に乗った", money.Amount),
+						Execute: func(g *Game) {
+						},
+					}
+					g.Enqueue(action)
+					break // 一致するアイテムが見つかったらループを終了
+				} else {
+					itemName := getItemNameWithSharpness(item)
+					action := Action{
+						Duration: 0.5,
+						Message:  fmt.Sprintf("%sに乗った", itemName),
+						Execute: func(g *Game) {
+						},
+					}
+					g.Enqueue(action)
+					break // 一致するアイテムが見つかったらループを終了
 				}
-				g.Enqueue(action)
-				break // 一致するアイテムが見つかったらループを終了
 			}
 		}
 

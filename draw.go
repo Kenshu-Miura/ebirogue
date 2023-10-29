@@ -445,7 +445,15 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	playerPowerText := fmt.Sprintf("パワー: %2d/%2d", g.state.Player.Power, g.state.Player.MaxPower)
 	text.Draw(screen, playerPowerText, mplusNormalFont, screenWidth-130, 130, color.White)
 
-	yCoordinate := 170 // Initial Y-coordinate
+	// Player Experience Points
+	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
+	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White)
+
+	// Player Cash
+	playerCashText := fmt.Sprintf("所持金：%5d円", g.state.Player.Cash)
+	text.Draw(screen, playerCashText, mplusNormalFont, screenWidth-130, 170, color.White)
+
+	yCoordinate := 190 // Initial Y-coordinate updated to position below the cash text
 
 	for i, equippedItem := range g.state.Player.EquippedItems {
 		equippedItemName := "なし"
@@ -465,10 +473,6 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 		text.Draw(screen, equippedItemText, mplusNormalFont, screenWidth-130, yCoordinate, color.White)
 		yCoordinate += 20 // Increment the Y-coordinate to position text below the previous item
 	}
-
-	// Player Experience Points
-	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
-	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White)
 
 	// Floor level
 	floorText := fmt.Sprintf("階層: B%dF", g.Floor)
