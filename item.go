@@ -6,6 +6,29 @@ import (
 	"math/rand"
 )
 
+func (g *Game) UpdateThrownItem() {
+	if g.ThrownItem.Image != nil {
+		g.ThrownItem.X += g.ThrownItem.DX
+		g.ThrownItem.Y += g.ThrownItem.DY
+		// 必要に応じてアイテムが目的地に到達したかどうかをチェックし、到達したらリストから削除
+		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) || (g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
+			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
+				if g.TargetEnemy != nil {
+					// 敵にアイテムが当たった時の処理を実行
+					if g.onEnemyHit != nil {
+						g.onEnemyHit(g.TargetEnemy, g.ThrownItem.Item, g.TargetEnemyIndex) // g.TargetEnemyIndexは敵のインデックスを指定する仮定の変数です
+					}
+					g.TargetEnemy = nil
+				} else {
+					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+				}
+				g.ThrownItem = ThrownItem{}
+				g.ThrownItemDestination = Coordinate{}
+			}
+		}
+	}
+}
+
 func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapState [][]Tile, enemies []Enemy, onWallHit func(Item, Coordinate, int), onTargetHit func(Character, Item, int)) {
 	var dx, dy int
 	switch character.GetDirection() {

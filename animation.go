@@ -5,6 +5,25 @@ import (
 	"math"
 )
 
+func (g *Game) UpdateAttackTimer() {
+	// Check the attack timer and reset temporary player position if needed
+	if g.attackTimer > 0 {
+		progress := 1 - g.attackTimer/0.5 // progress ranges from 0 to 1 over 0.5 seconds
+		angle := math.Pi * progress       // angle ranges from 0 to Pi
+		value := 30 * math.Sin(angle)     // value ranges from 0 to 20 to 0
+
+		g.tmpPlayerOffsetX = value
+		g.tmpPlayerOffsetY = value
+
+		g.attackTimer -= (1 / 60.0) // assuming Update is called 60 times per second
+		if g.attackTimer <= 0 {
+			g.attackTimer = 0 // reset timer
+			g.tmpPlayerOffsetX = 0
+			g.tmpPlayerOffsetY = 0
+		}
+	}
+}
+
 func (g *Game) HandleAnimationProgress() {
 	if g.Animating {
 		g.AnimationProgressInt += 1

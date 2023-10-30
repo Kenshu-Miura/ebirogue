@@ -3,7 +3,6 @@ package main
 import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
-	"math"
 	"math/rand"
 	"time"
 
@@ -137,7 +136,6 @@ type Game struct {
 	tmpPlayerOffsetX        float64 // プレイヤーの一時的なオフセットX
 	tmpPlayerOffsetY        float64 // プレイヤーの一時的なオフセットY
 	attackTimer             float64 // 攻撃メッセージのタイマー
-	playerAttack            bool    // プレイヤーが攻撃したかどうか
 	ActionQueue             ActionQueue
 	isCombatActive          bool
 	ActionDurationCounter   float64
@@ -206,7 +204,7 @@ func init() {
 
 func (g *Game) Update() error {
 
-	if !g.showInventory && !g.playerAttack && !g.isCombatActive && !g.ShowGroundItem {
+	if !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheetHandleInput()
 
@@ -254,44 +252,9 @@ func (g *Game) Update() error {
 
 	g.HandleAnimationProgress()
 
-	// Check the attack timer and reset temporary player position if needed
-	if g.attackTimer > 0 {
-		progress := 1 - g.attackTimer/0.5 // progress ranges from 0 to 1 over 0.5 seconds
-		angle := math.Pi * progress       // angle ranges from 0 to Pi
-		value := 30 * math.Sin(angle)     // value ranges from 0 to 20 to 0
+	g.UpdateAttackTimer()
 
-		g.tmpPlayerOffsetX = value
-		g.tmpPlayerOffsetY = value
-
-		g.attackTimer -= (1 / 60.0) // assuming Update is called 60 times per second
-		if g.attackTimer <= 0 {
-			g.attackTimer = 0 // reset timer
-			g.tmpPlayerOffsetX = 0
-			g.tmpPlayerOffsetY = 0
-			g.playerAttack = false
-		}
-	}
-
-	if g.ThrownItem.Image != nil {
-		g.ThrownItem.X += g.ThrownItem.DX
-		g.ThrownItem.Y += g.ThrownItem.DY
-		// 必要に応じてアイテムが目的地に到達したかどうかをチェックし、到達したらリストから削除
-		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) || (g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
-			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
-				if g.TargetEnemy != nil {
-					// 敵にアイテムが当たった時の処理を実行
-					if g.onEnemyHit != nil {
-						g.onEnemyHit(g.TargetEnemy, g.ThrownItem.Item, g.TargetEnemyIndex) // g.TargetEnemyIndexは敵のインデックスを指定する仮定の変数です
-					}
-					g.TargetEnemy = nil
-				} else {
-					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
-				}
-				g.ThrownItem = ThrownItem{}
-				g.ThrownItemDestination = Coordinate{}
-			}
-		}
-	}
+	g.UpdateThrownItem()
 
 	g.HandleEnemyAttackTimers()
 

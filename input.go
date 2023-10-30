@@ -27,7 +27,7 @@ func (g *Game) OpenDoor() {
 
 func (g *Game) HandleGroundItemInput() {
 	dPressed := inpututil.IsKeyJustPressed(ebiten.KeyD)
-	if dPressed && !g.showInventory && !g.playerAttack && !g.isCombatActive && !g.ShowGroundItem {
+	if dPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
 		g.ShowGroundItem = true
 	}
 

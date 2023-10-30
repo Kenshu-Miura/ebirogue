@@ -305,7 +305,6 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 				Duration: 0.5,
 				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.state.Enemies[i].Name, netDamage),
 				Execute: func(g *Game) {
-					g.playerAttack = true
 
 					enemyIndex := i // ここでi変数の値を明示的にキャプチャ
 					g.state.Enemies[enemyIndex].Health -= netDamage
@@ -326,8 +325,8 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 						g.state.Player.checkLevelUp() // レベルアップをチェック
 					}
-					g.playerAttack = false
 					g.isActioned = true
+
 				},
 			}
 
@@ -342,9 +341,6 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			Duration: 0.5,
 			Message:  "",
 			Execute: func(g *Game) {
-				g.playerAttack = true
-
-				g.playerAttack = false
 				g.isActioned = true
 			},
 		}
