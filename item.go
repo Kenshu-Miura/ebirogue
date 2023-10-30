@@ -224,6 +224,8 @@ func getItemNameWithSharpness(item Item) string {
 		return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
 	case *Money: // Money type case added
 		return fmt.Sprintf("%d円", item.Amount) // Format the amount as yen
+	case *Arrow: // Arrow type case added
+		return fmt.Sprintf("%d本の%s", item.ShotCount, item.GetName()) // Format the arrow item with shot count
 	default:
 		return item.GetName()
 	}

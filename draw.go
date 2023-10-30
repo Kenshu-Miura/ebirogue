@@ -10,6 +10,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font"
+	"golang.org/x/image/math/fixed"
 )
 
 func (g *Game) CalculateAnimationOffset(screen *ebiten.Image) (int, int) {
@@ -267,7 +269,18 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 			// Check if the item is equipped and draw "E" if it is
 			if equipableItem, ok := item.(Equipable); ok {
 				if isEquipped(g.state.Player.EquippedItems[:], equipableItem) {
-					text.Draw(screen, "E", mplusNormalFont, x+len(itemText)*10+10, y, color.White) // Adjust the x coordinate based on the length of itemText and a small offset
+					var dr font.Drawer
+					dr.Dst = screen
+					dr.Src = image.NewUniform(color.White)
+					dr.Face = mplusNormalFont
+					dr.Dot = fixed.Point26_6{
+						X: fixed.I(x),
+						Y: fixed.I(y),
+					}
+					// Measure the width of itemText in pixels
+					textBounds, _ := dr.BoundString(itemText)
+					textWidth := textBounds.Max.X - textBounds.Min.X
+					text.Draw(screen, "E", mplusNormalFont, x+int(textWidth)/64+10, y, color.White) // Adjust the x coordinate based on the width of itemText and a small offset
 				}
 			}
 
@@ -461,13 +474,21 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 		equippedItemName := "なし"
 		sharpnessText := ""
 
-		// Check if the equipped item is not nil and is of type *Weapon or *Armor to display sharpness
+		// Check if the equipped item is not nil
 		if equippedItem != nil {
-			equippedItemName = equippedItem.GetName()
-			if weaponItem, ok := equippedItem.(*Weapon); ok && weaponItem.Sharpness != 0 {
-				sharpnessText = fmt.Sprintf("%+d", weaponItem.Sharpness) // %+d will include the sign for negative and positive numbers
-			} else if armorItem, ok := equippedItem.(*Armor); ok && armorItem.Sharpness != 0 {
-				sharpnessText = fmt.Sprintf("%+d", armorItem.Sharpness) // %+d will include the sign for negative and positive numbers
+			if arrowItem, ok := equippedItem.(*Arrow); ok {
+				// If the equipped item is of type *Arrow, format the name with shot count
+				equippedItemName = fmt.Sprintf("%d本の%s", arrowItem.ShotCount, arrowItem.GetName())
+			} else {
+				// For other item types, just get the name
+				equippedItemName = equippedItem.GetName()
+
+				// Check if the equipped item is of type *Weapon or *Armor to display sharpness
+				if weaponItem, ok := equippedItem.(*Weapon); ok && weaponItem.Sharpness != 0 {
+					sharpnessText = fmt.Sprintf("%+d", weaponItem.Sharpness) // %+d will include the sign for negative and positive numbers
+				} else if armorItem, ok := equippedItem.(*Armor); ok && armorItem.Sharpness != 0 {
+					sharpnessText = fmt.Sprintf("%+d", armorItem.Sharpness) // %+d will include the sign for negative and positive numbers
+				}
 			}
 		}
 
