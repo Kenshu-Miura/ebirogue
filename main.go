@@ -279,6 +279,16 @@ func (g *Game) Update() error {
 				g.onTargetHit(target, item, index)
 			}
 			g.ThrowItem(newArrow, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+		} else {
+			action := Action{
+				Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+				Message:  "矢が装備されていません",
+				Execute: func(*Game) {
+
+				},
+			}
+			g.dPressed = false
+			g.Enqueue(action)
 		}
 	}
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
+	"log"
 	"math/rand"
 )
 
@@ -53,9 +54,13 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 
 	x, y := character.GetPosition()
 	itemName := getItemNameWithSharpness(item)
+	message := fmt.Sprintf("%sを投げた", itemName) // Default message
+	if g.dPressed {
+		message = fmt.Sprintf("%sを撃った", item.GetName()) // Update message if D key was pressed
+	}
 	action := Action{
 		Duration: 0.5,
-		Message:  fmt.Sprintf("%sを投げた", itemName),
+		Message:  message,
 		Execute: func(g *Game) {
 			g.ThrownItem = ThrownItem{
 				Item:  item,
@@ -188,15 +193,29 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		}
 		g.Enqueue(action)
 	} else {
-		damage := rand.Intn(3) + 1
+		damage := 0
+		if g.dPressed {
+			// Base damage calculation
+			damage = g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - target.GetDefensePower() + rand.Intn(3) - 1
+
+			// Check if item is of type Arrow
+			if arrow, ok := item.(*Arrow); ok {
+				// Add the AttackPower of the Arrow to the damage
+				damage += arrow.AttackPower
+			}
+		} else {
+			damage = rand.Intn(3) + 1
+		}
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
 			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", target.GetName(), damage),
 			Execute: func(*Game) {
+				log.Printf("target.GetHealth() = %d", target.GetHealth())
 				target.SetHealth(target.GetHealth() - damage)
 				if target.GetHealth() < 0 {
 					target.SetHealth(0)
 				}
+				log.Printf("target.GetHealth() = %d", target.GetHealth())
 				if enemy, isEnemy := target.(*Enemy); isEnemy && target.GetHealth() <= 0 {
 					// 敵のHealthが0以下の場合、敵を配列から削除
 					defeatAction := Action{

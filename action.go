@@ -142,11 +142,14 @@ func (g *Game) executeAction() {
 			g.onTargetHit(target, item, index)
 		}
 
-		// Check if the item is equipped
-		index := getEquippedIndex(g.state.Player.EquippedItems[:], item.(Equipable))
-		if index != -1 {
-			// If it is equipped, remove it from the equipped items list
-			g.state.Player.EquippedItems[index] = nil
+		// Type assertion to check if item is Equipable
+		if equipableItem, ok := item.(Equipable); ok {
+			// Check if the item is equipped
+			index := getEquippedIndex(g.state.Player.EquippedItems[:], equipableItem)
+			if index != -1 {
+				// If it is equipped, remove it from the equipped items list
+				g.state.Player.EquippedItems[index] = nil
+			}
 		}
 
 		g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)

@@ -9,6 +9,7 @@ type Character interface {
 	GetHealth() int                   // GetHealth returns the current health of the character
 	SetHealth(health int)             // SetHealth sets the current health of the character
 	GetMaxHealth() int                // GetMaxHealth returns the maximum health of the character
+	GetDefensePower() int             // GetDefensePower returns the defense power of the character
 	// 他にも必要なメソッドを定義します（例: GetHealth(), SetHealth(), GetName(), etc.）
 }
 
@@ -45,6 +46,10 @@ func (p *Player) GetMaxHealth() int {
 	return p.MaxHealth
 }
 
+func (p *Player) GetDefensePower() int {
+	return p.DefensePower
+}
+
 func (e *Enemy) GetPosition() (int, int) {
 	return e.X, e.Y
 }
@@ -76,6 +81,10 @@ func (e *Enemy) SetHealth(health int) {
 
 func (e *Enemy) GetMaxHealth() int {
 	return e.MaxHealth
+}
+
+func (e *Enemy) GetDefensePower() int {
+	return e.DefensePower
 }
 
 type UseAction func(g *Game)
