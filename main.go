@@ -375,7 +375,6 @@ func NewGame() *Game {
 		frameCount:       0,
 		tmpPlayerOffsetX: 0,
 		tmpPlayerOffsetY: 0,
-		playerAttack:     false,
 		ActionQueue: ActionQueue{
 			Queue: make([]Action, 0),
 		},

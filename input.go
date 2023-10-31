@@ -26,8 +26,8 @@ func (g *Game) OpenDoor() {
 }
 
 func (g *Game) HandleGroundItemInput() {
-	dPressed := inpututil.IsKeyJustPressed(ebiten.KeyD)
-	if dPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
+	sPressed := inpututil.IsKeyJustPressed(ebiten.KeyS)
+	if sPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
 		g.ShowGroundItem = true
 	}
 
@@ -216,14 +216,6 @@ func (g *Game) HandleInput() (int, int) {
 	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
 	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
 	xPressed := ebiten.IsKeyPressed(ebiten.KeyX)         // Xキーが押されているかどうかをチェック
-	sPressed := ebiten.IsKeyPressed(ebiten.KeyS)         // Sキーが押されているかどうかをチェック
-
-	// 足踏みロジック
-	if sPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
-		!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
-		g.isActioned = true
-		g.lastIncrement = time.Now() // lastIncrementの更新
-	}
 
 	if aPressed && !g.zPressed {
 		if shiftPressed {
@@ -258,7 +250,7 @@ func (g *Game) HandleInput() (int, int) {
 		return dx, dy
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) && !aPressed {
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) && !aPressed && !xPressed {
 		g.zPressed = true
 		switch g.state.Player.Direction {
 		case Up:
@@ -293,8 +285,18 @@ func (g *Game) HandleInput() (int, int) {
 	blockDownLeft := blockDown || blockLeft
 	blockDownRight := blockDown || blockRight
 
-	if arrowPressed && xPressed {
+	if xPressed && !arrowPressed {
+		// 足踏みロジック
+		if ebiten.IsKeyPressed(ebiten.KeyZ) && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
+			!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
+			g.isActioned = true
+			g.lastIncrement = time.Now() // lastIncrementの更新
+		}
+	}
+
+	if arrowPressed && xPressed && !ebiten.IsKeyPressed(ebiten.KeyZ) {
 		g.xPressed = true
+
 		if shiftPressed { // 斜め移動のロジック
 
 			if upPressed && rightPressed && (!blockUp && !blockRight) {
