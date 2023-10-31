@@ -86,7 +86,24 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 							Y: targetY,
 						}
 
-						g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+						// Remove the item from the player's inventory
+						// Check if the item is of type Arrow and whether the D key was pressed
+						if _, ok := item.(*Arrow); ok && g.dPressed {
+							// If it's an arrow and D key was pressed, only remove it from inventory if ShotCount is 0
+							for i, inventoryItem := range g.state.Player.Inventory {
+								if arrow, ok := inventoryItem.(*Arrow); ok && arrow.ShotCount == 0 {
+									// Remove the Arrow item with ShotCount of 0 from the inventory
+									g.state.Player.Inventory = append(g.state.Player.Inventory[:i], g.state.Player.Inventory[i+1:]...)
+
+									// Adjust the index for the next iteration if an item was removed
+									i--
+								}
+							}
+							g.dPressed = false // Reset the D key flag
+						} else {
+							// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
+							g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+						}
 
 						g.TargetEnemy = &enemy
 						g.TargetEnemyIndex = index
@@ -130,7 +147,23 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 	g.ThrownItemDestination = position
 
 	// Remove the item from the player's inventory
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+	// Check if the item is of type Arrow and whether the D key was pressed
+	if _, ok := item.(*Arrow); ok && g.dPressed {
+		// If it's an arrow and D key was pressed, only remove it from inventory if ShotCount is 0
+		for i, inventoryItem := range g.state.Player.Inventory {
+			if arrow, ok := inventoryItem.(*Arrow); ok && arrow.ShotCount == 0 {
+				// Remove the Arrow item with ShotCount of 0 from the inventory
+				g.state.Player.Inventory = append(g.state.Player.Inventory[:i], g.state.Player.Inventory[i+1:]...)
+
+				// Adjust the index for the next iteration if an item was removed
+				i--
+			}
+		}
+		g.dPressed = false // Reset the D key flag
+	} else {
+		// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
+		g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+	}
 
 	// Update the UI flags
 	g.showItemActions = false

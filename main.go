@@ -239,10 +239,19 @@ func (g *Game) Update() error {
 		var equippedArrow *Arrow
 		for _, item := range g.state.Player.Inventory {
 			if arrow, ok := item.(*Arrow); ok {
-				for _, equippedItem := range g.state.Player.EquippedItems {
+				for i, equippedItem := range g.state.Player.EquippedItems {
 					if equippedItem == arrow {
 						equippedArrow = arrow
-						break
+
+						// If an Arrow item is equipped, decrement its ShotCount
+						equippedArrow.ShotCount--
+
+						// Check if ShotCount becomes 0, and if so, set the corresponding slot in EquippedItems to nil
+						if equippedArrow.ShotCount == 0 {
+							g.state.Player.EquippedItems[i] = nil
+						}
+
+						break // Break the inner loop as the equipped arrow is found
 					}
 				}
 				if equippedArrow != nil {
@@ -253,7 +262,6 @@ func (g *Game) Update() error {
 
 		// If an Arrow item is equipped, set its ShotCount to 1 and call g.ThrowItem
 		if equippedArrow != nil {
-			equippedArrow.ShotCount-- // Decrement the ShotCount of the equipped arrow
 			// Create a new arrow item with ShotCount set to 1
 			newArrow := &Arrow{
 				BaseItem:    equippedArrow.BaseItem,
