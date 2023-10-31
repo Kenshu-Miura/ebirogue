@@ -387,11 +387,46 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 func (g *Game) DrawThrownItem(screen *ebiten.Image, offsetX, offsetY int) {
 
 	if g.ThrownItem.Image != nil {
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(g.ThrownItem.X*tileSize+offsetX), float64(g.ThrownItem.Y*tileSize+offsetY))
-		screen.DrawImage(g.ThrownItem.Image, opts)
-	}
+		// Check if the ThrownItem is of type Arrow
+		if _, ok := g.ThrownItem.Item.(*Arrow); ok && g.dPressed {
+			opts := &ebiten.DrawImageOptions{}
 
+			// Determine the rotation angle based on the player's direction
+			var angle float64
+			switch g.state.Player.Direction {
+			case Up:
+				angle = math.Pi // 180 degrees in radians
+			case Down:
+				angle = 0 // No rotation
+			case Left:
+				angle = math.Pi / 2 // 90 degrees in radians
+			case Right:
+				angle = -math.Pi / 2 // -90 degrees in radians
+			case UpLeft:
+				angle = 3 * math.Pi / 4 // 135 degrees in radians
+			case UpRight:
+				angle = -3 * math.Pi / 4 // -135 degrees in radians
+			case DownLeft:
+				angle = math.Pi / 4 // 45 degrees in radians
+			case DownRight:
+				angle = -math.Pi / 4 // -45 degrees in radians
+			}
+
+			// Rotate the geometry matrix around the center of the image
+			w, h := g.ThrownItem.Image.Bounds().Dx(), g.ThrownItem.Image.Bounds().Dy()
+			opts.GeoM.Translate(float64(-w)/2, float64(-h)/2)                                                       // Move the origin to the center of the image
+			opts.GeoM.Rotate(angle)                                                                                 // Rotate
+			opts.GeoM.Translate(float64(w)/2, float64(h)/2)                                                         // Move the origin back
+			opts.GeoM.Translate(float64(g.ThrownItem.X*tileSize+offsetX), float64(g.ThrownItem.Y*tileSize+offsetY)) // Translate the geometry matrix to the item's position
+			// Draw the image
+			screen.DrawImage(g.ThrownItem.Image, opts)
+		} else {
+			// If it's not an Arrow, draw the image without rotation
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Translate(float64(g.ThrownItem.X*tileSize+offsetX), float64(g.ThrownItem.Y*tileSize+offsetY))
+			screen.DrawImage(g.ThrownItem.Image, opts)
+		}
+	}
 }
 
 func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {

@@ -22,6 +22,7 @@ func (g *Game) UpdateThrownItem() {
 				} else {
 					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
 				}
+				g.dPressed = false
 				g.ThrownItem = ThrownItem{}
 				g.ThrownItemDestination = Coordinate{}
 			}
@@ -99,7 +100,6 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 									i--
 								}
 							}
-							g.dPressed = false // Reset the D key flag
 						} else {
 							// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
 							g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
@@ -159,7 +159,6 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 				i--
 			}
 		}
-		g.dPressed = false // Reset the D key flag
 	} else {
 		// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
 		g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
@@ -232,6 +231,15 @@ func isEquipped(equippedItems []Item, item Equipable) bool {
 		}
 	}
 	return false
+}
+
+func getEquippedIndex(equippedItems []Item, item Equipable) int {
+	for index, equippedItem := range equippedItems {
+		if equippedItem == item {
+			return index
+		}
+	}
+	return -1
 }
 
 // UpdatePlayerStats is a method to update player stats when equipping/unequipping an item

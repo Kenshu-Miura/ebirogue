@@ -232,9 +232,9 @@ func (g *Game) Update() error {
 		}
 	}
 
-	g.dPressed = inpututil.IsKeyJustPressed(ebiten.KeyD)
 	// Check if the D key is pressed
-	if g.dPressed {
+	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
+		g.dPressed = true
 		// Find the equipped Arrow item
 		var equippedArrow *Arrow
 		for _, item := range g.state.Player.Inventory {
