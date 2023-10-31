@@ -142,6 +142,7 @@ type Game struct {
 	isActioned              bool
 	zPressed                bool
 	xPressed                bool
+	dPressed                bool
 	ShowGroundItem          bool
 	selectedGroundItemIndex int
 	GroundItemActioned      bool
@@ -228,6 +229,48 @@ func (g *Game) Update() error {
 		spacePressed := inpututil.IsKeyJustPressed(ebiten.KeySpace) // Spaceキーをチェック
 		if spacePressed {
 			g.OpenDoor()
+		}
+	}
+
+	g.dPressed = inpututil.IsKeyJustPressed(ebiten.KeyD)
+	// Check if the D key is pressed
+	if g.dPressed {
+		// Find the equipped Arrow item
+		var equippedArrow *Arrow
+		for _, item := range g.state.Player.Inventory {
+			if arrow, ok := item.(*Arrow); ok {
+				for _, equippedItem := range g.state.Player.EquippedItems {
+					if equippedItem == arrow {
+						equippedArrow = arrow
+						break
+					}
+				}
+				if equippedArrow != nil {
+					break // Break the outer loop if equippedArrow is found
+				}
+			}
+		}
+
+		// If an Arrow item is equipped, set its ShotCount to 1 and call g.ThrowItem
+		if equippedArrow != nil {
+			equippedArrow.ShotCount-- // Decrement the ShotCount of the equipped arrow
+			// Create a new arrow item with ShotCount set to 1
+			newArrow := &Arrow{
+				BaseItem:    equippedArrow.BaseItem,
+				ShotCount:   1,
+				AttackPower: equippedArrow.AttackPower,
+			}
+			throwRange := 10
+			character := &g.state.Player
+			mapState := g.state.Map
+			enemies := g.state.Enemies
+			onWallHit := func(item Item, position Coordinate, itemIndex int) {
+				g.onWallHit(item, position, itemIndex)
+			}
+			onTargetHit := func(target Character, item Item, index int) {
+				g.onTargetHit(target, item, index)
+			}
+			g.ThrowItem(newArrow, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
 		}
 	}
 
