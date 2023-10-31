@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 	"math/rand"
 )
 
@@ -182,10 +181,20 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
 			Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), potion.Health),
-			Execute: func(*Game) {
-				target.SetHealth(target.GetHealth() + potion.Health)
-				if target.GetHealth() > target.GetMaxHealth() {
-					target.SetHealth(target.GetMaxHealth())
+			Execute: func(g *Game) {
+				// Type assertion to check if target is of type *Player or *Enemy
+				if _, ok := target.(*Player); ok {
+					// If target is of type *Player
+					g.state.Player.Health += potion.Health
+					if g.state.Player.Health > g.state.Player.GetMaxHealth() {
+						g.state.Player.Health = g.state.Player.GetMaxHealth()
+					}
+				} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+					// If target is of type *Enemy
+					g.state.Enemies[index].Health += potion.Health
+					if g.state.Enemies[index].Health > g.state.Enemies[index].GetMaxHealth() {
+						g.state.Enemies[index].Health = g.state.Enemies[index].GetMaxHealth()
+					}
 				}
 				g.isActioned = true
 				// Reset the target character after processing
@@ -209,37 +218,46 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
 			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", target.GetName(), damage),
-			Execute: func(*Game) {
-				log.Printf("target.GetHealth() = %d", target.GetHealth())
-				target.SetHealth(target.GetHealth() - damage)
-				if target.GetHealth() < 0 {
-					target.SetHealth(0)
-				}
-				log.Printf("target.GetHealth() = %d", target.GetHealth())
-				if enemy, isEnemy := target.(*Enemy); isEnemy && target.GetHealth() <= 0 {
-					// 敵のHealthが0以下の場合、敵を配列から削除
-					defeatAction := Action{
-						Duration: 0.5,
-						Message:  fmt.Sprintf("%sを倒した。", target.GetName()),
-						Execute:  func(g *Game) {},
+			Execute: func(g *Game) {
+				// Type assertion to check if target is of type *Player or *Enemy
+				if _, ok := target.(*Player); ok {
+					// If target is of type *Player
+					g.state.Player.Health -= damage
+					if g.state.Player.Health < 0 {
+						g.state.Player.Health = 0
 					}
-					g.Enqueue(defeatAction)
+				} else if enemy, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+					// If target is of type *Enemy
+					g.state.Enemies[index].Health -= damage
+					if g.state.Enemies[index].Health < 0 {
+						g.state.Enemies[index].Health = 0
+					}
+					if g.state.Enemies[index].Health <= 0 {
+						// 敵のHealthが0以下の場合、敵を配列から削除
+						defeatAction := Action{
+							Duration: 0.5,
+							Message:  fmt.Sprintf("%sを倒した。", target.GetName()),
+							Execute:  func(g *Game) {},
+						}
+						g.Enqueue(defeatAction)
 
-					g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
+						g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
 
-					// 敵の経験値をプレイヤーの所持経験値に加える
-					g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+						// 敵の経験値をプレイヤーの所持経験値に加える
+						g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 
-					g.state.Player.checkLevelUp() // レベルアップをチェック
+						g.state.Player.checkLevelUp() // レベルアップをチェック
 
-					// Reset the target enemy after processing
-					// (If necessary. This part may need to be adjusted based on your game's logic)
+						// Reset the target enemy after processing
+						// (If necessary. This part may need to be adjusted based on your game's logic)
+					}
 				}
 				g.isActioned = true
 			},
 		}
 		g.Enqueue(action)
 	}
+	g.TargetEnemyIndex = 0
 }
 
 // Additional function to check if item is equipped
