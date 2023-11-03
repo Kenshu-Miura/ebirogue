@@ -97,6 +97,7 @@ type Item interface {
 	GetPosition() (int, int)
 	SetPosition(x, y int)
 	Use(g *Game) // Now, Use will call the appropriate function from the UseActions map
+	GetID() int  // Add this method to get the ID of the item
 	// 他にも共通のメソッドがあればここに追加します。
 }
 

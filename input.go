@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "image/png" // PNG画像を読み込むために必要
+	"sort"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -156,6 +157,13 @@ func (g *Game) handleInventoryNavigationInput() error {
 		}
 	}
 
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		sort.Slice(g.state.Player.Inventory, func(i, j int) bool {
+			return g.state.Player.Inventory[i].GetID() < g.state.Player.Inventory[j].GetID()
+		})
+		return nil
+	}
+
 	return nil
 }
 
@@ -170,7 +178,7 @@ func (g *Game) handleItemDescriptionInput() error {
 
 func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
-	if cPressed && !g.ShowGroundItem && !g.showStairsPrompt {
+	if cPressed && !g.ShowGroundItem && !g.showStairsPrompt && !g.showInventory {
 		g.showInventory = true
 		return nil // Skip other updates when the inventory window is active
 	}
@@ -186,6 +194,7 @@ func (g *Game) handleInventoryInput() error {
 	}
 
 	if g.showInventory {
+
 		if g.showItemActions && !g.showItemDescription {
 			return g.handleItemActionsInput()
 		} else if !g.showItemActions && !g.showItemDescription {
