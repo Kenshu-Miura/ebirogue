@@ -158,9 +158,61 @@ func (g *Game) handleInventoryNavigationInput() error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		// Sort the inventory by ID
 		sort.Slice(g.state.Player.Inventory, func(i, j int) bool {
 			return g.state.Player.Inventory[i].GetID() < g.state.Player.Inventory[j].GetID()
 		})
+
+		// Initialize a map to keep track of Arrow items with the same ID
+		arrowItemsMap := make(map[int][]*Arrow)
+
+		// Populate the map with Arrow items
+		for _, item := range g.state.Player.Inventory {
+			if arrow, ok := item.(*Arrow); ok {
+				arrowItemsMap[arrow.GetID()] = append(arrowItemsMap[arrow.GetID()], arrow)
+			}
+		}
+
+		// Iterate through the map and merge Arrow items with the same ID
+		for _, arrows := range arrowItemsMap {
+			if len(arrows) > 1 { // More than one Arrow item with the same ID
+				var totalShotCount int
+				var equippedArrow *Arrow
+				for _, arrow := range arrows {
+					totalShotCount += arrow.ShotCount
+					// Check if the arrow is equipped
+					for _, equippedItem := range g.state.Player.EquippedItems {
+						if equippedItem == arrow {
+							equippedArrow = arrow
+							break
+						}
+					}
+				}
+
+				// If an arrow is equipped, use it as the base arrow
+				mergedArrow := equippedArrow
+				if mergedArrow == nil {
+					mergedArrow = arrows[0] // Use the first arrow as the base arrow if none are equipped
+				}
+				mergedArrow.ShotCount = totalShotCount // Update the ShotCount of the merged arrow
+
+				// Remove the other arrows from the inventory
+				newInventory := []Item{}
+				for _, item := range g.state.Player.Inventory {
+					keep := true
+					for _, arrow := range arrows {
+						if item == arrow && arrow != mergedArrow {
+							keep = false
+							break
+						}
+					}
+					if keep {
+						newInventory = append(newInventory, item)
+					}
+				}
+				g.state.Player.Inventory = newInventory // Update the player's inventory
+			}
+		}
 		return nil
 	}
 
