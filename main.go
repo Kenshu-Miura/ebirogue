@@ -273,41 +273,8 @@ func (g *Game) Update() error {
 	g.CheckCombatState()
 
 	g.checkForStairs()
-
-	if g.showStairsPrompt {
-		if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
-			g.selectedOption = (g.selectedOption + 1) % 2
-		}
-		if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
-			g.selectedOption = (g.selectedOption + 1) % 2
-		}
-		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-			if g.selectedOption == 0 { // "Proceed" is selected
-				mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
-				g.state.Map = mapGrid
-				g.state.Enemies = enemies
-				g.state.Items = items
-				g.Floor = newFloor
-				g.rooms = newRoom
-			} else { // "Cancel" is selected
-				g.selectedOption = 0
-				g.ignoreStairs = true
-			}
-			g.showStairsPrompt = false // Close the prompt window
-		}
-		if inpututil.IsKeyJustPressed(ebiten.KeyX) {
-			g.selectedOption = 0
-			g.ignoreStairs = true
-			g.showStairsPrompt = false // Close the prompt window
-		}
-	}
-
-	// Reset ignoreStairs flag when player moves away from stairs
-	player := &g.state.Player
-	playerTile := g.state.Map[player.Y][player.X]
-	if playerTile.Type != "stairs" {
-		g.ignoreStairs = false
-	}
+	g.handleStairsPrompt()
+	g.ResetStairsIgnoreFlag()
 
 	return nil
 }
