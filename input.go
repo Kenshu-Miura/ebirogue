@@ -27,7 +27,7 @@ func (g *Game) OpenDoor() {
 
 func (g *Game) processDKeyPress() {
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
+	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
 		g.dPressed = true
 		// Find the equipped Arrow item
 		var equippedArrow *Arrow
@@ -89,7 +89,7 @@ func (g *Game) processDKeyPress() {
 
 func (g *Game) HandleGroundItemInput() {
 	sPressed := inpututil.IsKeyJustPressed(ebiten.KeyS)
-	if sPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
+	if sPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt && !g.ignoreStairs {
 		g.ShowGroundItem = true
 	}
 
@@ -170,7 +170,7 @@ func (g *Game) handleItemDescriptionInput() error {
 
 func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
-	if cPressed && !g.ShowGroundItem {
+	if cPressed && !g.ShowGroundItem && !g.showStairsPrompt {
 		g.showInventory = true
 		return nil // Skip other updates when the inventory window is active
 	}

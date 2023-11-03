@@ -4,6 +4,9 @@ import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Room struct {
@@ -17,13 +20,14 @@ func (g *Game) checkForStairs() {
 	player := &g.state.Player
 	playerTile := g.state.Map[player.Y][player.X]
 
-	if playerTile.Type == "stairs" {
-		mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, player)
-		g.state.Map = mapGrid
-		g.state.Enemies = enemies
-		g.state.Items = items
-		g.Floor = newFloor
-		g.rooms = newRoom
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) && g.ignoreStairs && playerTile.Type == "stairs" {
+		g.showStairsPrompt = true
+		g.ignoreStairs = false // Optionally reset ignoreStairs flag
+		return
+	}
+
+	if playerTile.Type == "stairs" && !g.ignoreStairs && !g.showStairsPrompt {
+		g.showStairsPrompt = true
 	}
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
@@ -10,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 )
@@ -153,6 +155,9 @@ type Game struct {
 	TargetEnemy             *Enemy
 	TargetEnemyIndex        int
 	onEnemyHit              func(Character, Item, int)
+	showStairsPrompt        bool
+	selectedOption          int // 0 for "Proceed", 1 for "Cancel"
+	ignoreStairs            bool
 }
 
 func min(a, b int) int {
@@ -205,7 +210,7 @@ func init() {
 
 func (g *Game) Update() error {
 
-	if !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
+	if !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheetHandleInput()
 
@@ -269,6 +274,41 @@ func (g *Game) Update() error {
 
 	g.checkForStairs()
 
+	if g.showStairsPrompt {
+		if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+			g.selectedOption = (g.selectedOption + 1) % 2
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+			g.selectedOption = (g.selectedOption + 1) % 2
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			if g.selectedOption == 0 { // "Proceed" is selected
+				mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
+				g.state.Map = mapGrid
+				g.state.Enemies = enemies
+				g.state.Items = items
+				g.Floor = newFloor
+				g.rooms = newRoom
+			} else { // "Cancel" is selected
+				g.selectedOption = 0
+				g.ignoreStairs = true
+			}
+			g.showStairsPrompt = false // Close the prompt window
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+			g.selectedOption = 0
+			g.ignoreStairs = true
+			g.showStairsPrompt = false // Close the prompt window
+		}
+	}
+
+	// Reset ignoreStairs flag when player moves away from stairs
+	player := &g.state.Player
+	playerTile := g.state.Map[player.Y][player.X]
+	if playerTile.Type != "stairs" {
+		g.ignoreStairs = false
+	}
+
 	return nil
 }
 
@@ -301,6 +341,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawDescriptions(screen)
 
 	g.DrawGroundItem(screen)
+
+	if g.showStairsPrompt {
+		windowX, windowY, windowWidth, windowHeight := 100, 100, 200, 50 // Adjust these values as needed
+		drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 255)
+		options := []string{"進む", "やめる"}
+		for i, option := range options {
+			text.Draw(screen, option, mplusNormalFont, windowX+i*100+20, windowY+25, color.White) // Adjust these values as needed
+		}
+		cursorX := windowX + g.selectedOption*100 // Adjust these values as needed
+		cursorY := windowY + 25                   // Adjust these values as needed
+		text.Draw(screen, "→", mplusNormalFont, cursorX, cursorY, color.White)
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
