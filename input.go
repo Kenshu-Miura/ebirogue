@@ -25,6 +25,68 @@ func (g *Game) OpenDoor() {
 	}
 }
 
+func (g *Game) processDKeyPress() {
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
+		g.dPressed = true
+		// Find the equipped Arrow item
+		var equippedArrow *Arrow
+		for _, item := range g.state.Player.Inventory {
+			if arrow, ok := item.(*Arrow); ok {
+				for i, equippedItem := range g.state.Player.EquippedItems {
+					if equippedItem == arrow {
+						equippedArrow = arrow
+
+						// If an Arrow item is equipped, decrement its ShotCount
+						equippedArrow.ShotCount--
+
+						// Check if ShotCount becomes 0, and if so, set the corresponding slot in EquippedItems to nil
+						if equippedArrow.ShotCount == 0 {
+							g.state.Player.EquippedItems[i] = nil
+						}
+
+						break // Break the inner loop as the equipped arrow is found
+					}
+				}
+				if equippedArrow != nil {
+					break // Break the outer loop if equippedArrow is found
+				}
+			}
+		}
+
+		// If an Arrow item is equipped, set its ShotCount to 1 and call g.ThrowItem
+		if equippedArrow != nil {
+			// Create a new arrow item with ShotCount set to 1
+			newArrow := &Arrow{
+				BaseItem:    equippedArrow.BaseItem,
+				ShotCount:   1,
+				AttackPower: equippedArrow.AttackPower,
+			}
+			throwRange := 10
+			character := &g.state.Player
+			mapState := g.state.Map
+			enemies := g.state.Enemies
+			onWallHit := func(item Item, position Coordinate, itemIndex int) {
+				g.onWallHit(item, position, itemIndex)
+			}
+			onTargetHit := func(target Character, item Item, index int) {
+				g.onTargetHit(target, item, index)
+			}
+			g.ThrowItem(newArrow, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+		} else {
+			action := Action{
+				Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+				Message:  "矢が装備されていません",
+				Execute: func(*Game) {
+
+				},
+			}
+			g.dPressed = false
+			g.Enqueue(action)
+		}
+	}
+}
+
 func (g *Game) HandleGroundItemInput() {
 	sPressed := inpututil.IsKeyJustPressed(ebiten.KeyS)
 	if sPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem {
