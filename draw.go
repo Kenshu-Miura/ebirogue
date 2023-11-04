@@ -39,13 +39,29 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	// ミニマップを描画
 	for y, row := range g.state.Map {
 		for x, tile := range row {
-			if tile.Visited {
+			if tile.Visited && tile.Type != "wall" { // tile.Typeが"wall"でないことも確認
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(x*tilePixelSize), float64(y*tilePixelSize))
 				g.miniMap.DrawImage(miniMapTile, opts)
 			}
 		}
 	}
+
+	// プレイヤーの位置を取得
+	playerX, playerY := g.state.Player.X, g.state.Player.Y
+
+	// プレイヤーの位置に対応するミニマップ上の座標を計算
+	miniMapPlayerX := playerX * tilePixelSize
+	miniMapPlayerY := playerY * tilePixelSize
+
+	// 黄色の半透明のイメージを作成
+	playerTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+	playerTile.Fill(color.RGBA{255, 255, 0, 128}) // 黄色半透明
+
+	// 黄色の半透明のイメージをミニマップ上のプレイヤーの位置に描画
+	playerOpts := &ebiten.DrawImageOptions{}
+	playerOpts.GeoM.Translate(float64(miniMapPlayerX), float64(miniMapPlayerY))
+	g.miniMap.DrawImage(playerTile, playerOpts)
 
 	// キャッシュされたミニマップイメージをスクリーンに描画
 	opts := &ebiten.DrawImageOptions{}
