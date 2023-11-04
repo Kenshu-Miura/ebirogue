@@ -40,9 +40,10 @@ func (g *Game) updateEnemyVisibility() {
 		inSameRoom := isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms)
 
 		// Check if the player and enemy are adjacent
-		adjacent := (math.Abs(float64(playerX-enemyX)) <= 2 && math.Abs(float64(playerY-enemyY)) <= 2)
+		adjacent := (math.Abs(float64(playerX-enemyX)) <= 1 && math.Abs(float64(playerY-enemyY)) <= 1)
 
-		if inSameRoom || adjacent {
+		if inSameRoom || adjacent || enemy.PlayerDiscovered {
+			g.miniMapDirty = true
 			enemy.SetShowOnMiniMap(true)
 		} else {
 			enemy.SetShowOnMiniMap(false)

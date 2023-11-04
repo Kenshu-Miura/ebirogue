@@ -646,6 +646,7 @@ func (g *Game) MoveEnemies() {
 		} else {
 			moveRandomly(g, i) // Call function to move enemy randomly
 		}
+		//g.miniMapDirty = true
 	}
 }
 

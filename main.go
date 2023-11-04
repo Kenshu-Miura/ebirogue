@@ -261,6 +261,22 @@ func (g *Game) Update() error {
 	// プレイヤーがタイルを訪れたことをマーク
 	currentTile.Visited = true
 
+	// 隣接タイルをマーク
+	directions := []struct{ dx, dy int }{
+		{0, 1}, {1, 0}, {0, -1}, {-1, 0}, // 上、右、下、左
+		{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, // 右上、右下、左上、左下
+	}
+
+	for _, dir := range directions {
+		adjX, adjY := playerX+dir.dx, playerY+dir.dy
+		if adjX >= 0 && adjX < len(g.state.Map[0]) && adjY >= 0 && adjY < len(g.state.Map) {
+			adjTile := &g.state.Map[adjY][adjX]
+			if adjTile.Type == "floor" || adjTile.Type == "corridor" {
+				adjTile.Visited = true
+			}
+		}
+	}
+
 	// プレイヤーが新しい部屋に入ったかどうかを確認
 	for _, room := range g.rooms {
 		if isSameRoom(playerX, playerY, room.Center.X, room.Center.Y, g.rooms) {
