@@ -14,6 +14,40 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+func (g *Game) DrawStairsPrompt(screen *ebiten.Image) {
+	if g.showStairsPrompt {
+		windowX, windowY, windowWidth, windowHeight := 100, 100, 200, 50 // Adjust these values as needed
+		drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 255)
+		options := []string{"進む", "やめる"}
+		for i, option := range options {
+			text.Draw(screen, option, mplusNormalFont, windowX+i*100+20, windowY+25, color.White) // Adjust these values as needed
+		}
+		cursorX := windowX + g.selectedOption*100 // Adjust these values as needed
+		cursorY := windowY + 25                   // Adjust these values as needed
+		text.Draw(screen, "→", mplusNormalFont, cursorX, cursorY, color.White)
+	}
+}
+
+func (g *Game) UpdateAndDrawMiniMap(screen *ebiten.Image) {
+	if g.miniMapDirty {
+		// ミニマップを更新
+		g.updateMiniMap(screen)
+		g.miniMapDirty = false
+	}
+
+	// キャッシュされたミニマップイメージをスクリーンに描画
+	if g.miniMap != nil {
+		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+		miniMapWidth, miniMapHeight := g.miniMap.Bounds().Dx(), g.miniMap.Bounds().Dy()
+		miniMapX := screenWidth - miniMapWidth - 10   // 画面の右端から10ピクセルのマージンを持たせる
+		miniMapY := screenHeight - miniMapHeight - 10 // 画面の下端から10ピクセルのマージンを持たせる
+
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(miniMapX), float64(miniMapY))
+		screen.DrawImage(g.miniMap, opts)
+	}
+}
+
 func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 

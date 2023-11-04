@@ -16,6 +16,60 @@ type Room struct {
 	Center        Coordinate
 }
 
+func (g *Game) MarkVisitedTiles(playerX, playerY int) {
+	// 現在のタイルを取得
+	currentTile := &g.state.Map[playerY][playerX]
+
+	// プレイヤーがタイルを訪れたことをマーク
+	currentTile.Visited = true
+
+	// 隣接タイルをマーク
+	directions := []struct{ dx, dy int }{
+		{0, 1}, {1, 0}, {0, -1}, {-1, 0}, // 上、右、下、左
+		{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, // 右上、右下、左上、左下
+	}
+
+	for _, dir := range directions {
+		adjX, adjY := playerX+dir.dx, playerY+dir.dy
+		if adjX >= 0 && adjX < len(g.state.Map[0]) && adjY >= 0 && adjY < len(g.state.Map) {
+			adjTile := &g.state.Map[adjY][adjX]
+			if adjTile.Type == "floor" || adjTile.Type == "corridor" {
+				adjTile.Visited = true
+			}
+		}
+	}
+}
+
+func (g *Game) MarkRoomVisited(playerX, playerY int) {
+	// プレイヤーが新しい部屋に入ったかどうかを確認
+	for _, room := range g.rooms {
+		if isSameRoom(playerX, playerY, room.Center.X, room.Center.Y, g.rooms) {
+			// プレイヤーが部屋に入ったので、部屋の全てのタイルを訪れたものとしてマーク
+			for y := room.Y; y < room.Y+room.Height; y++ {
+				for x := room.X; x < room.X+room.Width; x++ {
+					g.state.Map[y][x].Visited = true
+				}
+			}
+			break // 一つの部屋しかマークする必要はないので、ループを抜ける
+		}
+	}
+}
+
+func (g *Game) CheckPlayerMovement() {
+	// プレイヤーが移動したかどうかを確認する
+	playerMoved := g.prevPlayerX != g.state.Player.X || g.prevPlayerY != g.state.Player.Y
+
+	// プレイヤーが移動したか、マップが変更された場合、
+	// ミニマップを再描画する必要があることを示すフラグを設定します。
+	if playerMoved {
+		g.miniMapDirty = true
+	}
+
+	// プレイヤーの現在の座標を保存する
+	g.prevPlayerX = g.state.Player.X
+	g.prevPlayerY = g.state.Player.Y
+}
+
 // handleStairsPrompt handles user input for the stairs prompt.
 func (g *Game) handleStairsPrompt() {
 	if g.showStairsPrompt {

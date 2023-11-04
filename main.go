@@ -1,7 +1,6 @@
 package main
 
 import (
-	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"math/rand"
@@ -11,7 +10,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 )
@@ -255,53 +253,9 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// 現在のタイルを取得
-	currentTile := &g.state.Map[playerY][playerX]
-
-	// プレイヤーがタイルを訪れたことをマーク
-	currentTile.Visited = true
-
-	// 隣接タイルをマーク
-	directions := []struct{ dx, dy int }{
-		{0, 1}, {1, 0}, {0, -1}, {-1, 0}, // 上、右、下、左
-		{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, // 右上、右下、左上、左下
-	}
-
-	for _, dir := range directions {
-		adjX, adjY := playerX+dir.dx, playerY+dir.dy
-		if adjX >= 0 && adjX < len(g.state.Map[0]) && adjY >= 0 && adjY < len(g.state.Map) {
-			adjTile := &g.state.Map[adjY][adjX]
-			if adjTile.Type == "floor" || adjTile.Type == "corridor" {
-				adjTile.Visited = true
-			}
-		}
-	}
-
-	// プレイヤーが新しい部屋に入ったかどうかを確認
-	for _, room := range g.rooms {
-		if isSameRoom(playerX, playerY, room.Center.X, room.Center.Y, g.rooms) {
-			// プレイヤーが部屋に入ったので、部屋の全てのタイルを訪れたものとしてマーク
-			for y := room.Y; y < room.Y+room.Height; y++ {
-				for x := room.X; x < room.X+room.Width; x++ {
-					g.state.Map[y][x].Visited = true
-				}
-			}
-			break // 一つの部屋しかマークする必要はないので、ループを抜ける
-		}
-	}
-
-	// プレイヤーが移動したかどうかを確認する
-	playerMoved := g.prevPlayerX != g.state.Player.X || g.prevPlayerY != g.state.Player.Y
-
-	// プレイヤーが移動したか、マップが変更された場合、
-	// ミニマップを再描画する必要があることを示すフラグを設定します。
-	if playerMoved {
-		g.miniMapDirty = true
-	}
-
-	// プレイヤーの現在の座標を保存する
-	g.prevPlayerX = g.state.Player.X
-	g.prevPlayerY = g.state.Player.Y
+	g.MarkVisitedTiles(playerX, playerY)
+	g.MarkRoomVisited(playerX, playerY)
+	g.CheckPlayerMovement()
 
 	g.updateItemVisibility()
 	g.updateEnemyVisibility()
@@ -335,6 +289,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	centerX := (screenWidth-tileSize)/2 - tileSize
 	centerY := (screenHeight-tileSize)/2 - tileSize
@@ -364,35 +319,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	g.DrawGroundItem(screen)
 
-	if g.showStairsPrompt {
-		windowX, windowY, windowWidth, windowHeight := 100, 100, 200, 50 // Adjust these values as needed
-		drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 255)
-		options := []string{"進む", "やめる"}
-		for i, option := range options {
-			text.Draw(screen, option, mplusNormalFont, windowX+i*100+20, windowY+25, color.White) // Adjust these values as needed
-		}
-		cursorX := windowX + g.selectedOption*100 // Adjust these values as needed
-		cursorY := windowY + 25                   // Adjust these values as needed
-		text.Draw(screen, "→", mplusNormalFont, cursorX, cursorY, color.White)
-	}
+	g.DrawStairsPrompt(screen)
 
-	if g.miniMapDirty {
-		// ミニマップを更新
-		g.updateMiniMap(screen)
-		g.miniMapDirty = false
-	}
-
-	// キャッシュされたミニマップイメージをスクリーンに描画
-	if g.miniMap != nil {
-		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-		miniMapWidth, miniMapHeight := g.miniMap.Bounds().Dx(), g.miniMap.Bounds().Dy()
-		miniMapX := screenWidth - miniMapWidth - 10   // 画面の右端から10ピクセルのマージンを持たせる
-		miniMapY := screenHeight - miniMapHeight - 10 // 画面の下端から10ピクセルのマージンを持たせる
-
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(float64(miniMapX), float64(miniMapY))
-		screen.DrawImage(g.miniMap, opts)
-	}
+	g.UpdateAndDrawMiniMap(screen)
 
 }
 
