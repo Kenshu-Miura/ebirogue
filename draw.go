@@ -42,7 +42,16 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 			if tile.Visited && tile.Type != "wall" { // tile.Typeが"wall"でないことも確認
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(x*tilePixelSize), float64(y*tilePixelSize))
-				g.miniMap.DrawImage(miniMapTile, opts)
+
+				// tile.Typeが"stairs"であるかどうかをチェック
+				if tile.Type == "stairs" {
+					// 階段タイル用の白色のイメージを作成
+					stairsTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+					stairsTile.Fill(color.RGBA{255, 255, 255, 255}) // 白色
+					g.miniMap.DrawImage(stairsTile, opts)
+				} else {
+					g.miniMap.DrawImage(miniMapTile, opts)
+				}
 			}
 		}
 	}
