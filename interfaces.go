@@ -87,6 +87,15 @@ func (e *Enemy) GetDefensePower() int {
 	return e.DefensePower
 }
 
+// Enemyタイプにこのメソッドを追加
+func (e *Enemy) SetShowOnMiniMap(show bool) {
+	e.ShowOnMiniMap = show
+}
+
+func (e *Enemy) GetShowOnMiniMap() bool {
+	return e.ShowOnMiniMap
+}
+
 type UseAction func(g *Game)
 
 type Item interface {

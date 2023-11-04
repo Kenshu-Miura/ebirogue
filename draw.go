@@ -26,6 +26,9 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	// キャッシュされたミニマップイメージを作成または更新
 	if g.miniMap == nil || g.miniMap.Bounds().Dx() != miniMapWidth || g.miniMap.Bounds().Dy() != miniMapHeight {
 		g.miniMap = ebiten.NewImage(miniMapWidth, miniMapHeight)
+	} else {
+		// g.miniMapをクリア
+		g.miniMap.Clear()
 	}
 
 	// ミニマップの描画位置を計算
@@ -83,6 +86,20 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Translate(float64(itemX*tilePixelSize), float64(itemY*tilePixelSize))
 			g.miniMap.DrawImage(itemTile, opts)
+		}
+	}
+
+	enemyTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+	enemyTile.Fill(color.RGBA{255, 0, 0, 128}) // Red semi-transparent
+
+	//log.Printf("ShowOnMiniMap: %v", g.state.Enemies[0].GetShowOnMiniMap())
+
+	for _, enemy := range g.state.Enemies {
+		if enemy.GetShowOnMiniMap() {
+			enemyX, enemyY := enemy.GetPosition()
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Translate(float64(enemyX*tilePixelSize), float64(enemyY*tilePixelSize))
+			g.miniMap.DrawImage(enemyTile, opts)
 		}
 	}
 

@@ -288,6 +288,7 @@ func (g *Game) Update() error {
 	g.prevPlayerY = g.state.Player.Y
 
 	g.updateItemVisibility()
+	g.updateEnemyVisibility()
 
 	err := g.handleInventoryInput()
 	if err != nil {

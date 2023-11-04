@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 type SpecialAttackFunc func(e *Enemy, g *Game)
 
@@ -24,6 +27,27 @@ type Enemy struct {
 	OffsetX, OffsetY         int               // アニメーションのオフセット
 	SpecialAttack            SpecialAttackFunc // 敵の特殊攻撃処理
 	SpecialAttackProbability float64           // 敵が特殊攻撃を使ってくる確率 (0.0 to 1.0)
+	ShowOnMiniMap            bool
+}
+
+func (g *Game) updateEnemyVisibility() {
+	playerX, playerY := g.state.Player.GetPosition()
+	for i := range g.state.Enemies {
+		enemy := &g.state.Enemies[i] // get the address of the enemy instance
+		enemyX, enemyY := enemy.GetPosition()
+
+		// Check if the player and enemy are in the same room
+		inSameRoom := isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms)
+
+		// Check if the player and enemy are adjacent
+		adjacent := (math.Abs(float64(playerX-enemyX)) <= 2 && math.Abs(float64(playerY-enemyY)) <= 2)
+
+		if inSameRoom || adjacent {
+			enemy.SetShowOnMiniMap(true)
+		} else {
+			enemy.SetShowOnMiniMap(false)
+		}
+	}
 }
 
 func createEnemy(x, y int) Enemy {
