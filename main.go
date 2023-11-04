@@ -29,6 +29,8 @@ const (
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 var mplusNormalFont font.Face
+var mplusMediumFont font.Face
+var mplusSmallFont font.Face
 var levelExpRequirements = []int{0, 5, 12, 22, 35, 51, 70, 92, 118, 148, 181} // レベル10までの経験値要件
 
 type Tile struct {
@@ -203,6 +205,24 @@ func init() {
 	const dpi = 72
 	mplusNormalFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
 		Size:    16,
+		DPI:     dpi,
+		Hinting: font.HintingVertical,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mplusMediumFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
+		Size:    14,
+		DPI:     dpi,
+		Hinting: font.HintingVertical,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mplusSmallFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
+		Size:    12,
 		DPI:     dpi,
 		Hinting: font.HintingVertical,
 	})

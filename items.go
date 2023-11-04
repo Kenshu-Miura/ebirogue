@@ -61,7 +61,7 @@ type Cane struct {
 
 func createItem(x, y int) Item {
 	var item Item
-	randomValue := localRand.Intn(7) // Store the random value to ensure it's only generated once
+	randomValue := localRand.Intn(8) // Store the random value to ensure it's only generated once
 	sharpnessValue := localRand.Intn(5) - 1
 	switch randomValue {
 	case 0:

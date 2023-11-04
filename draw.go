@@ -619,6 +619,40 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 	}
 }
 
+func drawBarWithBorder(screen *ebiten.Image, x, y, width, height int, barColor, borderColor color.Color) {
+	// バーの背景を描画
+	barBackground := ebiten.NewImage(width, height)
+	barBackground.Fill(barColor)
+	barOpts := &ebiten.DrawImageOptions{}
+	barOpts.GeoM.Translate(float64(x), float64(y))
+	screen.DrawImage(barBackground, barOpts)
+
+	// 枠を描画
+	borderSize := 1
+	borderImg := ebiten.NewImage(width+2*borderSize, height+2*borderSize)
+	borderImg.Fill(borderColor)
+
+	// 上の枠
+	borderOpts := &ebiten.DrawImageOptions{}
+	borderOpts.GeoM.Translate(float64(x-borderSize), float64(y-borderSize))
+	screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, width+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
+
+	// 左の枠
+	borderOpts.GeoM.Reset()
+	borderOpts.GeoM.Translate(float64(x-borderSize), float64(y))
+	screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, height)).(*ebiten.Image), borderOpts)
+
+	// 右の枠
+	borderOpts.GeoM.Reset()
+	borderOpts.GeoM.Translate(float64(x+width), float64(y))
+	screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, borderSize, height)).(*ebiten.Image), borderOpts)
+
+	// 下の枠
+	borderOpts.GeoM.Reset()
+	borderOpts.GeoM.Translate(float64(x-borderSize), float64(y+height))
+	screen.DrawImage(borderImg.SubImage(image.Rect(0, 0, width+2*borderSize, borderSize)).(*ebiten.Image), borderOpts)
+}
+
 func (g *Game) DrawHUD(screen *ebiten.Image) {
 	screenWidth, _ := screen.Bounds().Dx(), screen.Bounds().Dy()
 
@@ -628,33 +662,83 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	// Player HP
 	playerHPText := fmt.Sprintf("HP:%3d/%3d", g.state.Player.Health, g.state.Player.MaxHealth)
-	text.Draw(screen, playerHPText, mplusNormalFont, screenWidth-130, 50, color.White)
+	hpTextWidth := font.MeasureString(mplusSmallFont, playerHPText).Round() / 64
+	text.Draw(screen, playerHPText, mplusSmallFont, (screenWidth/2)-(hpTextWidth+110), 20, color.White)
+
+	hpBarMaxWidth := g.state.Player.MaxHealth / 4
+	hpBarCurrentWidth := int(float64(hpBarMaxWidth) * (float64(g.state.Player.Health) / float64(g.state.Player.MaxHealth)))
+
+	// 最大HPの値でベースとなる黒色のバーを作成
+	baseHpBar := ebiten.NewImage(hpBarMaxWidth, 10)
+	baseHpBar.Fill(color.Black)
+
+	// その値の割合として現在のHPを緑色のバーとして表示
+	hpBar := ebiten.NewImage(hpBarCurrentWidth, 10)
+	hpBar.Fill(color.RGBA{0, 255, 0, 255})
+
+	// 黒色のバーを描画
+	baseHpGeoM := ebiten.GeoM{}
+	baseHpGeoM.Translate(float64((screenWidth/2)-30), 10)
+	screen.DrawImage(baseHpBar, &ebiten.DrawImageOptions{GeoM: baseHpGeoM})
+
+	// 緑色のバーを描画
+	HPgeoM := ebiten.GeoM{}
+	HPgeoM.Translate(float64((screenWidth/2)-30), 10)
+	screen.DrawImage(hpBar, &ebiten.DrawImageOptions{GeoM: HPgeoM})
+
+	// 枠を描画
+	drawBarWithBorder(screen, (screenWidth/2)-30, 10, hpBarMaxWidth, 10, color.RGBA{0, 0, 0, 0}, color.White)
 
 	// Player Satiety
 	playerSatietyText := fmt.Sprintf("満腹度:%3d/%3d", g.state.Player.Satiety, g.state.Player.MaxSatiety)
-	text.Draw(screen, playerSatietyText, mplusNormalFont, screenWidth-130, 70, color.White)
+	satietyTextWidth := font.MeasureString(mplusSmallFont, playerSatietyText).Round() / 64
+	text.Draw(screen, playerSatietyText, mplusSmallFont, (screenWidth/2)-(satietyTextWidth+130), 35, color.White)
+
+	satietyBarMaxWidth := g.state.Player.MaxSatiety
+	satietyBarCurrentWidth := int(float64(satietyBarMaxWidth) * (float64(g.state.Player.Satiety) / float64(g.state.Player.MaxSatiety)))
+
+	// 最大満腹度の値でベースとなる黒色のバーを作成
+	baseSatietyBar := ebiten.NewImage(satietyBarMaxWidth, 10)
+	baseSatietyBar.Fill(color.Black)
+
+	// その値の割合として現在の満腹度を黄色のバーとして表示
+	satietyBar := ebiten.NewImage(satietyBarCurrentWidth, 10)
+	satietyBar.Fill(color.RGBA{255, 255, 0, 255})
+
+	// 黒色のバーを描画
+	baseSatietyGeoM := ebiten.GeoM{}
+	baseSatietyGeoM.Translate(float64((screenWidth/2)-30), 25)
+	screen.DrawImage(baseSatietyBar, &ebiten.DrawImageOptions{GeoM: baseSatietyGeoM})
+
+	// 黄色のバーを描画
+	STgeoM := ebiten.GeoM{}
+	STgeoM.Translate(float64((screenWidth/2)-30), 25)
+	screen.DrawImage(satietyBar, &ebiten.DrawImageOptions{GeoM: STgeoM})
+
+	// 枠を描画
+	drawBarWithBorder(screen, (screenWidth/2)-30, 25, satietyBarMaxWidth, 10, color.RGBA{0, 0, 0, 0}, color.White)
 
 	// Player Attack Power
 	playerAttackPowerText := fmt.Sprintf("攻撃力: %3d", g.state.Player.AttackPower)
-	text.Draw(screen, playerAttackPowerText, mplusNormalFont, screenWidth-130, 90, color.White)
+	text.Draw(screen, playerAttackPowerText, mplusNormalFont, screenWidth-130, 50, color.White)
 
 	// Player Defense Power
 	playerDefensePowerText := fmt.Sprintf("防御力: %3d", g.state.Player.DefensePower)
-	text.Draw(screen, playerDefensePowerText, mplusNormalFont, screenWidth-130, 110, color.White)
+	text.Draw(screen, playerDefensePowerText, mplusNormalFont, screenWidth-130, 70, color.White)
 
 	// Player Power
 	playerPowerText := fmt.Sprintf("パワー: %2d/%2d", g.state.Player.Power, g.state.Player.MaxPower)
-	text.Draw(screen, playerPowerText, mplusNormalFont, screenWidth-130, 130, color.White)
+	text.Draw(screen, playerPowerText, mplusNormalFont, screenWidth-130, 90, color.White)
 
 	// Player Experience Points
 	playerExpText := fmt.Sprintf("経験値: %3d", g.state.Player.ExperiencePoints)
-	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 150, color.White)
+	text.Draw(screen, playerExpText, mplusNormalFont, screenWidth-130, 110, color.White)
 
 	// Player Cash
 	playerCashText := fmt.Sprintf("所持金：%5d円", g.state.Player.Cash)
-	text.Draw(screen, playerCashText, mplusNormalFont, screenWidth-130, 170, color.White)
+	text.Draw(screen, playerCashText, mplusNormalFont, screenWidth-130, 130, color.White)
 
-	yCoordinate := 190 // Initial Y-coordinate updated to position below the cash text
+	yCoordinate := 110 // Initial Y-coordinate updated to position below the cash text
 
 	for i, equippedItem := range g.state.Player.EquippedItems {
 		equippedItemName := "なし"
@@ -679,8 +763,8 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 		}
 
 		equippedItemText := fmt.Sprintf("装備%d: %s%s", i+1, equippedItemName, sharpnessText) // i+1 to display item number starting from 1
-		text.Draw(screen, equippedItemText, mplusNormalFont, screenWidth-130, yCoordinate, color.White)
-		yCoordinate += 20 // Increment the Y-coordinate to position text below the previous item
+		text.Draw(screen, equippedItemText, mplusMediumFont, 10, yCoordinate, color.White)
+		yCoordinate += 16 // Increment the Y-coordinate to position text below the previous item
 	}
 
 	// Floor level
