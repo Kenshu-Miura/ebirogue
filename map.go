@@ -16,15 +16,28 @@ type Room struct {
 	Center        Coordinate
 }
 
+func getPlayerRoom(playerX, playerY int, rooms []Room) *Room {
+	for _, room := range rooms {
+		if playerX >= room.X && playerX <= room.X+room.Width-1 &&
+			playerY >= room.Y && playerY <= room.Y+room.Height-1 {
+			return &room
+		}
+	}
+	return nil
+}
+
 func (g *Game) updateTileBrightness() {
 	playerX, playerY := g.state.Player.GetPosition()
 	inRoom := isInsideRoom(playerX, playerY, g.rooms)
 
+	playerRoom := getPlayerRoom(playerX, playerY, g.rooms) // プレイヤーの部屋を取得
+
 	for y, row := range g.state.Map {
 		for x, _ := range row {
-			if inRoom {
+			if inRoom && playerRoom != nil {
 				// Check if the tile is in the same room as the player
-				if isInsideRoom(x, y, g.rooms) {
+				if x >= playerRoom.X && x <= playerRoom.X+playerRoom.Width-1 &&
+					y >= playerRoom.Y && y <= playerRoom.Y+playerRoom.Height-1 {
 					g.state.Map[y][x].Brightness = 1.0 // Fully bright
 				} else {
 					g.state.Map[y][x].Brightness = 0.2 // Fully dark
