@@ -28,6 +28,7 @@ func (g *Game) handleStairsPrompt() {
 		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
 			if g.selectedOption == 0 { // "Proceed" is selected
 				mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
+				g.miniMap = nil
 				g.state.Map = mapGrid
 				g.state.Enemies = enemies
 				g.state.Items = items

@@ -14,6 +14,45 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+func (g *Game) updateMiniMap(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+
+	tilePixelSize := 3
+	mapWidth := len(g.state.Map[0])
+	mapHeight := len(g.state.Map)
+	miniMapWidth := mapWidth * tilePixelSize
+	miniMapHeight := mapHeight * tilePixelSize
+
+	// キャッシュされたミニマップイメージを作成または更新
+	if g.miniMap == nil || g.miniMap.Bounds().Dx() != miniMapWidth || g.miniMap.Bounds().Dy() != miniMapHeight {
+		g.miniMap = ebiten.NewImage(miniMapWidth, miniMapHeight)
+	}
+
+	// ミニマップの描画位置を計算
+	miniMapX := screenWidth - miniMapWidth - 10   // 画面の右端から10ピクセルのマージンを持たせる
+	miniMapY := screenHeight - miniMapHeight - 10 // 画面の下端から10ピクセルのマージンを持たせる
+
+	// 訪れたタイルを青色半透明で描画するためのイメージを作成
+	miniMapTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+	miniMapTile.Fill(color.RGBA{0, 0, 255, 128}) // 青色半透明
+
+	// ミニマップを描画
+	for y, row := range g.state.Map {
+		for x, tile := range row {
+			if tile.Visited {
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Translate(float64(x*tilePixelSize), float64(y*tilePixelSize))
+				g.miniMap.DrawImage(miniMapTile, opts)
+			}
+		}
+	}
+
+	// キャッシュされたミニマップイメージをスクリーンに描画
+	opts := &ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(float64(miniMapX), float64(miniMapY))
+	screen.DrawImage(g.miniMap, opts)
+}
+
 func (g *Game) CalculateAnimationOffset(screen *ebiten.Image) (int, int) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	centerX := (screenWidth-tileSize)/2 - tileSize

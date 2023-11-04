@@ -103,62 +103,65 @@ type ThrownItem struct {
 }
 
 type Game struct {
-	state                   GameState
-	rooms                   []Room
-	playerImg               *ebiten.Image
-	ebiImg                  *ebiten.Image
-	snakeImg                *ebiten.Image
-	kaneImg                 *ebiten.Image
-	cardImg                 *ebiten.Image
-	mintiaImg               *ebiten.Image
-	sausageImg              *ebiten.Image
-	tilesetImg              *ebiten.Image
-	weaponImg               *ebiten.Image
-	armorImg                *ebiten.Image
-	arrowImg                *ebiten.Image
-	offsetX                 int
-	offsetY                 int
-	moveCount               int
-	Floor                   int
-	lastIncrement           time.Time
-	lastArrowPress          time.Time // 矢印キーが最後に押された時間を追跡
-	showInventory           bool      // true when the inventory window should be displayed
-	selectedItemIndex       int
-	showItemActions         bool
-	selectedActionIndex     int
-	showDescription         bool
-	showItemDescription     bool
-	itemdescriptionText     string
-	descriptionText         string
-	nextDescriptionTime     time.Time
-	Animating               bool
-	AnimationProgress       float64
-	dx, dy                  int
-	AnimationProgressInt    int
-	frameCount              int
-	tmpPlayerOffsetX        float64 // プレイヤーの一時的なオフセットX
-	tmpPlayerOffsetY        float64 // プレイヤーの一時的なオフセットY
-	attackTimer             float64 // 攻撃メッセージのタイマー
-	ActionQueue             ActionQueue
-	isCombatActive          bool
-	ActionDurationCounter   float64
-	isActioned              bool
-	zPressed                bool
-	xPressed                bool
-	dPressed                bool
-	ShowGroundItem          bool
-	selectedGroundItemIndex int
-	GroundItemActioned      bool
-	isFrontEnemy            bool
-	currentGroundItem       Item
-	ThrownItem              ThrownItem
-	ThrownItemDestination   Coordinate
-	TargetEnemy             *Enemy
-	TargetEnemyIndex        int
-	onEnemyHit              func(Character, Item, int)
-	showStairsPrompt        bool
-	selectedOption          int // 0 for "Proceed", 1 for "Cancel"
-	ignoreStairs            bool
+	state                    GameState
+	rooms                    []Room
+	playerImg                *ebiten.Image
+	ebiImg                   *ebiten.Image
+	snakeImg                 *ebiten.Image
+	kaneImg                  *ebiten.Image
+	cardImg                  *ebiten.Image
+	mintiaImg                *ebiten.Image
+	sausageImg               *ebiten.Image
+	tilesetImg               *ebiten.Image
+	weaponImg                *ebiten.Image
+	armorImg                 *ebiten.Image
+	arrowImg                 *ebiten.Image
+	offsetX                  int
+	offsetY                  int
+	moveCount                int
+	Floor                    int
+	lastIncrement            time.Time
+	lastArrowPress           time.Time // 矢印キーが最後に押された時間を追跡
+	showInventory            bool      // true when the inventory window should be displayed
+	selectedItemIndex        int
+	showItemActions          bool
+	selectedActionIndex      int
+	showDescription          bool
+	showItemDescription      bool
+	itemdescriptionText      string
+	descriptionText          string
+	nextDescriptionTime      time.Time
+	Animating                bool
+	AnimationProgress        float64
+	dx, dy                   int
+	AnimationProgressInt     int
+	frameCount               int
+	tmpPlayerOffsetX         float64 // プレイヤーの一時的なオフセットX
+	tmpPlayerOffsetY         float64 // プレイヤーの一時的なオフセットY
+	attackTimer              float64 // 攻撃メッセージのタイマー
+	ActionQueue              ActionQueue
+	isCombatActive           bool
+	ActionDurationCounter    float64
+	isActioned               bool
+	zPressed                 bool
+	xPressed                 bool
+	dPressed                 bool
+	ShowGroundItem           bool
+	selectedGroundItemIndex  int
+	GroundItemActioned       bool
+	isFrontEnemy             bool
+	currentGroundItem        Item
+	ThrownItem               ThrownItem
+	ThrownItemDestination    Coordinate
+	TargetEnemy              *Enemy
+	TargetEnemyIndex         int
+	onEnemyHit               func(Character, Item, int)
+	showStairsPrompt         bool
+	selectedOption           int // 0 for "Proceed", 1 for "Cancel"
+	ignoreStairs             bool
+	miniMap                  *ebiten.Image // ミニマップのキャッシュ
+	miniMapDirty             bool          // ミニマップが更新される必要があるかどうかを示すフラグ
+	prevPlayerX, prevPlayerY int           // 前のフレームのプレイヤーの座標
 }
 
 func min(a, b int) int {
@@ -271,6 +274,22 @@ func (g *Game) Update() error {
 		}
 	}
 
+	// プレイヤーが移動したかどうかを確認する
+	playerMoved := g.prevPlayerX != g.state.Player.X || g.prevPlayerY != g.state.Player.Y
+
+	// マップが変更されたかどうかを確認する（この例では省略）
+	mapChanged := false
+
+	// プレイヤーが移動したか、マップが変更された場合、
+	// ミニマップを再描画する必要があることを示すフラグを設定します。
+	if playerMoved || mapChanged {
+		g.miniMapDirty = true
+	}
+
+	// プレイヤーの現在の座標を保存する
+	g.prevPlayerX = g.state.Player.X
+	g.prevPlayerY = g.state.Player.Y
+
 	err := g.handleInventoryInput()
 	if err != nil {
 		return err
@@ -341,28 +360,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		text.Draw(screen, "→", mplusNormalFont, cursorX, cursorY, color.White)
 	}
 
-	tilePixelSize := 3
-	mapWidth := len(g.state.Map[0])
-	mapHeight := len(g.state.Map)
-	miniMapWidth := mapWidth * tilePixelSize
-	miniMapHeight := mapHeight * tilePixelSize
+	if g.miniMapDirty {
+		// ミニマップを更新
+		g.updateMiniMap(screen)
+		g.miniMapDirty = false
+	}
 
-	// ミニマップの描画位置を計算
-	miniMapX := screenWidth - miniMapWidth - 10   // 画面の右端から10ピクセルのマージンを持たせる
-	miniMapY := screenHeight - miniMapHeight - 10 // 画面の下端から10ピクセルのマージンを持たせる
+	// キャッシュされたミニマップイメージをスクリーンに描画
+	if g.miniMap != nil {
+		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+		miniMapWidth, miniMapHeight := g.miniMap.Bounds().Dx(), g.miniMap.Bounds().Dy()
+		miniMapX := screenWidth - miniMapWidth - 10   // 画面の右端から10ピクセルのマージンを持たせる
+		miniMapY := screenHeight - miniMapHeight - 10 // 画面の下端から10ピクセルのマージンを持たせる
 
-	// ミニマップを描画
-	for y, row := range g.state.Map {
-		for x, tile := range row {
-			if tile.Visited {
-				// 訪れたタイルを青色半透明で描画
-				miniMapTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
-				miniMapTile.Fill(color.RGBA{0, 0, 255, 128}) // 青色半透明
-				opts := &ebiten.DrawImageOptions{}
-				opts.GeoM.Translate(float64(miniMapX+x*tilePixelSize), float64(miniMapY+y*tilePixelSize))
-				screen.DrawImage(miniMapTile, opts)
-			}
-		}
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(miniMapX), float64(miniMapY))
+		screen.DrawImage(g.miniMap, opts)
 	}
 
 }
