@@ -6,6 +6,23 @@ import (
 	"math/rand"
 )
 
+func (g *Game) updateItemVisibility() {
+	// プレイヤーの座標を取得
+	playerX, playerY := g.state.Player.X, g.state.Player.Y
+
+	// 全てのアイテムに対してループを実行
+	for _, item := range g.state.Items {
+		// アイテムの座標を取得
+		itemX, itemY := item.GetPosition()
+
+		// プレイヤーとアイテムが同じ部屋にあるかどうかを確認
+		if isSameRoom(playerX, playerY, itemX, itemY, g.rooms) {
+			// 同じ部屋にある場合、アイテムのShowOnMiniMapフィールドをtrueに設定
+			item.SetShowOnMiniMap(true)
+		}
+	}
+}
+
 func (g *Game) UpdateThrownItem() {
 	if g.ThrownItem.Image != nil {
 		g.ThrownItem.X += g.ThrownItem.DX
@@ -21,6 +38,7 @@ func (g *Game) UpdateThrownItem() {
 					g.TargetEnemy = nil
 				} else {
 					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+					g.miniMapDirty = true
 				}
 				g.dPressed = false
 				g.ThrownItem = ThrownItem{}

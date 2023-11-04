@@ -277,18 +277,17 @@ func (g *Game) Update() error {
 	// プレイヤーが移動したかどうかを確認する
 	playerMoved := g.prevPlayerX != g.state.Player.X || g.prevPlayerY != g.state.Player.Y
 
-	// マップが変更されたかどうかを確認する（この例では省略）
-	mapChanged := false
-
 	// プレイヤーが移動したか、マップが変更された場合、
 	// ミニマップを再描画する必要があることを示すフラグを設定します。
-	if playerMoved || mapChanged {
+	if playerMoved {
 		g.miniMapDirty = true
 	}
 
 	// プレイヤーの現在の座標を保存する
 	g.prevPlayerX = g.state.Player.X
 	g.prevPlayerY = g.state.Player.Y
+
+	g.updateItemVisibility()
 
 	err := g.handleInventoryInput()
 	if err != nil {

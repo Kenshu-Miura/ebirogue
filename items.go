@@ -2,11 +2,12 @@ package main
 
 type BaseItem struct {
 	Entity
-	ID          int
-	Type        string
-	Name        string
-	Description string
-	UseActions  map[string]UseAction
+	ID            int
+	Type          string
+	Name          string
+	Description   string
+	UseActions    map[string]UseAction
+	ShowOnMiniMap bool
 }
 
 type Weapon struct {

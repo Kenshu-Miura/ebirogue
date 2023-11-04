@@ -72,6 +72,20 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	playerOpts.GeoM.Translate(float64(miniMapPlayerX), float64(miniMapPlayerY))
 	g.miniMap.DrawImage(playerTile, playerOpts)
 
+	// アイテムを青色で描画するためのイメージを作成
+	itemTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+	itemTile.Fill(color.RGBA{0, 255, 255, 128}) // 水色半透明
+
+	// ゲームのアイテムリストをループして、ShowOnMiniMapがtrueのアイテムをミニマップに描画
+	for _, item := range g.state.Items {
+		if item.GetShowOnMiniMap() {
+			itemX, itemY := item.GetPosition()
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Translate(float64(itemX*tilePixelSize), float64(itemY*tilePixelSize))
+			g.miniMap.DrawImage(itemTile, opts)
+		}
+	}
+
 	// キャッシュされたミニマップイメージをスクリーンに描画
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(miniMapX), float64(miniMapY))
