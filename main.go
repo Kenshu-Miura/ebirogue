@@ -37,6 +37,7 @@ type Tile struct {
 	Type       string // タイルの種類（例: "floor", "wall", "water" 等）
 	Blocked    bool   // タイルが通行可能かどうか
 	BlockSight bool   // タイルが視界を遮るかどうか
+	Visited    bool   // プレイヤーがこのタイルを通過したかどうか
 }
 
 type Entity struct {
@@ -251,6 +252,25 @@ func (g *Game) Update() error {
 		}
 	}
 
+	// 現在のタイルを取得
+	currentTile := &g.state.Map[playerY][playerX]
+
+	// プレイヤーがタイルを訪れたことをマーク
+	currentTile.Visited = true
+
+	// プレイヤーが新しい部屋に入ったかどうかを確認
+	for _, room := range g.rooms {
+		if isSameRoom(playerX, playerY, room.Center.X, room.Center.Y, g.rooms) {
+			// プレイヤーが部屋に入ったので、部屋の全てのタイルを訪れたものとしてマーク
+			for y := room.Y; y < room.Y+room.Height; y++ {
+				for x := room.X; x < room.X+room.Width; x++ {
+					g.state.Map[y][x].Visited = true
+				}
+			}
+			break // 一つの部屋しかマークする必要はないので、ループを抜ける
+		}
+	}
+
 	err := g.handleInventoryInput()
 	if err != nil {
 		return err
@@ -320,6 +340,31 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		cursorY := windowY + 25                   // Adjust these values as needed
 		text.Draw(screen, "→", mplusNormalFont, cursorX, cursorY, color.White)
 	}
+
+	tilePixelSize := 3
+	mapWidth := len(g.state.Map[0])
+	mapHeight := len(g.state.Map)
+	miniMapWidth := mapWidth * tilePixelSize
+	miniMapHeight := mapHeight * tilePixelSize
+
+	// ミニマップの描画位置を計算
+	miniMapX := screenWidth - miniMapWidth - 10   // 画面の右端から10ピクセルのマージンを持たせる
+	miniMapY := screenHeight - miniMapHeight - 10 // 画面の下端から10ピクセルのマージンを持たせる
+
+	// ミニマップを描画
+	for y, row := range g.state.Map {
+		for x, tile := range row {
+			if tile.Visited {
+				// 訪れたタイルを青色半透明で描画
+				miniMapTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+				miniMapTile.Fill(color.RGBA{0, 0, 255, 128}) // 青色半透明
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Translate(float64(miniMapX+x*tilePixelSize), float64(miniMapY+y*tilePixelSize))
+				screen.DrawImage(miniMapTile, opts)
+			}
+		}
+	}
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {

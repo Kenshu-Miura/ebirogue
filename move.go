@@ -680,9 +680,7 @@ func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
 	}
 
 	result := room1.ID == room2.ID
-	//if result {
-	//log.Printf("Points are in the same room: %v\n", result) // Log result
-	//}
+
 	return result
 }
 
