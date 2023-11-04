@@ -571,40 +571,51 @@ func (g *Game) DrawThrownItem(screen *ebiten.Image, offsetX, offsetY int) {
 
 func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, item := range g.state.Items {
-		img := g.getItemImage(item)
-		opts := &ebiten.DrawImageOptions{}
 		itemX, itemY := item.GetPosition()
-		opts.GeoM.Translate(float64(itemX*tileSize+offsetX), float64(itemY*tileSize+offsetY))
-		screen.DrawImage(img, opts)
+
+		// Check if the tile at the item's position is fully bright
+		if g.state.Map[itemY][itemX].Brightness == 1.0 {
+			img := g.getItemImage(item)
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Translate(float64(itemX*tileSize+offsetX), float64(itemY*tileSize+offsetY))
+			screen.DrawImage(img, opts)
+		}
 	}
+}
+
+func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
+	var img *ebiten.Image
+	switch enemy.Type {
+	case "Snake":
+		img = g.snakeImg
+	case "Shrimp":
+		img = g.ebiImg
+	}
+	return img
 }
 
 func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 	for i := range g.state.Enemies {
 		enemy := &g.state.Enemies[i]
 
-		// 敵のアニメーションを更新
-		g.UpdateEnemyAnimation(enemy)
+		// Check if the tile at the enemy's position is fully bright
+		if g.state.Map[enemy.Y][enemy.X].Brightness == 1.0 {
 
-		// 敵の描画オフセットを計算
-		enemyOffsetX, enemyOffsetY := g.CalculateEnemyOffset(enemy)
-		enemyOffsetX += int(enemy.OffsetX)
-		enemyOffsetY += int(enemy.OffsetY)
+			// 敵のアニメーションを更新
+			g.UpdateEnemyAnimation(enemy)
 
-		var img *ebiten.Image
-		switch enemy.Type {
-		case "Snake":
-			img = g.snakeImg
-		case "Shrimp":
-			img = g.ebiImg
-		default:
-			img = g.ebiImg
+			// 敵の描画オフセットを計算
+			enemyOffsetX, enemyOffsetY := g.CalculateEnemyOffset(enemy)
+			enemyOffsetX += int(enemy.OffsetX)
+			enemyOffsetY += int(enemy.OffsetY)
+
+			img := g.getEnemyImage(*enemy)
+
+			opts := &ebiten.DrawImageOptions{}
+			// 敵の位置とオフセットを適用して敵を描画
+			opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX+enemyOffsetX), float64(enemy.Y*tileSize+offsetY+enemyOffsetY))
+			screen.DrawImage(img, opts)
 		}
-
-		opts := &ebiten.DrawImageOptions{}
-		// 敵の位置とオフセットを適用して敵を描画
-		opts.GeoM.Translate(float64(enemy.X*tileSize+offsetX+enemyOffsetX), float64(enemy.Y*tileSize+offsetY+enemyOffsetY))
-		screen.DrawImage(img, opts)
 	}
 }
 
