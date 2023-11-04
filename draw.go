@@ -444,8 +444,19 @@ func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 			default:
 				continue
 			}
+
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Translate(float64(x*tileSize+offsetX), float64(y*tileSize+offsetY))
+
+			// ColorScaleのインスタンスを作成
+			var colorScale ebiten.ColorScale
+
+			// Brightnessに基づいて色のスケールを設定
+			colorScale.Scale(float32(tile.Brightness), float32(tile.Brightness), float32(tile.Brightness), 1)
+
+			// ColorScaleを適用
+			opts.ColorScale = colorScale
+
 			screen.DrawImage(g.tilesetImg.SubImage(image.Rect(srcX, srcY, srcX+tileSize, srcY+tileSize)).(*ebiten.Image), opts)
 		}
 	}

@@ -36,6 +36,7 @@ type Tile struct {
 	Blocked    bool   // タイルが通行可能かどうか
 	BlockSight bool   // タイルが視界を遮るかどうか
 	Visited    bool   // プレイヤーがこのタイルを通過したかどうか
+	Brightness float64
 }
 
 type Entity struct {
@@ -280,6 +281,8 @@ func (g *Game) Update() error {
 	g.HandleActionQueue()
 
 	g.CheckCombatState()
+
+	g.updateTileBrightness()
 
 	g.checkForStairs()
 	g.handleStairsPrompt()

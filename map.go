@@ -16,6 +16,42 @@ type Room struct {
 	Center        Coordinate
 }
 
+func (g *Game) updateTileBrightness() {
+	playerX, playerY := g.state.Player.GetPosition()
+	inRoom := isInsideRoom(playerX, playerY, g.rooms)
+
+	for y, row := range g.state.Map {
+		for x, _ := range row {
+			if inRoom {
+				// Check if the tile is in the same room as the player
+				if isInsideRoom(x, y, g.rooms) {
+					g.state.Map[y][x].Brightness = 1.0 // Fully bright
+				} else {
+					g.state.Map[y][x].Brightness = 0.2 // Fully dark
+				}
+			} else {
+				// Check if the tile is adjacent to the player
+				adjacent := (math.Abs(float64(playerX-x)) <= 1 && math.Abs(float64(playerY-y)) <= 1)
+				if adjacent {
+					g.state.Map[y][x].Brightness = 1.0 // Fully bright
+				} else {
+					g.state.Map[y][x].Brightness = 0.2 // Fully dark
+				}
+			}
+		}
+	}
+}
+
+func isInsideRoom(x, y int, rooms []Room) bool {
+	for _, room := range rooms {
+		if x > room.X && x < room.X+room.Width-1 &&
+			y > room.Y && y < room.Y+room.Height-1 {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *Game) MarkVisitedTiles(playerX, playerY int) {
 	// 現在のタイルを取得
 	currentTile := &g.state.Map[playerY][playerX]
