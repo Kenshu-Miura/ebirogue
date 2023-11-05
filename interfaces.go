@@ -195,3 +195,9 @@ func (m *Money) Use(g *Game) {
 		action(g)
 	}
 }
+
+func (t *Trap) Use(g *Game) {
+	if action, exists := t.UseActions["SetTrap"]; exists {
+		action(g)
+	}
+}

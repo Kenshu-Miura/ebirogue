@@ -64,6 +64,7 @@ type Player struct {
 	Direction        Direction // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
 	EquippedItems    [5]Item   // Array to hold equipped items
 	Cash             int       // 所持金
+	SetTrap          Item      // トラップを設置する
 }
 
 type Coordinate struct {

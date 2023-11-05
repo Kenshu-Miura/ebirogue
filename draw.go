@@ -6,6 +6,7 @@ import (
 	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math"
+	"strings"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -764,8 +765,17 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 		equippedItemText := fmt.Sprintf("装備%d: %s%s", i+1, equippedItemName, sharpnessText) // i+1 to display item number starting from 1
 		text.Draw(screen, equippedItemText, mplusMediumFont, 10, yCoordinate, color.White)
-		yCoordinate += 16 // Increment the Y-coordinate to position text below the previous item
+		yCoordinate += 15 // Increment the Y-coordinate to position text below the previous item
 	}
+
+	// Player Traps
+	playerTrapName := "なし"
+	if g.state.Player.SetTrap != nil {
+		playerTrapName = g.state.Player.SetTrap.GetName()
+		playerTrapName = strings.ReplaceAll(playerTrapName, "のカード", "") // "のカード" を空の文字列で置き換え
+	}
+	playerTrapText := fmt.Sprintf("罠: %s", playerTrapName)
+	text.Draw(screen, playerTrapText, mplusMediumFont, 10, 190, color.White)
 
 	// Floor level
 	floorText := fmt.Sprintf("階層: B%dF", g.Floor)

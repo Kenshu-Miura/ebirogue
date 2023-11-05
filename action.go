@@ -72,6 +72,8 @@ func (g *Game) executeAction() {
 			cardItem.Use(g)
 		} else if moneyItem, ok := item.(*Money); ok {
 			moneyItem.Use(g)
+		} else if trapItem, ok := item.(*Trap); ok {
+			trapItem.Use(g)
 		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
 			itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type

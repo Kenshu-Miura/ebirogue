@@ -59,9 +59,13 @@ type Cane struct {
 	BaseItem
 }
 
+type Trap struct {
+	BaseItem
+}
+
 func createItem(x, y int) Item {
 	var item Item
-	randomValue := localRand.Intn(8) // Store the random value to ensure it's only generated once
+	randomValue := localRand.Intn(9) // Store the random value to ensure it's only generated once
 	sharpnessValue := localRand.Intn(5) - 1
 	switch randomValue {
 	case 0:
@@ -202,7 +206,7 @@ func createItem(x, y int) Item {
 			AttackPower: 5,
 		}
 
-	default:
+	case 7:
 		item = &Card{
 			BaseItem: BaseItem{
 				Entity: Entity{
@@ -216,6 +220,24 @@ func createItem(x, y int) Item {
 				Description: "魔法カード。眼の前の敵に30ダメージを与える。",
 				UseActions: map[string]UseAction{
 					"UseCard": damageHP30,
+				},
+			},
+		}
+
+	case 8:
+		item = &Trap{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          8,
+				Type:        "Card",
+				Name:        "炸裂装甲のカード",
+				Description: "罠カード。攻撃を行った敵を破壊する",
+				UseActions: map[string]UseAction{
+					"SetTrap": setTrap,
 				},
 			},
 		}

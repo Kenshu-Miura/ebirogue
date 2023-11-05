@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var restoreSatiety50 = func(g *Game) {
 	action := Action{
@@ -178,6 +180,19 @@ var money = func(g *Game) {
 		Message:  fmt.Sprintf("%dを入手した。", moneyItem.Amount),
 		Execute: func(g *Game) {
 			g.state.Player.Cash += moneyItem.Amount
+		},
+	}
+	g.Enqueue(action)
+	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+}
+
+var setTrap = func(g *Game) {
+	trapItem := g.state.Player.Inventory[g.selectedItemIndex].(*Trap)
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sをセットした。", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Execute: func(g *Game) {
+			g.state.Player.SetTrap = trapItem // Set the trap
 		},
 	}
 	g.Enqueue(action)

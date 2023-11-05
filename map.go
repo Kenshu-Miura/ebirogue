@@ -33,7 +33,7 @@ func (g *Game) updateTileBrightness() {
 	playerRoom := getPlayerRoom(playerX, playerY, g.rooms) // プレイヤーの部屋を取得
 
 	for y, row := range g.state.Map {
-		for x, _ := range row {
+		for x := range row {
 			if inRoom && playerRoom != nil {
 				// Check if the tile is in the same room as the player
 				if x >= playerRoom.X && x <= playerRoom.X+playerRoom.Width-1 &&
@@ -488,7 +488,7 @@ func setRoomCenter(room *Room) {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		for {
