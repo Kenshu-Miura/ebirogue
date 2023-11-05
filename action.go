@@ -244,6 +244,41 @@ func (aq *ActionQueue) Enqueue(action Action) {
 func (g *Game) AttackFromEnemy(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 
+	if trap := g.state.Player.SetTrap; trap != nil && trap.GetName() == "炸裂装甲のカード" {
+		// If the player has set a trap and it is the '炸裂装甲のカード', the trap will be triggered
+		action := Action{
+			Duration: 0.5,
+			Message:  fmt.Sprintf("%sの攻撃。", enemy.Name),
+			Execute:  func(g *Game) {},
+		}
+		g.Enqueue(action)
+
+		action = Action{
+			Duration: 0.5,
+			Message:  fmt.Sprintf("罠カード、%sが発動した。", trap.GetName()),
+			Execute:  func(g *Game) {},
+		}
+		g.Enqueue(action)
+
+		defeatAction := Action{
+			Duration: 0.5,
+			Message:  fmt.Sprintf("%sを倒した。", enemy.Name),
+			Execute: func(g *Game) {
+				g.state.Enemies = append(g.state.Enemies[:enemyIndex], g.state.Enemies[enemyIndex+1:]...)
+
+				// 敵の経験値をプレイヤーの所持経験値に加える
+				g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+
+				g.state.Player.checkLevelUp() // レベルアップをチェック
+
+				// トラップをリセットする (オプショナル)
+				g.state.Player.SetTrap = nil
+			},
+		}
+		g.Enqueue(defeatAction)
+		return
+	}
+
 	// Generate a random float number between 0 and 1 to compare with specialAttackProbability
 	randomValue := rand.Float64()
 
