@@ -441,7 +441,16 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				itemName := getItemNameWithSharpness(item)
+				// Identifiableインターフェースが実装されているかチェック
+				var itemName string
+				if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
+					// アイテムが識別されていない場合は、基本的な名前を使用
+					itemName = identifiableItem.GetName()
+				} else {
+					// それ以外の場合は、Sharpnessを含む名前を使用
+					itemName = getItemNameWithSharpness(item)
+				}
+
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{

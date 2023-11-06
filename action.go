@@ -109,6 +109,7 @@ func (g *Game) executeAction() {
 				// Equip the item
 				message = fmt.Sprintf("%sを装備した。", itemName)
 				equipableItem.UpdatePlayerStats(&g.state.Player, true)   // Update player's stats when equipping
+				equipableItem.SetIdentified(true)                        // Set the item as identified when equipping
 				g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
 			}
 

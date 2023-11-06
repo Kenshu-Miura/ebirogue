@@ -123,7 +123,17 @@ func (b *BaseItem) GetShowOnMiniMap() bool {
 // Equipable interface
 type Equipable interface {
 	Item                                          // Embed the Item interface
+	Identifiable                                  // Embed the Identifiable interface
 	UpdatePlayerStats(player *Player, equip bool) // Method to update player stats when equipping/unequipping
+	SetIdentified(value bool)                     // Method to set the identified status of the item
+}
+
+func (w *Weapon) SetIdentified(value bool) {
+	w.Identified = value
+}
+
+func (a *Armor) SetIdentified(value bool) {
+	a.Identified = value
 }
 
 func (bi BaseItem) GetID() int {
