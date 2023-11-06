@@ -27,19 +27,59 @@ func (g *Game) UpdateThrownItem() {
 	if g.ThrownItem.Image != nil {
 		g.ThrownItem.X += g.ThrownItem.DX
 		g.ThrownItem.Y += g.ThrownItem.DY
-		// 必要に応じてアイテムが目的地に到達したかどうかをチェックし、到達したらリストから削除
-		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) || (g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
-			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) || (g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
+		// Check if the item has reached its destination
+		if (g.ThrownItem.DX >= 0 && g.ThrownItem.X*tileSize >= g.ThrownItemDestination.X*tileSize) ||
+			(g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
+			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) ||
+				(g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
 				if g.TargetEnemy != nil {
-					// 敵にアイテムが当たった時の処理を実行
-					if g.onEnemyHit != nil {
-						g.onEnemyHit(g.TargetEnemy, g.ThrownItem.Item, g.TargetEnemyIndex) // g.TargetEnemyIndexは敵のインデックスを指定する仮定の変数です
-					}
-					g.TargetEnemy = nil
+					// Execute hit enemy logic
 				} else {
-					g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+					itemExists := false
+					for _, item := range g.state.Items {
+						x, y := item.GetPosition()
+						if x == g.ThrownItem.X && y == g.ThrownItem.Y {
+							itemExists = true
+							break
+						}
+					}
+
+					if itemExists {
+						// Check surrounding tiles for placement
+						directions := []Coordinate{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}
+						placed := false
+						for _, dir := range directions {
+							newX := g.ThrownItem.X + dir.X
+							newY := g.ThrownItem.Y + dir.Y
+							// Check map boundaries and tile type
+							if newX >= 0 && newY >= 0 && newX < len(g.state.Map[0]) && newY < len(g.state.Map) &&
+								g.state.Map[newY][newX].Type != "wall" {
+								emptyTile := true
+								for _, item := range g.state.Items {
+									x, y := item.GetPosition()
+									if x == newX && y == newY {
+										emptyTile = false
+										break
+									}
+								}
+								if emptyTile {
+									g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+									g.ThrownItem.Item.SetPosition(newX, newY)
+									placed = true
+									break
+								}
+							}
+						}
+						if !placed {
+							// If no empty tile, do not place the item
+						}
+					} else {
+						// Place the item normally if no item exists at the destination
+						g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+					}
 					g.miniMapDirty = true
 				}
+				// Reset the thrown item and its destination
 				g.dPressed = false
 				g.ThrownItem = ThrownItem{}
 				g.ThrownItemDestination = Coordinate{}
