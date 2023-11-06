@@ -376,6 +376,13 @@ func getItemNameWithSharpness(item Item) string {
 		return ""
 	}
 
+	// Check if the item implements the Identifiable interface and is not identified
+	if identifiable, ok := item.(Identifiable); ok && !identifiable.IsIdentified() {
+		// For unidentified items, return the base name without sharpness
+		return identifiable.GetName()
+	}
+
+	// Process identified items normally
 	switch item := item.(type) {
 	case *Weapon:
 		return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
@@ -441,15 +448,8 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				// Identifiableインターフェースが実装されているかチェック
-				var itemName string
-				if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
-					// アイテムが識別されていない場合は、基本的な名前を使用
-					itemName = identifiableItem.GetName()
-				} else {
-					// それ以外の場合は、Sharpnessを含む名前を使用
-					itemName = getItemNameWithSharpness(item)
-				}
+				// それ以外の場合は、Sharpnessを含む名前を使用
+				itemName := getItemNameWithSharpness(item)
 
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {

@@ -76,6 +76,7 @@ func (g *Game) executeAction() {
 			trapItem.Use(g)
 		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
+			equipableItem.SetIdentified(true)                   // Set the item as identified when equipping
 			itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
 
 			// Find an empty slot or use the last slot
