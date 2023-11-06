@@ -385,7 +385,18 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 
 	if len(g.state.Player.Inventory) > 0 {
 		for i, item := range g.state.Player.Inventory {
-			itemText := getItemNameWithSharpness(item)
+			// アイテムが識別されているかどうかを判断し、表示するテキストを設定
+			var itemText string
+			var textColor color.Color = color.White // デフォルトのテキストカラーは白
+			if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
+				// アイテムが識別されていなければ、GetName()を使って名前を取得し、テキストカラーを黄色に設定
+				itemText = identifiableItem.GetName()
+				textColor = color.RGBA{0xff, 0xff, 0x00, 0xff} // 黄色
+			} else {
+				// アイテムが識別されているか、識別可能な型ではない場合はSharpnessを含む名前を取得
+				itemText = getItemNameWithSharpness(item)
+			}
+
 			// 現在の列と行の計算
 			column := i / itemsPerColumn
 			row := i % itemsPerColumn
@@ -394,7 +405,7 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 			x := windowX + 30 + column*columnWidth
 			y := windowY + 30 + row*25
 
-			text.Draw(screen, itemText, mplusNormalFont, x, y, color.White)
+			text.Draw(screen, itemText, mplusNormalFont, x, y, textColor) // 色を変更
 
 			// Check if the item is equipped and draw "E" if it is
 			if equipableItem, ok := item.(Equipable); ok {

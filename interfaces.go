@@ -154,6 +154,19 @@ func (bi *BaseItem) SetPosition(x, y int) {
 	bi.X, bi.Y = x, y
 }
 
+type Identifiable interface {
+	IsIdentified() bool
+	GetName() string
+}
+
+func (w *Weapon) IsIdentified() bool {
+	return w.Identified
+}
+
+func (a *Armor) IsIdentified() bool {
+	return a.Identified
+}
+
 func (c *Weapon) Use(g *Game) {
 	if action, exists := c.UseActions["WeaponEffect"]; exists {
 		action(g)

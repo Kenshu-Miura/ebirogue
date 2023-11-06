@@ -16,6 +16,7 @@ type Weapon struct {
 	Sharpness   int    // 例: 0-100の範囲で切れ味を表現
 	Element     string // 例: "Fire", "Ice", "Electric", etc.
 	Cursed      bool   // 武器が呪われているかどうか
+	Identified  bool   // 武器が識別されているかどうか
 }
 
 type Armor struct {
@@ -24,6 +25,7 @@ type Armor struct {
 	Sharpness    int
 	Element      string
 	Cursed       bool
+	Identified   bool // 鎧が識別されているかどうか
 }
 
 type Arrow struct {
