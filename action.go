@@ -174,30 +174,63 @@ func (g *Game) executeAction() {
 
 	if g.selectedActionIndex == 1 { // Assuming index 1 corresponds to '投げる'
 		item := g.state.Player.Inventory[g.selectedItemIndex]
-		throwRange := 10
-		character := &g.state.Player
-		mapState := g.state.Map
-		enemies := g.state.Enemies
+		itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
+		isCursedEquipped := false
 
-		onWallHit := func(item Item, position Coordinate, itemIndex int) {
-			g.onWallHit(item, position, itemIndex)
-		}
-
-		onTargetHit := func(target Character, item Item, index int) {
-			g.onTargetHit(target, item, index)
-		}
-
-		// Type assertion to check if item is Equipable
+		// Type assertion to check if item is Equipable and if it's cursed
 		if equipableItem, ok := item.(Equipable); ok {
-			// Check if the item is equipped
-			index := getEquippedIndex(g.state.Player.EquippedItems[:], equipableItem)
-			if index != -1 {
-				// If it is equipped, remove it from the equipped items list
-				g.state.Player.EquippedItems[index] = nil
+			for i, equippedItem := range g.state.Player.EquippedItems {
+				if equippedItem == equipableItem {
+					switch v := equipableItem.(type) {
+					case *Weapon:
+						if v.Cursed {
+							isCursedEquipped = true
+						}
+					case *Armor:
+						if v.Cursed {
+							isCursedEquipped = true
+						}
+					}
+					if isCursedEquipped {
+						// If the item is cursed and equipped, do not throw and enqueue an action with a message that it cannot be thrown
+						action := Action{
+							Duration: 0.4,
+							Message:  fmt.Sprintf("%sは呪われていて投げられない", itemName),
+							Execute: func(g *Game) {
+								// Any additional logic if needed
+								g.showItemActions = false
+								g.showInventory = false
+								g.selectedItemIndex = 0
+								g.selectedActionIndex = 0
+							},
+						}
+						g.Enqueue(action)
+						break
+					}
+					// If it is equipped and not cursed, remove it from the equipped items list
+					g.state.Player.EquippedItems[i] = nil
+					break
+				}
 			}
 		}
 
-		g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+		if !isCursedEquipped {
+			throwRange := 10
+			character := &g.state.Player
+			mapState := g.state.Map
+			enemies := g.state.Enemies
+
+			onWallHit := func(item Item, position Coordinate, itemIndex int) {
+				g.onWallHit(item, position, itemIndex)
+			}
+
+			onTargetHit := func(target Character, item Item, index int) {
+				g.onTargetHit(target, item, index)
+			}
+
+			// Continue with the throwing logic if the item is not cursed and equipped
+			g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+		}
 	}
 
 	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
