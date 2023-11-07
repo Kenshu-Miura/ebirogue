@@ -102,10 +102,28 @@ func (g *Game) executeAction() {
 			}
 
 			if alreadyEquipped {
-				// Unequip the item
-				message = fmt.Sprintf("%sをはずした。", itemName)
-				equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
-				g.state.Player.EquippedItems[equipIndex] = nil          // Remove item from equipped items
+				// Check if the equipped item is cursed
+				isCursed := false
+				switch v := equipableItem.(type) {
+				case *Weapon:
+					if v.Cursed {
+						isCursed = true
+					}
+				case *Armor:
+					if v.Cursed {
+						isCursed = true
+					}
+				}
+
+				if isCursed {
+					// If the item is cursed, update the message and do not unequip
+					message = fmt.Sprintf("%sをはずせない。", itemName)
+				} else {
+					// Unequip the item
+					message = fmt.Sprintf("%sをはずした。", itemName)
+					equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
+					g.state.Player.EquippedItems[equipIndex] = nil          // Remove item from equipped items
+				}
 			} else {
 				// Equip the item
 				message = fmt.Sprintf("%sを装備した。", itemName)
@@ -122,6 +140,30 @@ func (g *Game) executeAction() {
 				},
 			}
 			g.Enqueue(action)
+			// Check if the item is cursed after equipping
+			cursedMessage := ""
+			switch v := equipableItem.(type) {
+			case *Weapon:
+				if v.Cursed {
+					cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
+				}
+			case *Armor:
+				if v.Cursed {
+					cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
+				}
+			}
+
+			// If the item is cursed, enqueue the cursed message
+			if cursedMessage != "" {
+				cursedAction := Action{
+					Duration: 0.5,
+					Message:  cursedMessage,
+					Execute: func(g *Game) {
+						// This can be left empty if no additional behavior is needed other than displaying the message
+					},
+				}
+				g.Enqueue(cursedAction)
+			}
 		}
 
 		g.showItemActions = false
