@@ -211,7 +211,43 @@ func (g *Game) executeAction() {
 			}
 		}
 		itemName := getItemNameWithSharpness(g.state.Player.Inventory[g.selectedItemIndex])
-		if !itemExistsAtPlayerPos {
+		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
+
+		// Check if the item is cursed and equipped
+		isCursedEquipped := false
+		if equipableItem, ok := selectedItem.(Equipable); ok {
+			for _, equippedItem := range g.state.Player.EquippedItems {
+				if equippedItem == equipableItem {
+					// Type assertion to Weapon or Armor to access Cursed property
+					switch v := equipableItem.(type) {
+					case *Weapon:
+						if v.Cursed {
+							isCursedEquipped = true
+						}
+					case *Armor:
+						if v.Cursed {
+							isCursedEquipped = true
+						}
+					}
+					break
+				}
+			}
+		}
+
+		if isCursedEquipped {
+			// If the item is cursed and equipped, enqueue an action with a message that it cannot be placed
+			action := Action{
+				Duration: 0.4,
+				Message:  fmt.Sprintf("%sは呪われていて置けない", itemName),
+				Execute: func(g *Game) {
+					g.selectedItemIndex = 0
+					g.selectedActionIndex = 0
+					g.showItemActions = false
+					g.showInventory = false
+				},
+			}
+			g.Enqueue(action)
+		} else if !itemExistsAtPlayerPos {
 			action := Action{
 				Duration: 0.4, // Assuming a duration of 0.5 seconds for this action
 				Message:  fmt.Sprintf("%sを置いた", itemName),
@@ -253,7 +289,6 @@ func (g *Game) executeAction() {
 					g.selectedActionIndex = 0
 					g.showItemActions = false
 					g.showInventory = false
-					g.isActioned = true
 				},
 			}
 			g.Enqueue(action)
