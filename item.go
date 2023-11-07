@@ -404,25 +404,66 @@ func (g *Game) executeItemSwap() {
 		itemX, itemY := item.GetPosition()
 		if itemX == playerX && itemY == playerY {
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
+			itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
+			selectedItemName := getItemNameWithSharpness(selectedInventoryItem)
+			isCursedEquipped := false
 
-			itemName := getItemNameWithSharpness(item)
-			selecteditemName := getItemNameWithSharpness(selectedInventoryItem)
-
-			action := Action{
-				Duration: 0.5,
-				Message:  fmt.Sprintf("%sと%sを交換しました", itemName, selecteditemName),
-				Execute: func(g *Game) {
-					// Set the position of the selected inventory item to the player's position
-					selectedInventoryItem.SetPosition(playerX, playerY)
-					// Swap the positions of the items
-					g.state.Items[i] = selectedInventoryItem
-					g.state.Player.Inventory[g.selectedItemIndex] = item
-					g.selectedItemIndex = 0
-					g.isActioned = true
-				},
+			// Check if the selected inventory item is Equipable and cursed
+			if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
+				for _, equippedItem := range g.state.Player.EquippedItems {
+					if equippedItem == equipableItem {
+						switch v := equipableItem.(type) {
+						case *Weapon:
+							if v.Cursed {
+								isCursedEquipped = true
+							}
+						case *Armor:
+							if v.Cursed {
+								isCursedEquipped = true
+							}
+						}
+						break
+					}
+				}
 			}
 
-			g.ActionQueue.Enqueue(action)
+			if isCursedEquipped {
+				// If the selected inventory item is cursed and equipped, do not swap and enqueue an action with a message that it cannot be swapped
+				action := Action{
+					Duration: 0.4,
+					Message:  fmt.Sprintf("%sは呪われていて交換できない", selectedItemName),
+					Execute: func(g *Game) {
+						// Any additional logic if needed
+						g.selectedItemIndex = 0
+					},
+				}
+				g.ActionQueue.Enqueue(action)
+			} else {
+				// If the item is not cursed or not equipped, proceed with the swap
+				action := Action{
+					Duration: 0.5,
+					Message:  fmt.Sprintf("%sと%sを交換しました", itemName, selectedItemName),
+					Execute: func(g *Game) {
+						// Check if the item is equipped and unequip if necessary
+						if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
+							for i, equippedItem := range g.state.Player.EquippedItems {
+								if equippedItem == equipableItem {
+									g.state.Player.EquippedItems[i] = nil
+									equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
+									break
+								}
+							}
+						}
+						// Swap the positions of the items
+						selectedInventoryItem.SetPosition(playerX, playerY)
+						g.state.Items[i] = selectedInventoryItem
+						g.state.Player.Inventory[g.selectedItemIndex] = item
+						g.selectedItemIndex = 0
+						g.isActioned = true
+					},
+				}
+				g.ActionQueue.Enqueue(action)
+			}
 			break
 		}
 	}
