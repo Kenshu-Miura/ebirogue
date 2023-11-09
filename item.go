@@ -489,32 +489,45 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				// それ以外の場合は、Sharpnessを含む名前を使用
-				itemName := getItemNameWithSharpness(item)
+				// アイテムが識別されているかどうかをチェック
+				identified := true
+				var itemName string
+				if identifiableItem, ok := item.(Identifiable); ok {
+					identified = identifiableItem.IsIdentified()
+					// 識別されていない場合は識別されていないアイテム名を取得
+					if !identified {
+						itemName = identifiableItem.GetName()
+					}
+				}
+
+				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+				if identified {
+					itemName = getItemNameWithSharpness(item)
+				}
+				message := fmt.Sprintf("%sを拾った", itemName) // メッセージ全体を作成
+
+				//log.Printf("Picked up %s", itemName)
+				//log.Printf("message: %s", message)
 
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{
-						Duration: 0.3,
-						Message:  fmt.Sprintf("%sを拾った", itemName),
-						Execute: func(g *Game) {
-							g.PickUpItem(item, i)
-						},
+						Duration:     0.3,
+						Message:      message,
+						ItemName:     itemName,
+						Execute:      func(g *Game) { g.PickUpItem(item, i) },
+						IsIdentified: identified,
 					}
-
 					g.Enqueue(action)
 					break // 一致するアイテムが見つかったらループを終了
 				} else {
 					action := Action{
 						Duration: 0.5,
 						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName),
-						Execute: func(g *Game) {
-
-						},
+						Execute:  func(g *Game) {},
 					}
 					g.Enqueue(action)
 				}
-
 			}
 		}
 	} else {

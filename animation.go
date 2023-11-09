@@ -75,14 +75,21 @@ func (g *Game) HandleEnemyAttackTimers() {
 func (g *Game) HandleActionQueue() {
 	if len(g.ActionQueue.Queue) > 0 {
 		if g.ActionDurationCounter <= 0 {
+			//log.Printf("g.ActionQueue.Queue: %v", g.ActionQueue.Queue)
 			action := g.ActionQueue.Queue[0]
-			g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
+			//g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
 			g.processAction(action)
 		}
 	}
 
+	//log.Printf("g.ActionDurationCounter: %f", g.ActionDurationCounter)
+
 	if g.ActionDurationCounter > 0 {
 		g.ActionDurationCounter -= (1 / 60.0) // decrement the counter every frame
+	}
+
+	if g.ActionQueue.Queue != nil && len(g.ActionQueue.Queue) > 0 && g.ActionDurationCounter <= 0 {
+		g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
 	}
 
 	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive && g.ActionDurationCounter <= 0 {

@@ -224,6 +224,7 @@ func (g *Game) ManageDescriptions() {
 
 	if len(g.ActionQueue.Queue) > 0 {
 		action := g.ActionQueue.Queue[0]
+		//log.Printf("Managing description for action: %+v", action) // Add this line to log
 
 		if action.Message != "" {
 			g.descriptionText = action.Message
@@ -244,8 +245,39 @@ func (g *Game) DrawDescriptions(screen *ebiten.Image) {
 
 		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight, 127)
 
-		// Draw description text
-		text.Draw(screen, g.descriptionText, mplusNormalFont, windowX+10, windowY+20, color.White)
+		// アクションを取得
+		var action Action
+		if len(g.ActionQueue.Queue) > 0 {
+			action = g.ActionQueue.Queue[0]
+		}
+
+		// 描画するテキストの基本位置
+		x := windowX + 10
+		y := windowY + 20
+
+		// アイテム名の色を設定
+		var itemNameColor color.Color // color.Color インターフェースを使う
+		itemNameColor = color.White   // 初期値は白色
+		if !action.IsIdentified {
+			itemNameColor = color.RGBA{R: 255, G: 255, B: 0, A: 255} // 未識別は黄色
+		}
+
+		// アイテム名を描画
+		text.Draw(screen, action.ItemName, mplusNormalFont, x, y, itemNameColor)
+
+		// アイテム名の幅を取得
+		var dr font.Drawer
+		dr.Face = mplusNormalFont // 'mplusNormalFont' should be the font face you're using
+		bounds, _ := dr.BoundString(action.ItemName)
+		itemNameWidth := (bounds.Max.X - bounds.Min.X).Ceil()
+
+		// アイテム名と残りのメッセージの間にスペースを追加
+		x += itemNameWidth + 10 // 10ピクセルのスペースを追加
+
+		// 残りのメッセージを描画
+		// アイテム名をメッセージから取り除いてから残りを描画
+		remainingMessage := strings.TrimPrefix(action.Message, action.ItemName)
+		text.Draw(screen, remainingMessage, mplusNormalFont, x, y, color.White)
 	}
 }
 

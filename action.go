@@ -337,6 +337,7 @@ func (g *Game) executeAction() {
 }
 
 func (g *Game) Enqueue(action Action) {
+	//log.Printf("Enqueuing action: %+v", action) // ログ出力を追加
 	g.isCombatActive = true
 	g.ActionQueue.Queue = append(g.ActionQueue.Queue, action)
 }
