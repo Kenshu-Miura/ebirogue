@@ -32,6 +32,8 @@ type Arrow struct {
 	BaseItem
 	ShotCount   int
 	AttackPower int
+	Cursed      bool
+	Identified  bool // 矢が識別されているかどうか
 }
 
 type Food struct {
@@ -55,6 +57,8 @@ type Money struct {
 
 type Accessory struct {
 	BaseItem
+	Cursed     bool
+	Identified bool // 矢が識別されているかどうか
 }
 
 type Cane struct {
@@ -207,6 +211,8 @@ func createItem(x, y int) Item {
 			},
 			ShotCount:   localRand.Intn(11) + 5, // Generates a random number between 5 and 15
 			AttackPower: 5,
+			Cursed:      false,
+			Identified:  true,
 		}
 
 	case 7:
