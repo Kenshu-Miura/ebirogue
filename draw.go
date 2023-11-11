@@ -7,7 +7,6 @@ import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"math"
 	"strings"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -214,13 +213,6 @@ func (g *Game) CalculateEnemyOffset(enemy *Enemy) (int, int) {
 }
 
 func (g *Game) ManageDescriptions() {
-	now := time.Now()
-	if g.nextDescriptionTime.IsZero() {
-		g.nextDescriptionTime = now
-	}
-	if now.Before(g.nextDescriptionTime) {
-		return
-	}
 
 	if len(g.ActionQueue.Queue) > 0 {
 		action := g.ActionQueue.Queue[0]
@@ -230,7 +222,6 @@ func (g *Game) ManageDescriptions() {
 			g.showDescription = true
 		}
 
-		g.nextDescriptionTime = now.Add(time.Duration(action.Duration * float64(time.Second)))
 	} else {
 		g.showDescription = false
 	}
@@ -244,8 +235,51 @@ func (g *Game) DrawDescriptions(screen *ebiten.Image) {
 
 		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight, 127)
 
-		// Draw description text
-		text.Draw(screen, g.descriptionText, mplusNormalFont, windowX+10, windowY+20, color.White)
+		// アクションを取得
+		var action Action
+		if len(g.ActionQueue.Queue) > 0 {
+			action = g.ActionQueue.Queue[0]
+		}
+
+		// 描画するテキストの基本位置
+		x := windowX + 10
+		y := windowY + 20
+
+		// アイテム名の色を設定
+		var itemNameColor color.Color
+		itemNameColor = color.White
+		if !action.IsIdentified {
+			itemNameColor = color.RGBA{R: 255, G: 255, B: 0, A: 255} // 未識別は黄色
+		}
+
+		var dr font.Drawer
+		dr.Face = mplusNormalFont
+
+		if action.ItemName != "" {
+			// アイテム名を含むメッセージを処理
+			parts := strings.Split(action.Message, action.ItemName)
+			firstPart := parts[0]
+			secondPart := ""
+			if len(parts) > 1 {
+				secondPart = parts[1]
+			}
+
+			// 最初の部分を描画
+			text.Draw(screen, firstPart, mplusNormalFont, x, y, color.White)
+			bounds, _ := dr.BoundString(firstPart)
+			x += (bounds.Max.X - bounds.Min.X).Ceil() + 5 // 5ピクセルのスペースを追加
+
+			// アイテム名を描画
+			text.Draw(screen, action.ItemName, mplusNormalFont, x, y, itemNameColor)
+			bounds, _ = dr.BoundString(action.ItemName)
+			x += (bounds.Max.X - bounds.Min.X).Ceil() + 5 // 5ピクセルのスペースを追加
+
+			// 2番目の部分を描画
+			text.Draw(screen, secondPart, mplusNormalFont, x, y, color.White)
+		} else {
+			// アイテム名がない場合はそのままメッセージを描画
+			text.Draw(screen, action.Message, mplusNormalFont, x, y, color.White)
+		}
 	}
 }
 
@@ -313,12 +347,36 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 		// Draw item name window
 		drawWindowWithBorder(screen, itemwindowX, itemwindowY, itemWindowWidth, itemWindowHeight, 127)
 		if g.currentGroundItem != nil {
-
 			groundItemName := getItemNameWithSharpness(g.currentGroundItem)
 
-			// Draw item name
-			itemtext := fmt.Sprintf("%sが落ちている", groundItemName)
-			text.Draw(screen, itemtext, mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
+			// アイテムが識別されているかチェック
+			identified := true
+			if identifiableItem, ok := g.currentGroundItem.(Identifiable); ok {
+				identified = identifiableItem.IsIdentified()
+			}
+
+			// テキストの描画位置
+			x := itemwindowX + 10
+			y := itemwindowY + 20
+
+			var itemNameColor color.Color
+			if identified {
+				itemNameColor = color.White
+			} else {
+				itemNameColor = color.RGBA{R: 255, G: 255, B: 0, A: 255} // 未識別は黄色
+			}
+
+			// アイテム名を描画
+			text.Draw(screen, groundItemName, mplusNormalFont, x, y, itemNameColor)
+
+			// アイテム名の幅を取得して、xの位置を調整
+			var dr font.Drawer
+			dr.Face = mplusNormalFont
+			bounds, _ := dr.BoundString(groundItemName)
+			x += (bounds.Max.X - bounds.Min.X).Ceil() + 5 // 5ピクセルのスペースを追加
+
+			// 「が落ちている」の部分を描画
+			text.Draw(screen, "が落ちている", mplusNormalFont, x, y, color.White)
 			// Draw actions window
 			drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
 			// Draw cursor

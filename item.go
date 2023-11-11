@@ -110,7 +110,21 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 	}
 
 	x, y := character.GetPosition()
-	itemName := getItemNameWithSharpness(item)
+	// アイテムが識別されているかどうかをチェック
+	identified := true
+	var itemName string
+	if identifiableItem, ok := item.(Identifiable); ok {
+		identified = identifiableItem.IsIdentified()
+		// 識別されていない場合は識別されていないアイテム名を取得
+		if !identified {
+			itemName = identifiableItem.GetName()
+		}
+	}
+
+	// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+	if identified {
+		itemName = getItemNameWithSharpness(item)
+	}
 	message := fmt.Sprintf("%sを投げた", itemName) // Default message
 	if g.dPressed {
 		message = fmt.Sprintf("%sを撃った", item.GetName()) // Update message if D key was pressed
@@ -118,6 +132,7 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 	action := Action{
 		Duration: 0.5,
 		Message:  message,
+		ItemName: itemName,
 		Execute: func(g *Game) {
 			g.ThrownItem = ThrownItem{
 				Item:  item,
@@ -197,6 +212,7 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 				onWallHit(item, position, g.selectedItemIndex) // Assuming the item will stop at the maximum range if no wall or enemy is encountered
 			}
 		},
+		IsIdentified: identified,
 	}
 	g.Enqueue(action)
 }
@@ -377,8 +393,24 @@ func (g *Game) executeItemSwap() {
 		if itemX == playerX && itemY == playerY {
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
 			itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
-			selectedItemName := getItemNameWithSharpness(selectedInventoryItem)
+
 			isCursedEquipped := false
+
+			// アイテムが識別されているかどうかをチェック
+			identified := true
+			var selectedItemName string
+			if identifiableItem, ok := selectedInventoryItem.(Identifiable); ok {
+				identified = identifiableItem.IsIdentified()
+				// 識別されていない場合は識別されていないアイテム名を取得
+				if !identified {
+					selectedItemName = identifiableItem.GetName()
+				}
+			}
+
+			// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+			if identified {
+				selectedItemName = getItemNameWithSharpness(selectedInventoryItem)
+			}
 
 			// Check if the selected inventory item is Equipable and cursed
 			if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
@@ -415,6 +447,7 @@ func (g *Game) executeItemSwap() {
 				action := Action{
 					Duration: 0.5,
 					Message:  fmt.Sprintf("%sと%sを交換しました", itemName, selectedItemName),
+					ItemName: selectedItemName,
 					Execute: func(g *Game) {
 						// Check if the item is equipped and unequip if necessary
 						if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
@@ -433,6 +466,7 @@ func (g *Game) executeItemSwap() {
 						g.selectedItemIndex = 0
 						g.isActioned = true
 					},
+					IsIdentified: identified,
 				}
 				g.ActionQueue.Enqueue(action)
 			}
@@ -461,32 +495,46 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				// それ以外の場合は、Sharpnessを含む名前を使用
-				itemName := getItemNameWithSharpness(item)
+				// アイテムが識別されているかどうかをチェック
+				identified := true
+				var itemName string
+				if identifiableItem, ok := item.(Identifiable); ok {
+					identified = identifiableItem.IsIdentified()
+					// 識別されていない場合は識別されていないアイテム名を取得
+					if !identified {
+						itemName = identifiableItem.GetName()
+					}
+				}
+
+				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+				if identified {
+					itemName = getItemNameWithSharpness(item)
+				}
 
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
+					message := fmt.Sprintf("%sを拾った", itemName) // メッセージ全体を作成
 					action := Action{
-						Duration: 0.3,
-						Message:  fmt.Sprintf("%sを拾った", itemName),
-						Execute: func(g *Game) {
-							g.PickUpItem(item, i)
-						},
+						Duration:     0.3,
+						Message:      message,
+						ItemName:     itemName,
+						Execute:      func(g *Game) { g.PickUpItem(item, i) },
+						IsIdentified: identified,
 					}
-
 					g.Enqueue(action)
 					break // 一致するアイテムが見つかったらループを終了
 				} else {
+					// インベントリが満杯の場合のメッセージ
+					message := fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName)
 					action := Action{
-						Duration: 0.5,
-						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName),
-						Execute: func(g *Game) {
-
-						},
+						Duration:     0.5,
+						Message:      message,
+						ItemName:     itemName,
+						Execute:      func(g *Game) {},
+						IsIdentified: identified,
 					}
 					g.Enqueue(action)
 				}
-
 			}
 		}
 	} else {
@@ -494,12 +542,29 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				itemName := getItemNameWithSharpness(item)
+				// アイテムが識別されているかどうかをチェック
+				identified := true
+				var itemName string
+				if identifiableItem, ok := item.(Identifiable); ok {
+					identified = identifiableItem.IsIdentified()
+					// 識別されていない場合は識別されていないアイテム名を取得
+					if !identified {
+						itemName = identifiableItem.GetName()
+					}
+				}
+
+				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+				if identified {
+					itemName = getItemNameWithSharpness(item)
+				}
+
 				action := Action{
 					Duration: 0.5,
 					Message:  fmt.Sprintf("%sに乗った", itemName),
+					ItemName: itemName,
 					Execute: func(g *Game) {
 					},
+					IsIdentified: identified,
 				}
 				g.Enqueue(action)
 				break // 一致するアイテムが見つかったらループを終了

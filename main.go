@@ -86,9 +86,11 @@ type Attack struct {
 }
 
 type Action struct {
-	Duration float64     // 行動を処理する時間
-	Message  string      // 画面下に表示するメッセージ
-	Execute  func(*Game) // 行動を実行する関数
+	Duration     float64     // 行動を処理する時間
+	Message      string      // 画面下に表示するメッセージ
+	ItemName     string      // アイテム名を追加
+	Execute      func(*Game) // 行動を実行する関数
+	IsIdentified bool
 }
 
 type ActionQueue struct {
@@ -132,7 +134,6 @@ type Game struct {
 	showItemDescription      bool
 	itemdescriptionText      string
 	descriptionText          string
-	nextDescriptionTime      time.Time
 	Animating                bool
 	AnimationProgress        float64
 	dx, dy                   int
