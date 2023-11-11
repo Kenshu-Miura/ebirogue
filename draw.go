@@ -246,28 +246,40 @@ func (g *Game) DrawDescriptions(screen *ebiten.Image) {
 		y := windowY + 20
 
 		// アイテム名の色を設定
-		var itemNameColor color.Color // color.Color インターフェースを使う
-		itemNameColor = color.White   // 初期値は白色
+		var itemNameColor color.Color
+		itemNameColor = color.White
 		if !action.IsIdentified {
 			itemNameColor = color.RGBA{R: 255, G: 255, B: 0, A: 255} // 未識別は黄色
 		}
 
-		// アイテム名を描画
-		text.Draw(screen, action.ItemName, mplusNormalFont, x, y, itemNameColor)
-
-		// アイテム名の幅を取得
 		var dr font.Drawer
-		dr.Face = mplusNormalFont // 'mplusNormalFont' should be the font face you're using
-		bounds, _ := dr.BoundString(action.ItemName)
-		itemNameWidth := (bounds.Max.X - bounds.Min.X).Ceil()
+		dr.Face = mplusNormalFont
 
-		// アイテム名と残りのメッセージの間にスペースを追加
-		x += itemNameWidth + 10 // 10ピクセルのスペースを追加
+		if action.ItemName != "" {
+			// アイテム名を含むメッセージを処理
+			parts := strings.Split(action.Message, action.ItemName)
+			firstPart := parts[0]
+			secondPart := ""
+			if len(parts) > 1 {
+				secondPart = parts[1]
+			}
 
-		// 残りのメッセージを描画
-		// アイテム名をメッセージから取り除いてから残りを描画
-		remainingMessage := strings.TrimPrefix(action.Message, action.ItemName)
-		text.Draw(screen, remainingMessage, mplusNormalFont, x, y, color.White)
+			// 最初の部分を描画
+			text.Draw(screen, firstPart, mplusNormalFont, x, y, color.White)
+			bounds, _ := dr.BoundString(firstPart)
+			x += (bounds.Max.X - bounds.Min.X).Ceil() + 5 // 5ピクセルのスペースを追加
+
+			// アイテム名を描画
+			text.Draw(screen, action.ItemName, mplusNormalFont, x, y, itemNameColor)
+			bounds, _ = dr.BoundString(action.ItemName)
+			x += (bounds.Max.X - bounds.Min.X).Ceil() + 5 // 5ピクセルのスペースを追加
+
+			// 2番目の部分を描画
+			text.Draw(screen, secondPart, mplusNormalFont, x, y, color.White)
+		} else {
+			// アイテム名がない場合はそのままメッセージを描画
+			text.Draw(screen, action.Message, mplusNormalFont, x, y, color.White)
+		}
 	}
 }
 
