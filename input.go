@@ -62,6 +62,8 @@ func (g *Game) processDKeyPress() {
 				BaseItem:    equippedArrow.BaseItem,
 				ShotCount:   1,
 				AttackPower: equippedArrow.AttackPower,
+				Cursed:      equippedArrow.Cursed,
+				Identified:  equippedArrow.Identified,
 			}
 			throwRange := 10
 			character := &g.state.Player

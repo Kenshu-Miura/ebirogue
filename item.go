@@ -127,7 +127,7 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 	}
 	message := fmt.Sprintf("%sを投げた", itemName) // Default message
 	if g.dPressed {
-		message = fmt.Sprintf("%sを撃った", item.GetName()) // Update message if D key was pressed
+		message = fmt.Sprintf("%sを撃った", itemName) // Update message if D key was pressed
 	}
 	action := Action{
 		Duration: 0.5,

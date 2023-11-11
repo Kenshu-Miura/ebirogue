@@ -76,15 +76,28 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	// ミニマップを描画
 	for y, row := range g.state.Map {
 		for x, tile := range row {
-			if tile.Visited && tile.Type != "wall" { // tile.Typeが"wall"でないことも確認
+			if tile.Visited && tile.Type != "wall" {
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(x*tilePixelSize), float64(y*tilePixelSize))
 
 				// tile.Typeが"stairs"であるかどうかをチェック
 				if tile.Type == "stairs" {
-					// 階段タイル用の白色のイメージを作成
+					// 階段タイル用のボーダーのイメージを作成
 					stairsTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
-					stairsTile.Fill(color.RGBA{255, 255, 255, 255}) // 白色
+					//borderSize := 1 // ボーダーの幅
+
+					// ボーダーを描画
+					for i := 0; i < tilePixelSize; i++ {
+						// 上のボーダー
+						stairsTile.Set(i, 0, color.White)
+						// 下のボーダー
+						stairsTile.Set(i, tilePixelSize-1, color.White)
+						// 左のボーダー
+						stairsTile.Set(0, i, color.White)
+						// 右のボーダー
+						stairsTile.Set(tilePixelSize-1, i, color.White)
+					}
+
 					g.miniMap.DrawImage(stairsTile, opts)
 				} else {
 					g.miniMap.DrawImage(miniMapTile, opts)
@@ -740,7 +753,7 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	// 最大HPの値でベースとなる黒色のバーを作成
 	baseHpBar := ebiten.NewImage(hpBarMaxWidth, 10)
-	baseHpBar.Fill(color.Black)
+	baseHpBar.Fill(color.RGBA{255, 0, 0, 127})
 
 	// その値の割合として現在のHPを緑色のバーとして表示
 	hpBar := ebiten.NewImage(hpBarCurrentWidth, 10)
