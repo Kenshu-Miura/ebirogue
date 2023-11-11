@@ -110,7 +110,21 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 	}
 
 	x, y := character.GetPosition()
-	itemName := getItemNameWithSharpness(item)
+	// アイテムが識別されているかどうかをチェック
+	identified := true
+	var itemName string
+	if identifiableItem, ok := item.(Identifiable); ok {
+		identified = identifiableItem.IsIdentified()
+		// 識別されていない場合は識別されていないアイテム名を取得
+		if !identified {
+			itemName = identifiableItem.GetName()
+		}
+	}
+
+	// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+	if identified {
+		itemName = getItemNameWithSharpness(item)
+	}
 	message := fmt.Sprintf("%sを投げた", itemName) // Default message
 	if g.dPressed {
 		message = fmt.Sprintf("%sを撃った", item.GetName()) // Update message if D key was pressed
@@ -118,6 +132,7 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 	action := Action{
 		Duration: 0.5,
 		Message:  message,
+		ItemName: itemName,
 		Execute: func(g *Game) {
 			g.ThrownItem = ThrownItem{
 				Item:  item,
@@ -197,6 +212,7 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 				onWallHit(item, position, g.selectedItemIndex) // Assuming the item will stop at the maximum range if no wall or enemy is encountered
 			}
 		},
+		IsIdentified: identified,
 	}
 	g.Enqueue(action)
 }
