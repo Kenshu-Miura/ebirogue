@@ -421,8 +421,24 @@ func (g *Game) executeItemSwap() {
 		if itemX == playerX && itemY == playerY {
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
 			itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
-			selectedItemName := getItemNameWithSharpness(selectedInventoryItem)
+
 			isCursedEquipped := false
+
+			// アイテムが識別されているかどうかをチェック
+			identified := true
+			var selectedItemName string
+			if identifiableItem, ok := selectedInventoryItem.(Identifiable); ok {
+				identified = identifiableItem.IsIdentified()
+				// 識別されていない場合は識別されていないアイテム名を取得
+				if !identified {
+					selectedItemName = identifiableItem.GetName()
+				}
+			}
+
+			// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+			if identified {
+				selectedItemName = getItemNameWithSharpness(selectedInventoryItem)
+			}
 
 			// Check if the selected inventory item is Equipable and cursed
 			if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
@@ -459,6 +475,7 @@ func (g *Game) executeItemSwap() {
 				action := Action{
 					Duration: 0.5,
 					Message:  fmt.Sprintf("%sと%sを交換しました", itemName, selectedItemName),
+					ItemName: selectedItemName,
 					Execute: func(g *Game) {
 						// Check if the item is equipped and unequip if necessary
 						if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
@@ -477,6 +494,7 @@ func (g *Game) executeItemSwap() {
 						g.selectedItemIndex = 0
 						g.isActioned = true
 					},
+					IsIdentified: identified,
 				}
 				g.ActionQueue.Enqueue(action)
 			}
