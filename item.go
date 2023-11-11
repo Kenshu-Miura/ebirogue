@@ -536,12 +536,29 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				itemName := getItemNameWithSharpness(item)
+				// アイテムが識別されているかどうかをチェック
+				identified := true
+				var itemName string
+				if identifiableItem, ok := item.(Identifiable); ok {
+					identified = identifiableItem.IsIdentified()
+					// 識別されていない場合は識別されていないアイテム名を取得
+					if !identified {
+						itemName = identifiableItem.GetName()
+					}
+				}
+
+				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
+				if identified {
+					itemName = getItemNameWithSharpness(item)
+				}
+
 				action := Action{
 					Duration: 0.5,
 					Message:  fmt.Sprintf("%sに乗った", itemName),
+					ItemName: itemName,
 					Execute: func(g *Game) {
 					},
+					IsIdentified: identified,
 				}
 				g.Enqueue(action)
 				break // 一致するアイテムが見つかったらループを終了
