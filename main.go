@@ -107,64 +107,65 @@ type ThrownItem struct {
 }
 
 type Game struct {
-	state                    GameState
-	rooms                    []Room
-	playerImg                *ebiten.Image
-	ebiImg                   *ebiten.Image
-	snakeImg                 *ebiten.Image
-	kaneImg                  *ebiten.Image
-	cardImg                  *ebiten.Image
-	mintiaImg                *ebiten.Image
-	sausageImg               *ebiten.Image
-	tilesetImg               *ebiten.Image
-	weaponImg                *ebiten.Image
-	armorImg                 *ebiten.Image
-	arrowImg                 *ebiten.Image
-	offsetX                  int
-	offsetY                  int
-	moveCount                int
-	Floor                    int
-	lastIncrement            time.Time
-	lastArrowPress           time.Time // 矢印キーが最後に押された時間を追跡
-	showInventory            bool      // true when the inventory window should be displayed
-	selectedItemIndex        int
-	showItemActions          bool
-	selectedActionIndex      int
-	showDescription          bool
-	showItemDescription      bool
-	itemdescriptionText      string
-	descriptionText          string
-	Animating                bool
-	AnimationProgress        float64
-	dx, dy                   int
-	AnimationProgressInt     int
-	frameCount               int
-	tmpPlayerOffsetX         float64 // プレイヤーの一時的なオフセットX
-	tmpPlayerOffsetY         float64 // プレイヤーの一時的なオフセットY
-	attackTimer              float64 // 攻撃メッセージのタイマー
-	ActionQueue              ActionQueue
-	isCombatActive           bool
-	ActionDurationCounter    float64
-	isActioned               bool
-	zPressed                 bool
-	xPressed                 bool
-	dPressed                 bool
-	ShowGroundItem           bool
-	selectedGroundItemIndex  int
-	GroundItemActioned       bool
-	isFrontEnemy             bool
-	currentGroundItem        Item
-	ThrownItem               ThrownItem
-	ThrownItemDestination    Coordinate
-	TargetEnemy              *Enemy
-	TargetEnemyIndex         int
-	onEnemyHit               func(Character, Item, int)
-	showStairsPrompt         bool
-	selectedOption           int // 0 for "Proceed", 1 for "Cancel"
-	ignoreStairs             bool
-	miniMap                  *ebiten.Image // ミニマップのキャッシュ
-	miniMapDirty             bool          // ミニマップが更新される必要があるかどうかを示すフラグ
-	prevPlayerX, prevPlayerY int           // 前のフレームのプレイヤーの座標
+	state                     GameState
+	rooms                     []Room
+	playerImg                 *ebiten.Image
+	ebiImg                    *ebiten.Image
+	snakeImg                  *ebiten.Image
+	kaneImg                   *ebiten.Image
+	cardImg                   *ebiten.Image
+	mintiaImg                 *ebiten.Image
+	sausageImg                *ebiten.Image
+	tilesetImg                *ebiten.Image
+	weaponImg                 *ebiten.Image
+	armorImg                  *ebiten.Image
+	arrowImg                  *ebiten.Image
+	offsetX                   int
+	offsetY                   int
+	moveCount                 int
+	Floor                     int
+	lastIncrement             time.Time
+	lastArrowPress            time.Time // 矢印キーが最後に押された時間を追跡
+	showInventory             bool      // true when the inventory window should be displayed
+	selectedItemIndex         int
+	showItemActions           bool
+	selectedActionIndex       int
+	showDescription           bool
+	showItemDescription       bool
+	itemdescriptionText       string
+	descriptionText           string
+	Animating                 bool
+	AnimationProgress         float64
+	dx, dy                    int
+	AnimationProgressInt      int
+	frameCount                int
+	tmpPlayerOffsetX          float64 // プレイヤーの一時的なオフセットX
+	tmpPlayerOffsetY          float64 // プレイヤーの一時的なオフセットY
+	attackTimer               float64 // 攻撃メッセージのタイマー
+	ActionQueue               ActionQueue
+	isCombatActive            bool
+	ActionDurationCounter     float64
+	isActioned                bool
+	zPressed                  bool
+	xPressed                  bool
+	dPressed                  bool
+	ShowGroundItem            bool
+	selectedGroundActionIndex int
+	selectedGroundItemIndex   int
+	GroundItemActioned        bool
+	isFrontEnemy              bool
+	currentGroundItem         Item
+	ThrownItem                ThrownItem
+	ThrownItemDestination     Coordinate
+	TargetEnemy               *Enemy
+	TargetEnemyIndex          int
+	onEnemyHit                func(Character, Item, int)
+	showStairsPrompt          bool
+	selectedOption            int // 0 for "Proceed", 1 for "Cancel"
+	ignoreStairs              bool
+	miniMap                   *ebiten.Image // ミニマップのキャッシュ
+	miniMapDirty              bool          // ミニマップが更新される必要があるかどうかを示すフラグ
+	prevPlayerX, prevPlayerY  int           // 前のフレームのプレイヤーの座標
 }
 
 func min(a, b int) int {

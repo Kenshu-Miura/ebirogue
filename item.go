@@ -392,7 +392,7 @@ func (g *Game) executeItemSwap() {
 		itemX, itemY := item.GetPosition()
 		if itemX == playerX && itemY == playerY {
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
-			itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
+			//itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
 
 			isCursedEquipped := false
 
@@ -446,7 +446,7 @@ func (g *Game) executeItemSwap() {
 				// If the item is not cursed or not equipped, proceed with the swap
 				action := Action{
 					Duration: 0.5,
-					Message:  fmt.Sprintf("%sと%sを交換しました", itemName, selectedItemName),
+					Message:  fmt.Sprintf("足元のアイテムと%sを交換しました", selectedItemName),
 					ItemName: selectedItemName,
 					Execute: func(g *Game) {
 						// Check if the item is equipped and unequip if necessary

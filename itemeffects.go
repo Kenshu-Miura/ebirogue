@@ -4,10 +4,34 @@ import (
 	"fmt"
 )
 
+func determineItemSource(g *Game) (item Item, isInventoryItem bool) {
+	if g.GroundItemActioned {
+		// 地面からのアイテムの場合
+		item = g.state.Items[g.selectedGroundItemIndex]
+	} else {
+		// インベントリからのアイテムの場合
+		item = g.state.Player.Inventory[g.selectedItemIndex]
+		isInventoryItem = true
+	}
+	return item, isInventoryItem
+}
+
+func removeUsedItem(g *Game, isInventoryItem bool) {
+	if isInventoryItem {
+		// インベントリからアイテムを削除
+		g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+	} else {
+		// 地面からアイテムを削除
+		g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
+	}
+}
+
 var restoreSatiety50 = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+
 	action := Action{
 		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Message:  fmt.Sprintf("%sを食べた", item.GetName()),
 		Execute: func(g *Game) {
 		},
 	}
@@ -22,30 +46,36 @@ var restoreSatiety50 = func(g *Game) {
 		}
 		g.Enqueue(action)
 	} else {
-		foodItem := g.state.Player.Inventory[g.selectedItemIndex].(*Food) // Assumes item is of type *Food
-		action := Action{
-			Duration: 0.4,
-			Message:  fmt.Sprintf("満腹度が%d回復した。", foodItem.Satiety),
-			Execute: func(g *Game) {
-				g.state.Player.Satiety += foodItem.Satiety
-				if g.state.Player.Satiety > g.state.Player.MaxSatiety {
-					g.state.Player.Satiety = g.state.Player.MaxSatiety
-				}
-			},
+		if foodItem, ok := item.(*Food); ok {
+			action := Action{
+				Duration: 0.4,
+				Message:  fmt.Sprintf("満腹度が%d回復した。", foodItem.Satiety),
+				Execute: func(g *Game) {
+					g.state.Player.Satiety += foodItem.Satiety
+					if g.state.Player.Satiety > g.state.Player.MaxSatiety {
+						g.state.Player.Satiety = g.state.Player.MaxSatiety
+					}
+				},
+			}
+			g.Enqueue(action)
 		}
-		g.Enqueue(action)
 	}
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
 }
 
 var restoreHP30 = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+
+	// アクションの生成
 	action := Action{
 		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-		Execute: func(g *Game) {
-		},
+		Message:  fmt.Sprintf("%sを食べた", item.GetName()),
+		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)
+
+	// HP回復の処理
 	if g.state.Player.Health == g.state.Player.MaxHealth {
 		action := Action{
 			Duration: 0.4,
@@ -56,30 +86,37 @@ var restoreHP30 = func(g *Game) {
 		}
 		g.Enqueue(action)
 	} else {
-		potionItem := g.state.Player.Inventory[g.selectedItemIndex].(*Potion) // Assumes item is of type *Food
-		action := Action{
-			Duration: 0.4,
-			Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
-			Execute: func(g *Game) {
-				g.state.Player.Health += potionItem.Health
-				if g.state.Player.Health > g.state.Player.MaxHealth {
-					g.state.Player.Health = g.state.Player.MaxHealth
-				}
-			},
+		if potionItem, ok := item.(*Potion); ok {
+			action := Action{
+				Duration: 0.4,
+				Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
+				Execute: func(g *Game) {
+					g.state.Player.Health += potionItem.Health
+					if g.state.Player.Health > g.state.Player.MaxHealth {
+						g.state.Player.Health = g.state.Player.MaxHealth
+					}
+				},
+			}
+			g.Enqueue(action)
 		}
-		g.Enqueue(action)
 	}
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
 }
 
 var restoreHP100 = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+
+	// アクションの生成
 	action := Action{
 		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを食べた", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-		Execute: func(g *Game) {
-		},
+		Message:  fmt.Sprintf("%sを食べた", item.GetName()),
+		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)
+
+	// HP回復の処理
 	if g.state.Player.Health == g.state.Player.MaxHealth {
 		action := Action{
 			Duration: 0.4,
@@ -90,26 +127,30 @@ var restoreHP100 = func(g *Game) {
 		}
 		g.Enqueue(action)
 	} else {
-		potionItem := g.state.Player.Inventory[g.selectedItemIndex].(*Potion) // Assumes item is of type *Food
-		action := Action{
-			Duration: 0.4,
-			Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
-			Execute: func(g *Game) {
-				g.state.Player.Health += potionItem.Health
-				if g.state.Player.Health > g.state.Player.MaxHealth {
-					g.state.Player.Health = g.state.Player.MaxHealth
-				}
-			},
+		if potionItem, ok := item.(*Potion); ok {
+			action := Action{
+				Duration: 0.4,
+				Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
+				Execute: func(g *Game) {
+					g.state.Player.Health += potionItem.Health
+					if g.state.Player.Health > g.state.Player.MaxHealth {
+						g.state.Player.Health = g.state.Player.MaxHealth
+					}
+				},
+			}
+			g.Enqueue(action)
 		}
-		g.Enqueue(action)
 	}
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
 }
 
 var damageHP30 = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
 	action := Action{
 		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを使った。", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
+		Message:  fmt.Sprintf("%sを使った。", item.GetName()),
 		Execute: func(g *Game) {
 		},
 	}
@@ -170,7 +211,7 @@ var damageHP30 = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+	removeUsedItem(g, isInventoryItem)
 }
 
 var money = func(g *Game) {
@@ -187,14 +228,17 @@ var money = func(g *Game) {
 }
 
 var setTrap = func(g *Game) {
-	trapItem := g.state.Player.Inventory[g.selectedItemIndex].(*Trap)
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sをセットした。", g.state.Player.Inventory[g.selectedItemIndex].GetName()),
-		Execute: func(g *Game) {
-			g.state.Player.SetTrap = trapItem // Set the trap
-		},
+	item, isInventoryItem := determineItemSource(g)
+	if trapItem, ok := item.(*Trap); ok {
+		action := Action{
+			Duration: 0.4,
+			Message:  fmt.Sprintf("%sをセットした。", trapItem.GetName()),
+			Execute: func(g *Game) {
+				g.state.Player.SetTrap = trapItem // Set the trap
+			},
+		}
+		g.Enqueue(action)
 	}
-	g.Enqueue(action)
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+
+	removeUsedItem(g, isInventoryItem)
 }

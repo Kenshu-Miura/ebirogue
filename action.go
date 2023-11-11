@@ -9,7 +9,7 @@ import (
 func (g *Game) executeGroundItemAction() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
-	if g.selectedGroundItemIndex == 0 { // Assuming index 0 corresponds to '拾う'
+	if g.selectedGroundActionIndex == 0 { // Assuming index 0 corresponds to '拾う'
 		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
@@ -58,12 +58,93 @@ func (g *Game) executeGroundItemAction() {
 		}
 		g.ShowGroundItem = false
 		g.GroundItemActioned = false
-		g.selectedGroundItemIndex = 0
+		g.selectedGroundActionIndex = 0
 	}
 
-	if g.selectedGroundItemIndex == 1 { // Assuming index 1 corresponds to '交換'
+	if g.selectedGroundActionIndex == 1 { // Assuming index 1 corresponds to '交換'
 		g.ShowGroundItem = false
 		g.showInventory = true
+	}
+
+	if g.selectedGroundActionIndex == 2 { // Assuming index 2 corresponds to '使う' or '装備'
+		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
+			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
+			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
+				g.selectedGroundItemIndex = i
+				if foodItem, ok := item.(*Food); ok {
+					foodItem.Use(g)
+				} else if potionItem, ok := item.(*Potion); ok {
+					potionItem.Use(g)
+				} else if cardItem, ok := item.(*Card); ok {
+					cardItem.Use(g)
+				} else if moneyItem, ok := item.(*Money); ok {
+					moneyItem.Use(g)
+				} else if trapItem, ok := item.(*Trap); ok {
+					trapItem.Use(g)
+				} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
+					var message string
+					equipableItem.SetIdentified(true)                   // Set the item as identified when equipping
+					itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
+
+					// Find an empty slot or use the last slot
+					equipIndex := -1
+					for i := 0; i < 4; i++ { // Search for an empty slot in EquippedItems[0] to EquippedItems[3]
+						if g.state.Player.EquippedItems[i] == nil {
+							equipIndex = i
+							break
+						}
+					}
+					if equipIndex == -1 { // If no empty slot found, use the last slot
+						equipIndex = 4
+					}
+
+					// Equip the item
+					message = fmt.Sprintf("%sを装備した。", itemName)
+					equipableItem.UpdatePlayerStats(&g.state.Player, true)   // Update player's stats when equipping
+					equipableItem.SetIdentified(true)                        // Set the item as identified when equipping
+					g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
+					g.PickUpItem(item, i)
+
+					action := Action{
+						Duration: 0.5,
+						Message:  message,
+						Execute: func(g *Game) {
+							// The equipped/unequipped item is already set above
+						},
+					}
+					g.Enqueue(action)
+					// Check if the item is cursed after equipping
+					cursedMessage := ""
+					switch v := equipableItem.(type) {
+					case *Weapon:
+						if v.Cursed {
+							cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
+						}
+					case *Armor:
+						if v.Cursed {
+							cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
+						}
+					}
+
+					// If the item is cursed, enqueue the cursed message
+					if cursedMessage != "" {
+						cursedAction := Action{
+							Duration: 0.5,
+							Message:  cursedMessage,
+							Execute: func(g *Game) {
+								// This can be left empty if no additional behavior is needed other than displaying the message
+							},
+						}
+						g.Enqueue(cursedAction)
+					}
+				}
+
+				g.ShowGroundItem = false
+				g.GroundItemActioned = false
+				g.selectedGroundActionIndex = 0
+				g.isActioned = true
+			}
+		}
 	}
 }
 
