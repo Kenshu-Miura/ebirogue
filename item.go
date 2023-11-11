@@ -504,13 +504,10 @@ func (g *Game) PickupItem() {
 				if identified {
 					itemName = getItemNameWithSharpness(item)
 				}
-				message := fmt.Sprintf("%sを拾った", itemName) // メッセージ全体を作成
-
-				//log.Printf("Picked up %s", itemName)
-				//log.Printf("message: %s", message)
 
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
+					message := fmt.Sprintf("%sを拾った", itemName) // メッセージ全体を作成
 					action := Action{
 						Duration:     0.3,
 						Message:      message,
@@ -521,10 +518,14 @@ func (g *Game) PickupItem() {
 					g.Enqueue(action)
 					break // 一致するアイテムが見つかったらループを終了
 				} else {
+					// インベントリが満杯の場合のメッセージ
+					message := fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName)
 					action := Action{
-						Duration: 0.5,
-						Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", itemName),
-						Execute:  func(g *Game) {},
+						Duration:     0.5,
+						Message:      message,
+						ItemName:     itemName,
+						Execute:      func(g *Game) {},
+						IsIdentified: identified,
 					}
 					g.Enqueue(action)
 				}

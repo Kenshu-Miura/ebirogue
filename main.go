@@ -134,7 +134,6 @@ type Game struct {
 	showItemDescription      bool
 	itemdescriptionText      string
 	descriptionText          string
-	nextDescriptionTime      time.Time
 	Animating                bool
 	AnimationProgress        float64
 	dx, dy                   int
