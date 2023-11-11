@@ -347,12 +347,36 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 		// Draw item name window
 		drawWindowWithBorder(screen, itemwindowX, itemwindowY, itemWindowWidth, itemWindowHeight, 127)
 		if g.currentGroundItem != nil {
-
 			groundItemName := getItemNameWithSharpness(g.currentGroundItem)
 
-			// Draw item name
-			itemtext := fmt.Sprintf("%sが落ちている", groundItemName)
-			text.Draw(screen, itemtext, mplusNormalFont, itemwindowX+10, itemwindowY+20, color.White)
+			// アイテムが識別されているかチェック
+			identified := true
+			if identifiableItem, ok := g.currentGroundItem.(Identifiable); ok {
+				identified = identifiableItem.IsIdentified()
+			}
+
+			// テキストの描画位置
+			x := itemwindowX + 10
+			y := itemwindowY + 20
+
+			var itemNameColor color.Color
+			if identified {
+				itemNameColor = color.White
+			} else {
+				itemNameColor = color.RGBA{R: 255, G: 255, B: 0, A: 255} // 未識別は黄色
+			}
+
+			// アイテム名を描画
+			text.Draw(screen, groundItemName, mplusNormalFont, x, y, itemNameColor)
+
+			// アイテム名の幅を取得して、xの位置を調整
+			var dr font.Drawer
+			dr.Face = mplusNormalFont
+			bounds, _ := dr.BoundString(groundItemName)
+			x += (bounds.Max.X - bounds.Min.X).Ceil() + 5 // 5ピクセルのスペースを追加
+
+			// 「が落ちている」の部分を描画
+			text.Draw(screen, "が落ちている", mplusNormalFont, x, y, color.White)
 			// Draw actions window
 			drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
 			// Draw cursor
