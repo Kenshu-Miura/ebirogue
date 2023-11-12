@@ -146,6 +146,34 @@ func (g *Game) executeGroundItemAction() {
 			}
 		}
 	}
+
+	if g.selectedGroundActionIndex == 3 { // Assuming index 3 corresponds to '投げる'
+		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
+			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
+			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
+				g.selectedGroundItemIndex = i
+
+				throwRange := 10
+				character := &g.state.Player
+				mapState := g.state.Map
+				enemies := g.state.Enemies
+
+				onWallHit := func(item Item, position Coordinate, itemIndex int) {
+					g.onWallHit(item, position, itemIndex)
+				}
+
+				onTargetHit := func(target Character, item Item, index int) {
+					g.onTargetHit(target, item, index)
+				}
+
+				// Continue with the throwing logic if the item is not cursed and equipped
+				g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+
+				g.ShowGroundItem = false
+				g.isActioned = true
+			}
+		}
+	}
 }
 
 func (g *Game) executeAction() {

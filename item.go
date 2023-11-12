@@ -178,13 +178,20 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 								}
 							}
 						} else {
-							// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
-							g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+							if !g.GroundItemActioned {
+								// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
+								g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+							} else {
+								// If it's a ground item, remove the item from the map
+								g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
+								g.GroundItemActioned = false
+								g.selectedGroundActionIndex = 0
+							}
 						}
 
 						g.TargetEnemy = &enemy
-						g.TargetEnemyIndex = index
-						g.onEnemyHit = onTargetHit
+
+						onTargetHit(&enemy, item, index)
 
 						g.showItemActions = false
 						g.showInventory = false
@@ -238,8 +245,15 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 			}
 		}
 	} else {
-		// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
-		g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+		if !g.GroundItemActioned {
+			// If it's an inventory item, remove the item from the player's inventory
+			g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+		} else {
+			// If it's a ground item, remove the item from the map
+			g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
+			g.GroundItemActioned = false
+			g.selectedGroundActionIndex = 0
+		}
 	}
 
 	// Update the UI flags
@@ -331,7 +345,6 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		}
 		g.Enqueue(action)
 	}
-	g.TargetEnemyIndex = 0
 }
 
 // Additional function to check if item is equipped
