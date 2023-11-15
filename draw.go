@@ -769,9 +769,11 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	screen.DrawImage(baseHpBar, &ebiten.DrawImageOptions{GeoM: baseHpGeoM})
 
 	// 緑色のバーを描画
-	HPgeoM := ebiten.GeoM{}
-	HPgeoM.Translate(float64((screenWidth/2)-30), 10)
-	screen.DrawImage(hpBar, &ebiten.DrawImageOptions{GeoM: HPgeoM})
+	if hpBarCurrentWidth > 0 {
+		HPgeoM := ebiten.GeoM{}
+		HPgeoM.Translate(float64((screenWidth/2)-30), 10)
+		screen.DrawImage(hpBar, &ebiten.DrawImageOptions{GeoM: HPgeoM})
+	}
 
 	// 枠を描画
 	drawBarWithBorder(screen, (screenWidth/2)-30, 10, hpBarMaxWidth, 10, color.RGBA{0, 0, 0, 0}, color.White)
@@ -784,23 +786,27 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	satietyBarMaxWidth := g.state.Player.MaxSatiety
 	satietyBarCurrentWidth := int(float64(satietyBarMaxWidth) * (float64(g.state.Player.Satiety) / float64(g.state.Player.MaxSatiety)))
 
-	// 最大満腹度の値でベースとなる黒色のバーを作成
+	// 満腹度の最大値でベースとなる黒色のバーを作成
 	baseSatietyBar := ebiten.NewImage(satietyBarMaxWidth, 10)
 	baseSatietyBar.Fill(color.Black)
 
 	// その値の割合として現在の満腹度を黄色のバーとして表示
-	satietyBar := ebiten.NewImage(satietyBarCurrentWidth, 10)
-	satietyBar.Fill(color.RGBA{255, 255, 0, 255})
+	if g.state.Player.Satiety > 0 {
+		satietyBar := ebiten.NewImage(satietyBarCurrentWidth, 10)
+		satietyBar.Fill(color.RGBA{255, 255, 0, 255})
 
-	// 黒色のバーを描画
-	baseSatietyGeoM := ebiten.GeoM{}
-	baseSatietyGeoM.Translate(float64((screenWidth/2)-30), 25)
-	screen.DrawImage(baseSatietyBar, &ebiten.DrawImageOptions{GeoM: baseSatietyGeoM})
+		// 黒色のバーを描画
+		baseSatietyGeoM := ebiten.GeoM{}
+		baseSatietyGeoM.Translate(float64((screenWidth/2)-30), 25)
+		screen.DrawImage(baseSatietyBar, &ebiten.DrawImageOptions{GeoM: baseSatietyGeoM})
 
-	// 黄色のバーを描画
-	STgeoM := ebiten.GeoM{}
-	STgeoM.Translate(float64((screenWidth/2)-30), 25)
-	screen.DrawImage(satietyBar, &ebiten.DrawImageOptions{GeoM: STgeoM})
+		// 黄色のバーを描画
+		if satietyBarCurrentWidth > 0 {
+			STgeoM := ebiten.GeoM{}
+			STgeoM.Translate(float64((screenWidth/2)-30), 25)
+			screen.DrawImage(satietyBar, &ebiten.DrawImageOptions{GeoM: STgeoM})
+		}
+	}
 
 	// 枠を描画
 	drawBarWithBorder(screen, (screenWidth/2)-30, 25, satietyBarMaxWidth, 10, color.RGBA{0, 0, 0, 0}, color.White)
