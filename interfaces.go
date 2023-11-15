@@ -218,6 +218,10 @@ func (ac *Accessory) IsIdentified() bool {
 	return ac.Identified
 }
 
+func (c *Cane) IsIdentified() bool {
+	return c.Identified
+}
+
 func (c *Weapon) Use(g *Game) {
 	if action, exists := c.UseActions["WeaponEffect"]; exists {
 		action(g)
@@ -262,6 +266,12 @@ func (m *Money) Use(g *Game) {
 
 func (t *Trap) Use(g *Game) {
 	if action, exists := t.UseActions["SetTrap"]; exists {
+		action(g)
+	}
+}
+
+func (c *Cane) Use(g *Game) {
+	if action, exists := c.UseActions["CaneEffect"]; exists {
 		action(g)
 	}
 }

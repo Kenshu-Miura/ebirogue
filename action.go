@@ -190,6 +190,49 @@ func (g *Game) executeAction() {
 			moneyItem.Use(g)
 		} else if trapItem, ok := item.(*Trap); ok {
 			trapItem.Use(g)
+		} else if caneItem, ok := item.(*Cane); ok {
+
+			if caneItem.Uses <= 0 {
+				action := Action{
+					Duration: 0.5,
+					Message:  fmt.Sprintf("%sを使った。しかし何も起こらなかった。", caneItem.GetName()),
+					Execute: func(g *Game) {
+					},
+				}
+				g.Enqueue(action)
+				g.showItemActions = false
+				g.showInventory = false
+				g.isActioned = true
+				g.selectedItemIndex = 0
+				g.selectedActionIndex = 0
+				return
+			}
+
+			//caneItemの複製を作成する。
+			caneItemCopy := caneItem
+
+			//caneItemCopyのUsesを1減らす
+			caneItem.Uses--
+
+			//caneItemCopyのBaseItem.Typeを"Effect"にする
+			caneItemCopy.BaseItem.Type = "Effect"
+
+			throwRange := 30
+			character := &g.state.Player
+			mapState := g.state.Map
+			enemies := g.state.Enemies
+
+			onWallHit := func(item Item, position Coordinate, itemIndex int) {
+				g.onWallHit(item, position, itemIndex)
+			}
+
+			onTargetHit := func(target Character, item Item, index int) {
+				g.onTargetHit(target, item, index)
+			}
+
+			// Continue with the throwing logic if the item is not cursed and equipped
+			g.ThrowItem(caneItemCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+
 		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
 			equipableItem.SetIdentified(true)                   // Set the item as identified when equipping

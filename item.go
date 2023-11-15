@@ -74,8 +74,13 @@ func (g *Game) UpdateThrownItem() {
 							// If no empty tile, do not place the item
 						}
 					} else {
-						// Place the item normally if no item exists at the destination
-						g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+						// g.ThrownItemがCane型かつTypeが"Effect"の場合、g.state.Itemsにg.ThrownItem.Itemを追加する処理を行わない
+						if caneItem, ok := g.ThrownItem.Item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
+							// Do nothing
+						} else {
+							// Place the item normally if no item exists at the destination
+							g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+						}
 					}
 					g.miniMapDirty = true
 				}
@@ -110,24 +115,29 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 	}
 
 	x, y := character.GetPosition()
-	// アイテムが識別されているかどうかをチェック
-	identified := true
 	var itemName string
+	message := ""
+	identified := true
+
+	// アイテムが識別されているかどうかをチェック
 	if identifiableItem, ok := item.(Identifiable); ok {
-		identified = identifiableItem.IsIdentified()
-		// 識別されていない場合は識別されていないアイテム名を取得
-		if !identified {
+		itemName = getItemNameWithSharpness(item) // 識別されている場合、またはIdentifiableインターフェースを実装している場合
+		// 識別されていないアイテムの場合は識別されていないアイテム名を取得
+		if !identifiableItem.IsIdentified() {
 			itemName = identifiableItem.GetName()
+			identified = false
 		}
+	} else {
+		itemName = item.GetName() // Identifiableインターフェースを実装していない場合
 	}
 
-	// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
-	if identified {
-		itemName = getItemNameWithSharpness(item)
-	}
-	message := fmt.Sprintf("%sを投げた", itemName) // Default message
-	if g.dPressed {
-		message = fmt.Sprintf("%sを撃った", itemName) // Update message if D key was pressed
+	// メッセージの設定
+	if caneItem, ok := item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
+		message = fmt.Sprintf("%sを使った", itemName) // Cane型でかつTypeが"Effect"の場合
+	} else if g.dPressed {
+		message = fmt.Sprintf("%sを撃った", itemName) // Dキーが押された場合
+	} else {
+		message = fmt.Sprintf("%sを投げた", itemName) // デフォルトのメッセージ
 	}
 	action := Action{
 		Duration: 0.5,
@@ -245,14 +255,19 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 			}
 		}
 	} else {
-		if !g.GroundItemActioned {
-			// If it's an inventory item, remove the item from the player's inventory
-			g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+		// itemがCane型かつTypeが"Effect"の場合、プレイヤーのインベントリから削除しない
+		if caneItem, ok := item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
+			// Do nothing
 		} else {
-			// If it's a ground item, remove the item from the map
-			g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
-			g.GroundItemActioned = false
-			g.selectedGroundActionIndex = 0
+			// If it's an item that was on the ground, remove it from the ground
+			if g.GroundItemActioned {
+				g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
+				g.GroundItemActioned = false
+				g.selectedGroundActionIndex = 0
+			} else {
+				// If it's an item that was in the player's inventory, remove it from the inventory
+				g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+			}
 		}
 	}
 
@@ -377,23 +392,31 @@ func getItemNameWithSharpness(item Item) string {
 		return ""
 	}
 
-	// Check if the item implements the Identifiable interface and is not identified
-	if identifiable, ok := item.(Identifiable); ok && !identifiable.IsIdentified() {
-		// For unidentified items, return the base name without sharpness
-		return identifiable.GetName()
-	}
-
-	// Process identified items normally
-	switch item := item.(type) {
-	case *Weapon:
-		return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
-	case *Armor:
-		return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
-	case *Money: // Money type case added
-		return fmt.Sprintf("%d円", item.Amount) // Format the amount as yen
-	case *Arrow: // Arrow type case added
-		return fmt.Sprintf("%d本の%s", item.ShotCount, item.GetName()) // Format the arrow item with shot count
-	default:
+	// Check if the item implements the Identifiable interface
+	if identifiable, ok := item.(Identifiable); ok {
+		// Check if the item is identified
+		if !identifiable.IsIdentified() {
+			// For unidentified items, return the base name without sharpness
+			return identifiable.GetName()
+		} else {
+			// Process identified items
+			switch item := item.(type) {
+			case *Weapon:
+				return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
+			case *Armor:
+				return fmt.Sprintf("%s%s", item.GetName(), formatSharpness(item.Sharpness))
+			case *Money:
+				return fmt.Sprintf("%d円", item.Amount) // Format the amount as yen
+			case *Arrow:
+				return fmt.Sprintf("%d本の%s", item.ShotCount, item.GetName()) // Format the arrow item with shot count
+			case *Cane:
+				return fmt.Sprintf("%s[%d]", item.GetName(), item.Uses) // Format the cane item with uses count
+			default:
+				return item.GetName()
+			}
+		}
+	} else {
+		// If the item does not implement the Identifiable interface, use the default name
 		return item.GetName()
 	}
 }

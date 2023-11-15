@@ -603,6 +603,10 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 		img = g.sausageImg
 	case "Arrow":
 		img = g.arrowImg
+	case "Cane":
+		img = g.caneImg
+	case "Effect":
+		img = g.effectImg
 	}
 	return img
 }

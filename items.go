@@ -63,6 +63,8 @@ type Accessory struct {
 
 type Cane struct {
 	BaseItem
+	Uses       int  // 回数を保持するフィールド
+	Identified bool // 杖が識別されているかどうか
 }
 
 type Trap struct {
@@ -71,7 +73,8 @@ type Trap struct {
 
 func createItem(x, y int) Item {
 	var item Item
-	randomValue := localRand.Intn(9) // Store the random value to ensure it's only generated once
+	//randomValue := localRand.Intn(10) // Store the random value to ensure it's only generated once
+	randomValue := 9
 	sharpnessValue := localRand.Intn(5) - 1
 	//sharpnessValue := -1
 	switch randomValue {
@@ -250,7 +253,27 @@ func createItem(x, y int) Item {
 				},
 			},
 		}
-	}
 
+	case 9:
+		item = &Cane{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          9,
+				Type:        "Cane",
+				Name:        "シフトチェンジの杖",
+				Description: "敵に当たった場合、自分と位置を交換する。",
+				UseActions: map[string]UseAction{
+					"CaneEffect": func(g *Game) {
+					},
+				},
+			},
+			Uses:       5,
+			Identified: false,
+		}
+	}
 	return item
 }
