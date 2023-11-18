@@ -159,7 +159,6 @@ type Game struct {
 	currentGroundItem         Item
 	ThrownItem                ThrownItem
 	ThrownItemDestination     Coordinate
-	TargetEnemy               *Enemy
 	TargetEnemyIndex          int
 	showStairsPrompt          bool
 	selectedOption            int // 0 for "Proceed", 1 for "Cancel"

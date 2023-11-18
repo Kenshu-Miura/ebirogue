@@ -32,58 +32,56 @@ func (g *Game) UpdateThrownItem() {
 			(g.ThrownItem.DX < 0 && g.ThrownItem.X*tileSize <= g.ThrownItemDestination.X*tileSize) {
 			if (g.ThrownItem.DY >= 0 && g.ThrownItem.Y*tileSize >= g.ThrownItemDestination.Y*tileSize) ||
 				(g.ThrownItem.DY < 0 && g.ThrownItem.Y*tileSize <= g.ThrownItemDestination.Y*tileSize) {
-				if g.TargetEnemy != nil {
-					// Execute hit enemy logic
-				} else {
-					itemExists := false
-					for _, item := range g.state.Items {
-						x, y := item.GetPosition()
-						if x == g.ThrownItem.X && y == g.ThrownItem.Y {
-							itemExists = true
-							break
-						}
-					}
 
-					if itemExists {
-						// Check surrounding tiles for placement
-						directions := []Coordinate{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}
-						placed := false
-						for _, dir := range directions {
-							newX := g.ThrownItem.X + dir.X
-							newY := g.ThrownItem.Y + dir.Y
-							// Check map boundaries and tile type
-							if newX >= 0 && newY >= 0 && newX < len(g.state.Map[0]) && newY < len(g.state.Map) &&
-								g.state.Map[newY][newX].Type != "wall" {
-								emptyTile := true
-								for _, item := range g.state.Items {
-									x, y := item.GetPosition()
-									if x == newX && y == newY {
-										emptyTile = false
-										break
-									}
-								}
-								if emptyTile {
-									g.state.Items = append(g.state.Items, g.ThrownItem.Item)
-									g.ThrownItem.Item.SetPosition(newX, newY)
-									placed = true
+				itemExists := false
+				for _, item := range g.state.Items {
+					x, y := item.GetPosition()
+					if x == g.ThrownItem.X && y == g.ThrownItem.Y {
+						itemExists = true
+						break
+					}
+				}
+
+				if itemExists {
+					// Check surrounding tiles for placement
+					directions := []Coordinate{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}
+					placed := false
+					for _, dir := range directions {
+						newX := g.ThrownItem.X + dir.X
+						newY := g.ThrownItem.Y + dir.Y
+						// Check map boundaries and tile type
+						if newX >= 0 && newY >= 0 && newX < len(g.state.Map[0]) && newY < len(g.state.Map) &&
+							g.state.Map[newY][newX].Type != "wall" {
+							emptyTile := true
+							for _, item := range g.state.Items {
+								x, y := item.GetPosition()
+								if x == newX && y == newY {
+									emptyTile = false
 									break
 								}
 							}
-						}
-						if !placed {
-							// If no empty tile, do not place the item
-						}
-					} else {
-						// g.ThrownItemがCane型かつTypeが"Effect"の場合、g.state.Itemsにg.ThrownItem.Itemを追加する処理を行わない
-						if caneItem, ok := g.ThrownItem.Item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
-							// Do nothing
-						} else {
-							// Place the item normally if no item exists at the destination
-							g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+							if emptyTile {
+								g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+								g.ThrownItem.Item.SetPosition(newX, newY)
+								placed = true
+								break
+							}
 						}
 					}
-					g.miniMapDirty = true
+					if !placed {
+						// If no empty tile, do not place the item
+					}
+				} else {
+					// g.ThrownItemがCane型かつTypeが"Effect"の場合、g.state.Itemsにg.ThrownItem.Itemを追加する処理を行わない
+					if caneItem, ok := g.ThrownItem.Item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
+						// Do nothing
+					} else {
+						// Place the item normally if no item exists at the destination
+						g.state.Items = append(g.state.Items, g.ThrownItem.Item)
+					}
 				}
+				g.miniMapDirty = true
+
 				// Reset the thrown item and its destination
 				g.dPressed = false
 				g.ThrownItem = ThrownItem{}
@@ -152,13 +150,14 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 				DX:    dx,
 				DY:    dy,
 			}
-
 			var i int
 			for i = 1; i <= throwRange; i++ {
 				targetX := x + i*dx
 				targetY := y + i*dy
 				tile := mapState[targetY][targetX]
 				if tile.Type == "wall" {
+					//log.Printf("Cane item: %+v", item)
+					//log.Printf("Thrown item: %+v", g.ThrownItem)
 					// アイテムがCane型であり、BaseItem.Typeが"Effect"であるかチェック
 					if caneItem, ok := item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
 						// 条件に合致した場合のposition
@@ -217,8 +216,6 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 								}
 							}
 						}
-
-						g.TargetEnemy = &enemy
 
 						onTargetHit(&enemy, item, index)
 

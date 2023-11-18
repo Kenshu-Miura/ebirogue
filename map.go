@@ -488,7 +488,7 @@ func setRoomCenter(room *Room) {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 10; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		for {
