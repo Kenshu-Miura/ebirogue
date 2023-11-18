@@ -267,8 +267,7 @@ func createItem(x, y int) Item {
 				Name:        "シフトチェンジの杖",
 				Description: "敵に当たった場合、自分と位置を交換する。",
 				UseActions: map[string]UseAction{
-					"CaneEffect": func(g *Game) {
-					},
+					"CaneEffect": shiftChange,
 				},
 			},
 			Uses:       5,

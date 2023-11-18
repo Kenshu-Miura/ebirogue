@@ -181,6 +181,8 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 				for index, enemy := range enemies {
 					if enemy.X == targetX && enemy.Y == targetY {
 
+						g.TargetEnemyIndex = index
+
 						g.ThrownItemDestination = Coordinate{
 							X: targetX,
 							Y: targetY,
@@ -200,14 +202,19 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 								}
 							}
 						} else {
-							if !g.GroundItemActioned {
-								// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
-								g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+							// itemがCane型かつTypeが"Effect"の場合、プレイヤーのインベントリから削除しない
+							if caneItem, ok := item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
+								// Do nothing
 							} else {
-								// If it's a ground item, remove the item from the map
-								g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
-								g.GroundItemActioned = false
-								g.selectedGroundActionIndex = 0
+								if !g.GroundItemActioned {
+									// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
+									g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+								} else {
+									// If it's a ground item, remove the item from the map
+									g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
+									g.GroundItemActioned = false
+									g.selectedGroundActionIndex = 0
+								}
 							}
 						}
 
@@ -292,7 +299,10 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 }
 
 func (g *Game) onTargetHit(target Character, item Item, index int) {
-	if potion, ok := item.(*Potion); ok {
+	// Check if the item is of type Cane
+	if cane, ok := item.(*Cane); ok {
+		cane.Use(g)
+	} else if potion, ok := item.(*Potion); ok {
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
 			Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), potion.Health),
