@@ -159,12 +159,24 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 				targetY := y + i*dy
 				tile := mapState[targetY][targetX]
 				if tile.Type == "wall" {
-					position := Coordinate{
-						X: x + (i-1)*dx,
-						Y: y + (i-1)*dy,
+					// アイテムがCane型であり、BaseItem.Typeが"Effect"であるかチェック
+					if caneItem, ok := item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
+						// 条件に合致した場合のposition
+						position := Coordinate{
+							X: x + i*dx,
+							Y: y + i*dy,
+						}
+						onWallHit(item, position, g.selectedItemIndex)
+						return
+					} else {
+						// 通常のposition
+						position := Coordinate{
+							X: x + (i-1)*dx,
+							Y: y + (i-1)*dy,
+						}
+						onWallHit(item, position, g.selectedItemIndex)
+						return
 					}
-					onWallHit(item, position, g.selectedItemIndex)
-					return
 				}
 				for index, enemy := range enemies {
 					if enemy.X == targetX && enemy.Y == targetY {
