@@ -209,7 +209,8 @@ func (g *Game) executeAction() {
 			}
 
 			//caneItemの複製を作成する。
-			caneItemCopy := caneItem
+
+			caneItemCopy := *caneItem
 
 			//caneItemCopyのUsesを1減らす
 			caneItem.Uses--
@@ -231,7 +232,7 @@ func (g *Game) executeAction() {
 			}
 
 			// Continue with the throwing logic if the item is not cursed and equipped
-			g.ThrowItem(caneItemCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+			g.ThrowItem(&caneItemCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
 
 		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
