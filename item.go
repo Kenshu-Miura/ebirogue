@@ -42,7 +42,7 @@ func (g *Game) UpdateThrownItem() {
 					}
 				}
 
-				if itemExists {
+				if itemExists && g.TargetEnemy == nil {
 					// Check surrounding tiles for placement
 					directions := []Coordinate{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}
 					placed := false
@@ -75,7 +75,7 @@ func (g *Game) UpdateThrownItem() {
 					// g.ThrownItemがCane型かつTypeが"Effect"の場合、g.state.Itemsにg.ThrownItem.Itemを追加する処理を行わない
 					if caneItem, ok := g.ThrownItem.Item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
 						// Do nothing
-					} else {
+					} else if g.TargetEnemy == nil {
 						// Place the item normally if no item exists at the destination
 						g.state.Items = append(g.state.Items, g.ThrownItem.Item)
 					}
@@ -86,6 +86,7 @@ func (g *Game) UpdateThrownItem() {
 				g.dPressed = false
 				g.ThrownItem = ThrownItem{}
 				g.ThrownItemDestination = Coordinate{}
+				g.TargetEnemy = nil
 			}
 		}
 	}
@@ -216,6 +217,8 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 								}
 							}
 						}
+
+						g.TargetEnemy = &enemy
 
 						onTargetHit(&enemy, item, index)
 
