@@ -168,6 +168,10 @@ type Game struct {
 	miniMap                   *ebiten.Image // ミニマップのキャッシュ
 	miniMapDirty              bool          // ミニマップが更新される必要があるかどうかを示すフラグ
 	prevPlayerX, prevPlayerY  int           // 前のフレームのプレイヤーの座標
+	fadingOut                 bool
+	fadingIn                  bool
+	fadeAlpha                 float64 // 0.0（透明）から1.0（完全な不透明）の間の値
+	frameCounter              int
 }
 
 func min(a, b int) int {
@@ -313,6 +317,15 @@ func (g *Game) Update() error {
 	g.handleStairsPrompt()
 	g.ResetStairsIgnoreFlag()
 
+	// 暗転処理
+	if g.fadingOut {
+		g.handleFadingOut()
+	}
+	// 明転処理
+	if g.fadingIn {
+		g.handleFadingIn()
+	}
+
 	return nil
 }
 
@@ -350,6 +363,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawStairsPrompt(screen)
 
 	g.UpdateAndDrawMiniMap(screen)
+
+	if g.fadeAlpha > 0 {
+		g.drawOverlay(screen)
+	}
 
 }
 

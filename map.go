@@ -16,6 +16,39 @@ type Room struct {
 	Center        Coordinate
 }
 
+func (g *Game) handleFadingOut() {
+	g.fadeAlpha += 1.0 / 60 // 1秒かけて暗くする
+	if g.fadeAlpha >= 1.0 {
+		g.fadeAlpha = 1.0
+		if g.frameCounter == 0 {
+			// マップ生成
+			mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
+			// 新しいマップ情報を設定
+			g.miniMap = nil
+			g.state.Map = mapGrid
+			g.state.Enemies = enemies
+			g.state.Items = items
+			g.Floor = newFloor
+			g.rooms = newRoom
+		}
+		g.frameCounter++
+		if g.frameCounter >= 60 { // 1秒経過した後
+			g.fadingOut = false
+			g.fadingIn = true
+			g.frameCounter = 0 // フレームカウンターをリセット
+		}
+	}
+}
+
+func (g *Game) handleFadingIn() {
+	g.fadeAlpha -= 1.0 / 60 // 1秒かけて明るくする
+	if g.fadeAlpha <= 0.0 {
+		g.fadeAlpha = 0.0
+		g.fadingIn = false
+		g.showStairsPrompt = false
+	}
+}
+
 func getPlayerRoom(playerX, playerY int, rooms []Room) *Room {
 	for _, room := range rooms {
 		if playerX >= room.X && playerX <= room.X+room.Width-1 &&
@@ -130,18 +163,14 @@ func (g *Game) handleStairsPrompt() {
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
 			if g.selectedOption == 0 { // "Proceed" is selected
-				mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
-				g.miniMap = nil
-				g.state.Map = mapGrid
-				g.state.Enemies = enemies
-				g.state.Items = items
-				g.Floor = newFloor
-				g.rooms = newRoom
+				g.fadingOut = true // 暗転開始
+				g.fadeAlpha = 0.0
 			} else { // "Cancel" is selected
 				g.selectedOption = 0
 				g.ignoreStairs = true
 			}
 			g.showStairsPrompt = false // Close the prompt window
+			g.selectedOption = 0
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 			g.selectedOption = 0
@@ -488,7 +517,7 @@ func setRoomCenter(room *Room) {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		for {

@@ -14,8 +14,28 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+func (g *Game) drawOverlay(screen *ebiten.Image) {
+	// 画面サイズに合わせた黒い画像（オーバーレイ）を作成
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	overlay := ebiten.NewImage(screenWidth, screenHeight)
+	overlay.Fill(color.NRGBA{0, 0, 0, 255}) // 完全に黒
+
+	// オーバーレイの描画オプションを設定
+	opts := &ebiten.DrawImageOptions{}
+
+	// ColorScaleのインスタンスを作成してアルファ値を設定
+	var colorScale ebiten.ColorScale
+	colorScale.Scale(1, 1, 1, float32(g.fadeAlpha))
+
+	// ColorScaleを適用
+	opts.ColorScale = colorScale
+
+	// オーバーレイを画面に描画
+	screen.DrawImage(overlay, opts)
+}
+
 func (g *Game) DrawStairsPrompt(screen *ebiten.Image) {
-	if g.showStairsPrompt {
+	if g.showStairsPrompt && !g.fadingOut && !g.fadingIn {
 		windowX, windowY, windowWidth, windowHeight := 100, 100, 200, 50 // Adjust these values as needed
 		drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 255)
 		options := []string{"進む", "やめる"}
