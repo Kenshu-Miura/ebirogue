@@ -126,6 +126,21 @@ func (g *Game) executeGroundItemAction() {
 					g.ThrowItem(&caneItemCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
 
 				} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
+
+					// インベントリのサイズを確認し、いっぱいの場合はアイテムを拾わない
+					if len(g.state.Player.Inventory) >= 20 {
+						action := Action{
+							Duration: 0.5,
+							Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", item.GetName()),
+							ItemName: item.GetName(),
+							Execute: func(g *Game) {
+
+							},
+						}
+						g.Enqueue(action)
+						break
+					}
+
 					var message string
 					equipableItem.SetIdentified(true)                   // Set the item as identified when equipping
 					itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
