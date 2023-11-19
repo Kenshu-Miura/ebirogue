@@ -5,6 +5,24 @@ import (
 	"math"
 )
 
+func (g *Game) updateEnemyYOffset() {
+	if g.isCombatActive {
+		// 戦闘がアクティブな場合は、オフセットを0に保持
+		g.enemyYOffset = 0
+	} else {
+		// 敵のY座標オフセットの更新
+		g.enemyYOffsetTimer++
+		if g.enemyYOffsetTimer >= 30 { // 0.5秒ごとに変更 (60FPSを仮定)
+			if g.enemyYOffset == -3 {
+				g.enemyYOffset = 0 // オフセットを0に変更
+			} else {
+				g.enemyYOffset = -3 // オフセットを-3に変更
+			}
+			g.enemyYOffsetTimer = 0
+		}
+	}
+}
+
 func (g *Game) UpdateAttackTimer() {
 	// Check the attack timer and reset temporary player position if needed
 	if g.attackTimer > 0 {

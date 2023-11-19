@@ -172,6 +172,8 @@ type Game struct {
 	fadingIn                  bool
 	fadeAlpha                 float64 // 0.0（透明）から1.0（完全な不透明）の間の値
 	frameCounter              int
+	enemyYOffset              int
+	enemyYOffsetTimer         int
 }
 
 func min(a, b int) int {
@@ -302,6 +304,8 @@ func (g *Game) Update() error {
 	g.UpdateAttackTimer()
 
 	g.UpdateThrownItem()
+
+	g.updateEnemyYOffset()
 
 	g.HandleEnemyAttackTimers()
 

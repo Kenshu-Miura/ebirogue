@@ -718,6 +718,8 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 			enemyOffsetX += int(enemy.OffsetX)
 			enemyOffsetY += int(enemy.OffsetY)
 
+			enemyOffsetY += g.enemyYOffset // Y座標オフセットの適用
+
 			img := g.getEnemyImage(*enemy)
 
 			opts := &ebiten.DrawImageOptions{}
