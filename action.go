@@ -142,7 +142,7 @@ func (g *Game) executeGroundItemAction() {
 					}
 
 					var message string
-					equipableItem.SetIdentified(true)                   // Set the item as identified when equipping
+					identified := false
 					itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
 
 					// Find an empty slot or use the last slot
@@ -159,17 +159,23 @@ func (g *Game) executeGroundItemAction() {
 
 					// Equip the item
 					message = fmt.Sprintf("%sを装備した。", itemName)
-					equipableItem.UpdatePlayerStats(&g.state.Player, true)   // Update player's stats when equipping
-					equipableItem.SetIdentified(true)                        // Set the item as identified when equipping
+					equipableItem.UpdatePlayerStats(&g.state.Player, true) // Update player's stats when equipping
+					// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
+					if _, ok := equipableItem.(*Accessory); !ok {
+						equipableItem.SetIdentified(true) // Set the item as identified when equipping
+						identified = true
+					}
 					g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
 					g.PickUpItem(item, i)
 
 					action := Action{
 						Duration: 0.5,
 						Message:  message,
+						ItemName: itemName,
 						Execute: func(g *Game) {
 							// The equipped/unequipped item is already set above
 						},
+						IsIdentified: identified,
 					}
 					g.Enqueue(action)
 					// Check if the item is cursed after equipping
@@ -190,9 +196,11 @@ func (g *Game) executeGroundItemAction() {
 						cursedAction := Action{
 							Duration: 0.5,
 							Message:  cursedMessage,
+							ItemName: itemName,
 							Execute: func(g *Game) {
 								// This can be left empty if no additional behavior is needed other than displaying the message
 							},
+							IsIdentified: identified,
 						}
 						g.Enqueue(cursedAction)
 					}
@@ -295,7 +303,7 @@ func (g *Game) executeAction() {
 
 		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
-			equipableItem.SetIdentified(true)                   // Set the item as identified when equipping
+			identified := false
 			itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
 
 			// Find an empty slot or use the last slot
@@ -346,17 +354,23 @@ func (g *Game) executeAction() {
 			} else {
 				// Equip the item
 				message = fmt.Sprintf("%sを装備した。", itemName)
-				equipableItem.UpdatePlayerStats(&g.state.Player, true)   // Update player's stats when equipping
-				equipableItem.SetIdentified(true)                        // Set the item as identified when equipping
+				equipableItem.UpdatePlayerStats(&g.state.Player, true) // Update player's stats when equipping
+				// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
+				if _, ok := equipableItem.(*Accessory); !ok {
+					equipableItem.SetIdentified(true) // Set the item as identified when equipping
+					identified = true
+				}
 				g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
 			}
 
 			action := Action{
 				Duration: 0.5,
 				Message:  message,
+				ItemName: itemName,
 				Execute: func(g *Game) {
 					// The equipped/unequipped item is already set above
 				},
+				IsIdentified: identified,
 			}
 			g.Enqueue(action)
 			// Check if the item is cursed after equipping
@@ -377,9 +391,11 @@ func (g *Game) executeAction() {
 				cursedAction := Action{
 					Duration: 0.5,
 					Message:  cursedMessage,
+					ItemName: itemName,
 					Execute: func(g *Game) {
 						// This can be left empty if no additional behavior is needed other than displaying the message
 					},
+					IsIdentified: identified,
 				}
 				g.Enqueue(cursedAction)
 			}
@@ -406,6 +422,10 @@ func (g *Game) executeAction() {
 							isCursedEquipped = true
 						}
 					case *Armor:
+						if v.Cursed {
+							isCursedEquipped = true
+						}
+					case *Accessory:
 						if v.Cursed {
 							isCursedEquipped = true
 						}

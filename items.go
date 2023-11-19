@@ -58,7 +58,7 @@ type Money struct {
 type Accessory struct {
 	BaseItem
 	Cursed     bool
-	Identified bool // 矢が識別されているかどうか
+	Identified bool // アクセサリが識別されているかどうか
 }
 
 type Cane struct {
@@ -74,7 +74,7 @@ type Trap struct {
 func createItem(x, y int) Item {
 	var item Item
 	//randomValue := localRand.Intn(10) // Store the random value to ensure it's only generated once
-	randomValue := 9
+	randomValue := 10
 	sharpnessValue := localRand.Intn(5) - 1
 	//sharpnessValue := -1
 	switch randomValue {
@@ -271,6 +271,26 @@ func createItem(x, y int) Item {
 				},
 			},
 			Uses:       5,
+			Identified: false,
+		}
+	case 10:
+		item = &Accessory{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          10,
+				Type:        "Accessory",
+				Name:        "鼓舞の指輪",
+				Description: "アクセサリ。パワーの最大値が3上昇する。",
+				UseActions: map[string]UseAction{
+					"AccessoryEffect": func(g *Game) {
+					},
+				},
+			},
+			Cursed:     false,
 			Identified: false,
 		}
 	}

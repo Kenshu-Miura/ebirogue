@@ -607,6 +607,8 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 		img = g.caneImg
 	case "Effect":
 		img = g.effectImg
+	case "Accessory":
+		img = g.accessoryImg
 	}
 	return img
 }

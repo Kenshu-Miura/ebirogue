@@ -141,6 +141,11 @@ func (a *Arrow) SetIdentified(value bool) {
 	a.Identified = value
 }
 
+func (ac *Accessory) SetIdentified(value bool) {
+	// AccessoryのIdentified状態を設定するロジック
+	ac.Identified = value
+}
+
 // UpdatePlayerStats is a method to update player stats when equipping/unequipping an item
 // This method needs to be implemented by each equipable item type (Weapon, Armor, Arrow, Accessory)
 func (w *Weapon) UpdatePlayerStats(player *Player, equip bool) {
@@ -167,6 +172,28 @@ func (ar *Arrow) UpdatePlayerStats(player *Player, equip bool) {
 func (ac *Accessory) UpdatePlayerStats(player *Player, equip bool) {
 	// Accessories might affect various stats
 	// Implement logic accordingly
+	// もし鼓舞の指輪を装備した場合は、プレイヤーのパワーとパワーの最大値を3上昇させる
+	if ac.Name == "鼓舞の指輪" {
+		if equip {
+			// もし鼓舞の指輪が呪われている場合は、プレイヤーのパワーとパワーの最大値を3減少させる
+			if ac.Cursed {
+				player.Power -= 3
+				player.MaxPower -= 3
+			} else {
+				player.Power += 3
+				player.MaxPower += 3
+			}
+		} else {
+			// もし鼓舞の指輪が呪われている場合は、プレイヤーのパワーとパワーの最大値を3上昇させる
+			if ac.Cursed {
+				player.Power += 3
+				player.MaxPower += 3
+			} else {
+				player.Power -= 3
+				player.MaxPower -= 3
+			}
+		}
+	}
 }
 
 func (bi BaseItem) GetID() int {
@@ -272,6 +299,12 @@ func (t *Trap) Use(g *Game) {
 
 func (c *Cane) Use(g *Game) {
 	if action, exists := c.UseActions["CaneEffect"]; exists {
+		action(g)
+	}
+}
+
+func (a *Accessory) Use(g *Game) {
+	if action, exists := a.UseActions["AccessoryEffect"]; exists {
 		action(g)
 	}
 }
