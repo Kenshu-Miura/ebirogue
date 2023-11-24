@@ -154,9 +154,16 @@ func (g *Game) handleInventoryNavigationInput() error {
 				g.selectedGroundActionIndex = 0
 				g.showInventory = false
 			}
+		} else if g.useidentifyItem && g.tmpselectedItemIndex != g.selectedItemIndex {
+			g.executeItemIdentify()
 		} else {
 			g.showItemActions = true // Toggle the item actions menu
 		}
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.useidentifyItem {
+		g.selectedItemIndex = 0
+		g.selectedActionIndex = 0
+		g.tmpselectedItemIndex = -1
+		g.useidentifyItem = false
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
@@ -239,7 +246,7 @@ func (g *Game) handleInventoryInput() error {
 
 	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)
 
-	if xPressed && g.showInventory && !g.showItemActions {
+	if xPressed && g.showInventory && !g.showItemActions && !g.useidentifyItem {
 		g.selectedItemIndex = 0
 		g.selectedActionIndex = 0
 		g.selectedGroundActionIndex = 0

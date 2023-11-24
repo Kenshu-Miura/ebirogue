@@ -125,25 +125,6 @@ type Equipable interface {
 	Item                                          // Embed the Item interface
 	Identifiable                                  // Embed the Identifiable interface
 	UpdatePlayerStats(player *Player, equip bool) // Method to update player stats when equipping/unequipping
-	SetIdentified(value bool)                     // Method to set the identified status of the item
-}
-
-func (w *Weapon) SetIdentified(value bool) {
-	w.Identified = value
-}
-
-func (a *Armor) SetIdentified(value bool) {
-	a.Identified = value
-}
-
-func (a *Arrow) SetIdentified(value bool) {
-	// ArrowのIdentified状態を設定するロジック
-	a.Identified = value
-}
-
-func (ac *Accessory) SetIdentified(value bool) {
-	// AccessoryのIdentified状態を設定するロジック
-	ac.Identified = value
 }
 
 // UpdatePlayerStats is a method to update player stats when equipping/unequipping an item
@@ -227,6 +208,8 @@ func (bi *BaseItem) SetPosition(x, y int) {
 type Identifiable interface {
 	IsIdentified() bool
 	GetName() string
+	SetIdentified(value bool) // Method to set the identified status of the item
+	GetIdentified() bool      // Method to get the identified status of the item
 }
 
 func (w *Weapon) IsIdentified() bool {
@@ -247,6 +230,64 @@ func (ac *Accessory) IsIdentified() bool {
 
 func (c *Cane) IsIdentified() bool {
 	return c.Identified
+}
+
+func (m *Money) IsIdentified() bool {
+	return m.Identified
+}
+
+func (w *Weapon) SetIdentified(value bool) {
+	w.Identified = value
+}
+
+func (a *Armor) SetIdentified(value bool) {
+	a.Identified = value
+}
+
+func (a *Arrow) SetIdentified(value bool) {
+	// ArrowのIdentified状態を設定するロジック
+	a.Identified = value
+}
+
+func (ac *Accessory) SetIdentified(value bool) {
+	// AccessoryのIdentified状態を設定するロジック
+	ac.Identified = value
+}
+
+func (c *Cane) SetIdentified(value bool) {
+	// CaneのIdentified状態を設定するロジック
+	c.Identified = value
+}
+
+func (m *Money) SetIdentified(value bool) {
+	m.Identified = value
+}
+
+func (w *Weapon) GetIdentified() bool {
+	return w.Identified
+}
+
+func (a *Armor) GetIdentified() bool {
+	return a.Identified
+}
+
+func (a *Arrow) GetIdentified() bool {
+	// ArrowのIdentified状態を取得するロジック
+	return a.Identified
+}
+
+func (ac *Accessory) GetIdentified() bool {
+	// AccessoryのIdentified状態を取得するロジック
+	return ac.Identified
+}
+
+func (c *Cane) GetIdentified() bool {
+	// CaneのIdentified状態を取得するロジック
+	return c.Identified
+}
+
+func (m *Money) GetIdentified() bool {
+	return m.Identified
 }
 
 func (c *Weapon) Use(g *Game) {

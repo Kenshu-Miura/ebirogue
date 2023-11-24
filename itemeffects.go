@@ -256,3 +256,61 @@ var shiftChange = func(g *Game) {
 	g.Enqueue(action)
 
 }
+
+var identifyItem = func(g *Game) {
+	_, isInventoryItem := determineItemSource(g)
+
+	if isInventoryItem {
+		g.tmpselectedItemIndex = g.selectedItemIndex
+	} else {
+		g.tmpselectedItemIndex = g.selectedGroundItemIndex
+	}
+
+	g.useidentifyItem = true
+	g.showInventory = true
+}
+
+func (g *Game) executeItemIdentify() {
+	g.showInventory = false
+	item, _ := determineItemSource(g)
+
+	if identifiableItem, ok := item.(Identifiable); ok {
+
+		action := Action{
+			Duration: 0.5,
+			ItemName: identifiableItem.GetName(),
+			Message:  fmt.Sprintf("%sを識別した。", identifiableItem.GetName()),
+			Execute: func(g *Game) {
+			},
+			IsIdentified: identifiableItem.GetIdentified(),
+		}
+		g.Enqueue(action)
+
+		identifiableItem.SetIdentified(true)
+
+	}
+
+	action := Action{
+		Duration: 0.5,
+		ItemName: getItemNameWithSharpness(item),
+		Message:  fmt.Sprintf("アイテムの正体は%sだった。", getItemNameWithSharpness(item)),
+		Execute: func(g *Game) {
+		},
+		IsIdentified: true,
+	}
+	g.Enqueue(action)
+
+	_, isInventoryItem := determineItemSource(g)
+
+	if isInventoryItem {
+		// インベントリからアイテムを削除
+		g.state.Player.Inventory = append(g.state.Player.Inventory[:g.tmpselectedItemIndex], g.state.Player.Inventory[g.tmpselectedItemIndex+1:]...)
+	} else {
+		// 地面からアイテムを削除
+		g.state.Items = append(g.state.Items[:g.tmpselectedItemIndex], g.state.Items[g.tmpselectedItemIndex+1:]...)
+	}
+
+	g.tmpselectedItemIndex = -1
+	g.selectedItemIndex = 0
+	g.useidentifyItem = false
+}

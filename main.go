@@ -174,6 +174,8 @@ type Game struct {
 	frameCounter              int
 	enemyYOffset              int
 	enemyYOffsetTimer         int
+	useidentifyItem           bool
+	tmpselectedItemIndex      int
 }
 
 func min(a, b int) int {

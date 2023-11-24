@@ -52,7 +52,8 @@ type Card struct {
 
 type Money struct {
 	BaseItem
-	Amount int // 金額を保持するフィールド
+	Amount     int  // 金額を保持するフィールド
+	Identified bool // お金が識別されているかどうか
 }
 
 type Accessory struct {
@@ -73,8 +74,8 @@ type Trap struct {
 
 func createItem(x, y int) Item {
 	var item Item
-	//randomValue := localRand.Intn(10) // Store the random value to ensure it's only generated once
-	randomValue := 10
+	randomValue := localRand.Intn(12) // Store the random value to ensure it's only generated once
+	//randomValue := 9
 	sharpnessValue := localRand.Intn(5) - 1
 	//sharpnessValue := -1
 	switch randomValue {
@@ -94,7 +95,8 @@ func createItem(x, y int) Item {
 					"UseMoney": money,
 				},
 			},
-			Amount: localRand.Intn(2001), // Generates a random integer between 0 and 2000
+			Amount:     localRand.Intn(2001), // Generates a random integer between 0 and 2000
+			Identified: true,
 		}
 	case 1:
 		item = &Food{
@@ -229,7 +231,7 @@ func createItem(x, y int) Item {
 				ID:          7,
 				Type:        "Card",
 				Name:        "黒炎弾のカード",
-				Description: "魔法カード。眼の前の敵に30ダメージを与える。",
+				Description: "眼の前の敵に30ダメージを与える。",
 				UseActions: map[string]UseAction{
 					"UseCard": damageHP30,
 				},
@@ -247,7 +249,7 @@ func createItem(x, y int) Item {
 				ID:          8,
 				Type:        "Card",
 				Name:        "炸裂装甲のカード",
-				Description: "罠カード。攻撃を行った敵を破壊する",
+				Description: "セットして使用する罠カード。攻撃を行った敵を破壊する",
 				UseActions: map[string]UseAction{
 					"SetTrap": setTrap,
 				},
@@ -292,6 +294,23 @@ func createItem(x, y int) Item {
 			},
 			Cursed:     false,
 			Identified: false,
+		}
+	case 11:
+		item = &Card{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          11,
+				Type:        "Card",
+				Name:        "真実の眼のカード",
+				Description: "所持アイテムを1つ識別する。",
+				UseActions: map[string]UseAction{
+					"UseCard": identifyItem,
+				},
+			},
 		}
 	}
 	return item
