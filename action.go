@@ -157,14 +157,16 @@ func (g *Game) executeGroundItemAction() {
 						equipIndex = 4
 					}
 
-					// Equip the item
-					message = fmt.Sprintf("%sを装備した。", itemName)
-					equipableItem.UpdatePlayerStats(&g.state.Player, true) // Update player's stats when equipping
 					// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
 					if _, ok := equipableItem.(*Accessory); !ok {
 						equipableItem.SetIdentified(true) // Set the item as identified when equipping
 						identified = true
+						itemName = getItemNameWithSharpness(equipableItem)
 					}
+
+					// Equip the item
+					message = fmt.Sprintf("%sを装備した。", itemName)
+					equipableItem.UpdatePlayerStats(&g.state.Player, true)   // Update player's stats when equipping
 					g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
 					g.PickUpItem(item, i)
 
@@ -352,14 +354,15 @@ func (g *Game) executeAction() {
 					g.state.Player.EquippedItems[equipIndex] = nil          // Remove item from equipped items
 				}
 			} else {
-				// Equip the item
-				message = fmt.Sprintf("%sを装備した。", itemName)
-				equipableItem.UpdatePlayerStats(&g.state.Player, true) // Update player's stats when equipping
-				// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
 				if _, ok := equipableItem.(*Accessory); !ok {
 					equipableItem.SetIdentified(true) // Set the item as identified when equipping
 					identified = true
 				}
+				itemName = getItemNameWithSharpness(equipableItem)
+				// Equip the item
+				message = fmt.Sprintf("%sを装備した。", itemName)
+				equipableItem.UpdatePlayerStats(&g.state.Player, true) // Update player's stats when equipping
+				// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
 				g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
 			}
 
