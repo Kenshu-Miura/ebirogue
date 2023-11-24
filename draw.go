@@ -415,7 +415,14 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 			// Draw cursor
 			text.Draw(screen, "→", mplusNormalFont, actionWindowX+10, actionWindowY+actionWindowHeight+20+(g.selectedGroundActionIndex*20), color.White)
 			// Draw actions
-			actions := []string{"拾う", "交換", "使う", "投げる"}
+			var actions []string
+			// g.currentGroundItemがequipableItemであるかどうかをチェック
+			if _, ok := g.currentGroundItem.(Equipable); ok {
+				// Assume function isEquipped returns true if the item is equipped, false otherwise
+				actions = []string{"拾う", "交換", "装備", "投げる"}
+			} else {
+				actions = []string{"拾う", "交換", "使う", "投げる"}
+			}
 			for index, action := range actions {
 				text.Draw(screen, action, mplusNormalFont, actionWindowX+30, actionWindowY+actionWindowHeight+20+(index*20), color.White)
 			}
