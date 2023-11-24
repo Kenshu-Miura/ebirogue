@@ -462,6 +462,13 @@ func (g *Game) drawActionMenu(screen *ebiten.Image) {
 	}
 }
 
+func (g *Game) drawUseIdentifyItemWindow(screen *ebiten.Image) {
+	windowX, windowY, windowWidth, windowHeight := 100, 50, 100, 25 // Adjust these values as needed
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 127)
+
+	text.Draw(screen, "どれを？", mplusNormalFont, windowX+10, windowY+20, color.White)
+}
+
 func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()

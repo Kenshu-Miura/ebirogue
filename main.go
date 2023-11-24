@@ -358,6 +358,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
+	if g.useidentifyItem {
+		g.drawUseIdentifyItemWindow(screen)
+	}
+
 	g.drawActionMenu(screen)
 
 	g.drawItemDescription(screen)
