@@ -464,8 +464,9 @@ func NewGame() *Game {
 		ActionQueue: ActionQueue{
 			Queue: make([]Action, 0),
 		},
-		isCombatActive: false,
-		zPressed:       false,
+		isCombatActive:       false,
+		zPressed:             false,
+		tmpselectedItemIndex: -1,
 	}
 
 	return game

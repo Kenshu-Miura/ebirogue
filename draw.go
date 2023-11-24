@@ -502,6 +502,11 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 				itemText = getItemNameWithSharpness(item)
 			}
 
+			// もしiの値がg.tmpselectedItemIndexと等しければ、textColorを灰色に設定
+			if i == g.tmpselectedItemIndex {
+				textColor = color.RGBA{0x80, 0x80, 0x80, 0xff} // 灰色
+			}
+
 			// 現在の列と行の計算
 			column := i / itemsPerColumn
 			row := i % itemsPerColumn

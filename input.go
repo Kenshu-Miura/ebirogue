@@ -156,7 +156,7 @@ func (g *Game) handleInventoryNavigationInput() error {
 			}
 		} else if g.useidentifyItem && g.tmpselectedItemIndex != g.selectedItemIndex {
 			g.executeItemIdentify()
-		} else {
+		} else if !g.useidentifyItem {
 			g.showItemActions = true // Toggle the item actions menu
 		}
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.useidentifyItem {
