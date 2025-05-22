@@ -8,10 +8,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
 )
 
 const (
@@ -207,41 +205,6 @@ func sign(x int) int {
 		return -1
 	}
 	return 0
-}
-
-func init() {
-	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	const dpi = 72
-	mplusNormalFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    16,
-		DPI:     dpi,
-		Hinting: font.HintingVertical,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	mplusMediumFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    14,
-		DPI:     dpi,
-		Hinting: font.HintingVertical,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	mplusSmallFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    12,
-		DPI:     dpi,
-		Hinting: font.HintingVertical,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func (g *Game) Update() error {

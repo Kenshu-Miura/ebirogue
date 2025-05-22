@@ -1,3 +1,5 @@
+//go:build game
+
 package main
 
 import (
