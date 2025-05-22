@@ -684,7 +684,7 @@ func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
 	return result
 }
 
-func (g *Game) CheetMovePlayer(dx, dy int) bool {
+func (g *Game) CheatMovePlayer(dx, dy int) bool {
 	// dx と dy が両方とも0の場合、移動は発生していない
 	if dx == 0 && dy == 0 {
 		return false
