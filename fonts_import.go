@@ -1,5 +1,3 @@
-//go:build fonts
-
 package main
 
 import (

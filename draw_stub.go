@@ -1,4 +1,4 @@
-//go:build !game
+//go:build test
 
 package main
 
