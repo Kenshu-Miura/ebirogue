@@ -9,6 +9,7 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 - Keep functions short and related logic grouped in the existing files (e.g. `input.go`, `move.go`).
 
 ## Tests
+- テストでは Ebiten のスタブを利用するため `go test -tags test ./...` を実行してください。
 - Unit tests are in `*_test.go` files.  They rely on stub files such as `draw_stub.go` and `fonts_stub.go` when built with the `test` tag.
 - Run `go test -tags test ./...` to execute tests in a headless environment.
 
