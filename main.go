@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	tileSize      = 30 // タイルのサイズを20x20ピクセルに設定
+	tileSize      = 30 // タイルのサイズを30x30ピクセルに設定
 	Uninitialized = -1
 	Up            = 0
 	Down          = 1
