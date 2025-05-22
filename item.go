@@ -573,7 +573,7 @@ func (g *Game) PickupItem() {
 				if len(g.state.Player.Inventory) < 20 {
 					message := fmt.Sprintf("%sを拾った", itemName) // メッセージ全体を作成
 					action := Action{
-						Duration:     0.3,
+						Duration:     0.8,
 						Message:      message,
 						ItemName:     itemName,
 						Execute:      func(g *Game) { g.PickUpItem(item, i) },
