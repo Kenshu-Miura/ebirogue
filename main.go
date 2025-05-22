@@ -128,6 +128,7 @@ type Game struct {
 	showItemActions           bool
 	selectedActionIndex       int
 	showDescription           bool
+	descriptionText           string
 	showItemDescription       bool
 	itemdescriptionText       string
 	Animating                 bool

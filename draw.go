@@ -14,6 +14,12 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+var (
+	mplusNormalFont font.Face
+	mplusMediumFont font.Face
+	mplusSmallFont  font.Face
+)
+
 func (g *Game) drawOverlay(screen *ebiten.Image) {
 	// 画面サイズに合わせた黒い画像（オーバーレイ）を作成
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
