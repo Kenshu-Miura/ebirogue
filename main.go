@@ -248,7 +248,7 @@ func (g *Game) Update() error {
 
 	if !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
 		dx, dy := g.HandleInput()
-		//dx, dy := g.CheetHandleInput()
+		//dx, dy := g.CheatHandleInput()
 
 		if g.zPressed && !g.ShowGroundItem {
 			g.CheckForEnemies(dx, dy)
@@ -257,7 +257,7 @@ func (g *Game) Update() error {
 		}
 
 		moved := g.MovePlayer(dx, dy)
-		//moved := g.CheetMovePlayer(dx, dy)
+		//moved := g.CheatMovePlayer(dx, dy)
 
 		if moved {
 			g.isActioned = true

@@ -270,7 +270,7 @@ func (g *Game) handleInventoryInput() error {
 	return nil
 }
 
-func (g *Game) CheetHandleInput() (int, int) {
+func (g *Game) CheatHandleInput() (int, int) {
 	var dx, dy int
 
 	// キーの押下状態を取得
