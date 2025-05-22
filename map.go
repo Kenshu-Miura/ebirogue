@@ -50,13 +50,14 @@ func (g *Game) handleFadingIn() {
 }
 
 func getPlayerRoom(playerX, playerY int, rooms []Room) *Room {
-	for _, room := range rooms {
-		if playerX >= room.X && playerX <= room.X+room.Width-1 &&
-			playerY >= room.Y && playerY <= room.Y+room.Height-1 {
-			return &room
-		}
-	}
-	return nil
+        for i := range rooms {
+                room := &rooms[i]
+                if playerX >= room.X && playerX <= room.X+room.Width-1 &&
+                        playerY >= room.Y && playerY <= room.Y+room.Height-1 {
+                        return room
+                }
+        }
+        return nil
 }
 
 func (g *Game) updateTileBrightness() {
