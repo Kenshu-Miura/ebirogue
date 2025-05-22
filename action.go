@@ -31,7 +31,7 @@ func (g *Game) executeGroundItemAction() {
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{
-						Duration: 0.3,
+						Duration: 0.8,
 						Message:  fmt.Sprintf("%sを拾った", itemName),
 						ItemName: itemName,
 						Execute: func(g *Game) {
@@ -39,6 +39,7 @@ func (g *Game) executeGroundItemAction() {
 							g.isActioned = true
 						},
 						IsIdentified: identified,
+						NonBlocking:  true,
 					}
 					g.Enqueue(action)
 					break // 一致するアイテムが見つかったらループを終了
@@ -51,6 +52,7 @@ func (g *Game) executeGroundItemAction() {
 
 						},
 						IsIdentified: identified,
+						NonBlocking:  true,
 					}
 					g.Enqueue(action)
 				}
@@ -136,6 +138,7 @@ func (g *Game) executeGroundItemAction() {
 							Execute: func(g *Game) {
 
 							},
+							NonBlocking: true,
 						}
 						g.Enqueue(action)
 						break
@@ -603,7 +606,9 @@ func (g *Game) executeAction() {
 
 func (g *Game) Enqueue(action Action) {
 	//log.Printf("Enqueuing action: %+v", action) // ログ出力を追加
-	g.isCombatActive = true
+	if !action.NonBlocking {
+		g.isCombatActive = true
+	}
 	g.ActionQueue.Queue = append(g.ActionQueue.Queue, action)
 }
 

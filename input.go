@@ -32,7 +32,7 @@ func (g *Game) OpenDoor() {
 
 func (g *Game) processDKeyPress() {
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
+	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt {
 		g.dPressed = true
 		// Find the equipped Arrow item
 		var equippedArrow *Arrow
@@ -96,7 +96,7 @@ func (g *Game) processDKeyPress() {
 
 func (g *Game) HandleGroundItemInput() {
 	sPressed := inpututil.IsKeyJustPressed(ebiten.KeyS)
-	if sPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt && !g.ignoreStairs {
+	if sPressed && !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.ignoreStairs {
 		g.ShowGroundItem = true
 	}
 
@@ -287,7 +287,7 @@ func (g *Game) CheatHandleInput() (int, int) {
 
 	// 足踏みロジック
 	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
-		!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
+		!upPressed && !downPressed && !leftPressed && !rightPressed && g.CanAcceptInput() {
 		g.isActioned = true
 		g.lastIncrement = time.Now() // lastIncrementの更新
 	}
@@ -424,7 +424,7 @@ func (g *Game) HandleInput() (int, int) {
 	if xPressed && !arrowPressed {
 		// 足踏みロジック
 		if ebiten.IsKeyPressed(ebiten.KeyZ) && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
-			!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
+			!upPressed && !downPressed && !leftPressed && !rightPressed && g.CanAcceptInput() {
 			g.isActioned = true
 			g.lastIncrement = time.Now() // lastIncrementの更新
 		}
