@@ -85,6 +85,7 @@ type Action struct {
 	ItemName     string      // アイテム名を追加
 	Execute      func(*Game) // 行動を実行する関数
 	IsIdentified bool
+	NonBlocking  bool // true if the action should not block player input
 }
 
 type ActionQueue struct {
@@ -203,9 +204,16 @@ func sign(x int) int {
 	return 0
 }
 
+func (g *Game) CanAcceptInput() bool {
+	if g.isCombatActive && len(g.ActionQueue.Queue) > 0 {
+		return g.ActionQueue.Queue[0].NonBlocking
+	}
+	return !g.isCombatActive
+}
+
 func (g *Game) Update() error {
 
-	if !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
+	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt {
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheatHandleInput()
 

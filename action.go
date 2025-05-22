@@ -39,6 +39,7 @@ func (g *Game) executeGroundItemAction() {
 							g.isActioned = true
 						},
 						IsIdentified: identified,
+						NonBlocking:  true,
 					}
 					g.Enqueue(action)
 					break // 一致するアイテムが見つかったらループを終了
@@ -51,6 +52,7 @@ func (g *Game) executeGroundItemAction() {
 
 						},
 						IsIdentified: identified,
+						NonBlocking:  true,
 					}
 					g.Enqueue(action)
 				}

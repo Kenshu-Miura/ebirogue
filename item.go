@@ -578,6 +578,7 @@ func (g *Game) PickupItem() {
 						ItemName:     itemName,
 						Execute:      func(g *Game) { g.PickUpItem(item, i) },
 						IsIdentified: identified,
+						NonBlocking:  true,
 					}
 					g.Enqueue(action)
 					break // 一致するアイテムが見つかったらループを終了
@@ -590,6 +591,7 @@ func (g *Game) PickupItem() {
 						ItemName:     itemName,
 						Execute:      func(g *Game) {},
 						IsIdentified: identified,
+						NonBlocking:  true,
 					}
 					g.Enqueue(action)
 				}
