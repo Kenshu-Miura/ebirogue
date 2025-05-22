@@ -102,7 +102,7 @@ func (g *Game) HandleActionQueue() {
 		g.ActionDurationCounter -= (1 / 60.0) // decrement the counter every frame
 	}
 
-	if g.ActionQueue.Queue != nil && len(g.ActionQueue.Queue) > 0 && g.ActionDurationCounter <= 0 {
+	if len(g.ActionQueue.Queue) > 0 && g.ActionDurationCounter <= 0 {
 		g.ActionDurationCounter = 0
 		g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
 	}

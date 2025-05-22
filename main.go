@@ -9,7 +9,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"golang.org/x/image/font"
 )
 
 const (
@@ -26,9 +25,6 @@ const (
 )
 
 var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-var mplusNormalFont font.Face
-var mplusMediumFont font.Face
-var mplusSmallFont font.Face
 var levelExpRequirements = []int{0, 5, 12, 22, 35, 51, 70, 92, 118, 148, 181} // レベル10までの経験値要件
 
 type Tile struct {
@@ -134,7 +130,6 @@ type Game struct {
 	showDescription           bool
 	showItemDescription       bool
 	itemdescriptionText       string
-	descriptionText           string
 	Animating                 bool
 	AnimationProgress         float64
 	dx, dy                    int
