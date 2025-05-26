@@ -127,6 +127,7 @@ type Game struct {
 	Floor                     int
 	lastIncrement             time.Time
 	lastArrowPress            time.Time // 矢印キーが最後に押された時間を追跡
+	lastDashStop              time.Time // 最後にダッシュが停止した時間
 	showInventory             bool      // true when the inventory window should be displayed
 	selectedItemIndex         int
 	showItemActions           bool
@@ -149,6 +150,7 @@ type Game struct {
 	isActioned                bool
 	zPressed                  bool
 	xPressed                  bool
+	dashStopped               bool // ダッシュ停止状態
 	dPressed                  bool
 	ShowGroundItem            bool
 	selectedGroundActionIndex int
