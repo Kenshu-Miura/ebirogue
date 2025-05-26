@@ -5,6 +5,7 @@ package main
 
 import (
 	_ "image/png" // PNG画像を読み込むために必要
+	"log"
 	"sort"
 	"time"
 
@@ -436,54 +437,65 @@ func (g *Game) HandleInput() (int, int) {
 	if arrowPressed && xPressed && !ebiten.IsKeyPressed(ebiten.KeyZ) {
 		g.xPressed = true
 
-		if shiftPressed { // 斜め移動のロジック
-
-			if upPressed && rightPressed && (!blockUp && !blockRight) {
-				dy, dx = -1, 1
-			} else if upPressed && leftPressed && (!blockUp && !blockLeft) {
-				dy, dx = -1, -1
-			} else if downPressed && leftPressed && (!blockDown && !blockLeft) {
-				dy, dx = 1, -1
-			} else if downPressed && rightPressed && (!blockDown && !blockRight) {
-				dy, dx = 1, 1
-			}
-
-		} else {
-			if upPressed && !downPressed && !blockUp {
-				dy = -1
-			}
-			if downPressed && !upPressed && !blockDown {
-				dy = 1
-			}
-			if leftPressed && !rightPressed && !blockLeft {
-				dx = -1
-			}
-			if rightPressed && !leftPressed && !blockRight {
-				dx = 1
-			}
-
-			// 斜め移動のロジック
-			if upPressed && rightPressed && !blockUpRight {
-				dy, dx = -1, 1
-			} else if upPressed && leftPressed && !blockUpLeft {
-				dy, dx = -1, -1
-			} else if downPressed && leftPressed && !blockDownLeft {
-				dy, dx = 1, -1
-			} else if downPressed && rightPressed && !blockDownRight {
-				dy, dx = 1, 1
-			}
-		}
-
-		for _, room := range g.rooms {
-			if isOnBoundary(g.state.Player.X+dx, g.state.Player.Y+dy, room) {
+		if g.dashStopped {
+			if time.Since(g.lastDashStop) < 200*time.Millisecond {
 				return 0, 0
 			}
-		}
+			g.dashStopped = false // ダッシュ再開
+		} else {
+			if shiftPressed { // 斜め移動のロジック
+				if upPressed && rightPressed && (!blockUp && !blockRight) {
+					dy, dx = -1, 1
+				} else if upPressed && leftPressed && (!blockUp && !blockLeft) {
+					dy, dx = -1, -1
+				} else if downPressed && leftPressed && (!blockDown && !blockLeft) {
+					dy, dx = 1, -1
+				} else if downPressed && rightPressed && (!blockDown && !blockRight) {
+					dy, dx = 1, 1
+				}
+			} else {
+				if upPressed && !downPressed && !blockUp {
+					dy = -1
+				}
+				if downPressed && !upPressed && !blockDown {
+					dy = 1
+				}
+				if leftPressed && !rightPressed && !blockLeft {
+					dx = -1
+				}
+				if rightPressed && !leftPressed && !blockRight {
+					dx = 1
+				}
 
-		nowX, nowY := g.state.Player.X, g.state.Player.Y
-		if (g.state.Player.Direction == Up || g.state.Player.Direction == Down) && (g.state.Map[nowY][nowX+1].Type == "corridor" || g.state.Map[nowY][nowX-1].Type == "corridor") ||
-			((g.state.Player.Direction == Left || g.state.Player.Direction == Right) && (g.state.Map[nowY+1][nowX].Type == "corridor" || g.state.Map[nowY-1][nowX].Type == "corridor")) {
-			return 0, 0
+				// 斜め移動のロジック
+				if upPressed && rightPressed && !blockUpRight {
+					dy, dx = -1, 1
+				} else if upPressed && leftPressed && !blockUpLeft {
+					dy, dx = -1, -1
+				} else if downPressed && leftPressed && !blockDownLeft {
+					dy, dx = 1, -1
+				} else if downPressed && rightPressed && !blockDownRight {
+					dy, dx = 1, 1
+				}
+			}
+
+			for _, room := range g.rooms {
+				if isOnBoundary(g.state.Player.X+dx, g.state.Player.Y+dy, room) {
+					log.Printf("Dash stopped at entrance: (%d,%d)", g.state.Player.X+dx, g.state.Player.Y+dy)
+					g.dashStopped = true
+					g.lastDashStop = time.Now()
+					return 0, 0
+				}
+			}
+
+			nowX, nowY := g.state.Player.X, g.state.Player.Y
+			if (g.state.Player.Direction == Up || g.state.Player.Direction == Down) && (g.state.Map[nowY][nowX+1].Type == "corridor" || g.state.Map[nowY][nowX-1].Type == "corridor") ||
+				((g.state.Player.Direction == Left || g.state.Player.Direction == Right) && (g.state.Map[nowY+1][nowX].Type == "corridor" || g.state.Map[nowY-1][nowX].Type == "corridor")) {
+				log.Printf("Dash stopped at corner: (%d,%d)", nowX, nowY)
+				g.dashStopped = true
+				g.lastDashStop = time.Now()
+				return 0, 0
+			}
 		}
 	}
 
