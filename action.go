@@ -732,12 +732,11 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			}
 
 			g.attackTimer = 0.5 // set timer for 0.5 seconds
+			enemyIndex := i     // capture the index here
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.state.Enemies[i].Name, netDamage),
+				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.state.Enemies[enemyIndex].Name, netDamage),
 				Execute: func(g *Game) {
-
-					enemyIndex := i // ここでi変数の値を明示的にキャプチャ
 					g.state.Enemies[enemyIndex].Health -= netDamage
 
 					if g.state.Enemies[enemyIndex].Health <= 0 {
