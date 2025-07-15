@@ -409,7 +409,7 @@ func (g *Game) executeAction() {
 			}
 		}
 
-		if !g.useidentifyItem {
+		if !g.useIdentifyItem {
 			g.showInventory = false
 			g.isActioned = true
 		}

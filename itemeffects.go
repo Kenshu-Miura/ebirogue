@@ -264,12 +264,12 @@ var identifyItem = func(g *Game) {
 	_, isInventoryItem := determineItemSource(g)
 
 	if isInventoryItem {
-		g.tmpselectedItemIndex = g.selectedItemIndex
+		g.tmpSelectedItemIndex = g.selectedItemIndex
 	} else {
-		g.tmpselectedItemIndex = g.selectedGroundItemIndex
+		g.tmpSelectedItemIndex = g.selectedGroundItemIndex
 	}
 
-	g.useidentifyItem = true
+	g.useIdentifyItem = true
 	g.showInventory = true
 }
 
@@ -307,13 +307,13 @@ func (g *Game) executeItemIdentify() {
 
 	if isInventoryItem {
 		// インベントリからアイテムを削除
-		g.state.Player.Inventory = append(g.state.Player.Inventory[:g.tmpselectedItemIndex], g.state.Player.Inventory[g.tmpselectedItemIndex+1:]...)
+		g.state.Player.Inventory = append(g.state.Player.Inventory[:g.tmpSelectedItemIndex], g.state.Player.Inventory[g.tmpSelectedItemIndex+1:]...)
 	} else {
 		// 地面からアイテムを削除
-		g.state.Items = append(g.state.Items[:g.tmpselectedItemIndex], g.state.Items[g.tmpselectedItemIndex+1:]...)
+		g.state.Items = append(g.state.Items[:g.tmpSelectedItemIndex], g.state.Items[g.tmpSelectedItemIndex+1:]...)
 	}
 
-	g.tmpselectedItemIndex = -1
+	g.tmpSelectedItemIndex = -1
 	g.selectedItemIndex = 0
-	g.useidentifyItem = false
+	g.useIdentifyItem = false
 }

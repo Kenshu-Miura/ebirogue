@@ -174,8 +174,8 @@ type Game struct {
 	frameCounter              int
 	enemyYOffset              int
 	enemyYOffsetTimer         int
-	useidentifyItem           bool
-	tmpselectedItemIndex      int
+	useIdentifyItem           bool
+	tmpSelectedItemIndex      int
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -314,7 +314,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 	}
 
-	if g.useidentifyItem {
+	if g.useIdentifyItem {
 		g.drawUseIdentifyItemWindow(screen)
 	}
 
@@ -422,7 +422,7 @@ func NewGame() *Game {
 		},
 		isCombatActive:       false,
 		zPressed:             false,
-		tmpselectedItemIndex: -1,
+		tmpSelectedItemIndex: -1,
 	}
 
 	return game
