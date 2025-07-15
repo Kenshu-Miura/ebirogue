@@ -27,8 +27,9 @@ type Enemy struct {
 type Item interface{}
 
 type GameState struct {
-	Map    [][]Tile
-	Player Player
+	Map     [][]Tile
+	Player  Player
+	Enemies []Enemy
 }
 
 type Game struct {
