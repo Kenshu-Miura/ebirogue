@@ -22,6 +22,13 @@
 - **`enemies.go`**
   - 敵キャラクターの構造体定義や生成処理を持ちます。
 
+## Testing
+テストは次のコマンドで実行できます:
+
+```bash
+go test -tags test ./...
+```
+
 ## 知っておくべきポイント
 - **Game/ActionQueue**
   - 行動（攻撃・アイテム使用など）は `ActionQueue` に積まれ、`HandleActionQueue` で順に実行されます。これによりアニメーションやメッセージ表示のタイミングを管理しています。
