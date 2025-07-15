@@ -221,9 +221,9 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 							}
 						}
 
-						g.TargetEnemy = &enemy
+						g.TargetEnemy = &g.state.Enemies[index]
 
-						onTargetHit(&enemy, item, index)
+						onTargetHit(&g.state.Enemies[index], item, index)
 
 						g.showItemActions = false
 						g.showInventory = false
