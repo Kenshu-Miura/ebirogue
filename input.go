@@ -438,7 +438,7 @@ func (g *Game) HandleInput() (int, int) {
 		g.xPressed = true
 
 		if g.dashStopped {
-			if time.Since(g.lastDashStop) < 200*time.Millisecond {
+			if time.Since(g.lastDashStop) < 400*time.Millisecond {
 				return 0, 0
 			}
 			g.dashStopped = false // ダッシュ再開
