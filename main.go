@@ -43,6 +43,15 @@ type Entity struct {
 	Char rune // エンティティを表現する文字
 }
 
+// 状態異常を管理する構造体
+type StatusAilments struct {
+	Confusion   int  // 混乱の残りターン数
+	Sleep       int  // 睡眠の残りターン数
+	Blind       bool // 目潰し状態
+	Paralysis   bool // かなしばり状態
+	Seal        bool // 封印状態
+}
+
 type Player struct {
 	Name             string
 	Entity           // PlayerはEntityのフィールドを継承します
@@ -58,10 +67,11 @@ type Player struct {
 	MaxInventory     int       // 最大所持アイテム数
 	ExperiencePoints int       // 所持経験値
 	Level            int       // プレイヤーのレベル
-	Direction        Direction // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
-	EquippedItems    [5]Item   // Array to hold equipped items
-	Cash             int       // 所持金
-	SetTrap          Item      // トラップを設置する
+	Direction        Direction       // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	EquippedItems    [5]Item         // Array to hold equipped items
+	Cash             int             // 所持金
+	SetTrap          Item            // トラップを設置する
+	StatusAilments   StatusAilments  // 状態異常
 }
 
 type Coordinate struct {

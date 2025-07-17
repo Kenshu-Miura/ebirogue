@@ -10,6 +10,8 @@ import (
 
 func (g *Game) IncrementMoveCount() {
 	g.moveCount++
+	// 状態異常のターン数を減らす
+	g.decrementStatusAilments()
 	// Check if moveCount has increased by 5
 	if g.moveCount%5 == 0 && g.moveCount != 0 {
 		// Recover 1 HP for the player
@@ -590,6 +592,11 @@ func determineDirection(dx, dy int) Direction {
 
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
+		// 睡眠状態の敵は移動できない
+		if enemy.StatusAilments.Sleep > 0 {
+			continue
+		}
+		
 		// Variables to store the difference in position
 		dx := enemy.X - g.state.Player.X
 		dy := enemy.Y - g.state.Player.Y
@@ -809,4 +816,25 @@ func isOccupied(g *Game, x, y int) bool {
 		return true
 	}
 	return false
+}
+
+// 状態異常のターン数を減らす関数
+func (g *Game) decrementStatusAilments() {
+	// プレイヤーの状態異常を減らす
+	if g.state.Player.StatusAilments.Confusion > 0 {
+		g.state.Player.StatusAilments.Confusion--
+	}
+	if g.state.Player.StatusAilments.Sleep > 0 {
+		g.state.Player.StatusAilments.Sleep--
+	}
+	
+	// 敵の状態異常を減らす
+	for i := range g.state.Enemies {
+		if g.state.Enemies[i].StatusAilments.Confusion > 0 {
+			g.state.Enemies[i].StatusAilments.Confusion--
+		}
+		if g.state.Enemies[i].StatusAilments.Sleep > 0 {
+			g.state.Enemies[i].StatusAilments.Sleep--
+		}
+	}
 }

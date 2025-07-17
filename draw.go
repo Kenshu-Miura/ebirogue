@@ -746,7 +746,10 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 			enemyOffsetX += int(enemy.OffsetX)
 			enemyOffsetY += int(enemy.OffsetY)
 
-			enemyOffsetY += g.enemyYOffset // Y座標オフセットの適用
+			// 睡眠状態の敵は上下アニメーションを適用しない
+			if enemy.StatusAilments.Sleep == 0 {
+				enemyOffsetY += g.enemyYOffset // Y座標オフセットの適用
+			}
 
 			img := g.getEnemyImage(*enemy)
 

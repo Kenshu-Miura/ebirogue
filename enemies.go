@@ -31,6 +31,7 @@ type Enemy struct {
 	SpecialAttack            SpecialAttackFunc // 敵の特殊攻撃処理
 	SpecialAttackProbability float64           // 敵が特殊攻撃を使ってくる確率 (0.0 to 1.0)
 	ShowOnMiniMap            bool
+	StatusAilments           StatusAilments    // 状態異常
 }
 
 func (g *Game) updateEnemyVisibility() {
