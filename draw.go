@@ -746,7 +746,7 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 			enemyOffsetX += int(enemy.OffsetX)
 			enemyOffsetY += int(enemy.OffsetY)
 
-			// 睡眠状態と金縛り状態の敵は上下アニメーションを適用しない
+			// 睡眠状態と金縛り状態の敵は上下アニメーションを適用しない（封印状態は通常通りアニメーション）
 			if enemy.StatusAilments.Sleep == 0 && !enemy.StatusAilments.Paralysis {
 				enemyOffsetY += g.enemyYOffset // Y座標オフセットの適用
 			}

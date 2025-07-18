@@ -728,8 +728,8 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 	// Generate a random float number between 0 and 1 to compare with specialAttackProbability
 	randomValue := rand.Float64()
 
-	// Check if the enemy will perform a special attack
-	if enemy.SpecialAttack != nil && randomValue <= enemy.SpecialAttackProbability {
+	// Check if the enemy will perform a special attack (封印状態の敵は特技を使用しない)
+	if enemy.SpecialAttack != nil && randomValue <= enemy.SpecialAttackProbability && !enemy.StatusAilments.Seal {
 		// Perform the special attack
 		enemy.SpecialAttack(enemy, g)
 	} else {

@@ -304,7 +304,23 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 func (g *Game) onTargetHit(target Character, item Item, index int) {
 	// Check if the item is of type Cane
 	if cane, ok := item.(*Cane); ok {
-		cane.Use(g)
+		// 封印の杖を投げた場合、直接当たった敵を封印状態にする
+		if cane.Name == "封印の杖" {
+			if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+				action := Action{
+					Duration: 0.5,
+					Message:  fmt.Sprintf("%sを封印状態にした", target.GetName()),
+					Execute: func(g *Game) {
+						g.state.Enemies[index].StatusAilments.Seal = true
+						g.isActioned = true
+					},
+				}
+				g.Enqueue(action)
+			}
+		} else {
+			// 他の杖の場合は通常の処理
+			cane.Use(g)
+		}
 	} else if potion, ok := item.(*Potion); ok {
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action

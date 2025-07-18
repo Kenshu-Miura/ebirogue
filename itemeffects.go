@@ -267,6 +267,20 @@ var shiftChange = func(g *Game) {
 
 }
 
+var sealEnemy = func(g *Game) {
+	//インデックスの敵を封印状態にする
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを封印状態にした", g.state.Enemies[g.TargetEnemyIndex].GetName()),
+		Execute: func(g *Game) {
+			g.state.Enemies[g.TargetEnemyIndex].StatusAilments.Seal = true
+			g.TargetEnemyIndex = -1
+		},
+	}
+	g.Enqueue(action)
+
+}
+
 var identifyItem = func(g *Game) {
 	_, isInventoryItem := determineItemSource(g)
 
