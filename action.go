@@ -671,6 +671,12 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 			attacker.AttackTimer = 0.5
 			attacker.AttackDirection = determineDirection(dx, dy)
 			target.Health -= netDamage
+			
+			// ダメージを受けた敵の金縛り状態を解除
+			if target.StatusAilments.Paralysis {
+				target.StatusAilments.Paralysis = false
+			}
+			
 			if target.Health <= 0 {
 				// 敵を倒した場合、配列から削除
 				g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
@@ -794,6 +800,11 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.state.Enemies[enemyIndex].Name, netDamage),
 				Execute: func(g *Game) {
 					g.state.Enemies[enemyIndex].Health -= netDamage
+					
+					// ダメージを受けた敵の金縛り状態を解除
+					if g.state.Enemies[enemyIndex].StatusAilments.Paralysis {
+						g.state.Enemies[enemyIndex].StatusAilments.Paralysis = false
+					}
 
 					if g.state.Enemies[enemyIndex].Health <= 0 {
 						// 敵のHealthが0以下の場合、敵を配列から削除

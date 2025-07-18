@@ -717,6 +717,11 @@ func (g *Game) MoveEnemies() {
 			continue
 		}
 		
+		// 金縛り状態の敵は移動も攻撃もできない
+		if enemy.StatusAilments.Paralysis {
+			continue
+		}
+		
 		// 混乱状態の敵は周囲8マスからランダムに移動
 		if enemy.StatusAilments.Confusion > 0 {
 			g.moveEnemyConfused(i)

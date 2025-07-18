@@ -357,6 +357,12 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				} else if enemy, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 					// If target is of type *Enemy
 					g.state.Enemies[index].Health -= damage
+					
+					// ダメージを受けた敵の金縛り状態を解除
+					if g.state.Enemies[index].StatusAilments.Paralysis {
+						g.state.Enemies[index].StatusAilments.Paralysis = false
+					}
+					
 					if g.state.Enemies[index].Health < 0 {
 						g.state.Enemies[index].Health = 0
 					}

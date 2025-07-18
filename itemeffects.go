@@ -190,6 +190,12 @@ var damageHP30 = func(g *Game) {
 						Message:  fmt.Sprintf("%sに30ダメージを与えた。", g.state.Enemies[i].Name),
 						Execute: func(g *Game) {
 							g.state.Enemies[i].Health -= 30
+							
+							// ダメージを受けた敵の金縛り状態を解除
+							if g.state.Enemies[i].StatusAilments.Paralysis {
+								g.state.Enemies[i].StatusAilments.Paralysis = false
+							}
+							
 							if g.state.Enemies[i].Health <= 0 {
 								// 敵のHealthが0以下の場合、敵を配列から削除
 								defeatAction := Action{
@@ -460,6 +466,40 @@ var blindAllEnemiesInRoom = func(g *Game) {
 				} else {
 					log.Printf("周囲に敵がいない")
 				}
+			}
+		},
+	}
+	g.Enqueue(action)
+	
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 金縛り効果関数 - 周囲8マスの敵を金縛り状態にする
+var paralyzeAllEnemiesAround = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
+		Execute: func(g *Game) {
+			playerX, playerY := g.state.Player.GetPosition()
+			enemiesParalyzed := 0
+			
+			// 周囲8マスの敵を金縛り状態にする
+			for i := range g.state.Enemies {
+				enemyX, enemyY := g.state.Enemies[i].GetPosition()
+				// 周囲8マス以内の判定（8方向）
+				if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 && !(enemyX == playerX && enemyY == playerY) {
+					g.state.Enemies[i].StatusAilments.Paralysis = true // 金縛り状態
+					enemiesParalyzed++
+				}
+			}
+			
+			if enemiesParalyzed > 0 {
+				log.Printf("周囲の敵%d体を金縛り状態にした", enemiesParalyzed)
+			} else {
+				log.Printf("周囲に敵がいない")
 			}
 		},
 	}
