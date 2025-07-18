@@ -625,6 +625,62 @@ func (aq *ActionQueue) Enqueue(action Action) {
 	aq.Queue = append(aq.Queue, action)
 }
 
+func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
+	enemy := &g.state.Enemies[enemyIndex]
+	
+	// 目潰し状態の敵は特技を使用せず、通常攻撃のみ
+	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
+	if netDamage < 0 {
+		netDamage = 0
+	}
+	
+	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
+	
+	action := Action{
+		Duration: 0.5,
+		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
+		Execute: func(g *Game) {
+			enemy.AttackTimer = 0.5
+			enemy.AttackDirection = determineDirection(dx, dy)
+			g.state.Player.Health -= netDamage
+			if g.state.Player.Health < 0 {
+				g.state.Player.Health = 0
+			}
+		},
+	}
+	
+	g.Enqueue(action)
+}
+
+func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
+	attacker := &g.state.Enemies[attackerIndex]
+	target := &g.state.Enemies[targetIndex]
+	
+	// 敵同士の攻撃（目潰し状態の敵が他の敵を攻撃）
+	netDamage := attacker.AttackPower - target.DefensePower + rand.Intn(3) - 1
+	if netDamage < 0 {
+		netDamage = 0
+	}
+	
+	dx, dy := target.X-attacker.X, target.Y-attacker.Y
+	
+	action := Action{
+		Duration: 0.5,
+		Message:  fmt.Sprintf("%sが%sを攻撃して%dダメージを与えた", attacker.Name, target.Name, netDamage),
+		Execute: func(g *Game) {
+			attacker.AttackTimer = 0.5
+			attacker.AttackDirection = determineDirection(dx, dy)
+			target.Health -= netDamage
+			if target.Health <= 0 {
+				// 敵を倒した場合、配列から削除
+				g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
+			}
+		},
+	}
+	
+	g.Enqueue(action)
+}
+
 func (g *Game) AttackFromEnemy(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 

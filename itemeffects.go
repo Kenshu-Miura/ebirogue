@@ -418,3 +418,53 @@ var confuseAllEnemiesInRoom = func(g *Game) {
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
+
+// 目潰し効果関数 - 部屋内では同じ部屋の敵全員、通路では周囲1マスの敵を目潰し状態にする
+var blindAllEnemiesInRoom = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
+		Execute: func(g *Game) {
+			playerX, playerY := g.state.Player.GetPosition()
+			enemiesBlinded := 0
+			
+			// プレイヤーが部屋内にいるかどうかを判定
+			if isInsideRoom(playerX, playerY, g.rooms) {
+				// 部屋内の場合：同じ部屋にいる敵を全員目潰し状態にする
+				for i := range g.state.Enemies {
+					enemyX, enemyY := g.state.Enemies[i].GetPosition()
+					if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
+						g.state.Enemies[i].StatusAilments.Blind = true // 目潰し状態
+						enemiesBlinded++
+					}
+				}
+				if enemiesBlinded > 0 {
+					log.Printf("同じ部屋の敵%d体を目潰し状態にした", enemiesBlinded)
+				} else {
+					log.Printf("同じ部屋に敵がいない")
+				}
+			} else {
+				// 通路の場合：周囲1マスの敵を目潰し状態にする
+				for i := range g.state.Enemies {
+					enemyX, enemyY := g.state.Enemies[i].GetPosition()
+					// 周囲1マス以内の判定
+					if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 {
+						g.state.Enemies[i].StatusAilments.Blind = true // 目潰し状態
+						enemiesBlinded++
+					}
+				}
+				if enemiesBlinded > 0 {
+					log.Printf("周囲の敵%d体を目潰し状態にした", enemiesBlinded)
+				} else {
+					log.Printf("周囲に敵がいない")
+				}
+			}
+		},
+	}
+	g.Enqueue(action)
+	
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
+}

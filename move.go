@@ -625,6 +625,91 @@ func (g *Game) moveEnemyConfused(i int) {
 	}
 }
 
+func (g *Game) moveEnemyBlind(i int) {
+	enemy := &g.state.Enemies[i]
+	
+	// 方向が初期化されていない場合、ランダムに設定
+	if enemy.Direction == Uninitialized {
+		directions := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
+		enemy.Direction = directions[localRand.Intn(len(directions))]
+	}
+	
+	// 現在の方向に基づいて移動先を計算
+	var dx, dy int
+	switch enemy.Direction {
+	case Up:
+		dx, dy = 0, -1
+	case Down:
+		dx, dy = 0, 1
+	case Left:
+		dx, dy = -1, 0
+	case Right:
+		dx, dy = 1, 0
+	case UpRight:
+		dx, dy = 1, -1
+	case UpLeft:
+		dx, dy = -1, -1
+	case DownRight:
+		dx, dy = 1, 1
+	case DownLeft:
+		dx, dy = -1, 1
+	}
+	
+	newX := enemy.X + dx
+	newY := enemy.Y + dy
+	
+	// 範囲チェック
+	if newX < 0 || newX >= len(g.state.Map[0]) || newY < 0 || newY >= len(g.state.Map) {
+		g.changeBlindEnemyDirection(i)
+		return
+	}
+	
+	// 壁にぶつかった場合、方向を変更
+	if g.state.Map[newY][newX].Blocked {
+		g.changeBlindEnemyDirection(i)
+		return
+	}
+	
+	// 移動先にプレイヤーがいる場合、攻撃（特技は使用しない）
+	if newX == g.state.Player.X && newY == g.state.Player.Y {
+		g.AttackFromEnemyBlind(i)
+		return
+	}
+	
+	// 移動先に他の敵がいる場合、攻撃
+	for j, otherEnemy := range g.state.Enemies {
+		if j != i && otherEnemy.X == newX && otherEnemy.Y == newY {
+			g.AttackEnemyFromBlindEnemy(i, j)
+			return
+		}
+	}
+	
+	// 移動可能な場合、移動
+	enemy.X = newX
+	enemy.Y = newY
+	enemy.dx = dx
+	enemy.dy = dy
+	enemy.Animating = true
+}
+
+func (g *Game) changeBlindEnemyDirection(i int) {
+	enemy := &g.state.Enemies[i]
+	
+	// 現在の方向以外の7方向から選択
+	allDirections := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
+	availableDirections := make([]Direction, 0)
+	
+	for _, dir := range allDirections {
+		if dir != enemy.Direction {
+			availableDirections = append(availableDirections, dir)
+		}
+	}
+	
+	if len(availableDirections) > 0 {
+		enemy.Direction = availableDirections[localRand.Intn(len(availableDirections))]
+	}
+}
+
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
 		// 睡眠状態の敵は移動できない
@@ -635,6 +720,12 @@ func (g *Game) MoveEnemies() {
 		// 混乱状態の敵は周囲8マスからランダムに移動
 		if enemy.StatusAilments.Confusion > 0 {
 			g.moveEnemyConfused(i)
+			continue
+		}
+		
+		// 目潰し状態の敵は直進移動
+		if enemy.StatusAilments.Blind {
+			g.moveEnemyBlind(i)
 			continue
 		}
 		
