@@ -2,8 +2,8 @@ package main
 
 import "testing"
 
-// MovePlayer is a minimal stub used for testing.
-func (g *Game) MovePlayer(dx, dy int) bool {
+// MovePlayerStub is a minimal stub used for testing.
+func (g *Game) MovePlayerStub(dx, dy int) bool {
 	newX := g.state.Player.X + dx
 	newY := g.state.Player.Y + dy
 
@@ -32,7 +32,7 @@ func TestMoveIntoEnemyFails(t *testing.T) {
 	m := [][]Tile{{{Type: "floor"}, {Type: "floor"}}}
 	g := &Game{state: GameState{Map: m, Player: Player{Entity: Entity{X: 0, Y: 0}}, Enemies: []Enemy{{Entity: Entity{X: 1, Y: 0}}}}}
 
-	moved := g.MovePlayer(1, 0)
+	moved := g.MovePlayerStub(1, 0)
 	if moved {
 		t.Fatalf("expected move to fail when enemy occupies tile")
 	}
@@ -46,7 +46,7 @@ func TestMoveToEmptyTileSucceeds(t *testing.T) {
 	m := [][]Tile{{{Type: "floor"}, {Type: "floor"}}}
 	g := &Game{state: GameState{Map: m, Player: Player{Entity: Entity{X: 0, Y: 0}}}}
 
-	moved := g.MovePlayer(1, 0)
+	moved := g.MovePlayerStub(1, 0)
 	if !moved {
 		t.Fatalf("expected move to succeed on empty tile")
 	}

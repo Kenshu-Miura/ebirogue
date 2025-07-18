@@ -590,10 +590,51 @@ func determineDirection(dx, dy int) Direction {
 	}
 }
 
+func (g *Game) moveEnemyConfused(i int) {
+	enemy := &g.state.Enemies[i]
+	
+	// 8方向のランダムな移動先を選択
+	directions := []struct{ dx, dy int }{
+		{-1, -1}, {0, -1}, {1, -1},
+		{-1, 0},           {1, 0},
+		{-1, 1},  {0, 1},  {1, 1},
+	}
+	
+	direction := directions[localRand.Intn(len(directions))]
+	newX := enemy.X + direction.dx
+	newY := enemy.Y + direction.dy
+	
+	// 範囲チェック
+	if newX < 0 || newX >= len(g.state.Map[0]) || newY < 0 || newY >= len(g.state.Map) {
+		return
+	}
+	
+	// 移動先がプレイヤーの場合、攻撃を行う
+	if newX == g.state.Player.X && newY == g.state.Player.Y {
+		g.AttackFromEnemy(i)
+		return
+	}
+	
+	// 移動先が通行可能で他の敵がいない場合、移動
+	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+		enemy.X = newX
+		enemy.Y = newY
+		enemy.dx = direction.dx
+		enemy.dy = direction.dy
+		enemy.Animating = true
+	}
+}
+
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
 		// 睡眠状態の敵は移動できない
 		if enemy.StatusAilments.Sleep > 0 {
+			continue
+		}
+		
+		// 混乱状態の敵は周囲8マスからランダムに移動
+		if enemy.StatusAilments.Confusion > 0 {
+			g.moveEnemyConfused(i)
 			continue
 		}
 		
