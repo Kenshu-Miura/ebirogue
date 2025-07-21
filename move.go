@@ -814,7 +814,7 @@ func (g *Game) MoveEnemies() {
 		}
 		
 		// 目潰し状態の敵は直進移動
-		if enemy.StatusAilments.Blind {
+		if enemy.StatusAilments.Blind > 0 {
 			g.moveEnemyBlind(i)
 			continue
 		}
@@ -1070,6 +1070,20 @@ func (g *Game) decrementStatusAilments() {
 			action := Action{
 				Duration: 0.4,
 				Message:  "目を覚ました",
+				Execute:  func(g *Game) {},
+			}
+			g.Enqueue(action)
+		}
+	}
+	if g.state.Player.StatusAilments.Blind > 0 {
+		g.state.Player.StatusAilments.Blind--
+		// 目潰し状態が治った時のメッセージ
+		if g.state.Player.StatusAilments.Blind == 0 {
+			// ミニマップを更新して敵・アイテム・階段を表示
+			g.miniMapDirty = true
+			action := Action{
+				Duration: 0.4,
+				Message:  "目が見えるようになった",
 				Execute:  func(g *Game) {},
 			}
 			g.Enqueue(action)

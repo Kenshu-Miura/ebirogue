@@ -5,12 +5,13 @@ package main
 
 type BaseItem struct {
 	Entity
-	ID            int
-	Type          string
-	Name          string
-	Description   string
-	UseActions    map[string]UseAction
-	ShowOnMiniMap bool
+	ID              int
+	Type            string
+	Name            string
+	Description     string
+	UseActions      map[string]UseAction
+	ShowOnMiniMap   bool
+	PlayerDiscovered bool // プレイヤーによって発見されたかどうか
 }
 
 type Weapon struct {
@@ -259,6 +260,15 @@ var itemTemplates = map[int]ItemTemplate{
 		Char:        '!',
 		UseActions:  map[string]UseAction{"RestoreHealth": confusionPotion},
 	},
+	19: {
+		ID:          19,
+		ItemType:    "Potion",
+		Type:        "Potion",
+		Name:        "目潰し薬",
+		Description: "飲むと30ターン目潰し状態になる。敵に投げると永続的な目潰し状態にする。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"RestoreHealth": blindPotion},
+	},
 }
 
 // テーブルからアイテムを生成する共通関数
@@ -268,7 +278,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 		// デフォルトで混乱薬を返す
 		template = itemTemplates[18]
 	}
-	
+
 	baseItem := BaseItem{
 		Entity: Entity{
 			X:    x,
@@ -281,10 +291,10 @@ func buildItemFromTemplate(id, x, y int) Item {
 		Description: template.Description,
 		UseActions:  template.UseActions,
 	}
-	
+
 	var item Item
 	sharpnessValue := localRand.Intn(5) - 1
-	
+
 	switch template.ItemType {
 	case "Money":
 		item = &Money{
@@ -363,7 +373,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 			Health:   0,
 		}
 	}
-	
+
 	return item
 }
 

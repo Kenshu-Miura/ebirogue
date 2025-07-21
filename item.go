@@ -17,11 +17,28 @@ func (g *Game) updateItemVisibility() {
 	for _, item := range g.state.Items {
 		// アイテムの座標を取得
 		itemX, itemY := item.GetPosition()
-
-		// プレイヤーとアイテムが同じ部屋にあるかどうかを確認
-		if isSameRoom(playerX, playerY, itemX, itemY, g.rooms) {
-			// 同じ部屋にある場合、アイテムのShowOnMiniMapフィールドをtrueに設定
-			item.SetShowOnMiniMap(true)
+		
+		// プレイヤーが盲目状態の場合、アイテムを非表示にする
+		if g.state.Player.StatusAilments.Blind > 0 {
+			item.SetShowOnMiniMap(false)
+			g.miniMapDirty = true
+		} else {
+			// プレイヤーとアイテムが同じ部屋にあるかどうかを確認
+			inSameRoom := isSameRoom(playerX, playerY, itemX, itemY, g.rooms)
+			
+			if inSameRoom {
+				// 同じ部屋にある場合、発見状態に設定し、ミニマップに表示
+				item.SetPlayerDiscovered(true)
+				item.SetShowOnMiniMap(true)
+				g.miniMapDirty = true
+			} else if item.GetPlayerDiscovered() {
+				// 同じ部屋にないが一度発見されたアイテムは表示し続ける
+				item.SetShowOnMiniMap(true)
+				g.miniMapDirty = true
+			} else {
+				// 発見されていないアイテムは非表示
+				item.SetShowOnMiniMap(false)
+			}
 		}
 	}
 }
@@ -354,6 +371,31 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 						// If target is of type *Enemy
 						g.state.Enemies[index].StatusAilments.Confusion = 10
 					}
+					g.isActioned = true
+				},
+			}
+			g.Enqueue(action)
+		} else if potion.Name == "目潰し薬" {
+			// 目潰し薬の場合の処理
+			// 効果を即座に適用（ミニマップを即座に非表示にするため）
+			if _, ok := target.(*Player); ok {
+				// If target is of type *Player
+				g.state.Player.StatusAilments.Blind = 30
+				// ミニマップを更新するためのフラグを設定
+				g.miniMapDirty = true
+				// ミニマップキャッシュを強制的にクリアして即座に更新
+				if g.miniMap != nil {
+					g.miniMap.Clear()
+				}
+			} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+				// If target is of type *Enemy - 永続的な目潰し状態にする
+				g.state.Enemies[index].StatusAilments.Blind = 999
+			}
+			
+			action := Action{
+				Duration: 0.5,
+				Message:  fmt.Sprintf("%sを目潰し状態にした", target.GetName()),
+				Execute: func(g *Game) {
 					g.isActioned = true
 				},
 			}

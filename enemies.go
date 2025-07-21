@@ -46,7 +46,11 @@ func (g *Game) updateEnemyVisibility() {
 		// Check if the player and enemy are adjacent
 		adjacent := (math.Abs(float64(playerX-enemyX)) <= 1 && math.Abs(float64(playerY-enemyY)) <= 1)
 
-		if inSameRoom || adjacent || enemy.PlayerDiscovered {
+		// プレイヤーが盲目状態の場合、敵を非表示にする
+		if g.state.Player.StatusAilments.Blind > 0 {
+			enemy.SetShowOnMiniMap(false)
+			g.miniMapDirty = true
+		} else if inSameRoom || adjacent || enemy.PlayerDiscovered {
 			g.miniMapDirty = true
 			enemy.SetShowOnMiniMap(true)
 		} else {

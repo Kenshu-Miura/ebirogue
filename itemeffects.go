@@ -456,7 +456,7 @@ var blindAllEnemiesInRoom = func(g *Game) {
 				for i := range g.state.Enemies {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
-						g.state.Enemies[i].StatusAilments.Blind = true // 目潰し状態
+						g.state.Enemies[i].StatusAilments.Blind = 10 // 10ターン目潰し状態
 						enemiesBlinded++
 					}
 				}
@@ -471,7 +471,7 @@ var blindAllEnemiesInRoom = func(g *Game) {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					// 周囲1マス以内の判定
 					if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 {
-						g.state.Enemies[i].StatusAilments.Blind = true // 目潰し状態
+						g.state.Enemies[i].StatusAilments.Blind = 10 // 10ターン目潰し状態
 						enemiesBlinded++
 					}
 				}
@@ -549,6 +549,23 @@ var confusionPotion = func(g *Game) {
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
 		Execute: func(g *Game) {
 			g.state.Player.StatusAilments.Confusion = 10 // 10ターン混乱
+		},
+	}
+	g.Enqueue(action)
+	
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 目潰しポーション効果関数 - プレイヤーを目潰し状態にする
+var blindPotion = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
+		Execute: func(g *Game) {
+			g.state.Player.StatusAilments.Blind = 30 // 30ターン目潰し状態
 		},
 	}
 	g.Enqueue(action)

@@ -111,23 +111,29 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 
 				// tile.Typeが"stairs"であるかどうかをチェック
 				if tile.Type == "stairs" {
-					// 階段タイル用のボーダーのイメージを作成
-					stairsTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
-					//borderSize := 1 // ボーダーの幅
+					// プレイヤーが目潰し状態の場合、階段をミニマップに表示しない
+					if g.state.Player.StatusAilments.Blind > 0 {
+						// 目潰し状態の時は階段を通常のタイルと同じように表示
+						g.miniMap.DrawImage(miniMapTile, opts)
+					} else {
+						// 階段タイル用のボーダーのイメージを作成
+						stairsTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+						//borderSize := 1 // ボーダーの幅
 
-					// ボーダーを描画
-					for i := 0; i < tilePixelSize; i++ {
-						// 上のボーダー
-						stairsTile.Set(i, 0, color.White)
-						// 下のボーダー
-						stairsTile.Set(i, tilePixelSize-1, color.White)
-						// 左のボーダー
-						stairsTile.Set(0, i, color.White)
-						// 右のボーダー
-						stairsTile.Set(tilePixelSize-1, i, color.White)
+						// ボーダーを描画
+						for i := 0; i < tilePixelSize; i++ {
+							// 上のボーダー
+							stairsTile.Set(i, 0, color.White)
+							// 下のボーダー
+							stairsTile.Set(i, tilePixelSize-1, color.White)
+							// 左のボーダー
+							stairsTile.Set(0, i, color.White)
+							// 右のボーダー
+							stairsTile.Set(tilePixelSize-1, i, color.White)
+						}
+
+						g.miniMap.DrawImage(stairsTile, opts)
 					}
-
-					g.miniMap.DrawImage(stairsTile, opts)
 				} else {
 					g.miniMap.DrawImage(miniMapTile, opts)
 				}
@@ -155,13 +161,16 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	itemTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
 	itemTile.Fill(color.RGBA{0, 255, 255, 128}) // 水色半透明
 
-	// ゲームのアイテムリストをループして、ShowOnMiniMapがtrueのアイテムをミニマップに描画
-	for _, item := range g.state.Items {
-		if item.GetShowOnMiniMap() {
-			itemX, itemY := item.GetPosition()
-			opts := &ebiten.DrawImageOptions{}
-			opts.GeoM.Translate(float64(itemX*tilePixelSize), float64(itemY*tilePixelSize))
-			g.miniMap.DrawImage(itemTile, opts)
+	// プレイヤーが目潰し状態でない場合、アイテムをミニマップに表示
+	if g.state.Player.StatusAilments.Blind == 0 {
+		// ゲームのアイテムリストをループして、ShowOnMiniMapがtrueのアイテムをミニマップに描画
+		for _, item := range g.state.Items {
+			if item.GetShowOnMiniMap() {
+				itemX, itemY := item.GetPosition()
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Translate(float64(itemX*tilePixelSize), float64(itemY*tilePixelSize))
+				g.miniMap.DrawImage(itemTile, opts)
+			}
 		}
 	}
 
@@ -170,12 +179,15 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 
 	//log.Printf("ShowOnMiniMap: %v", g.state.Enemies[0].GetShowOnMiniMap())
 
-	for _, enemy := range g.state.Enemies {
-		if enemy.GetShowOnMiniMap() {
-			enemyX, enemyY := enemy.GetPosition()
-			opts := &ebiten.DrawImageOptions{}
-			opts.GeoM.Translate(float64(enemyX*tilePixelSize), float64(enemyY*tilePixelSize))
-			g.miniMap.DrawImage(enemyTile, opts)
+	// プレイヤーが目潰し状態でない場合、敵をミニマップに表示
+	if g.state.Player.StatusAilments.Blind == 0 {
+		for _, enemy := range g.state.Enemies {
+			if enemy.GetShowOnMiniMap() {
+				enemyX, enemyY := enemy.GetPosition()
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Translate(float64(enemyX*tilePixelSize), float64(enemyY*tilePixelSize))
+				g.miniMap.DrawImage(enemyTile, opts)
+			}
 		}
 	}
 

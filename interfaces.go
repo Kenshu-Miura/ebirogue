@@ -112,6 +112,8 @@ type Item interface {
 	GetID() int  // Add this method to get the ID of the item
 	SetShowOnMiniMap(show bool)
 	GetShowOnMiniMap() bool
+	SetPlayerDiscovered(discovered bool)
+	GetPlayerDiscovered() bool
 	// 他にも共通のメソッドがあればここに追加します。
 }
 
@@ -121,6 +123,14 @@ func (item *BaseItem) SetShowOnMiniMap(show bool) {
 
 func (b *BaseItem) GetShowOnMiniMap() bool {
 	return b.ShowOnMiniMap
+}
+
+func (item *BaseItem) SetPlayerDiscovered(discovered bool) {
+	item.PlayerDiscovered = discovered
+}
+
+func (b *BaseItem) GetPlayerDiscovered() bool {
+	return b.PlayerDiscovered
 }
 
 // Equipable interface

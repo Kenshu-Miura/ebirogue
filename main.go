@@ -47,7 +47,7 @@ type Entity struct {
 type StatusAilments struct {
 	Confusion int  // 混乱の残りターン数
 	Sleep     int  // 睡眠の残りターン数
-	Blind     bool // 目潰し状態
+	Blind     int  // 目潰しの残りターン数
 	Paralysis bool // かなしばり状態
 	Seal      bool // 封印状態
 }

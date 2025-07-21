@@ -576,13 +576,12 @@ func (g *Game) processF1KeyPress() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
 		// インベントリに空きがあるかチェック
 		if len(g.state.Player.Inventory) < g.state.Player.MaxInventory {
-			// 混乱薬（ID: 18）を作成してインベントリに追加
-			confusionPotion := g.createItemByID(18, 0, 0) // 座標は仮の値
-			g.state.Player.Inventory = append(g.state.Player.Inventory, confusionPotion)
-			
+			blindPotion := g.createItemByID(19, 0, 0) // 座標は仮の値
+			g.state.Player.Inventory = append(g.state.Player.Inventory, blindPotion)
+
 			action := Action{
 				Duration: 0.4,
-				Message:  "[DEBUG] 混乱薬をインベントリに追加した",
+				Message:  "[DEBUG] 目潰し薬をインベントリに追加した",
 				Execute:  func(g *Game) {},
 			}
 			g.Enqueue(action)
