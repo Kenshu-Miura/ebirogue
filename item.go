@@ -340,6 +340,24 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				},
 			}
 			g.Enqueue(action)
+		} else if potion.Name == "混乱薬" {
+			// 混乱薬の場合の処理
+			action := Action{
+				Duration: 0.5,
+				Message:  fmt.Sprintf("%sを混乱状態にした", target.GetName()),
+				Execute: func(g *Game) {
+					// Type assertion to check if target is of type *Player or *Enemy
+					if _, ok := target.(*Player); ok {
+						// If target is of type *Player
+						g.state.Player.StatusAilments.Confusion = 10
+					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+						// If target is of type *Enemy
+						g.state.Enemies[index].StatusAilments.Confusion = 10
+					}
+					g.isActioned = true
+				},
+			}
+			g.Enqueue(action)
 		} else {
 			// 通常のポーションの場合の処理
 			action := Action{

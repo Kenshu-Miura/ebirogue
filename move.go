@@ -625,6 +625,91 @@ func (g *Game) moveEnemyConfused(i int) {
 	}
 }
 
+// プレイヤーが混乱状態の時のランダム移動処理
+func (g *Game) movePlayerConfused() bool {
+	// 8方向のランダムな移動先を選択
+	directions := []struct{ dx, dy int }{
+		{-1, -1}, {0, -1}, {1, -1},
+		{-1, 0},           {1, 0},
+		{-1, 1},  {0, 1},  {1, 1},
+	}
+	
+	direction := directions[localRand.Intn(len(directions))]
+	newX := g.state.Player.X + direction.dx
+	newY := g.state.Player.Y + direction.dy
+	
+	// 範囲チェック
+	if newX < 0 || newX >= len(g.state.Map[0]) || newY < 0 || newY >= len(g.state.Map) {
+		// 混乱メッセージを表示（移動失敗）
+		action := Action{
+			Duration: 0.4,
+			Message:  "混乱している...",
+			Execute:  func(g *Game) {},
+		}
+		g.Enqueue(action)
+		return false // 移動失敗時はターンを消費しない
+	}
+	
+	// プレイヤーの方向を設定
+	switch {
+	case direction.dx == 1 && direction.dy == 0:
+		g.state.Player.Direction = Right
+	case direction.dx == -1 && direction.dy == 0:
+		g.state.Player.Direction = Left
+	case direction.dx == 0 && direction.dy == 1:
+		g.state.Player.Direction = Down
+	case direction.dx == 0 && direction.dy == -1:
+		g.state.Player.Direction = Up
+	case direction.dx == 1 && direction.dy == -1:
+		g.state.Player.Direction = UpRight
+	case direction.dx == 1 && direction.dy == 1:
+		g.state.Player.Direction = DownRight
+	case direction.dx == -1 && direction.dy == -1:
+		g.state.Player.Direction = UpLeft
+	case direction.dx == -1 && direction.dy == 1:
+		g.state.Player.Direction = DownLeft
+	}
+	
+	// 移動先に敵がいる場合、移動失敗として扱う
+	for _, enemy := range g.state.Enemies {
+		if enemy.X == newX && enemy.Y == newY {
+			action := Action{
+				Duration: 0.4,
+				Message:  "混乱している...",
+				Execute:  func(g *Game) {},
+			}
+			g.Enqueue(action)
+			return false // 移動失敗時はターンを消費しない
+		}
+	}
+	
+	// 移動先が通行可能な場合、移動
+	if !g.state.Map[newY][newX].Blocked {
+		action := Action{
+			Duration: 0.4,
+			Message:  "混乱して移動した",
+			Execute:  func(g *Game) {},
+		}
+		g.Enqueue(action)
+		
+		g.state.Player.X = newX
+		g.state.Player.Y = newY
+		// アニメーション用に実際の移動方向を保存
+		g.dx, g.dy = direction.dx, direction.dy
+		return true // 移動成功時はターンを消費
+	}
+	
+	// 移動失敗時
+	action := Action{
+		Duration: 0.4,
+		Message:  "混乱している...",
+		Execute:  func(g *Game) {},
+	}
+	g.Enqueue(action)
+	return false // 移動失敗時はターンを消費しない
+}
+
+
 func (g *Game) moveEnemyBlind(i int) {
 	enemy := &g.state.Enemies[i]
 	
@@ -892,6 +977,11 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 	// dx と dy が両方とも0の場合、移動は発生していない
 	if dx == 0 && dy == 0 {
 		return false
+	}
+	
+	// プレイヤーが混乱状態の場合、入力方向に関係なくランダムな8方向に移動
+	if g.state.Player.StatusAilments.Confusion > 0 {
+		return g.movePlayerConfused()
 	}
 
 	newPX := g.state.Player.X + dx

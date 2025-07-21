@@ -539,3 +539,20 @@ var sleepPotion = func(g *Game) {
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
+
+// 混乱ポーション効果関数 - プレイヤーを混乱状態にする
+var confusionPotion = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
+		Execute: func(g *Game) {
+			g.state.Player.StatusAilments.Confusion = 10 // 10ターン混乱
+		},
+	}
+	g.Enqueue(action)
+	
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
+}

@@ -850,3 +850,54 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	}
 	return false
 }
+
+// プレイヤーが混乱状態の時のランダム攻撃処理
+func (g *Game) attackPlayerConfused() {
+	// 8方向のランダムな攻撃方向を選択
+	directions := []struct{ dx, dy int }{
+		{-1, -1}, {0, -1}, {1, -1},
+		{-1, 0},           {1, 0},
+		{-1, 1},  {0, 1},  {1, 1},
+	}
+	
+	direction := directions[localRand.Intn(len(directions))]
+	
+	// プレイヤーの方向を設定
+	switch {
+	case direction.dx == 1 && direction.dy == 0:
+		g.state.Player.Direction = Right
+	case direction.dx == -1 && direction.dy == 0:
+		g.state.Player.Direction = Left
+	case direction.dx == 0 && direction.dy == 1:
+		g.state.Player.Direction = Down
+	case direction.dx == 0 && direction.dy == -1:
+		g.state.Player.Direction = Up
+	case direction.dx == 1 && direction.dy == -1:
+		g.state.Player.Direction = UpRight
+	case direction.dx == 1 && direction.dy == 1:
+		g.state.Player.Direction = DownRight
+	case direction.dx == -1 && direction.dy == -1:
+		g.state.Player.Direction = UpLeft
+	case direction.dx == -1 && direction.dy == 1:
+		g.state.Player.Direction = DownLeft
+	}
+	
+	// ランダムな方向に攻撃を試行
+	attacked := g.CheckForEnemies(direction.dx, direction.dy)
+	
+	if attacked {
+		action := Action{
+			Duration: 0.4,
+			Message:  "混乱して攻撃した！",
+			Execute:  func(g *Game) {},
+		}
+		g.Enqueue(action)
+	} else {
+		action := Action{
+			Duration: 0.4,
+			Message:  "混乱して空振りした",
+			Execute:  func(g *Game) {},
+		}
+		g.Enqueue(action)
+	}
+}

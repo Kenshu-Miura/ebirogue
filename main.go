@@ -217,7 +217,12 @@ func (g *Game) Update() error {
 		//dx, dy := g.CheatHandleInput()
 
 		if g.zPressed && !g.ShowGroundItem {
-			g.CheckForEnemies(dx, dy)
+			// プレイヤーが混乱状態の場合、ランダムな方向に攻撃
+			if g.state.Player.StatusAilments.Confusion > 0 {
+				g.attackPlayerConfused()
+			} else {
+				g.CheckForEnemies(dx, dy)
+			}
 			g.zPressed = false
 			return nil
 		}
@@ -229,7 +234,10 @@ func (g *Game) Update() error {
 			g.isActioned = true
 			g.Animating = true  // Set the animating flag
 			g.xPressed = false  // Reset the xPressed flag
-			g.dx, g.dy = dx, dy // Save the direction of movement
+			// 混乱状態でない場合のみ入力方向をアニメーション用に保存
+			if g.state.Player.StatusAilments.Confusion == 0 {
+				g.dx, g.dy = dx, dy // Save the direction of movement
+			}
 		}
 
 		// 扉を開く処理の追加
@@ -240,6 +248,9 @@ func (g *Game) Update() error {
 	}
 
 	g.processDKeyPress()
+
+	// デバッグ用F1キー処理
+	g.processF1KeyPress()
 
 	// Find item at player's position
 	playerX, playerY := g.state.Player.X, g.state.Player.Y

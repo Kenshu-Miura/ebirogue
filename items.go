@@ -77,7 +77,7 @@ type Trap struct {
 
 func createItem(x, y int) Item {
 	var item Item
-	randomValue := localRand.Intn(18) // Store the random value to ensure it's only generated once
+	randomValue := localRand.Intn(19) // Store the random value to ensure it's only generated once
 	//randomValue := 9
 	sharpnessValue := localRand.Intn(5) - 1
 	//sharpnessValue := -1
@@ -416,6 +416,161 @@ func createItem(x, y int) Item {
 				Description: "飲むと10ターン睡眠状態になる。敵に投げることもできる。",
 				UseActions: map[string]UseAction{
 					"RestoreHealth": sleepPotion,
+				},
+			},
+			Health: 0,
+		}
+	case 18:
+		item = &Potion{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          18,
+				Type:        "Potion",
+				Name:        "混乱薬",
+				Description: "飲むと10ターン混乱状態になる。敵に投げることもできる。",
+				UseActions: map[string]UseAction{
+					"RestoreHealth": confusionPotion,
+				},
+			},
+			Health: 0,
+		}
+	}
+	return item
+}
+
+// デバッグ用：特定のIDのアイテムを生成する関数
+func (g *Game) createItemByID(id int, x, y int) Item {
+	var item Item
+	
+	switch id {
+	case 0:
+		item = &Money{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          0,
+				Type:        "Kane",
+				Name:        "小銭",
+				Description: "小銭。それは海老さんが絆と呼ぶもの。",
+				UseActions: map[string]UseAction{
+					"UseMoney": money,
+				},
+			},
+			Amount:     localRand.Intn(2001),
+			Identified: true,
+		}
+	case 1:
+		item = &Food{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          1,
+				Type:        "Sausage",
+				Name:        "ウインナー",
+				Description: "海老さんが配信中に食べる食事。満腹度を50回復する。",
+				UseActions: map[string]UseAction{
+					"RestoreSatiety": restoreSatiety50,
+				},
+			},
+			Satiety: 50,
+		}
+	case 2:
+		item = &Potion{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          2,
+				Type:        "Mintia",
+				Name:        "ミンティア",
+				Description: "海老さんを元気にする薬。HPを30回復する。",
+				UseActions: map[string]UseAction{
+					"RestoreHealth": restoreHP30,
+				},
+			},
+			Health: 30,
+		}
+	case 3:
+		item = &Potion{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          3,
+				Type:        "Mintia",
+				Name:        "すごいミンティア",
+				Description: "海老さんをすごく元気にする薬。HPを100回復する。",
+				UseActions: map[string]UseAction{
+					"RestoreHealth": restoreHP100,
+				},
+			},
+			Health: 100,
+		}
+	case 17:
+		item = &Potion{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          17,
+				Type:        "Potion",
+				Name:        "睡眠薬",
+				Description: "飲むと10ターン睡眠状態になる。敵に投げることもできる。",
+				UseActions: map[string]UseAction{
+					"RestoreHealth": sleepPotion,
+				},
+			},
+			Health: 0,
+		}
+	case 18:
+		item = &Potion{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          18,
+				Type:        "Potion",
+				Name:        "混乱薬",
+				Description: "飲むと10ターン混乱状態になる。敵に投げることもできる。",
+				UseActions: map[string]UseAction{
+					"RestoreHealth": confusionPotion,
+				},
+			},
+			Health: 0,
+		}
+	default:
+		// デフォルトでは混乱薬を返す
+		item = &Potion{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          18,
+				Type:        "Potion",
+				Name:        "混乱薬",
+				Description: "飲むと10ターン混乱状態になる。敵に投げることもできる。",
+				UseActions: map[string]UseAction{
+					"RestoreHealth": confusionPotion,
 				},
 			},
 			Health: 0,
