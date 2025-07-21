@@ -877,6 +877,18 @@ func (g *Game) CheatMovePlayer(dx, dy int) bool {
 }
 
 func (g *Game) MovePlayer(dx, dy int) bool {
+	// プレイヤーが睡眠状態の場合、移動できない
+	if g.state.Player.StatusAilments.Sleep > 0 {
+		// 睡眠メッセージを表示
+		action := Action{
+			Duration: 0.4,
+			Message:  "眠っている...",
+			Execute:  func(g *Game) {},
+		}
+		g.Enqueue(action)
+		return true // 睡眠状態でもターンを消費する
+	}
+	
 	// dx と dy が両方とも0の場合、移動は発生していない
 	if dx == 0 && dy == 0 {
 		return false
@@ -963,6 +975,15 @@ func (g *Game) decrementStatusAilments() {
 	}
 	if g.state.Player.StatusAilments.Sleep > 0 {
 		g.state.Player.StatusAilments.Sleep--
+		// 睡眠状態が治った時のメッセージ
+		if g.state.Player.StatusAilments.Sleep == 0 {
+			action := Action{
+				Duration: 0.4,
+				Message:  "目を覚ました",
+				Execute:  func(g *Game) {},
+			}
+			g.Enqueue(action)
+		}
 	}
 	
 	// 敵の状態異常を減らす

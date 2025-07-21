@@ -322,29 +322,50 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			cane.Use(g)
 		}
 	} else if potion, ok := item.(*Potion); ok {
-		action := Action{
-			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), potion.Health),
-			Execute: func(g *Game) {
-				// Type assertion to check if target is of type *Player or *Enemy
-				if _, ok := target.(*Player); ok {
-					// If target is of type *Player
-					g.state.Player.Health += potion.Health
-					if g.state.Player.Health > g.state.Player.GetMaxHealth() {
-						g.state.Player.Health = g.state.Player.GetMaxHealth()
+		// 睡眠薬の場合の処理
+		if potion.Name == "睡眠薬" {
+			action := Action{
+				Duration: 0.5,
+				Message:  fmt.Sprintf("%sを睡眠状態にした", target.GetName()),
+				Execute: func(g *Game) {
+					// Type assertion to check if target is of type *Player or *Enemy
+					if _, ok := target.(*Player); ok {
+						// If target is of type *Player
+						g.state.Player.StatusAilments.Sleep = 10
+					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+						// If target is of type *Enemy
+						g.state.Enemies[index].StatusAilments.Sleep = 10
 					}
-				} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
-					// If target is of type *Enemy
-					g.state.Enemies[index].Health += potion.Health
-					if g.state.Enemies[index].Health > g.state.Enemies[index].GetMaxHealth() {
-						g.state.Enemies[index].Health = g.state.Enemies[index].GetMaxHealth()
+					g.isActioned = true
+				},
+			}
+			g.Enqueue(action)
+		} else {
+			// 通常のポーションの場合の処理
+			action := Action{
+				Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
+				Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), potion.Health),
+				Execute: func(g *Game) {
+					// Type assertion to check if target is of type *Player or *Enemy
+					if _, ok := target.(*Player); ok {
+						// If target is of type *Player
+						g.state.Player.Health += potion.Health
+						if g.state.Player.Health > g.state.Player.GetMaxHealth() {
+							g.state.Player.Health = g.state.Player.GetMaxHealth()
+						}
+					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+						// If target is of type *Enemy
+						g.state.Enemies[index].Health += potion.Health
+						if g.state.Enemies[index].Health > g.state.Enemies[index].GetMaxHealth() {
+							g.state.Enemies[index].Health = g.state.Enemies[index].GetMaxHealth()
+						}
 					}
-				}
-				g.isActioned = true
-				// Reset the target character after processing
-			},
+					g.isActioned = true
+					// Reset the target character after processing
+				},
+			}
+			g.Enqueue(action)
 		}
-		g.Enqueue(action)
 	} else {
 		damage := 0
 		if g.dPressed {

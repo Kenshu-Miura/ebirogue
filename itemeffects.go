@@ -522,3 +522,20 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
+
+// 睡眠ポーション効果関数 - プレイヤーを睡眠状態にする
+var sleepPotion = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	
+	action := Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
+		Execute: func(g *Game) {
+			g.state.Player.StatusAilments.Sleep = 10 // 10ターン睡眠
+		},
+	}
+	g.Enqueue(action)
+	
+	// アイテムの使用後の処理
+	removeUsedItem(g, isInventoryItem)
+}

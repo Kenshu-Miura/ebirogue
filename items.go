@@ -77,7 +77,7 @@ type Trap struct {
 
 func createItem(x, y int) Item {
 	var item Item
-	randomValue := localRand.Intn(17) // Store the random value to ensure it's only generated once
+	randomValue := localRand.Intn(18) // Store the random value to ensure it's only generated once
 	//randomValue := 9
 	sharpnessValue := localRand.Intn(5) - 1
 	//sharpnessValue := -1
@@ -401,6 +401,24 @@ func createItem(x, y int) Item {
 			},
 			Uses:       5,
 			Identified: false,
+		}
+	case 17:
+		item = &Potion{
+			BaseItem: BaseItem{
+				Entity: Entity{
+					X:    x,
+					Y:    y,
+					Char: '!',
+				},
+				ID:          17,
+				Type:        "Potion",
+				Name:        "睡眠薬",
+				Description: "飲むと10ターン睡眠状態になる。敵に投げることもできる。",
+				UseActions: map[string]UseAction{
+					"RestoreHealth": sleepPotion,
+				},
+			},
+			Health: 0,
 		}
 	}
 	return item
