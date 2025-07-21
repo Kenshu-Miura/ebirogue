@@ -75,506 +75,305 @@ type Trap struct {
 	BaseItem
 }
 
-func createItem(x, y int) Item {
+// アイテムデータテーブル用の構造体
+type ItemTemplate struct {
+	ID          int
+	ItemType    string // "Money", "Food", "Potion", etc.
+	Type        string // BaseItem.Type用
+	Name        string
+	Description string
+	Char        rune
+	UseActions  map[string]UseAction
+}
+
+// アイテムデータテーブル
+var itemTemplates = map[int]ItemTemplate{
+	0: {
+		ID:          0,
+		ItemType:    "Money",
+		Type:        "Kane",
+		Name:        "小銭",
+		Description: "小銭。それは海老さんが絆と呼ぶもの。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"UseMoney": money},
+	},
+	1: {
+		ID:          1,
+		ItemType:    "Food",
+		Type:        "Sausage",
+		Name:        "ウインナー",
+		Description: "海老さんが配信中に食べる食事。満腹度を50回復する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"RestoreSatiety": restoreSatiety50},
+	},
+	2: {
+		ID:          2,
+		ItemType:    "Potion",
+		Type:        "Mintia",
+		Name:        "ミンティア",
+		Description: "海老さんを元気にする薬。HPを30回復する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"RestoreHealth": restoreHP30},
+	},
+	3: {
+		ID:          3,
+		ItemType:    "Potion",
+		Type:        "Mintia",
+		Name:        "すごいミンティア",
+		Description: "海老さんをすごく元気にする薬。HPを100回復する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"RestoreHealth": restoreHP100},
+	},
+	4: {
+		ID:          4,
+		ItemType:    "Weapon",
+		Type:        "Weapon",
+		Name:        "伝説の剣",
+		Description: "伝説の剣。攻撃力が8上昇する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"WeaponEffect": func(g *Game) {}},
+	},
+	5: {
+		ID:          5,
+		ItemType:    "Armor",
+		Type:        "Armor",
+		Name:        "光の角",
+		Description: "光の角。防御力が8上昇する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"ArmorEffect": func(g *Game) {}},
+	},
+	6: {
+		ID:          6,
+		ItemType:    "Arrow",
+		Type:        "Arrow",
+		Name:        "銀の弓矢",
+		Description: "銀の弓矢。攻撃力が5上昇する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"ArrowEffect": func(g *Game) {}},
+	},
+	7: {
+		ID:          7,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "黒炎弾のカード",
+		Description: "眼の前の敵に30ダメージを与える。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"UseCard": damageHP30},
+	},
+	8: {
+		ID:          8,
+		ItemType:    "Trap",
+		Type:        "Card",
+		Name:        "炸裂装甲のカード",
+		Description: "セットして使用する罠カード。攻撃を行った敵を破壊する",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"SetTrap": setTrap},
+	},
+	9: {
+		ID:          9,
+		ItemType:    "Cane",
+		Type:        "Cane",
+		Name:        "シフトチェンジの杖",
+		Description: "敵に当たった場合、自分と位置を交換する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"CaneEffect": shiftChange},
+	},
+	10: {
+		ID:          10,
+		ItemType:    "Accessory",
+		Type:        "Accessory",
+		Name:        "鼓舞の指輪",
+		Description: "アクセサリ。パワーの最大値が3上昇する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"AccessoryEffect": func(g *Game) {}},
+	},
+	11: {
+		ID:          11,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "真実の眼のカード",
+		Description: "所持アイテムを1つ識別する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"UseCard": identifyItem},
+	},
+	12: {
+		ID:          12,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "睡眠のカード",
+		Description: "同じ部屋にいる敵を全員睡眠状態にする。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": sleepAllEnemiesInRoom},
+	},
+	13: {
+		ID:          13,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "混乱のカード",
+		Description: "同じ部屋にいる敵を全員混乱状態にする。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": confuseAllEnemiesInRoom},
+	},
+	14: {
+		ID:          14,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "目潰しのカード",
+		Description: "同じ部屋にいる敵を全員目潰し状態にする。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": blindAllEnemiesInRoom},
+	},
+	15: {
+		ID:          15,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "金縛りのカード",
+		Description: "周囲8マスの敵を金縛り状態にする。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": paralyzeAllEnemiesAround},
+	},
+	16: {
+		ID:          16,
+		ItemType:    "Cane",
+		Type:        "Cane",
+		Name:        "封印の杖",
+		Description: "敵に当たった場合、その敵を封印状態にする。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"CaneEffect": sealEnemy},
+	},
+	17: {
+		ID:          17,
+		ItemType:    "Potion",
+		Type:        "Potion",
+		Name:        "睡眠薬",
+		Description: "飲むと10ターン睡眠状態になる。敵に投げることもできる。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"RestoreHealth": sleepPotion},
+	},
+	18: {
+		ID:          18,
+		ItemType:    "Potion",
+		Type:        "Potion",
+		Name:        "混乱薬",
+		Description: "飲むと10ターン混乱状態になる。敵に投げることもできる。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"RestoreHealth": confusionPotion},
+	},
+}
+
+// テーブルからアイテムを生成する共通関数
+func buildItemFromTemplate(id, x, y int) Item {
+	template, exists := itemTemplates[id]
+	if !exists {
+		// デフォルトで混乱薬を返す
+		template = itemTemplates[18]
+	}
+	
+	baseItem := BaseItem{
+		Entity: Entity{
+			X:    x,
+			Y:    y,
+			Char: template.Char,
+		},
+		ID:          template.ID,
+		Type:        template.Type,
+		Name:        template.Name,
+		Description: template.Description,
+		UseActions:  template.UseActions,
+	}
+	
 	var item Item
-	randomValue := localRand.Intn(19) // Store the random value to ensure it's only generated once
-	//randomValue := 9
 	sharpnessValue := localRand.Intn(5) - 1
-	//sharpnessValue := -1
-	switch randomValue {
-	case 0:
+	
+	switch template.ItemType {
+	case "Money":
 		item = &Money{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          0,
-				Type:        "Kane",
-				Name:        "小銭",
-				Description: "小銭。それは海老さんが絆と呼ぶもの。",
-				UseActions: map[string]UseAction{
-					"UseMoney": money,
-				},
-			},
-			Amount:     localRand.Intn(2001), // Generates a random integer between 0 and 2000
+			BaseItem:   baseItem,
+			Amount:     localRand.Intn(2001),
 			Identified: true,
 		}
-	case 1:
+	case "Food":
+		satiety := 50 // デフォルト値
 		item = &Food{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          1,
-				Type:        "Sausage",
-				Name:        "ウインナー",
-				Description: "海老さんが配信中に食べる食事。満腹度を50回復する。",
-				UseActions: map[string]UseAction{
-					"RestoreSatiety": restoreSatiety50,
-				},
-			},
-			Satiety: 50,
+			BaseItem: baseItem,
+			Satiety:  satiety,
 		}
-	case 2:
+	case "Potion":
+		var health int
+		switch id {
+		case 2:
+			health = 30
+		case 3:
+			health = 100
+		default:
+			health = 0 // 睡眠薬・混乱薬
+		}
 		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          2,
-				Type:        "Mintia",
-				Name:        "ミンティア",
-				Description: "海老さんを元気にする薬。HPを30回復する。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": restoreHP30,
-				},
-			},
-			Health: 30,
+			BaseItem: baseItem,
+			Health:   health,
 		}
-	case 3:
-		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          3,
-				Type:        "Mintia",
-				Name:        "すごいミンティア",
-				Description: "海老さんをすごく元気にする薬。HPを100回復する。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": restoreHP100,
-				},
-			},
-			Health: 100,
-		}
-	case 4:
+	case "Weapon":
 		item = &Weapon{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          4,
-				Type:        "Weapon",
-				Name:        "伝説の剣",
-				Description: "伝説の剣。攻撃力が8上昇する。",
-				UseActions: map[string]UseAction{
-					"WeaponEffect": func(g *Game) {
-					},
-				},
-			},
+			BaseItem:    baseItem,
 			AttackPower: 8,
 			Sharpness:   sharpnessValue,
 			Element:     "None",
 			Cursed:      sharpnessValue == -1,
 		}
-	case 5:
+	case "Armor":
 		item = &Armor{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          5,
-				Type:        "Armor",
-				Name:        "光の角",
-				Description: "光の角。防御力が8上昇する。",
-				UseActions: map[string]UseAction{
-					"ArmorEffect": func(g *Game) {
-					},
-				},
-			},
+			BaseItem:     baseItem,
 			DefensePower: 8,
 			Sharpness:    sharpnessValue,
 			Element:      "None",
 			Cursed:       sharpnessValue == -1,
 		}
-
-	case 6:
+	case "Arrow":
 		item = &Arrow{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          6,
-				Type:        "Arrow",
-				Name:        "銀の弓矢",
-				Description: "銀の弓矢。攻撃力が5上昇する。",
-				UseActions: map[string]UseAction{
-					"ArrowEffect": func(g *Game) {
-					},
-				},
-			},
-			ShotCount:   localRand.Intn(11) + 5, // Generates a random number between 5 and 15
+			BaseItem:    baseItem,
+			ShotCount:   localRand.Intn(11) + 5,
 			AttackPower: 5,
 			Cursed:      false,
 			Identified:  true,
 		}
-
-	case 7:
+	case "Card":
 		item = &Card{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          7,
-				Type:        "Card",
-				Name:        "黒炎弾のカード",
-				Description: "眼の前の敵に30ダメージを与える。",
-				UseActions: map[string]UseAction{
-					"UseCard": damageHP30,
-				},
-			},
+			BaseItem: baseItem,
 		}
-
-	case 8:
+	case "Trap":
 		item = &Trap{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          8,
-				Type:        "Card",
-				Name:        "炸裂装甲のカード",
-				Description: "セットして使用する罠カード。攻撃を行った敵を破壊する",
-				UseActions: map[string]UseAction{
-					"SetTrap": setTrap,
-				},
-			},
+			BaseItem: baseItem,
 		}
-
-	case 9:
+	case "Cane":
 		item = &Cane{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          9,
-				Type:        "Cane",
-				Name:        "シフトチェンジの杖",
-				Description: "敵に当たった場合、自分と位置を交換する。",
-				UseActions: map[string]UseAction{
-					"CaneEffect": shiftChange,
-				},
-			},
+			BaseItem:   baseItem,
 			Uses:       5,
 			Identified: false,
 		}
-	case 10:
+	case "Accessory":
 		item = &Accessory{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          10,
-				Type:        "Accessory",
-				Name:        "鼓舞の指輪",
-				Description: "アクセサリ。パワーの最大値が3上昇する。",
-				UseActions: map[string]UseAction{
-					"AccessoryEffect": func(g *Game) {
-					},
-				},
-			},
+			BaseItem:   baseItem,
 			Cursed:     false,
 			Identified: false,
 		}
-	case 11:
-		item = &Card{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          11,
-				Type:        "Card",
-				Name:        "真実の眼のカード",
-				Description: "所持アイテムを1つ識別する。",
-				UseActions: map[string]UseAction{
-					"UseCard": identifyItem,
-				},
-			},
-		}
-	case 12:
-		item = &Card{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: 'C',
-				},
-				ID:          12,
-				Type:        "Card",
-				Name:        "睡眠のカード",
-				Description: "同じ部屋にいる敵を全員睡眠状態にする。",
-				UseActions: map[string]UseAction{
-					"UseCard": sleepAllEnemiesInRoom,
-				},
-			},
-		}
-	case 13:
-		item = &Card{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: 'C',
-				},
-				ID:          13,
-				Type:        "Card",
-				Name:        "混乱のカード",
-				Description: "同じ部屋にいる敵を全員混乱状態にする。",
-				UseActions: map[string]UseAction{
-					"UseCard": confuseAllEnemiesInRoom,
-				},
-			},
-		}
-	case 14:
-		item = &Card{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: 'C',
-				},
-				ID:          14,
-				Type:        "Card",
-				Name:        "目潰しのカード",
-				Description: "同じ部屋にいる敵を全員目潰し状態にする。",
-				UseActions: map[string]UseAction{
-					"UseCard": blindAllEnemiesInRoom,
-				},
-			},
-		}
-	case 15:
-		item = &Card{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: 'C',
-				},
-				ID:          15,
-				Type:        "Card",
-				Name:        "金縛りのカード",
-				Description: "周囲8マスの敵を金縛り状態にする。",
-				UseActions: map[string]UseAction{
-					"UseCard": paralyzeAllEnemiesAround,
-				},
-			},
-		}
-	case 16:
-		item = &Cane{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          16,
-				Type:        "Cane",
-				Name:        "封印の杖",
-				Description: "敵に当たった場合、その敵を封印状態にする。",
-				UseActions: map[string]UseAction{
-					"CaneEffect": sealEnemy,
-				},
-			},
-			Uses:       5,
-			Identified: false,
-		}
-	case 17:
+	default:
+		// デフォルトは混乱薬
 		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          17,
-				Type:        "Potion",
-				Name:        "睡眠薬",
-				Description: "飲むと10ターン睡眠状態になる。敵に投げることもできる。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": sleepPotion,
-				},
-			},
-			Health: 0,
-		}
-	case 18:
-		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          18,
-				Type:        "Potion",
-				Name:        "混乱薬",
-				Description: "飲むと10ターン混乱状態になる。敵に投げることもできる。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": confusionPotion,
-				},
-			},
-			Health: 0,
+			BaseItem: baseItem,
+			Health:   0,
 		}
 	}
+	
 	return item
+}
+
+func createItem(x, y int) Item {
+	randomValue := localRand.Intn(19) // Store the random value to ensure it's only generated once
+	//randomValue := 9
+	return buildItemFromTemplate(randomValue, x, y)
 }
 
 // デバッグ用：特定のIDのアイテムを生成する関数
 func (g *Game) createItemByID(id int, x, y int) Item {
-	var item Item
-	
-	switch id {
-	case 0:
-		item = &Money{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          0,
-				Type:        "Kane",
-				Name:        "小銭",
-				Description: "小銭。それは海老さんが絆と呼ぶもの。",
-				UseActions: map[string]UseAction{
-					"UseMoney": money,
-				},
-			},
-			Amount:     localRand.Intn(2001),
-			Identified: true,
-		}
-	case 1:
-		item = &Food{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          1,
-				Type:        "Sausage",
-				Name:        "ウインナー",
-				Description: "海老さんが配信中に食べる食事。満腹度を50回復する。",
-				UseActions: map[string]UseAction{
-					"RestoreSatiety": restoreSatiety50,
-				},
-			},
-			Satiety: 50,
-		}
-	case 2:
-		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          2,
-				Type:        "Mintia",
-				Name:        "ミンティア",
-				Description: "海老さんを元気にする薬。HPを30回復する。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": restoreHP30,
-				},
-			},
-			Health: 30,
-		}
-	case 3:
-		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          3,
-				Type:        "Mintia",
-				Name:        "すごいミンティア",
-				Description: "海老さんをすごく元気にする薬。HPを100回復する。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": restoreHP100,
-				},
-			},
-			Health: 100,
-		}
-	case 17:
-		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          17,
-				Type:        "Potion",
-				Name:        "睡眠薬",
-				Description: "飲むと10ターン睡眠状態になる。敵に投げることもできる。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": sleepPotion,
-				},
-			},
-			Health: 0,
-		}
-	case 18:
-		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          18,
-				Type:        "Potion",
-				Name:        "混乱薬",
-				Description: "飲むと10ターン混乱状態になる。敵に投げることもできる。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": confusionPotion,
-				},
-			},
-			Health: 0,
-		}
-	default:
-		// デフォルトでは混乱薬を返す
-		item = &Potion{
-			BaseItem: BaseItem{
-				Entity: Entity{
-					X:    x,
-					Y:    y,
-					Char: '!',
-				},
-				ID:          18,
-				Type:        "Potion",
-				Name:        "混乱薬",
-				Description: "飲むと10ターン混乱状態になる。敵に投げることもできる。",
-				UseActions: map[string]UseAction{
-					"RestoreHealth": confusionPotion,
-				},
-			},
-			Health: 0,
-		}
-	}
-	return item
+	return buildItemFromTemplate(id, x, y)
 }
