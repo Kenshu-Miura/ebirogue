@@ -247,6 +247,10 @@ func (g *Game) handleItemDescriptionInput() error {
 func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
 	if cPressed && !g.ShowGroundItem && !g.showStairsPrompt && !g.showInventory {
+		// 睡眠状態の場合はインベントリを開けない
+		if g.state.Player.StatusAilments.Sleep > 0 {
+			return nil
+		}
 		g.showInventory = true
 		return nil // Skip other updates when the inventory window is active
 	}
@@ -346,6 +350,11 @@ func (g *Game) CheatHandleInput() (int, int) {
 
 func (g *Game) HandleInput() (int, int) {
 	var dx, dy = 0, 0
+
+	// 睡眠状態の場合はキー入力を受け付けない
+	if g.state.Player.StatusAilments.Sleep > 0 {
+		return 0, 0
+	}
 
 	// キーの押下状態を取得
 	upPressed := ebiten.IsKeyPressed(ebiten.KeyUp)

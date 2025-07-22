@@ -214,6 +214,13 @@ func (g *Game) IsEnemyAdjacent() bool {
 func (g *Game) Update() error {
 
 	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt {
+		// 睡眠状態の場合は自動的にターンを進行させる
+		if g.state.Player.StatusAilments.Sleep > 0 {
+			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
+			g.MovePlayer(0, 0)
+			g.isActioned = true
+			return nil
+		}
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheatHandleInput()
 
@@ -248,10 +255,13 @@ func (g *Game) Update() error {
 		}
 	}
 
-	g.processDKeyPress()
+	// 睡眠状態の場合はDキーとF1キーも無効
+	if g.state.Player.StatusAilments.Sleep == 0 {
+		g.processDKeyPress()
 
-	// デバッグ用F1キー処理
-	g.processF1KeyPress()
+		// デバッグ用F1キー処理
+		g.processF1KeyPress()
+	}
 
 	// Find item at player's position
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
