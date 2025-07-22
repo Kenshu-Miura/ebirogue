@@ -584,21 +584,22 @@ func (g *Game) executeItemSwap() {
 				selectedItemName = getItemNameWithSharpness(selectedInventoryItem)
 			}
 
-			// Check if the selected inventory item is Equipable and cursed
+			// Check if the selected inventory item is Equipable and cursed using new system
 			if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
-				for _, equippedItem := range g.state.Player.EquippedItems {
-					if equippedItem == equipableItem {
-						switch v := equipableItem.(type) {
-						case *Weapon:
-							if v.Cursed {
-								isCursedEquipped = true
-							}
-						case *Armor:
-							if v.Cursed {
-								isCursedEquipped = true
-							}
+				if g.state.Player.IsEquipped(equipableItem) {
+					switch v := equipableItem.(type) {
+					case *Weapon:
+						if v.Cursed {
+							isCursedEquipped = true
 						}
-						break
+					case *Armor:
+						if v.Cursed {
+							isCursedEquipped = true
+						}
+					case *Accessory:
+						if v.Cursed {
+							isCursedEquipped = true
+						}
 					}
 				}
 			}
@@ -621,14 +622,10 @@ func (g *Game) executeItemSwap() {
 					Message:  fmt.Sprintf("足元のアイテムと%sを交換しました", selectedItemName),
 					ItemName: selectedItemName,
 					Execute: func(g *Game) {
-						// Check if the item is equipped and unequip if necessary
+						// Check if the item is equipped and unequip if necessary using new system
 						if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
-							for i, equippedItem := range g.state.Player.EquippedItems {
-								if equippedItem == equipableItem {
-									g.state.Player.EquippedItems[i] = nil
-									equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
-									break
-								}
+							if g.state.Player.IsEquipped(equipableItem) {
+								g.state.Player.UnequipItem(equipableItem)
 							}
 						}
 						// Swap the positions of the items

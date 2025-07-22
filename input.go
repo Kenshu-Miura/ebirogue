@@ -37,28 +37,15 @@ func (g *Game) processDKeyPress() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
 		g.dPressed = true
-		// Find the equipped Arrow item
-		var equippedArrow *Arrow
-		for _, item := range g.state.Player.Inventory {
-			if arrow, ok := item.(*Arrow); ok {
-				for i, equippedItem := range g.state.Player.EquippedItems {
-					if equippedItem == arrow {
-						equippedArrow = arrow
+		// Use equipped arrow from new system
+		equippedArrow := g.state.Player.EquippedArrow
+		if equippedArrow != nil {
+			// Decrement ShotCount
+			equippedArrow.ShotCount--
 
-						// If an Arrow item is equipped, decrement its ShotCount
-						equippedArrow.ShotCount--
-
-						// Check if ShotCount becomes 0, and if so, set the corresponding slot in EquippedItems to nil
-						if equippedArrow.ShotCount == 0 {
-							g.state.Player.EquippedItems[i] = nil
-						}
-
-						break // Break the inner loop as the equipped arrow is found
-					}
-				}
-				if equippedArrow != nil {
-					break // Break the outer loop if equippedArrow is found
-				}
+			// Check if ShotCount becomes 0, and if so, unequip the arrow
+			if equippedArrow.ShotCount == 0 {
+				g.state.Player.EquippedArrow = nil
 			}
 		}
 
@@ -196,12 +183,9 @@ func (g *Game) handleInventoryNavigationInput() error {
 				var equippedArrow *Arrow
 				for _, arrow := range arrows {
 					totalShotCount += arrow.ShotCount
-					// Check if the arrow is equipped
-					for _, equippedItem := range g.state.Player.EquippedItems {
-						if equippedItem == arrow {
-							equippedArrow = arrow
-							break
-						}
+					// Check if the arrow is equipped using new system
+					if g.state.Player.EquippedArrow == arrow {
+						equippedArrow = arrow
 					}
 				}
 

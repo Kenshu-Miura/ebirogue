@@ -66,7 +66,11 @@ type Player struct {
 	ExperiencePoints int            // 所持経験値
 	Level            int            // プレイヤーのレベル
 	Direction        Direction      // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
-	EquippedItems    [5]Item        // Array to hold equipped items
+	EquippedWeapon   *Weapon    // 装備中の武器（1個まで）
+	EquippedArmor    *Armor     // 装備中の防具（1個まで）
+	EquippedArrow    *Arrow     // 装備中の矢（1個まで）
+	EquippedAccessories [2]*Accessory // 装備中のアクセサリー（2個まで）
+	EquippedItems    [5]Item        // Array to hold equipped items（後方互換のため残す）
 	Cash             int            // 所持金
 	SetTrap          Item           // トラップを設置する
 	StatusAilments   StatusAilments // 状態異常

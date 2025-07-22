@@ -507,10 +507,18 @@ func (g *Game) drawActionMenu(screen *ebiten.Image) {
 
 		if equipableItem, isEquipable := item.(Equipable); isEquipable {
 			// Assume function isEquipped returns true if the item is equipped, false otherwise
-			if isEquipped(g.state.Player.EquippedItems[:], equipableItem) {
-				actions = []string{"はずす", "投げる", "置く", "説明"}
+			if g.state.Player.IsEquipped(equipableItem) {
+				if _, isArrow := equipableItem.(*Arrow); isArrow {
+					actions = []string{"はずす", "撃つ", "投げる", "置く", "説明"}
+				} else {
+					actions = []string{"はずす", "投げる", "置く", "説明"}
+				}
 			} else {
-				actions = []string{"装備", "投げる", "置く", "説明"}
+				if _, isArrow := equipableItem.(*Arrow); isArrow {
+					actions = []string{"装備", "撃つ", "投げる", "置く", "説明"}
+				} else {
+					actions = []string{"装備", "投げる", "置く", "説明"}
+				}
 			}
 		} else {
 			actions = []string{"使う", "投げる", "置く", "説明"}
@@ -579,7 +587,7 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 
 			// Check if the item is equipped and draw "E" if it is
 			if equipableItem, ok := item.(Equipable); ok {
-				if isEquipped(g.state.Player.EquippedItems[:], equipableItem) {
+				if g.state.Player.IsEquipped(equipableItem) {
 					var dr font.Drawer
 					dr.Dst = screen
 					dr.Src = image.NewUniform(color.White)
@@ -1004,31 +1012,51 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 
 	yCoordinate := 110 // Initial Y-coordinate updated to position below the cash text
 
-	for i, equippedItem := range g.state.Player.EquippedItems {
-		equippedItemName := "なし"
-		sharpnessText := ""
-
-		// Check if the equipped item is not nil
-		if equippedItem != nil {
-			if arrowItem, ok := equippedItem.(*Arrow); ok {
-				// If the equipped item is of type *Arrow, format the name with shot count
-				equippedItemName = fmt.Sprintf("%d本の%s", arrowItem.ShotCount, arrowItem.GetName())
-			} else {
-				// For other item types, just get the name
-				equippedItemName = equippedItem.GetName()
-
-				// Check if the equipped item is of type *Weapon or *Armor to display sharpness
-				if weaponItem, ok := equippedItem.(*Weapon); ok && weaponItem.Sharpness != 0 {
-					sharpnessText = fmt.Sprintf("%+d", weaponItem.Sharpness) // %+d will include the sign for negative and positive numbers
-				} else if armorItem, ok := equippedItem.(*Armor); ok && armorItem.Sharpness != 0 {
-					sharpnessText = fmt.Sprintf("%+d", armorItem.Sharpness) // %+d will include the sign for negative and positive numbers
-				}
-			}
+	// Display equipment using new system
+	// Weapon
+	weaponName := "なし"
+	weaponSharpness := ""
+	if g.state.Player.EquippedWeapon != nil {
+		weaponName = g.state.Player.EquippedWeapon.GetName()
+		if g.state.Player.EquippedWeapon.Sharpness != 0 {
+			weaponSharpness = fmt.Sprintf("%+d", g.state.Player.EquippedWeapon.Sharpness)
 		}
+	}
+	weaponText := fmt.Sprintf("武器: %s%s", weaponName, weaponSharpness)
+	text.Draw(screen, weaponText, mplusMediumFont, 10, yCoordinate, color.White)
+	yCoordinate += 15
 
-		equippedItemText := fmt.Sprintf("装備%d: %s%s", i+1, equippedItemName, sharpnessText) // i+1 to display item number starting from 1
-		text.Draw(screen, equippedItemText, mplusMediumFont, 10, yCoordinate, color.White)
-		yCoordinate += 15 // Increment the Y-coordinate to position text below the previous item
+	// Armor
+	armorName := "なし"
+	armorSharpness := ""
+	if g.state.Player.EquippedArmor != nil {
+		armorName = g.state.Player.EquippedArmor.GetName()
+		if g.state.Player.EquippedArmor.Sharpness != 0 {
+			armorSharpness = fmt.Sprintf("%+d", g.state.Player.EquippedArmor.Sharpness)
+		}
+	}
+	armorText := fmt.Sprintf("防具: %s%s", armorName, armorSharpness)
+	text.Draw(screen, armorText, mplusMediumFont, 10, yCoordinate, color.White)
+	yCoordinate += 15
+
+	// Arrow
+	arrowName := "なし"
+	if g.state.Player.EquippedArrow != nil {
+		arrowName = fmt.Sprintf("%d本の%s", g.state.Player.EquippedArrow.ShotCount, g.state.Player.EquippedArrow.GetName())
+	}
+	arrowText := fmt.Sprintf("矢: %s", arrowName)
+	text.Draw(screen, arrowText, mplusMediumFont, 10, yCoordinate, color.White)
+	yCoordinate += 15
+
+	// Accessories
+	for i, accessory := range g.state.Player.EquippedAccessories {
+		accessoryName := "なし"
+		if accessory != nil {
+			accessoryName = accessory.GetName()
+		}
+		accessoryText := fmt.Sprintf("装身具%d: %s", i+1, accessoryName)
+		text.Draw(screen, accessoryText, mplusMediumFont, 10, yCoordinate, color.White)
+		yCoordinate += 15
 	}
 
 	// Player Traps

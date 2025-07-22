@@ -149,18 +149,6 @@ func (g *Game) executeGroundItemAction() {
 					identified := false
 					itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
 
-					// Find an empty slot or use the last slot
-					equipIndex := -1
-					for i := 0; i < 4; i++ { // Search for an empty slot in EquippedItems[0] to EquippedItems[3]
-						if g.state.Player.EquippedItems[i] == nil {
-							equipIndex = i
-							break
-						}
-					}
-					if equipIndex == -1 { // If no empty slot found, use the last slot
-						equipIndex = 4
-					}
-
 					// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
 					if _, ok := equipableItem.(*Accessory); !ok {
 						equipableItem.SetIdentified(true) // Set the item as identified when equipping
@@ -168,10 +156,12 @@ func (g *Game) executeGroundItemAction() {
 						itemName = getItemNameWithSharpness(equipableItem)
 					}
 
-					// Equip the item
-					message = fmt.Sprintf("%sを装備した。", itemName)
-					equipableItem.UpdatePlayerStats(&g.state.Player, true)   // Update player's stats when equipping
-					g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
+					// Use new equipment system
+					if equipMessage, err := g.state.Player.EquipItem(equipableItem); err != nil {
+						message = fmt.Sprintf("%sを装備できない。", itemName)
+					} else {
+						message = equipMessage
+					}
 					g.PickUpItem(item, i)
 
 					action := Action{
@@ -312,29 +302,8 @@ func (g *Game) executeAction() {
 			identified := false
 			itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
 
-			// Find an empty slot or use the last slot
-			equipIndex := -1
-			for i := 0; i < 4; i++ { // Search for an empty slot in EquippedItems[0] to EquippedItems[3]
-				if g.state.Player.EquippedItems[i] == nil {
-					equipIndex = i
-					break
-				}
-			}
-			if equipIndex == -1 { // If no empty slot found, use the last slot
-				equipIndex = 4
-			}
-
 			// Check if the item is already equipped
-			alreadyEquipped := false
-			for i := 0; i < 5; i++ {
-				if g.state.Player.EquippedItems[i] == equipableItem {
-					alreadyEquipped = true
-					equipIndex = i // Update the equipIndex to the slot where the item is already equipped
-					break
-				}
-			}
-
-			if alreadyEquipped {
+			if g.state.Player.IsEquipped(equipableItem) {
 				// Check if the equipped item is cursed
 				isCursed := false
 				switch v := equipableItem.(type) {
@@ -346,28 +315,36 @@ func (g *Game) executeAction() {
 					if v.Cursed {
 						isCursed = true
 					}
+				case *Accessory:
+					if v.Cursed {
+						isCursed = true
+					}
 				}
 
 				if isCursed {
 					// If the item is cursed, update the message and do not unequip
 					message = fmt.Sprintf("%sをはずせない。", itemName)
 				} else {
-					// Unequip the item
-					message = fmt.Sprintf("%sをはずした。", itemName)
-					equipableItem.UpdatePlayerStats(&g.state.Player, false) // Update player's stats when unequipping
-					g.state.Player.EquippedItems[equipIndex] = nil          // Remove item from equipped items
+					// Unequip the item using new system
+					if unequipMessage, err := g.state.Player.UnequipItem(equipableItem); err != nil {
+						message = fmt.Sprintf("%sをはずせない。", itemName)
+					} else {
+						message = unequipMessage
+					}
 				}
 			} else {
+				// Equip the item using new system
 				if _, ok := equipableItem.(*Accessory); !ok {
 					equipableItem.SetIdentified(true) // Set the item as identified when equipping
 					identified = true
 				}
 				itemName = getItemNameWithSharpness(equipableItem)
-				// Equip the item
-				message = fmt.Sprintf("%sを装備した。", itemName)
-				equipableItem.UpdatePlayerStats(&g.state.Player, true) // Update player's stats when equipping
-				// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
-				g.state.Player.EquippedItems[equipIndex] = equipableItem // Equip item
+				
+				if equipMessage, err := g.state.Player.EquipItem(equipableItem); err != nil {
+					message = fmt.Sprintf("%sを装備できない。", itemName)
+				} else {
+					message = equipMessage
+				}
 			}
 
 			action := Action{
@@ -416,7 +393,49 @@ func (g *Game) executeAction() {
 		g.selectedItemIndex = 0
 	}
 
-	if g.selectedActionIndex == 1 { // Assuming index 1 corresponds to '投げる'
+	// 矢の「撃つ」アクション処理
+	item := g.state.Player.Inventory[g.selectedItemIndex]
+	if arrow, isArrow := item.(*Arrow); isArrow && g.selectedActionIndex == 1 {
+		// 矢を撃つ処理
+		arrow.ShotCount--
+		
+		// Create arrow copy for throwing
+		arrowCopy := *arrow
+		
+		// If ShotCount becomes 0, remove from inventory
+		if arrow.ShotCount == 0 {
+			g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+		}
+
+		// ThrowItem parameters
+		throwRange := 10
+		character := &g.state.Player
+		mapState := g.state.Map
+		enemies := g.state.Enemies
+		
+		onWallHit := func(item Item, position Coordinate, itemIndex int) {
+			g.onWallHit(item, position, itemIndex)
+		}
+		onTargetHit := func(target Character, item Item, index int) {
+			g.onTargetHit(target, item, index)
+		}
+
+		g.ThrowItem(&arrowCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+
+		g.showItemActions = false
+		g.selectedItemIndex = 0
+		g.selectedActionIndex = 0
+		return
+	}
+
+	// 矢以外のアイテムまたは矢の「投げる」の場合
+	actionIndex := g.selectedActionIndex
+	if _, isArrow := item.(*Arrow); isArrow && g.selectedActionIndex > 1 {
+		// 矢の場合、「撃つ」が1番目に追加されているので、インデックスを調整
+		actionIndex = g.selectedActionIndex - 1
+	}
+
+	if actionIndex == 1 { // Assuming index 1 corresponds to '投げる' (adjusted for arrows)
 		item := g.state.Player.Inventory[g.selectedItemIndex]
 		itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
 		isCursedEquipped := false
@@ -483,7 +502,7 @@ func (g *Game) executeAction() {
 		}
 	}
 
-	if g.selectedActionIndex == 2 { // Assuming index 2 corresponds to '置く'
+	if actionIndex == 2 { // Assuming index 2 corresponds to '置く' (adjusted for arrows)
 		itemExistsAtPlayerPos := false
 		playerX, playerY := g.state.Player.X, g.state.Player.Y
 		for _, item := range g.state.Items {
@@ -597,7 +616,7 @@ func (g *Game) executeAction() {
 		}
 	}
 
-	if g.selectedActionIndex == 3 { // Assuming 0-based index and "説明" is at index 3
+	if actionIndex == 3 { // Assuming 0-based index and "説明" is at index 3 (adjusted for arrows)
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
 		g.itemdescriptionText = selectedItem.GetDescription()
 		g.showItemDescription = true
