@@ -184,9 +184,15 @@ var damageHP30 = func(g *Game) {
 			}
 			for i, enemy := range g.state.Enemies {
 				if enemy.X == targetX && enemy.Y == targetY {
+					// 目潰し状態の場合は敵の名前を「何者」に変更
+					enemyDisplayName := g.state.Enemies[i].Name
+					if g.state.Player.StatusAilments.Blind > 0 {
+						enemyDisplayName = "何者"
+					}
+					
 					action := Action{
 						Duration: 0.5,
-						Message:  fmt.Sprintf("%sに30ダメージを与えた。", g.state.Enemies[i].Name),
+						Message:  fmt.Sprintf("%sに30ダメージを与えた。", enemyDisplayName),
 						Execute: func(g *Game) {
 							g.state.Enemies[i].Health -= 30
 							

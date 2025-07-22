@@ -635,9 +635,15 @@ func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
 	
 	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
 	
+	// 目潰し状態の場合は敵の名前を「何者」に変更
+	enemyDisplayName := enemy.Name
+	if g.state.Player.StatusAilments.Blind > 0 {
+		enemyDisplayName = "何者"
+	}
+	
 	action := Action{
 		Duration: 0.5,
-		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
+		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemyDisplayName, netDamage),
 		Execute: func(g *Game) {
 			enemy.AttackTimer = 0.5
 			enemy.AttackDirection = determineDirection(dx, dy)
@@ -663,9 +669,17 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 	
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
 	
+	// 目潰し状態の場合は敵の名前を「何者」に変更
+	attackerDisplayName := attacker.Name
+	targetDisplayName := target.Name
+	if g.state.Player.StatusAilments.Blind > 0 {
+		attackerDisplayName = "何者"
+		targetDisplayName = "何者"
+	}
+	
 	action := Action{
 		Duration: 0.5,
-		Message:  fmt.Sprintf("%sが%sを攻撃して%dダメージを与えた", attacker.Name, target.Name, netDamage),
+		Message:  fmt.Sprintf("%sが%sを攻撃して%dダメージを与えた", attackerDisplayName, targetDisplayName, netDamage),
 		Execute: func(g *Game) {
 			attacker.AttackTimer = 0.5
 			attacker.AttackDirection = determineDirection(dx, dy)
@@ -691,9 +705,15 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 
 	if trap := g.state.Player.SetTrap; trap != nil && trap.GetName() == "炸裂装甲のカード" {
 		// If the player has set a trap and it is the '炸裂装甲のカード', the trap will be triggered
+		// 目潰し状態の場合は敵の名前を「何者」に変更
+		enemyDisplayName := enemy.Name
+		if g.state.Player.StatusAilments.Blind > 0 {
+			enemyDisplayName = "何者"
+		}
+		
 		action := Action{
 			Duration: 0.5,
-			Message:  fmt.Sprintf("%sの攻撃。", enemy.Name),
+			Message:  fmt.Sprintf("%sの攻撃。", enemyDisplayName),
 			Execute:  func(g *Game) {},
 		}
 		g.Enqueue(action)
@@ -740,9 +760,15 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 
 		dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y // プレイヤーと敵の位置の差を計算
 
+		// 目潰し状態の場合は敵の名前を「何者」に変更
+		enemyDisplayName := enemy.Name
+		if g.state.Player.StatusAilments.Blind > 0 {
+			enemyDisplayName = "何者"
+		}
+		
 		action := Action{
 			Duration: 0.5,
-			Message:  fmt.Sprintf("%sから%dダメージを受けた", enemy.Name, netDamage),
+			Message:  fmt.Sprintf("%sから%dダメージを受けた", enemyDisplayName, netDamage),
 			Execute: func(g *Game) {
 				enemy.AttackTimer = 0.5                            // ここでAttackTimerを設定することで、敵の攻撃アニメーションが実行される
 				enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
@@ -794,9 +820,15 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 			g.attackTimer = 0.5 // set timer for 0.5 seconds
 			enemyIndex := i     // capture the index here
+			// 目潰し状態の場合は敵の名前を「何者」に変更
+			enemyDisplayName := g.state.Enemies[enemyIndex].Name
+			if g.state.Player.StatusAilments.Blind > 0 {
+				enemyDisplayName = "何者"
+			}
+			
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.state.Enemies[enemyIndex].Name, netDamage),
+				Message:  fmt.Sprintf("%sに%dダメージを与えた。", enemyDisplayName, netDamage),
 				Execute: func(g *Game) {
 					g.state.Enemies[enemyIndex].Health -= netDamage
 					

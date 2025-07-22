@@ -129,6 +129,7 @@ type Game struct {
 	caneImg                   *ebiten.Image
 	effectImg                 *ebiten.Image
 	accessoryImg              *ebiten.Image
+	hatenaImg                 *ebiten.Image
 	offsetX                   int
 	offsetY                   int
 	moveCount                 int
@@ -384,6 +385,7 @@ func NewGame() *Game {
 	caneImg := loadImage("img/cane.png")
 	effectImg := loadImage("img/effect.png")
 	accessoryImg := loadImage("img/ring.png")
+	hatenaImg := loadImage("img/hatena.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -430,6 +432,7 @@ func NewGame() *Game {
 		caneImg:          caneImg,
 		effectImg:        effectImg,
 		accessoryImg:     accessoryImg,
+		hatenaImg:        hatenaImg,
 		offsetX:          0,
 		offsetY:          0,
 		Floor:            newFloor,

@@ -599,7 +599,33 @@ func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 			// ColorScaleを適用
 			opts.ColorScale = colorScale
 
-			screen.DrawImage(g.tilesetImg.SubImage(image.Rect(srcX, srcY, srcX+tileSize, srcY+tileSize)).(*ebiten.Image), opts)
+			// プレイヤーが目潰し状態で、タイルが階段の場合の処理
+			if tile.Type == "stairs" && g.state.Player.StatusAilments.Blind > 0 {
+				// プレイヤーが通路にいるかどうかを確認
+				playerX, playerY := g.state.Player.X, g.state.Player.Y
+				playerTile := g.state.Map[playerY][playerX]
+				
+				if playerTile.Type == "corridor" {
+					// プレイヤーが通路にいる場合：すべての階段を床タイルのみで表示
+					floorOpts := &ebiten.DrawImageOptions{}
+					floorOpts.GeoM.Translate(float64(x*tileSize+offsetX), float64(y*tileSize+offsetY))
+					floorOpts.ColorScale = colorScale
+					screen.DrawImage(g.tilesetImg.SubImage(image.Rect(2*tileSize, 0, 3*tileSize, tileSize)).(*ebiten.Image), floorOpts)
+				} else {
+					// プレイヤーが部屋にいる場合：床タイル+「？」マークを表示
+					floorOpts := &ebiten.DrawImageOptions{}
+					floorOpts.GeoM.Translate(float64(x*tileSize+offsetX), float64(y*tileSize+offsetY))
+					floorOpts.ColorScale = colorScale
+					screen.DrawImage(g.tilesetImg.SubImage(image.Rect(2*tileSize, 0, 3*tileSize, tileSize)).(*ebiten.Image), floorOpts)
+					// その上にhatena.pngを描画
+					hatenaOpts := &ebiten.DrawImageOptions{}
+					hatenaOpts.GeoM.Translate(float64(x*tileSize+offsetX), float64(y*tileSize+offsetY))
+					hatenaOpts.ColorScale = colorScale
+					screen.DrawImage(g.hatenaImg, hatenaOpts)
+				}
+			} else {
+				screen.DrawImage(g.tilesetImg.SubImage(image.Rect(srcX, srcY, srcX+tileSize, srcY+tileSize)).(*ebiten.Image), opts)
+			}
 		}
 	}
 }
@@ -725,7 +751,13 @@ func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 
 		// Check if the tile at the item's position is fully bright
 		if g.state.Map[itemY][itemX].Brightness == 1.0 {
-			img := g.getItemImage(item)
+			var img *ebiten.Image
+			// プレイヤーが目潰し状態の場合、全てのアイテムをhatena.pngで表示
+			if g.state.Player.StatusAilments.Blind > 0 {
+				img = g.hatenaImg
+			} else {
+				img = g.getItemImage(item)
+			}
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Translate(float64(itemX*tileSize+offsetX), float64(itemY*tileSize+offsetY))
 			screen.DrawImage(img, opts)
@@ -764,7 +796,13 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 				enemyOffsetY += g.enemyYOffset // Y座標オフセットの適用
 			}
 
-			img := g.getEnemyImage(*enemy)
+			var img *ebiten.Image
+			// プレイヤーが目潰し状態の場合、全ての敵をebisan.pngで表示
+			if g.state.Player.StatusAilments.Blind > 0 {
+				img = g.playerImg // ebisan.png
+			} else {
+				img = g.getEnemyImage(*enemy)
+			}
 
 			opts := &ebiten.DrawImageOptions{}
 			// 敵の位置とオフセットを適用して敵を描画

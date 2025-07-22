@@ -439,9 +439,18 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		} else {
 			damage = rand.Intn(3) + 1
 		}
+		// 目潰し状態の場合は敵の名前を「何者」に変更
+		targetDisplayName := target.GetName()
+		if g.state.Player.StatusAilments.Blind > 0 {
+			// targetがEnemyの場合のみ「何者」に変更
+			if _, ok := target.(*Enemy); ok {
+				targetDisplayName = "何者"
+			}
+		}
+		
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", target.GetName(), damage),
+			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", targetDisplayName, damage),
 			Execute: func(g *Game) {
 				// Type assertion to check if target is of type *Player or *Enemy
 				if _, ok := target.(*Player); ok {

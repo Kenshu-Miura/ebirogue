@@ -96,7 +96,12 @@ func createEnemy(x, y int) Enemy {
 			if g.state.Player.Power > 0 {
 				action := Action{
 					Duration: 0.5,
-					Message:  fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", e.Name),
+					Message:  fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", func() string {
+					if g.state.Player.StatusAilments.Blind > 0 {
+						return "何者"
+					}
+					return e.Name
+				}()),
 					Execute: func(g *Game) {
 						g.state.Player.Power--
 
