@@ -342,7 +342,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		if potion.Name == "睡眠薬" {
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sを睡眠状態にした", target.GetName()),
+				Message:  fmt.Sprintf("%sは眠った", target.GetName()),
 				Execute: func(g *Game) {
 					// Type assertion to check if target is of type *Player or *Enemy
 					if _, ok := target.(*Player); ok {
@@ -360,7 +360,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			// 混乱薬の場合の処理
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sを混乱状態にした", target.GetName()),
+				Message:  fmt.Sprintf("%sは混乱した", target.GetName()),
 				Execute: func(g *Game) {
 					// Type assertion to check if target is of type *Player or *Enemy
 					if _, ok := target.(*Player); ok {
@@ -393,7 +393,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sを目潰し状態にした", target.GetName()),
+				Message:  fmt.Sprintf("%sは目が見えなくなった", target.GetName()),
 				Execute: func(g *Game) {
 					g.isActioned = true
 				},
