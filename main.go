@@ -191,6 +191,10 @@ type Game struct {
 	enemyYOffsetTimer         int
 	useIdentifyItem           bool
 	tmpSelectedItemIndex      int
+	// モンスター湧きシステム
+	turnCount                 int // プレイヤーのターン数
+	lastSpawnTurn             int // 最後にモンスターが湧いたターン
+	spawnInterval             int // 次回湧きまでのターン数
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -236,6 +240,8 @@ func (g *Game) Update() error {
 				g.CheckForEnemies(dx, dy)
 			}
 			g.zPressed = false
+			// 攻撃でもターン進行
+			g.AdvanceTurn()
 			return nil
 		}
 
@@ -250,6 +256,8 @@ func (g *Game) Update() error {
 			if g.state.Player.StatusAilments.Confusion == 0 {
 				g.dx, g.dy = dx, dy // Save the direction of movement
 			}
+			// ターン進行とモンスター湧きチェック
+			g.AdvanceTurn()
 		}
 
 		// 扉を開く処理の追加
@@ -466,6 +474,9 @@ func NewGame() *Game {
 		zPressed:             false,
 		tmpSelectedItemIndex: -1,
 	}
+
+	// モンスター湧きシステム初期化
+	game.InitializeSpawnSystem()
 
 	return game
 }

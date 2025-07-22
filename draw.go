@@ -195,18 +195,18 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 		for _, trap := range g.state.MapTraps {
 			if trap.Discovered {
 				trapX, trapY := trap.X, trap.Y
-				
+
 				// 「×」マークを描画するための準備
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(trapX*tilePixelSize), float64(trapY*tilePixelSize))
-				
+
 				// 「×」マーク用のタイルを作成
 				trapTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
 				trapTile.Fill(color.RGBA{0, 0, 0, 0}) // 透明で初期化
-				
+
 				// 3×3ピクセルで「×」パターンを手動設定
 				redColor := color.RGBA{255, 0, 0, 255}
-				
+
 				if tilePixelSize >= 3 {
 					// 3×3の場合の「×」パターン
 					// X . X
@@ -224,7 +224,7 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 						trapTile.Set(tilePixelSize-1-i, i, redColor)
 					}
 				}
-				
+
 				g.miniMap.DrawImage(trapTile, opts)
 			}
 		}
@@ -652,7 +652,7 @@ func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 				// プレイヤーが通路にいるかどうかを確認
 				playerX, playerY := g.state.Player.X, g.state.Player.Y
 				playerTile := g.state.Map[playerY][playerX]
-				
+
 				if playerTile.Type == "corridor" {
 					// プレイヤーが通路にいる場合：すべての階段を床タイルのみで表示
 					floorOpts := &ebiten.DrawImageOptions{}
@@ -829,7 +829,7 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 				default:
 					img = g.sleepTrapImg // デフォルトで睡眠ガスの罠の画像を使用
 				}
-				
+
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(trapX*tileSize+offsetX), float64(trapY*tileSize+offsetY))
 				screen.DrawImage(img, opts)
@@ -1076,12 +1076,23 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	playerLevelText := fmt.Sprintf("レベル: %d", g.state.Player.Level)
 	text.Draw(screen, playerLevelText, mplusNormalFont, 10, 50, color.White) // x座標とy座標を直接指定
 
+	// Turn count and spawn info
+	turnText := fmt.Sprintf("ターン: %d", g.turnCount)
+	text.Draw(screen, turnText, mplusNormalFont, 10, 70, color.White)
+
+	nextSpawnTurns := g.lastSpawnTurn + g.spawnInterval - g.turnCount
+	if nextSpawnTurns < 0 {
+		nextSpawnTurns = 0
+	}
+	spawnInfoText := fmt.Sprintf("敵数: %d/19 次回湧き: %dターン後", len(g.state.Enemies), nextSpawnTurns)
+	text.Draw(screen, spawnInfoText, mplusNormalFont, 10, 90, color.White)
+
 	// Player Coordinate
 	playerCoordinateText := fmt.Sprintf("座標: (%d, %d)", g.state.Player.X, g.state.Player.Y)
-	text.Draw(screen, playerCoordinateText, mplusNormalFont, 10, 70, color.White) // x座標とy座標を直接指定
+	text.Draw(screen, playerCoordinateText, mplusNormalFont, 10, 210, color.White) // x座標とy座標を直接指定
 
 	// Player Room
 	playerRoomText := logCurrentRoom(g.state.Player, g.rooms)
-	text.Draw(screen, playerRoomText, mplusNormalFont, 10, 90, color.White) // x座標とy座標を直接指定
+	text.Draw(screen, playerRoomText, mplusNormalFont, 10, 230, color.White) // x座標とy座標を直接指定
 
 }

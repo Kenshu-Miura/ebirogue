@@ -70,6 +70,8 @@ func (g *Game) processDKeyPress() {
 				g.onTargetHit(target, item, index)
 			}
 			g.ThrowItem(newArrow, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+			// 矢を撃つことでもターン進行
+			g.AdvanceTurn()
 		} else {
 			action := Action{
 				Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
