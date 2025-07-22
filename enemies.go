@@ -1,11 +1,11 @@
 //go:build !test
-// +build !test
 
 package main
 
 import (
 	"fmt"
 	"math"
+	"math/rand"
 )
 
 type SpecialAttackFunc func(e *Enemy, g *Game)
@@ -66,7 +66,7 @@ func createEnemy(x, y int) Enemy {
 	var enemyDirection Direction
 	var specialAttack SpecialAttackFunc
 	var specialAttackProbability float64
-	randomValue := localRand.Intn(2) // Store the random value to ensure it's only generated once and correct the range to 2 for two cases
+	randomValue := rand.Intn(2) // Store the random value to ensure it's only generated once and correct the range to 2 for two cases
 	switch randomValue {
 	case 0:
 		enemyID = 0

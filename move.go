@@ -1,5 +1,4 @@
 //go:build !test
-// +build !test
 
 package main
 
@@ -600,7 +599,7 @@ func (g *Game) moveEnemyConfused(i int) {
 		{-1, 1},  {0, 1},  {1, 1},
 	}
 	
-	direction := directions[localRand.Intn(len(directions))]
+	direction := directions[rand.Intn(len(directions))]
 	newX := enemy.X + direction.dx
 	newY := enemy.Y + direction.dy
 	
@@ -634,7 +633,7 @@ func (g *Game) movePlayerConfused() bool {
 		{-1, 1},  {0, 1},  {1, 1},
 	}
 	
-	direction := directions[localRand.Intn(len(directions))]
+	direction := directions[rand.Intn(len(directions))]
 	newX := g.state.Player.X + direction.dx
 	newY := g.state.Player.Y + direction.dy
 	
@@ -716,7 +715,7 @@ func (g *Game) moveEnemyBlind(i int) {
 	// 方向が初期化されていない場合、ランダムに設定
 	if enemy.Direction == Uninitialized {
 		directions := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
-		enemy.Direction = directions[localRand.Intn(len(directions))]
+		enemy.Direction = directions[rand.Intn(len(directions))]
 	}
 	
 	// 現在の方向に基づいて移動先を計算
@@ -791,7 +790,7 @@ func (g *Game) changeBlindEnemyDirection(i int) {
 	}
 	
 	if len(availableDirections) > 0 {
-		enemy.Direction = availableDirections[localRand.Intn(len(availableDirections))]
+		enemy.Direction = availableDirections[rand.Intn(len(availableDirections))]
 	}
 }
 

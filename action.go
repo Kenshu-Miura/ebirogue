@@ -1,5 +1,4 @@
 //go:build !test
-// +build !test
 
 package main
 
@@ -860,7 +859,7 @@ func (g *Game) attackPlayerConfused() {
 		{-1, 1},  {0, 1},  {1, 1},
 	}
 	
-	direction := directions[localRand.Intn(len(directions))]
+	direction := directions[rand.Intn(len(directions))]
 	
 	// プレイヤーの方向を設定
 	switch {

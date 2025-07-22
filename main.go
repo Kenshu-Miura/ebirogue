@@ -1,12 +1,10 @@
 //go:build !test
-// +build !test
 
 package main
 
 import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -27,7 +25,7 @@ const (
 	DownLeft      = 7
 )
 
-var localRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+// Go 1.20+では、グローバルなrand関数が自動的にシードされるため、手動シードは不要
 var levelExpRequirements = []int{0, 5, 12, 22, 35, 51, 70, 92, 118, 148, 181} // レベル10までの経験値要件
 
 type Tile struct {

@@ -1,7 +1,8 @@
 //go:build !test
-// +build !test
 
 package main
+
+import "math/rand"
 
 type BaseItem struct {
 	Entity
@@ -293,13 +294,13 @@ func buildItemFromTemplate(id, x, y int) Item {
 	}
 
 	var item Item
-	sharpnessValue := localRand.Intn(5) - 1
+	sharpnessValue := rand.Intn(5) - 1
 
 	switch template.ItemType {
 	case "Money":
 		item = &Money{
 			BaseItem:   baseItem,
-			Amount:     localRand.Intn(2001),
+			Amount:     rand.Intn(2001),
 			Identified: true,
 		}
 	case "Food":
@@ -341,7 +342,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 	case "Arrow":
 		item = &Arrow{
 			BaseItem:    baseItem,
-			ShotCount:   localRand.Intn(11) + 5,
+			ShotCount:   rand.Intn(11) + 5,
 			AttackPower: 5,
 			Cursed:      false,
 			Identified:  true,
@@ -378,7 +379,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 }
 
 func createItem(x, y int) Item {
-	randomValue := localRand.Intn(19) // Store the random value to ensure it's only generated once
+	randomValue := rand.Intn(19) // Store the random value to ensure it's only generated once
 	//randomValue := 9
 	return buildItemFromTemplate(randomValue, x, y)
 }

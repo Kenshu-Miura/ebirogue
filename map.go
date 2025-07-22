@@ -1,5 +1,4 @@
 //go:build !test
-// +build !test
 
 package main
 
@@ -7,6 +6,7 @@ import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math"
+	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -439,28 +439,28 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 
 			// If there are already rooms created, try to align the new room with one of them
 			if len(rooms) > 0 {
-				alignWith := rooms[localRand.Intn(len(rooms))] // Randomly select a room to align with
+				alignWith := rooms[rand.Intn(len(rooms))] // Randomly select a room to align with
 
 				// Randomly decide to align horizontally or vertically
-				if localRand.Intn(2) == 0 {
+				if rand.Intn(2) == 0 {
 					// Align horizontally
-					roomWidth = localRand.Intn(10) + 6 // Random width between 6 and 15
+					roomWidth = rand.Intn(10) + 6 // Random width between 6 and 15
 					roomHeight = alignWith.Height      // Match the height of the room to align with
-					roomX = localRand.Intn(width-roomWidth-1) + 1
+					roomX = rand.Intn(width-roomWidth-1) + 1
 					roomY = alignWith.Y
 				} else {
 					// Align vertically
 					roomWidth = alignWith.Width         // Match the width of the room to align with
-					roomHeight = localRand.Intn(10) + 6 // Random height between 6 and 15
+					roomHeight = rand.Intn(10) + 6 // Random height between 6 and 15
 					roomX = alignWith.X
-					roomY = localRand.Intn(height-roomHeight-1) + 1
+					roomY = rand.Intn(height-roomHeight-1) + 1
 				}
 			} else {
 				// If this is the first room, generate random dimensions and position
-				roomWidth = localRand.Intn(min(10, width-2)) + 6   // Random width between 6 and 15, but not exceeding map width
-				roomHeight = localRand.Intn(min(10, height-2)) + 6 // Random height between 6 and 15, but not exceeding map height
-				roomX = localRand.Intn(width-roomWidth-1) + 1
-				roomY = localRand.Intn(height-roomHeight-1) + 1
+				roomWidth = rand.Intn(min(10, width-2)) + 6   // Random width between 6 and 15, but not exceeding map width
+				roomHeight = rand.Intn(min(10, height-2)) + 6 // Random height between 6 and 15, but not exceeding map height
+				roomX = rand.Intn(width-roomWidth-1) + 1
+				roomY = rand.Intn(height-roomHeight-1) + 1
 			}
 
 			newRoom := Room{
@@ -525,10 +525,10 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		for {
-			enemyRoom = rooms[localRand.Intn(len(rooms))]
+			enemyRoom = rooms[rand.Intn(len(rooms))]
 			if enemyRoom.ID != playerRoom.ID {
-				enemyX = localRand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
-				enemyY = localRand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
+				enemyX = rand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
+				enemyY = rand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
 				occupied := false
 				for _, enemy := range enemies {
 					if enemy.X == enemyX && enemy.Y == enemyY {
@@ -553,9 +553,9 @@ func generateItems(rooms []Room) []Item {
 		var itemRoom Room
 		var itemX, itemY int
 		for {
-			itemRoom = rooms[localRand.Intn(len(rooms))]
-			itemX = localRand.Intn(itemRoom.Width-2) + itemRoom.X + 1
-			itemY = localRand.Intn(itemRoom.Height-2) + itemRoom.Y + 1
+			itemRoom = rooms[rand.Intn(len(rooms))]
+			itemX = rand.Intn(itemRoom.Width-2) + itemRoom.X + 1
+			itemY = rand.Intn(itemRoom.Height-2) + itemRoom.Y + 1
 			occupied := false
 			for _, item := range items {
 				newitemX, newitemY := item.GetPosition()
@@ -598,17 +598,17 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 	connectRooms(rooms, mapGrid)
 
 	// プレイヤーの新しい位置を設定
-	playerRoom := rooms[localRand.Intn(len(rooms))]
-	playerX := localRand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
-	playerY := localRand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
+	playerRoom := rooms[rand.Intn(len(rooms))]
+	playerX := rand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
+	playerY := rand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
 	player.Entity.X = playerX
 	player.Entity.Y = playerY
 
 	// 階段タイルを配置するためのランダムな部屋を選択
-	stairsRoom := rooms[localRand.Intn(len(rooms))]
+	stairsRoom := rooms[rand.Intn(len(rooms))]
 	// 階段のランダムな位置を選ぶ（壁を避ける）
-	stairsX := localRand.Intn(stairsRoom.Width-2) + stairsRoom.X + 1
-	stairsY := localRand.Intn(stairsRoom.Height-2) + stairsRoom.Y + 1
+	stairsX := rand.Intn(stairsRoom.Width-2) + stairsRoom.X + 1
+	stairsY := rand.Intn(stairsRoom.Height-2) + stairsRoom.Y + 1
 	// 階段タイルを配置
 	mapGrid[stairsY][stairsX] = Tile{Type: "stairs", Blocked: false, BlockSight: false}
 
