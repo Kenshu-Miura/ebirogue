@@ -860,6 +860,9 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 
 			g.Enqueue(action)
 
+			// 敵への攻撃時にも前方の罠を発見する
+			g.checkTrapInFront()
+
 			return true
 		}
 	}
@@ -876,6 +879,9 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 		g.Enqueue(action)
 
 		g.isFrontEnemy = false
+
+		// 攻撃時に前方の罠を発見する
+		g.checkTrapInFront()
 
 		return true
 	}

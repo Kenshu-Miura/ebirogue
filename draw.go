@@ -190,6 +190,46 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 		}
 	}
 
+	// プレイヤーが目潰し状態でない場合、発見済みの罠をミニマップに「×」マークで表示
+	if g.state.Player.StatusAilments.Blind == 0 {
+		for _, trap := range g.state.MapTraps {
+			if trap.Discovered {
+				trapX, trapY := trap.X, trap.Y
+				
+				// 「×」マークを描画するための準備
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Translate(float64(trapX*tilePixelSize), float64(trapY*tilePixelSize))
+				
+				// 「×」マーク用のタイルを作成
+				trapTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+				trapTile.Fill(color.RGBA{0, 0, 0, 0}) // 透明で初期化
+				
+				// 3×3ピクセルで「×」パターンを手動設定
+				redColor := color.RGBA{255, 0, 0, 255}
+				
+				if tilePixelSize >= 3 {
+					// 3×3の場合の「×」パターン
+					// X . X
+					// . X .
+					// X . X
+					trapTile.Set(0, 0, redColor) // 左上
+					trapTile.Set(2, 0, redColor) // 右上
+					trapTile.Set(1, 1, redColor) // 中央
+					trapTile.Set(0, 2, redColor) // 左下
+					trapTile.Set(2, 2, redColor) // 右下
+				} else {
+					// 小さいサイズの場合は対角線で描画
+					for i := 0; i < tilePixelSize; i++ {
+						trapTile.Set(i, i, redColor)
+						trapTile.Set(tilePixelSize-1-i, i, redColor)
+					}
+				}
+				
+				g.miniMap.DrawImage(trapTile, opts)
+			}
+		}
+	}
+
 	// キャッシュされたミニマップイメージをスクリーンに描画
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(miniMapX), float64(miniMapY))
@@ -761,6 +801,31 @@ func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 			opts := &ebiten.DrawImageOptions{}
 			opts.GeoM.Translate(float64(itemX*tileSize+offsetX), float64(itemY*tileSize+offsetY))
 			screen.DrawImage(img, opts)
+		}
+	}
+}
+
+func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
+	for _, trap := range g.state.MapTraps {
+		// 罠が発見済みの場合のみ描画
+		if trap.Discovered {
+			trapX, trapY := trap.X, trap.Y
+
+			// Check if the tile at the trap's position is fully bright
+			if g.state.Map[trapY][trapX].Brightness == 1.0 {
+				var img *ebiten.Image
+				// 罠の種類に応じて画像を選択（現在は睡眠ガスの罠のみ）
+				switch trap.Name {
+				case "睡眠ガスの罠":
+					img = g.sleepTrapImg
+				default:
+					img = g.sleepTrapImg // デフォルトで睡眠ガスの罠の画像を使用
+				}
+				
+				opts := &ebiten.DrawImageOptions{}
+				opts.GeoM.Translate(float64(trapX*tileSize+offsetX), float64(trapY*tileSize+offsetY))
+				screen.DrawImage(img, opts)
+			}
 		}
 	}
 }

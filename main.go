@@ -76,10 +76,11 @@ type Coordinate struct {
 	X, Y int
 }
 type GameState struct {
-	Map     [][]Tile // ゲームのマップ
-	Player  Player   // プレイヤーキャラクター
-	Enemies []Enemy  // 敵キャラクターのリスト
-	Items   []Item   // マップ上のアイテムのリスト
+	Map      [][]Tile  // ゲームのマップ
+	Player   Player    // プレイヤーキャラクター
+	Enemies  []Enemy   // 敵キャラクターのリスト
+	Items    []Item    // マップ上のアイテムのリスト
+	MapTraps []MapTrap // マップ上の罠のリスト
 }
 
 type Attack struct {
@@ -130,6 +131,7 @@ type Game struct {
 	effectImg                 *ebiten.Image
 	accessoryImg              *ebiten.Image
 	hatenaImg                 *ebiten.Image
+	sleepTrapImg              *ebiten.Image
 	offsetX                   int
 	offsetY                   int
 	moveCount                 int
@@ -321,6 +323,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	g.DrawMap(screen, offsetX, offsetY)
 	g.DrawItems(screen, offsetX, offsetY)
+	g.DrawMapTraps(screen, offsetX, offsetY)
 	g.DrawThrownItem(screen, offsetX, offsetY)
 	g.DrawEnemies(screen, offsetX, offsetY)
 	g.DrawHUD(screen)
@@ -386,6 +389,7 @@ func NewGame() *Game {
 	effectImg := loadImage("img/effect.png")
 	accessoryImg := loadImage("img/ring.png")
 	hatenaImg := loadImage("img/hatena.png")
+	sleepTrapImg := loadImage("img/suimin_trap.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -408,14 +412,15 @@ func NewGame() *Game {
 	}
 
 	// 最初のマップを生成
-	mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, 0, &player) // 初期階層は1です
+	mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMap(70, 70, 0, &player) // 初期階層は1です
 
 	game := &Game{
 		state: GameState{
-			Map:     mapGrid,
-			Player:  player,
-			Enemies: enemies,
-			Items:   items,
+			Map:      mapGrid,
+			Player:   player,
+			Enemies:  enemies,
+			Items:    items,
+			MapTraps: traps,
 		},
 		rooms:            newRoom,
 		playerImg:        img,
@@ -433,6 +438,7 @@ func NewGame() *Game {
 		effectImg:        effectImg,
 		accessoryImg:     accessoryImg,
 		hatenaImg:        hatenaImg,
+		sleepTrapImg:     sleepTrapImg,
 		offsetX:          0,
 		offsetY:          0,
 		Floor:            newFloor,

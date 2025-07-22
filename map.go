@@ -25,12 +25,13 @@ func (g *Game) handleFadingOut() {
 		g.fadeAlpha = 1.0
 		if g.frameCounter == 0 {
 			// マップ生成
-			mapGrid, enemies, items, newFloor, newRoom := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
+			mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
 			// 新しいマップ情報を設定
 			g.miniMap = nil
 			g.state.Map = mapGrid
 			g.state.Enemies = enemies
 			g.state.Items = items
+			g.state.MapTraps = traps
 			g.Floor = newFloor
 			g.rooms = newRoom
 		}
@@ -574,7 +575,7 @@ func generateItems(rooms []Room) []Item {
 	return items
 }
 
-func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Item, int, []Room) {
+func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Item, int, []Room, []MapTrap) {
 	// Step 1: Initialize all tiles to "other" type
 	mapGrid := make([][]Tile, height)
 	for y := range mapGrid {
@@ -615,6 +616,9 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 	// Call the newly created functions to generate enemies and items
 	enemies := generateEnemies(rooms, playerRoom)
 	items := generateItems(rooms)
+	
+	// Generate map traps
+	traps := generateMapTraps(rooms)
 
-	return mapGrid, enemies, items, currentFloor + 1, rooms
+	return mapGrid, enemies, items, currentFloor + 1, rooms, traps
 }

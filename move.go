@@ -1037,6 +1037,10 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 		g.state.Player.X = newPX
 		g.state.Player.Y = newPY
 		g.isActioned = true
+		
+		// 新しい位置に罠があるかチェック
+		g.checkForTrapAtPosition(newPX, newPY)
+		
 		g.PickupItem()
 		return true
 	}
