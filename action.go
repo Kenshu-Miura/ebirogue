@@ -849,6 +849,9 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 				Duration: 0.5,
 				Message:  fmt.Sprintf("%sに%dダメージを与えた。", enemyDisplayName, netDamage),
 				Execute: func(g *Game) {
+					// 攻撃を受けた敵の仮眠状態を解除
+					g.WakeUpSleepingEnemyByAttack(enemyIndex)
+					
 					g.state.Enemies[enemyIndex].Health -= netDamage
 					
 					// ダメージを受けた敵の金縛り状態を解除

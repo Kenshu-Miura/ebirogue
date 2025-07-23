@@ -522,28 +522,52 @@ func setRoomCenter(room *Room) {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	for i := 0; i < 1; i++ {
+	
+	// 4~9体のモンスターを生成
+	numEnemies := 4 + rand.Intn(6) // 4 + (0~5) = 4~9
+	
+	// 使用済み部屋を追跡
+	usedRooms := make(map[int]bool)
+	usedRooms[playerRoom.ID] = true // プレイヤーの部屋は除外
+	
+	for i := 0; i < numEnemies; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
-		for {
+		maxAttempts := 100
+		
+		for attempt := 0; attempt < maxAttempts; attempt++ {
 			enemyRoom = rooms[rand.Intn(len(rooms))]
-			if enemyRoom.ID != playerRoom.ID {
-				enemyX = rand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
-				enemyY = rand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
-				occupied := false
-				for _, enemy := range enemies {
-					if enemy.X == enemyX && enemy.Y == enemyY {
-						occupied = true
-						break
-					}
-				}
-				if !occupied {
+			
+			// できる限り異なる部屋に配置（全部屋使用済みの場合は重複を許可）
+			if len(usedRooms) < len(rooms) && usedRooms[enemyRoom.ID] {
+				continue
+			}
+			
+			enemyX = rand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
+			enemyY = rand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
+			
+			// 位置の重複チェック
+			occupied := false
+			for _, enemy := range enemies {
+				if enemy.X == enemyX && enemy.Y == enemyY {
+					occupied = true
 					break
 				}
 			}
+			
+			if !occupied {
+				usedRooms[enemyRoom.ID] = true
+				break
+			}
 		}
-
-		enemies = append(enemies, createEnemy(enemyX, enemyY))
+		
+		// 敵を生成し、50%の確率で仮眠状態にする
+		enemy := createEnemy(enemyX, enemyY)
+		if rand.Float64() < 0.5 {
+			enemy.StatusAilments.Sleep = -1 // -1で仮眠状態を表現（通常の睡眠と区別）
+		}
+		
+		enemies = append(enemies, enemy)
 	}
 	return enemies
 }

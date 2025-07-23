@@ -796,8 +796,13 @@ func (g *Game) changeBlindEnemyDirection(i int) {
 
 func (g *Game) MoveEnemies() {
 	for i, enemy := range g.state.Enemies {
+		// 仮眠状態の敵の起床チェック（隣接時）
+		if enemy.StatusAilments.Sleep == -1 {
+			g.WakeUpSleepingEnemyByProximity(i)
+		}
+		
 		// 睡眠状態の敵は移動できない
-		if enemy.StatusAilments.Sleep > 0 {
+		if enemy.StatusAilments.Sleep > 0 || enemy.StatusAilments.Sleep == -1 {
 			continue
 		}
 		

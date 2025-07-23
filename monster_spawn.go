@@ -33,6 +33,9 @@ var FloorSpawnTables = map[int][]MonsterSpawnEntry{
 func (g *Game) AdvanceTurn() {
 	g.turnCount++
 
+	// 仮眠状態の敵の起床チェック
+	g.CheckSleepingEnemyWakeUp()
+
 	// モンスター湧きチェック
 	if g.ShouldSpawnMonster() {
 		g.TrySpawnMonster()
@@ -253,4 +256,56 @@ func (g *Game) InitializeSpawnSystem() {
 	g.turnCount = 0
 	g.lastSpawnTurn = 0
 	g.SetNextSpawnInterval()
+}
+
+// 仮眠状態の敵の起床チェック
+func (g *Game) CheckSleepingEnemyWakeUp() {
+	playerX, playerY := g.state.Player.X, g.state.Player.Y
+	
+	for i := range g.state.Enemies {
+		enemy := &g.state.Enemies[i]
+		
+		// 仮眠状態（Sleep = -1）の敵のみチェック
+		if enemy.StatusAilments.Sleep != -1 {
+			continue
+		}
+		
+		enemyX, enemyY := enemy.GetPosition()
+		
+		// プレイヤーが同じ部屋に入った場合
+		if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
+			if rand.Float64() < 0.5 { // 50%の確率で起床
+				enemy.StatusAilments.Sleep = 0
+			}
+		}
+	}
+}
+
+// 隣接時や攻撃時の起床チェック（他の関数から呼び出される）
+func (g *Game) WakeUpSleepingEnemyByProximity(enemyIndex int) {
+	enemy := &g.state.Enemies[enemyIndex]
+	
+	// 仮眠状態（Sleep = -1）の敵のみチェック
+	if enemy.StatusAilments.Sleep != -1 {
+		return
+	}
+	
+	playerX, playerY := g.state.Player.X, g.state.Player.Y
+	enemyX, enemyY := enemy.GetPosition()
+	
+	// プレイヤーが隣接している場合
+	adjacent := (abs(playerX-enemyX) <= 1 && abs(playerY-enemyY) <= 1)
+	if adjacent && rand.Float64() < 0.5 { // 50%の確率で起床
+		enemy.StatusAilments.Sleep = 0
+	}
+}
+
+// 攻撃による確実な起床
+func (g *Game) WakeUpSleepingEnemyByAttack(enemyIndex int) {
+	enemy := &g.state.Enemies[enemyIndex]
+	
+	// 仮眠状態の敵は攻撃を受けると必ず起床
+	if enemy.StatusAilments.Sleep == -1 {
+		enemy.StatusAilments.Sleep = 0
+	}
 }
