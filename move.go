@@ -50,153 +50,296 @@ func moveEnemy(g *Game, i int, dx, dy int) bool {
 }
 
 func moveRandomly(g *Game, i int) {
-	enemy := &g.state.Enemies[i] // Get a pointer to the enemy to update its fields
-	moved := false
-	attemptCount := 0
-	maxAttempts := 10 // 最大試行回数
+	enemy := &g.state.Enemies[i]
+	
+	// 敵が部屋内にいるか通路にいるかを判定
+	if isEnemyInRoom(g, enemy) {
+		moveEnemyInRoom(g, i)
+	} else {
+		moveEnemyInCorridor(g, i)
+	}
+}
 
-	directions := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
+// 敵が部屋内にいるかを判定
+func isEnemyInRoom(g *Game, enemy *Enemy) bool {
+	for _, room := range g.rooms {
+		// 部屋の内側の境界をチェック（壁を除く）
+		if enemy.X > room.X && enemy.X < room.X+room.Width-1 && 
+		   enemy.Y > room.Y && enemy.Y < room.Y+room.Height-1 {
+			return true
+		}
+	}
+	return false
+}
 
-	// If enemy has no direction, set a random one initially
-	if enemy.Direction == Uninitialized { // Assuming Uninitialized is a valid value of Direction
+// 敵の周囲の方向を取得（8方向）
+func getDirections() []struct{ dx, dy int } {
+	return []struct{ dx, dy int }{
+		{0, -1}, // Up
+		{0, 1},  // Down
+		{-1, 0}, // Left
+		{1, 0},  // Right
+		{-1, -1}, // UpLeft
+		{1, -1},  // UpRight
+		{-1, 1},  // DownLeft
+		{1, 1},   // DownRight
+	}
+}
+
+// 4方向のみ取得
+func getMainDirections() []struct{ dx, dy int } {
+	return []struct{ dx, dy int }{
+		{0, -1}, // Up
+		{0, 1},  // Down
+		{-1, 0}, // Left
+		{1, 0},  // Right
+	}
+}
+
+// 部屋内での敵の移動
+func moveEnemyInRoom(g *Game, i int) {
+	// まず通路への移動を試行
+	if moveTowardsCorridor(g, i) {
+		return
+	}
+	
+	// 通路への移動ができない場合、部屋の外周を歩き回る
+	moveAroundRoomPerimeter(g, i)
+}
+
+// 通路に向かって移動
+func moveTowardsCorridor(g *Game, i int) bool {
+	enemy := &g.state.Enemies[i]
+	directions := getMainDirections()
+	
+	// 各方向をチェックして通路を探す
+	var corridorDirections []struct{ dx, dy int }
+	
+	for _, dir := range directions {
+		newX, newY := enemy.X + dir.dx, enemy.Y + dir.dy
+		
+		// 境界チェック
+		if newX < 0 || newY < 0 || newX >= len(g.state.Map[0]) || newY >= len(g.state.Map) {
+			continue
+		}
+		
+		// 通路または床タイルへの移動をチェック
+		tile := g.state.Map[newY][newX]
+		if (tile.Type == "corridor" || tile.Type == "floor") && !tile.Blocked {
+			// その位置が移動可能かチェック
+			if isPositionFree(g, newX, newY, i) {
+				corridorDirections = append(corridorDirections, dir)
+			}
+		}
+	}
+	
+	// 通路方向がある場合、ランダムに一つ選んで移動
+	if len(corridorDirections) > 0 {
+		chosenDir := corridorDirections[rand.Intn(len(corridorDirections))]
+		return moveEnemy(g, i, chosenDir.dx, chosenDir.dy)
+	}
+	
+	return false
+}
+
+// 部屋の外周を歩き回る
+func moveAroundRoomPerimeter(g *Game, i int) {
+	enemy := &g.state.Enemies[i]
+	
+	// 方向が初期化されていない場合、ランダムに設定
+	if enemy.Direction == Uninitialized {
+		directions := []Direction{Up, Down, Left, Right}
 		enemy.Direction = directions[rand.Intn(len(directions))]
 	}
-
-	for !moved && attemptCount < maxAttempts {
-		attemptCount++ // Increment the attempt count
-
-		// Check if there's a passage to the right or left
-		var passLeft, passRight bool
+	
+	// 現在の方向で移動を試行
+	var dx, dy int
+	switch enemy.Direction {
+	case Up:
+		dx, dy = 0, -1
+	case Down:
+		dx, dy = 0, 1
+	case Left:
+		dx, dy = -1, 0
+	case Right:
+		dx, dy = 1, 0
+	default:
+		// 斜め方向の場合は主方向に変換
+		directions := []Direction{Up, Down, Left, Right}
+		enemy.Direction = directions[rand.Intn(len(directions))]
+		dx, dy = 0, -1 // とりあえず上方向
+	}
+	
+	// 移動可能かチェック
+	if moveEnemy(g, i, dx, dy) {
+		enemy.dx = dx
+		enemy.dy = dy
+		enemy.Animating = true
+		return
+	}
+	
+	// 移動できない場合、右回りで次の方向を試す
+	nextDirections := map[Direction]Direction{
+		Up:    Right,
+		Right: Down,
+		Down:  Left,
+		Left:  Up,
+	}
+	
+	for attempts := 0; attempts < 4; attempts++ {
+		enemy.Direction = nextDirections[enemy.Direction]
+		
 		switch enemy.Direction {
 		case Up:
-			passLeft = g.state.Map[enemy.Y][enemy.X-1].Type == "corridor"
-			passRight = g.state.Map[enemy.Y][enemy.X+1].Type == "corridor"
+			dx, dy = 0, -1
 		case Down:
-			passLeft = g.state.Map[enemy.Y][enemy.X+1].Type == "corridor"
-			passRight = g.state.Map[enemy.Y][enemy.X-1].Type == "corridor"
+			dx, dy = 0, 1
 		case Left:
-			passLeft = g.state.Map[enemy.Y+1][enemy.X].Type == "corridor"
-			passRight = g.state.Map[enemy.Y-1][enemy.X].Type == "corridor"
+			dx, dy = -1, 0
 		case Right:
-			passLeft = g.state.Map[enemy.Y-1][enemy.X].Type == "corridor"
-			passRight = g.state.Map[enemy.Y+1][enemy.X].Type == "corridor"
+			dx, dy = 1, 0
 		}
-
-		var dx, dy int
-		if passRight {
-			switch enemy.Direction {
-			case Up:
-				dx, dy = 1, 0
-				enemy.Direction = Right
-			case Down:
-				dx, dy = -1, 0
-				enemy.Direction = Left
-			case Left:
-				dx, dy = 0, -1
-				enemy.Direction = Up
-			case Right:
-				dx, dy = 0, 1
-				enemy.Direction = Down
-			}
-		} else if passLeft {
-			switch enemy.Direction {
-			case Up:
-				dx, dy = -1, 0
-				enemy.Direction = Left
-			case Down:
-				dx, dy = 1, 0
-				enemy.Direction = Right
-			case Left:
-				dx, dy = 0, 1
-				enemy.Direction = Down
-			case Right:
-				dx, dy = 0, -1
-				enemy.Direction = Up
-			}
-		} else {
-			// If no passages to the right or left, continue with original logic
-			switch enemy.Direction {
-			case Up:
-				dx, dy = 0, -1
-			case Down:
-				dx, dy = 0, 1
-			case Left:
-				dx, dy = -1, 0
-			case Right:
-				dx, dy = 1, 0
-			case UpRight:
-				dx, dy = 1, -1
-			case UpLeft:
-				dx, dy = -1, -1
-			case DownRight:
-				dx, dy = 1, 1
-			case DownLeft:
-				dx, dy = -1, 1
-			}
-		}
-
+		
 		if moveEnemy(g, i, dx, dy) {
-			moved = true // Set moved to true if enemy moved successfully
-			// Update the enemy's dx and dy fields
 			enemy.dx = dx
 			enemy.dy = dy
 			enemy.Animating = true
-		} else {
-			// Determine left and right based on enemy's current direction
-			switch enemy.Direction {
-			case Up:
-				dx, dy = -1, 0 // left is West
-			case Down:
-				dx, dy = 1, 0 // left is East
-			case Left:
-				dx, dy = 0, 1 // left is South
-			case Right:
-				dx, dy = 0, -1 // left is North
-			}
-
-			if moveEnemy(g, i, dx, dy) {
-				moved = true
-				// Update the enemy's dx and dy fields
-				enemy.dx = dx
-				enemy.dy = dy
-				enemy.Animating = true
-				// Update the enemy's direction based on the new movement
-				switch enemy.Direction {
-				case Up:
-					enemy.Direction = Left
-				case Down:
-					enemy.Direction = Right
-				case Left:
-					enemy.Direction = Down
-				case Right:
-					enemy.Direction = Up
-				}
-			} else {
-				// Try the opposite direction if left did not work
-				dx, dy = -dx, -dy // This will switch from left to right or right to left
-				if moveEnemy(g, i, dx, dy) {
-					moved = true
-					// Update the enemy's dx and dy fields
-					enemy.dx = dx
-					enemy.dy = dy
-					enemy.Animating = true
-					// Update the enemy's direction based on the new movement
-					switch enemy.Direction {
-					case Up:
-						enemy.Direction = Right
-					case Down:
-						enemy.Direction = Left
-					case Left:
-						enemy.Direction = Up
-					case Right:
-						enemy.Direction = Down
-					}
-				} else {
-					// If neither left nor right works, choose a new random direction
-					enemy.Direction = directions[rand.Intn(len(directions))]
-				}
-			}
+			return
 		}
+	}
+}
+
+// 通路での敵の移動
+func moveEnemyInCorridor(g *Game, i int) {
+	enemy := &g.state.Enemies[i]
+	
+	// 方向が初期化されていない場合、ランダムに設定
+	if enemy.Direction == Uninitialized {
+		directions := []Direction{Up, Down, Left, Right}
+		enemy.Direction = directions[rand.Intn(len(directions))]
+	}
+	
+	// まず直進を試行
+	if moveStraightInCorridor(g, i) {
+		return
+	}
+	
+	// 直進できない場合、行き止まり処理
+	handleDeadEnd(g, i)
+}
+
+// 通路で直進移動
+func moveStraightInCorridor(g *Game, i int) bool {
+	enemy := &g.state.Enemies[i]
+	
+	var dx, dy int
+	switch enemy.Direction {
+	case Up:
+		dx, dy = 0, -1
+	case Down:
+		dx, dy = 0, 1
+	case Left:
+		dx, dy = -1, 0
+	case Right:
+		dx, dy = 1, 0
+	default:
+		// 斜め方向の場合は主方向に変換
+		directions := []Direction{Up, Down, Left, Right}
+		enemy.Direction = directions[rand.Intn(len(directions))]
+		return moveStraightInCorridor(g, i) // 再帰呼び出し
+	}
+	
+	// 直進方向に移動可能かチェック
+	if moveEnemy(g, i, dx, dy) {
+		enemy.dx = dx
+		enemy.dy = dy
+		enemy.Animating = true
+		return true
+	}
+	
+	return false
+}
+
+// 行き止まり処理
+func handleDeadEnd(g *Game, i int) {
+	enemy := &g.state.Enemies[i]
+	
+	// 左右の方向を取得
+	leftDx, leftDy, rightDx, rightDy := getLeftRightDirections(enemy.Direction)
+	
+	// まず左方向を試行
+	if moveEnemy(g, i, leftDx, leftDy) {
+		enemy.dx = leftDx
+		enemy.dy = leftDy
+		enemy.Animating = true
+		enemy.Direction = getDirectionFromMovement(leftDx, leftDy)
+		return
+	}
+	
+	// 左がダメなら右方向を試行
+	if moveEnemy(g, i, rightDx, rightDy) {
+		enemy.dx = rightDx
+		enemy.dy = rightDy
+		enemy.Animating = true
+		enemy.Direction = getDirectionFromMovement(rightDx, rightDy)
+		return
+	}
+	
+	// 左右もダメなら背後に戻る
+	backDx, backDy := getOppositeDirection(enemy.Direction)
+	if moveEnemy(g, i, backDx, backDy) {
+		enemy.dx = backDx
+		enemy.dy = backDy
+		enemy.Animating = true
+		enemy.Direction = getDirectionFromMovement(backDx, backDy)
+	}
+}
+
+// 現在の方向に対する左右の方向を取得
+func getLeftRightDirections(dir Direction) (leftDx, leftDy, rightDx, rightDy int) {
+	switch dir {
+	case Up:
+		return -1, 0, 1, 0 // Left: 左, Right: 右
+	case Down:
+		return 1, 0, -1, 0 // Left: 右, Right: 左
+	case Left:
+		return 0, 1, 0, -1 // Left: 下, Right: 上
+	case Right:
+		return 0, -1, 0, 1 // Left: 上, Right: 下
+	default:
+		return -1, 0, 1, 0 // デフォルトは上向きの場合の左右
+	}
+}
+
+// 逆方向を取得
+func getOppositeDirection(dir Direction) (dx, dy int) {
+	switch dir {
+	case Up:
+		return 0, 1 // Down
+	case Down:
+		return 0, -1 // Up
+	case Left:
+		return 1, 0 // Right
+	case Right:
+		return -1, 0 // Left
+	default:
+		return 0, 1 // デフォルトは下
+	}
+}
+
+// 移動量から方向を取得
+func getDirectionFromMovement(dx, dy int) Direction {
+	switch {
+	case dx == 0 && dy == -1:
+		return Up
+	case dx == 0 && dy == 1:
+		return Down
+	case dx == -1 && dy == 0:
+		return Left
+	case dx == 1 && dy == 0:
+		return Right
+	default:
+		return Up // デフォルト
 	}
 }
 
