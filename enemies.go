@@ -93,22 +93,32 @@ func createEnemy(x, y int) Enemy {
 		enemyExperiencePoints = 10
 		enemyDirection = Down
 		specialAttack = func(e *Enemy, g *Game) {
+			var message string
 			if g.state.Player.Power > 0 {
-				action := Action{
-					Duration: 0.5,
-					Message:  fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", func() string {
+				message = fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", func() string {
 					if g.state.Player.StatusAilments.Blind > 0 {
 						return "何者"
 					}
 					return e.Name
-				}()),
-					Execute: func(g *Game) {
-						g.state.Player.Power--
-
-					},
-				}
-				g.Enqueue(action)
+				}())
+			} else {
+				message = fmt.Sprintf("%sの毒攻撃。しかし海老さんのパワーはこれ以上下がらない", func() string {
+					if g.state.Player.StatusAilments.Blind > 0 {
+						return "何者"
+					}
+					return e.Name
+				}())
 			}
+			action := Action{
+				Duration: 0.5,
+				Message:  message,
+				Execute: func(g *Game) {
+					if g.state.Player.Power > 0 {
+						g.state.Player.Power--
+					}
+				},
+			}
+			g.Enqueue(action)
 		}
 		specialAttackProbability = 0.3 // Assuming a 100% chance to use special attack for simplicity, adjust as necessary
 	}

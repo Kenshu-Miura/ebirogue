@@ -228,15 +228,29 @@ func (g *Game) CreateEnemyByID(id, x, y int) Enemy {
 			Direction:        Uninitialized,
 			ShowOnMiniMap:    true,
 			SpecialAttack: func(e *Enemy, g *Game) {
+				var message string
 				if g.state.Player.Power > 0 {
 					g.state.Player.Power--
-					action := Action{
-						Duration: 0.5,
-						Message:  "毒でパワーが下がった！",
-						Execute:  func(g *Game) {},
-					}
-					g.Enqueue(action)
+					message = fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", func() string {
+						if g.state.Player.StatusAilments.Blind > 0 {
+							return "何者"
+						}
+						return e.Name
+					}())
+				} else {
+					message = fmt.Sprintf("%sの毒攻撃。しかし海老さんのパワーはこれ以上下がらない", func() string {
+						if g.state.Player.StatusAilments.Blind > 0 {
+							return "何者"
+						}
+						return e.Name
+					}())
 				}
+				action := Action{
+					Duration: 0.5,
+					Message:  message,
+					Execute:  func(g *Game) {},
+				}
+				g.Enqueue(action)
 			},
 			SpecialAttackProbability: 0.3,
 		}
