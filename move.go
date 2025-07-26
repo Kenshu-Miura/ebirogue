@@ -12,15 +12,28 @@ func (g *Game) IncrementMoveCount() {
 	g.moveCount++
 	// 状態異常のターン数を減らす
 	g.decrementStatusAilments()
-	// Check if moveCount has increased by 5
-	if g.moveCount%5 == 0 && g.moveCount != 0 {
-		// Recover 1 HP for the player
-		g.state.Player.Health += 1
-		// Ensure player's health does not exceed MaxHealth
-		if g.state.Player.Health > g.state.Player.MaxHealth {
-			g.state.Player.Health = g.state.Player.MaxHealth
+	
+	// 満腹度が0の場合の処理
+	if g.state.Player.Satiety == 0 {
+		// 満腹度0の場合、毎ターンHPが1減る
+		g.state.Player.Health -= 1
+		if g.state.Player.Health < 0 {
+			g.state.Player.Health = 0
+		}
+		// 死亡チェック
+		g.state.Player.checkDeath(g)
+	} else {
+		// 満腹度が0でない場合のみHP自動回復
+		if g.moveCount%5 == 0 && g.moveCount != 0 {
+			// Recover 1 HP for the player
+			g.state.Player.Health += 1
+			// Ensure player's health does not exceed MaxHealth
+			if g.state.Player.Health > g.state.Player.MaxHealth {
+				g.state.Player.Health = g.state.Player.MaxHealth
+			}
 		}
 	}
+	
 	// Existing satiety reduction logic
 	if g.moveCount%10 == 0 && g.moveCount != 0 {
 		g.state.Player.Satiety -= 1
@@ -1059,10 +1072,10 @@ func (p *Player) checkDeath(g *Game) {
 
 // ゲームリセット機能
 func (g *Game) resetGame() {
-	// プレイヤーの初期化
+	// プレイヤーの初期化（座標は後でGenerateRandomMapで設定される）
 	player := Player{
 		Name:             "海老さん",
-		Entity:           Entity{Char: '@'},
+		Entity:           Entity{Char: '@'}, // X、Yは0のまま（GenerateRandomMapで設定される）
 		Health:           100,
 		MaxHealth:        100,
 		Satiety:          100,
@@ -1079,7 +1092,7 @@ func (g *Game) resetGame() {
 		Cash:             0,
 	}
 
-	// 新しいマップを生成
+	// 新しいマップを生成（プレイヤーの座標も部屋の中に設定される）
 	mapGrid, enemies, items, _, rooms, traps := GenerateRandomMap(70, 70, 0, &player)
 
 	// ゲーム状態をリセット
@@ -1098,6 +1111,7 @@ func (g *Game) resetGame() {
 	g.fadeOutProgress = 0.0
 	g.fadeInProgress = 0.0
 	g.gameResetTimer = 0.0
+	g.starvationBlinkTimer = 0.0
 	g.ActionQueue.Queue = []Action{}
 	g.moveCount = 0
 	g.Animating = false

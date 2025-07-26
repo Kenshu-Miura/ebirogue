@@ -183,6 +183,7 @@ type Game struct {
 	fadeOutProgress           float64 // フェードアウトの進行度 (0.0 - 1.0)
 	fadeInProgress            float64 // フェードインの進行度 (0.0 - 1.0)
 	gameResetTimer            float64 // ゲームリセットまでのタイマー
+	starvationBlinkTimer      float64 // 満腹度0時の点滅タイマー
 	showStairsPrompt          bool
 	selectedOption            int // 0 for "Proceed", 1 for "Cancel"
 	ignoreStairs              bool
@@ -234,12 +235,13 @@ func (g *Game) Update() error {
 		g.UpdateAttackTimer()
 		g.HandleEnemyAttackTimers()
 		
-		// 死亡時でもメッセージ表示のためActionQueueを処理
+		// 死亡時でもメッセージ表示のためManageDescriptionsとActionQueueを処理
+		g.ManageDescriptions()
 		g.HandleActionQueue()
 		
 		// ActionQueueが空になったら死亡メッセージを追加
 		if !g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 {
-			log.Printf("DEBUG: Adding death message to ActionQueue")
+			log.Printf("DEBUG: Adding death message to ActionQueue, isCombatActive: %v", g.isCombatActive)
 			deathMessage := "海老さんは倒れた"
 			deathAction := Action{
 				Duration: 1.0, // 1秒間表示
@@ -250,7 +252,9 @@ func (g *Game) Update() error {
 			}
 			g.ActionQueue.Queue = append(g.ActionQueue.Queue, deathAction)
 			g.deathMessageAdded = true
-			log.Printf("DEBUG: Death message added, queue length: %d", len(g.ActionQueue.Queue))
+			// 戦闘状態を強制的にアクティブにして、メッセージが正常に表示されるようにする
+			g.isCombatActive = true
+			log.Printf("DEBUG: Death message added, queue length: %d, set isCombatActive to true", len(g.ActionQueue.Queue))
 		}
 		
 		// ActionQueueが再び空になったら（死亡メッセージ表示完了後）フェードアウト開始
@@ -275,6 +279,14 @@ func (g *Game) Update() error {
 		g.fadeInProgress += 1.0 / 60.0 // 1秒でフェードイン完了
 		if g.fadeInProgress > 1.0 {
 			g.fadeInProgress = 1.0
+		}
+	}
+	
+	// 満腹度0時の点滅タイマー更新
+	if g.state.Player.Satiety == 0 {
+		g.starvationBlinkTimer += 1.0 / 60.0
+		if g.starvationBlinkTimer >= 1.0 { // 1秒周期で点滅
+			g.starvationBlinkTimer = 0.0
 		}
 	}
 

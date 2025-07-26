@@ -971,14 +971,34 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	// Player Satiety
 	playerSatietyText := fmt.Sprintf("満腹度:%3d/%3d", g.state.Player.Satiety, g.state.Player.MaxSatiety)
 	satietyTextWidth := font.MeasureString(mplusSmallFont, playerSatietyText).Round() / 64
-	text.Draw(screen, playerSatietyText, mplusSmallFont, (screenWidth/2)-(satietyTextWidth+130), 35, color.White)
+	
+	// 満腹度0時の点滅処理
+	var satietyTextColor color.Color = color.White
+	if g.state.Player.Satiety == 0 {
+		// 0.5秒周期で赤と白を切り替え
+		if g.starvationBlinkTimer < 0.5 {
+			satietyTextColor = color.RGBA{255, 0, 0, 255} // 赤
+		} else {
+			satietyTextColor = color.White // 白
+		}
+	}
+	text.Draw(screen, playerSatietyText, mplusSmallFont, (screenWidth/2)-(satietyTextWidth+130), 35, satietyTextColor)
 
 	satietyBarMaxWidth := g.state.Player.MaxSatiety
 	satietyBarCurrentWidth := int(float64(satietyBarMaxWidth) * (float64(g.state.Player.Satiety) / float64(g.state.Player.MaxSatiety)))
 
-	// 満腹度の最大値でベースとなる黒色のバーを作成
+	// 満腹度の最大値でベースとなるバーを作成
 	baseSatietyBar := ebiten.NewImage(satietyBarMaxWidth, 10)
-	baseSatietyBar.Fill(color.Black)
+	if g.state.Player.Satiety > 0 {
+		baseSatietyBar.Fill(color.Black) // 通常時は黒色
+	} else {
+		// 満腹度0時の点滅処理（背景バー）
+		if g.starvationBlinkTimer < 0.5 {
+			baseSatietyBar.Fill(color.RGBA{255, 0, 0, 255}) // 赤色
+		} else {
+			baseSatietyBar.Fill(color.White) // 白色
+		}
+	}
 
 	// その値の割合として現在の満腹度を黄色のバーとして表示
 	// 満腹度が0の場合は幅1の最小バーを作成（エラー回避）
@@ -989,7 +1009,12 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	if g.state.Player.Satiety > 0 {
 		satietyBar.Fill(color.RGBA{255, 255, 0, 255})
 	} else {
-		satietyBar.Fill(color.RGBA{255, 0, 0, 255}) // 満腹度が0の場合は赤色
+		// 満腹度0時の点滅処理（バー）
+		if g.starvationBlinkTimer < 0.5 {
+			satietyBar.Fill(color.RGBA{255, 0, 0, 255}) // 赤色
+		} else {
+			satietyBar.Fill(color.White) // 白色
+		}
 	}
 
 	// 黒色のバーを描画
