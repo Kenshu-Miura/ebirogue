@@ -753,7 +753,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 				// 敵の経験値をプレイヤーの所持経験値に加える
 				g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 
-				g.state.Player.checkLevelUp() // レベルアップをチェック
+				g.state.Player.checkLevelUp(g) // レベルアップをチェック
 
 				// トラップをリセットする (オプショナル)
 				g.state.Player.SetTrap = nil
@@ -873,7 +873,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 						// 敵の経験値をプレイヤーの所持経験値に加える
 						g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 
-						g.state.Player.checkLevelUp() // レベルアップをチェック
+						g.state.Player.checkLevelUp(g) // レベルアップをチェック
 					}
 					g.isActioned = true
 

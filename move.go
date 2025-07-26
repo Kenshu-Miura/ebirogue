@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math/rand"
 )
@@ -1028,11 +1029,20 @@ func (g *Game) MoveEnemies() {
 	}
 }
 
-func (p *Player) checkLevelUp() {
+func (p *Player) checkLevelUp(g *Game) {
 	if p.Level < 10 && p.Level < len(levelExpRequirements) && p.ExperiencePoints >= levelExpRequirements[p.Level] {
 		p.Level++ // レベルアップ
 		// 必要に応じて他のプレイヤーステータスをアップデート
 		p.MaxHealth += 10
+		
+		// レベルアップメッセージを表示
+		levelUpMessage := fmt.Sprintf("海老さんはレベル%dに上がった", p.Level)
+		levelUpAction := Action{
+			Duration: 1.0,
+			Message:  levelUpMessage,
+			Execute:  func(g *Game) {}, // 何もしない
+		}
+		g.ActionQueue.Queue = append(g.ActionQueue.Queue, levelUpAction)
 	}
 }
 

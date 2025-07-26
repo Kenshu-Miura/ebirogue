@@ -485,7 +485,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 						// 敵の経験値をプレイヤーの所持経験値に加える
 						g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 
-						g.state.Player.checkLevelUp() // レベルアップをチェック
+						g.state.Player.checkLevelUp(g) // レベルアップをチェック
 
 						// Reset the target enemy after processing
 						// (If necessary. This part may need to be adjusted based on your game's logic)

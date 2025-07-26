@@ -215,7 +215,7 @@ var damageHP30 = func(g *Game) {
 								// 敵の経験値をプレイヤーの所持経験値に加える
 								g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 
-								g.state.Player.checkLevelUp() // レベルアップをチェック
+								g.state.Player.checkLevelUp(g) // レベルアップをチェック
 							}
 						},
 					}
