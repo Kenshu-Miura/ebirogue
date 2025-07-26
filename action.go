@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
+	"log"
 	"math/rand"
 )
 
@@ -633,6 +634,9 @@ func (g *Game) Enqueue(action Action) {
 }
 
 func (g *Game) processAction(action Action) {
+	if g.playerDead && action.Message != "" {
+		log.Printf("DEBUG: processAction called for dead player: Message='%s'", action.Message)
+	}
 	// 実際のアクションの実行ロジックはアクションオブジェクトのExecuteメソッドに委譲
 	action.Execute(g)
 	g.ActionDurationCounter = action.Duration // record the duration of the next action
@@ -670,6 +674,7 @@ func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
 			if g.state.Player.Health < 0 {
 				g.state.Player.Health = 0
 			}
+			g.state.Player.checkDeath(g) // 死亡チェック
 		},
 	}
 	
@@ -795,6 +800,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 				if g.state.Player.Health < 0 {
 					g.state.Player.Health = 0 // Ensure health does not go below 0
 				}
+				g.state.Player.checkDeath(g) // 死亡チェック
 			},
 		}
 

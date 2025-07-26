@@ -316,7 +316,10 @@ func (g *Game) ManageDescriptions() {
 		}
 
 	} else {
-		g.showDescription = false
+		// プレイヤーが死亡している場合は、showDescriptionをfalseにしない
+		if !g.playerDead {
+			g.showDescription = false
+		}
 	}
 }
 
@@ -939,8 +942,16 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	baseHpBar.Fill(color.RGBA{255, 0, 0, 127})
 
 	// その値の割合として現在のHPを緑色のバーとして表示
+	// HPが0の場合は幅1の最小バーを作成（エラー回避）
+	if hpBarCurrentWidth <= 0 {
+		hpBarCurrentWidth = 1
+	}
 	hpBar := ebiten.NewImage(hpBarCurrentWidth, 10)
-	hpBar.Fill(color.RGBA{0, 255, 0, 255})
+	if g.state.Player.Health > 0 {
+		hpBar.Fill(color.RGBA{0, 255, 0, 255})
+	} else {
+		hpBar.Fill(color.RGBA{255, 0, 0, 255}) // HPが0の場合は赤色
+	}
 
 	// 黒色のバーを描画
 	baseHpGeoM := ebiten.GeoM{}
@@ -970,22 +981,26 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	baseSatietyBar.Fill(color.Black)
 
 	// その値の割合として現在の満腹度を黄色のバーとして表示
-	if g.state.Player.Satiety > 0 {
-		satietyBar := ebiten.NewImage(satietyBarCurrentWidth, 10)
-		satietyBar.Fill(color.RGBA{255, 255, 0, 255})
-
-		// 黒色のバーを描画
-		baseSatietyGeoM := ebiten.GeoM{}
-		baseSatietyGeoM.Translate(float64((screenWidth/2)-30), 25)
-		screen.DrawImage(baseSatietyBar, &ebiten.DrawImageOptions{GeoM: baseSatietyGeoM})
-
-		// 黄色のバーを描画
-		if satietyBarCurrentWidth > 0 {
-			STgeoM := ebiten.GeoM{}
-			STgeoM.Translate(float64((screenWidth/2)-30), 25)
-			screen.DrawImage(satietyBar, &ebiten.DrawImageOptions{GeoM: STgeoM})
-		}
+	// 満腹度が0の場合は幅1の最小バーを作成（エラー回避）
+	if satietyBarCurrentWidth <= 0 {
+		satietyBarCurrentWidth = 1
 	}
+	satietyBar := ebiten.NewImage(satietyBarCurrentWidth, 10)
+	if g.state.Player.Satiety > 0 {
+		satietyBar.Fill(color.RGBA{255, 255, 0, 255})
+	} else {
+		satietyBar.Fill(color.RGBA{255, 0, 0, 255}) // 満腹度が0の場合は赤色
+	}
+
+	// 黒色のバーを描画
+	baseSatietyGeoM := ebiten.GeoM{}
+	baseSatietyGeoM.Translate(float64((screenWidth/2)-30), 25)
+	screen.DrawImage(baseSatietyBar, &ebiten.DrawImageOptions{GeoM: baseSatietyGeoM})
+
+	// 満腹度バーを描画
+	STgeoM := ebiten.GeoM{}
+	STgeoM.Translate(float64((screenWidth/2)-30), 25)
+	screen.DrawImage(satietyBar, &ebiten.DrawImageOptions{GeoM: STgeoM})
 
 	// 枠を描画
 	drawBarWithBorder(screen, (screenWidth/2)-30, 25, satietyBarMaxWidth, 10, color.RGBA{0, 0, 0, 0}, color.White)

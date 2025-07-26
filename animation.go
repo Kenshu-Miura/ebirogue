@@ -4,6 +4,7 @@ package main
 
 import (
 	_ "image/png" // PNG画像を読み込むために必要
+	"log"
 	"math"
 )
 
@@ -96,6 +97,9 @@ func (g *Game) HandleActionQueue() {
 	if len(g.ActionQueue.Queue) > 0 {
 		if g.ActionDurationCounter <= 0 {
 			action := g.ActionQueue.Queue[0]
+			if g.playerDead {
+				log.Printf("DEBUG: Processing action while dead: Message='%s', Duration=%f", action.Message, action.Duration)
+			}
 			g.processAction(action)
 		}
 	}
@@ -105,13 +109,19 @@ func (g *Game) HandleActionQueue() {
 	}
 
 	if len(g.ActionQueue.Queue) > 0 && g.ActionDurationCounter <= 0 {
+		if g.playerDead {
+			log.Printf("DEBUG: Removing action from queue, remaining: %d", len(g.ActionQueue.Queue)-1)
+		}
 		g.ActionDurationCounter = 0
 		g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
 	}
 
 	if len(g.ActionQueue.Queue) == 0 && g.isCombatActive && g.ActionDurationCounter <= 0 {
 		g.isCombatActive = false // reset the combat active flag when the queue is empty
-		g.showDescription = false
+		// プレイヤーが死亡している場合は、showDescriptionをfalseにしない（死亡メッセージを表示するため）
+		if !g.playerDead {
+			g.showDescription = false
+		}
 	}
 }
 

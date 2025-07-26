@@ -1046,6 +1046,70 @@ func (p *Player) checkLevelUp(g *Game) {
 	}
 }
 
+// プレイヤーの死亡チェック
+func (p *Player) checkDeath(g *Game) {
+	if p.Health <= 0 && !g.playerDead {
+		g.playerDead = true
+		g.fadeOutProgress = 0.0
+		g.gameResetTimer = 6.0 // 6秒後にリセット（攻撃処理待ち+メッセージ1秒+フェードアウト1秒+待機2秒）
+		
+		// 死亡メッセージは後でActionQueueが空になってから追加する
+	}
+}
+
+// ゲームリセット機能
+func (g *Game) resetGame() {
+	// プレイヤーの初期化
+	player := Player{
+		Name:             "海老さん",
+		Entity:           Entity{Char: '@'},
+		Health:           100,
+		MaxHealth:        100,
+		Satiety:          100,
+		MaxSatiety:       100,
+		Inventory:        []Item{},
+		MaxInventory:     20,
+		AttackPower:      3,
+		DefensePower:     3,
+		ExperiencePoints: 0,
+		Level:            1,
+		Power:            8,
+		MaxPower:         8,
+		Direction:        Up,
+		Cash:             0,
+	}
+
+	// 新しいマップを生成
+	mapGrid, enemies, items, _, rooms, traps := GenerateRandomMap(70, 70, 0, &player)
+
+	// ゲーム状態をリセット
+	g.state = GameState{
+		Map:      mapGrid,
+		Player:   player,
+		Enemies:  enemies,
+		Items:    items,
+		MapTraps: traps,
+	}
+
+	// その他のゲーム状態をリセット
+	g.rooms = rooms // 部屋情報を更新
+	g.playerDead = false
+	g.deathMessageAdded = false
+	g.fadeOutProgress = 0.0
+	g.fadeInProgress = 0.0
+	g.gameResetTimer = 0.0
+	g.ActionQueue.Queue = []Action{}
+	g.moveCount = 0
+	g.Animating = false
+	g.AnimationProgress = 0.0
+	g.ActionDurationCounter = 0.0
+	g.isActioned = false
+	g.isCombatActive = false
+	
+	// モンスター湧きシステム再初期化
+	g.InitializeSpawnSystem()
+}
+
 func isSameRoom(x1, y1, x2, y2 int, rooms []Room) bool {
 	var room1, room2 Room
 	foundRoom1, foundRoom2 := false, false // New variables to track if room1 and room2 are found

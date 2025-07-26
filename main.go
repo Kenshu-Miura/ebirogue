@@ -3,6 +3,7 @@
 package main
 
 import (
+	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"time"
@@ -177,6 +178,11 @@ type Game struct {
 	ThrownItemDestination     Coordinate
 	TargetEnemy               *Enemy
 	TargetEnemyIndex          int
+	playerDead                bool    // プレイヤーが死亡したかどうか
+	deathMessageAdded         bool    // 死亡メッセージが追加済みかどうか
+	fadeOutProgress           float64 // フェードアウトの進行度 (0.0 - 1.0)
+	fadeInProgress            float64 // フェードインの進行度 (0.0 - 1.0)
+	gameResetTimer            float64 // ゲームリセットまでのタイマー
 	showStairsPrompt          bool
 	selectedOption            int // 0 for "Proceed", 1 for "Cancel"
 	ignoreStairs              bool
@@ -220,6 +226,57 @@ func (g *Game) IsEnemyAdjacent() bool {
 }
 
 func (g *Game) Update() error {
+	// プレイヤーが死亡している場合の処理
+	if g.playerDead {
+		// log.Printf("DEBUG: Player is dead, queue length: %d, deathMessageAdded: %v", len(g.ActionQueue.Queue), g.deathMessageAdded)
+		
+		// 死亡時でも攻撃アニメーション処理を継続
+		g.UpdateAttackTimer()
+		g.HandleEnemyAttackTimers()
+		
+		// 死亡時でもメッセージ表示のためActionQueueを処理
+		g.HandleActionQueue()
+		
+		// ActionQueueが空になったら死亡メッセージを追加
+		if !g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 {
+			log.Printf("DEBUG: Adding death message to ActionQueue")
+			deathMessage := "海老さんは倒れた"
+			deathAction := Action{
+				Duration: 1.0, // 1秒間表示
+				Message:  deathMessage,
+				Execute:  func(g *Game) {
+					log.Printf("DEBUG: Death message Execute function called")
+				}, 
+			}
+			g.ActionQueue.Queue = append(g.ActionQueue.Queue, deathAction)
+			g.deathMessageAdded = true
+			log.Printf("DEBUG: Death message added, queue length: %d", len(g.ActionQueue.Queue))
+		}
+		
+		// ActionQueueが再び空になったら（死亡メッセージ表示完了後）フェードアウト開始
+		if g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 && g.fadeOutProgress < 1.0 {
+			g.fadeOutProgress += 1.0 / 60.0 // 1秒でフェードアウト完了
+			if g.fadeOutProgress > 1.0 {
+				g.fadeOutProgress = 1.0
+			}
+		}
+		
+		// リセットタイマーを減らす
+		g.gameResetTimer -= 1.0 / 60.0
+		if g.gameResetTimer <= 0 {
+			g.resetGame()
+			g.fadeInProgress = 0.0 // フェードイン開始
+		}
+		return nil
+	}
+	
+	// フェードイン処理
+	if g.fadeInProgress < 1.0 {
+		g.fadeInProgress += 1.0 / 60.0 // 1秒でフェードイン完了
+		if g.fadeInProgress > 1.0 {
+			g.fadeInProgress = 1.0
+		}
+	}
 
 	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt {
 		// 睡眠状態の場合は自動的にターンを進行させる
@@ -378,7 +435,45 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.fadeAlpha > 0 {
 		g.drawOverlay(screen)
 	}
+	
+	// 死亡時のフェードアウト処理（メッセージ表示後）
+	if g.playerDead && g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 && g.fadeOutProgress > 0 {
+		g.drawDeathFade(screen)
+	}
+	
+	// ゲーム開始時のフェードイン処理
+	if g.fadeInProgress < 1.0 {
+		g.drawFadeIn(screen)
+	}
 
+}
+
+// 死亡時のフェードアウト描画
+func (g *Game) drawDeathFade(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	overlay := ebiten.NewImage(screenWidth, screenHeight)
+	
+	// フェードアウトの進行度に応じてアルファ値を計算
+	alpha := uint8(g.fadeOutProgress * 255)
+	color := color.RGBA{0, 0, 0, alpha}
+	overlay.Fill(color)
+	
+	opts := &ebiten.DrawImageOptions{}
+	screen.DrawImage(overlay, opts)
+}
+
+// ゲーム開始時のフェードイン描画
+func (g *Game) drawFadeIn(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	overlay := ebiten.NewImage(screenWidth, screenHeight)
+	
+	// フェードインの進行度に応じてアルファ値を計算（逆算）
+	alpha := uint8((1.0 - g.fadeInProgress) * 255)
+	color := color.RGBA{0, 0, 0, alpha}
+	overlay.Fill(color)
+	
+	opts := &ebiten.DrawImageOptions{}
+	screen.DrawImage(overlay, opts)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -477,6 +572,9 @@ func NewGame() *Game {
 
 	// モンスター湧きシステム初期化
 	game.InitializeSpawnSystem()
+	
+	// フェードイン状態を初期化
+	game.fadeInProgress = 0.0
 
 	return game
 }
