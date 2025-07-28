@@ -59,40 +59,47 @@ func (g *Game) updateEnemyVisibility() {
 	}
 }
 
-func createEnemy(x, y int) Enemy {
-	var enemyType, enemyName, enemyChar string
-	var enemyAP, enemyDP, enemyID int
-	var enemyHealth, enemyMaxHealth, enemyExperiencePoints int
-	var enemyDirection Direction
-	var specialAttack SpecialAttackFunc
-	var specialAttackProbability float64
-	randomValue := rand.Intn(2) // Store the random value to ensure it's only generated once and correct the range to 2 for two cases
-	switch randomValue {
-	case 0:
-		enemyID = 0
-		enemyType = "Shrimp"
-		enemyName = "エビ"
-		enemyChar = "E"
-		enemyAP = 4
-		enemyDP = 2
-		enemyHealth = 20
-		enemyMaxHealth = 20
-		enemyExperiencePoints = 5
-		enemyDirection = Down
-		specialAttack = nil // No special attack for Shrimp
-		specialAttackProbability = 0.0
-	case 1:
-		enemyID = 1
-		enemyType = "Snake"
-		enemyName = "毒ヘビ"
-		enemyChar = "S"
-		enemyAP = 7
-		enemyDP = 1
-		enemyHealth = 30
-		enemyMaxHealth = 30
-		enemyExperiencePoints = 10
-		enemyDirection = Down
-		specialAttack = func(e *Enemy, g *Game) {
+// 統一されたモンスター定義テーブル
+type MonsterDefinition struct {
+	ID                       int
+	Type                     string
+	Name                     string
+	Char                     rune
+	Health                   int
+	MaxHealth                int
+	AttackPower              int
+	DefensePower             int
+	ExperiencePoints         int
+	SpecialAttack            SpecialAttackFunc
+	SpecialAttackProbability float64
+}
+
+// モンスター定義テーブル
+var MonsterDefinitions = map[int]MonsterDefinition{
+	0: {
+		ID:                       0,
+		Type:                     "Shrimp",
+		Name:                     "エビ",
+		Char:                     'E',
+		Health:                   20,
+		MaxHealth:                20,
+		AttackPower:              4,
+		DefensePower:             2,
+		ExperiencePoints:         5,
+		SpecialAttack:            nil,
+		SpecialAttackProbability: 0.0,
+	},
+	1: {
+		ID:                       1,
+		Type:                     "Snake",
+		Name:                     "毒ヘビ",
+		Char:                     'S',
+		Health:                   30,
+		MaxHealth:                30,
+		AttackPower:              7,
+		DefensePower:             1,
+		ExperiencePoints:         10,
+		SpecialAttack: func(e *Enemy, g *Game) {
 			var message string
 			if g.state.Player.Power > 0 {
 				message = fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", func() string {
@@ -119,23 +126,38 @@ func createEnemy(x, y int) Enemy {
 				},
 			}
 			g.Enqueue(action)
-		}
-		specialAttackProbability = 0.3 // Assuming a 100% chance to use special attack for simplicity, adjust as necessary
+		},
+		SpecialAttackProbability: 0.3,
+	},
+}
+
+// 統一されたモンスター生成関数
+func CreateEnemyByID(id, x, y int) Enemy {
+	def, exists := MonsterDefinitions[id]
+	if !exists {
+		// デフォルトはエビ
+		def = MonsterDefinitions[0]
 	}
 
 	return Enemy{
-		Entity:                   Entity{X: x, Y: y, Char: rune(enemyChar[0])},
-		ID:                       enemyID,
-		Health:                   enemyHealth,
-		MaxHealth:                enemyMaxHealth,
-		Name:                     enemyName,
-		AttackPower:              enemyAP,
-		DefensePower:             enemyDP,
-		Type:                     enemyType,
-		ExperiencePoints:         enemyExperiencePoints,
-		Direction:                enemyDirection,
+		Entity:                   Entity{X: x, Y: y, Char: def.Char},
+		ID:                       def.ID,
+		Health:                   def.Health,
+		MaxHealth:                def.MaxHealth,
+		Name:                     def.Name,
+		AttackPower:              def.AttackPower,
+		DefensePower:             def.DefensePower,
+		Type:                     def.Type,
+		ExperiencePoints:         def.ExperiencePoints,
+		Direction:                Down,
 		PlayerDiscovered:         false,
-		SpecialAttack:            specialAttack,
-		SpecialAttackProbability: specialAttackProbability,
+		SpecialAttack:            def.SpecialAttack,
+		SpecialAttackProbability: def.SpecialAttackProbability,
+		ShowOnMiniMap:            true,
 	}
+}
+
+func createEnemy(x, y int) Enemy {
+	randomValue := rand.Intn(2)
+	return CreateEnemyByID(randomValue, x, y)
 }

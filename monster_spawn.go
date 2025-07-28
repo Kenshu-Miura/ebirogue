@@ -66,7 +66,7 @@ func (g *Game) TrySpawnMonster() {
 
 	// モンスター生成
 	monsterID := g.SelectMonsterForSpawn()
-	enemy := g.CreateEnemyByID(monsterID, spawnPos.X, spawnPos.Y)
+	enemy := CreateEnemyByID(monsterID, spawnPos.X, spawnPos.Y)
 
 	// ゲーム状態に追加
 	g.state.Enemies = append(g.state.Enemies, enemy)
@@ -193,72 +193,6 @@ func (g *Game) SelectMonsterForSpawn() int {
 	return 0
 }
 
-// IDに応じた敵生成
-func (g *Game) CreateEnemyByID(id, x, y int) Enemy {
-	switch id {
-	case 0:
-		// エビ
-		return Enemy{
-			Entity:           Entity{X: x, Y: y, Char: 'E'},
-			ID:               0,
-			Name:             "エビ",
-			Health:           20,
-			MaxHealth:        20,
-			AttackPower:      4,
-			DefensePower:     2,
-			Type:             "Shrimp",
-			ExperiencePoints: 5,
-			PlayerDiscovered: false,
-			Direction:        Uninitialized,
-			ShowOnMiniMap:    true,
-		}
-	case 1:
-		// ヘビ
-		return Enemy{
-			Entity:           Entity{X: x, Y: y, Char: 'S'},
-			ID:               1,
-			Name:             "毒ヘビ",
-			Health:           30,
-			MaxHealth:        30,
-			AttackPower:      7,
-			DefensePower:     1,
-			Type:             "Snake",
-			ExperiencePoints: 10,
-			PlayerDiscovered: false,
-			Direction:        Uninitialized,
-			ShowOnMiniMap:    true,
-			SpecialAttack: func(e *Enemy, g *Game) {
-				var message string
-				if g.state.Player.Power > 0 {
-					g.state.Player.Power--
-					message = fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", func() string {
-						if g.state.Player.StatusAilments.Blind > 0 {
-							return "何者"
-						}
-						return e.Name
-					}())
-				} else {
-					message = fmt.Sprintf("%sの毒攻撃。しかし海老さんのパワーはこれ以上下がらない", func() string {
-						if g.state.Player.StatusAilments.Blind > 0 {
-							return "何者"
-						}
-						return e.Name
-					}())
-				}
-				action := Action{
-					Duration: 0.5,
-					Message:  message,
-					Execute:  func(g *Game) {},
-				}
-				g.Enqueue(action)
-			},
-			SpecialAttackProbability: 0.3,
-		}
-	default:
-		// デフォルトはエビ
-		return g.CreateEnemyByID(0, x, y)
-	}
-}
 
 // 次回湧き間隔を設定
 func (g *Game) SetNextSpawnInterval() {
