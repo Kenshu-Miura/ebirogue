@@ -34,6 +34,10 @@ func (g *Game) handleFadingOut() {
 			g.state.MapTraps = traps
 			g.Floor = newFloor
 			g.rooms = newRoom
+			// フロア変更時のリセット処理
+			g.floorTurns = 0
+			g.windWarning1Shown = false
+			g.windWarning2Shown = false
 		}
 		g.frameCounter++
 		if g.frameCounter >= 60 { // 1秒経過した後

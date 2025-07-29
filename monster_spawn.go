@@ -32,6 +32,10 @@ var FloorSpawnTables = map[int][]MonsterSpawnEntry{
 // プレイヤーターン進行時の処理
 func (g *Game) AdvanceTurn() {
 	g.turnCount++
+	g.floorTurns++ // フロア滞在ターン数を増加
+
+	// フロア滞在時間チェック
+	g.checkFloorTimeWarnings()
 
 	// 仮眠状態の敵の起床チェック
 	g.CheckSleepingEnemyWakeUp()
@@ -255,5 +259,49 @@ func (g *Game) WakeUpSleepingEnemyByAttack(enemyIndex int) {
 	// 仮眠状態の敵は攻撃を受けると必ず起床
 	if enemy.StatusAilments.Sleep == -1 {
 		enemy.StatusAilments.Sleep = 0
+	}
+}
+
+// フロア滞在時間警告チェック
+func (g *Game) checkFloorTimeWarnings() {
+	// 1200ターン経過時の警告
+	if g.floorTurns >= 1200 && !g.windWarning1Shown {
+		g.windWarning1Shown = true
+		windAction := Action{
+			Duration:    2.0, // 2秒間表示
+			Message:     "風が吹いてきた…",
+			Execute:     func(g *Game) {},
+			NonBlocking: false, // 入力をブロック
+		}
+		g.ActionQueue.Queue = append(g.ActionQueue.Queue, windAction)
+		return
+	}
+	
+	// 1300ターン経過時の警告
+	if g.floorTurns >= 1300 && !g.windWarning2Shown {
+		g.windWarning2Shown = true
+		windAction := Action{
+			Duration:    2.0, // 2秒間表示
+			Message:     "風が吹いてきた…さっきより強いぞ",
+			Execute:     func(g *Game) {},
+			NonBlocking: false, // 入力をブロック
+		}
+		g.ActionQueue.Queue = append(g.ActionQueue.Queue, windAction)
+		return
+	}
+	
+	// 1400ターン経過時の死亡
+	if g.floorTurns >= 1400 {
+		g.playerDead = true
+		g.gameResetTimer = 2.0 // 2秒後にリセット
+		windDeathAction := Action{
+			Duration: 2.0, // 2秒間表示
+			Message:  "突風だ！海老さんは風に飛ばされた",
+			Execute: func(g *Game) {
+				// プレイヤー死亡処理は既にplayerDead=trueで実行される
+			},
+			NonBlocking: false,
+		}
+		g.ActionQueue.Queue = append(g.ActionQueue.Queue, windDeathAction)
 	}
 }

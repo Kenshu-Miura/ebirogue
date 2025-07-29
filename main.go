@@ -202,6 +202,10 @@ type Game struct {
 	turnCount                 int // プレイヤーのターン数
 	lastSpawnTurn             int // 最後にモンスターが湧いたターン
 	spawnInterval             int // 次回湧きまでのターン数
+	// フロア滞在時間システム
+	floorTurns               int  // 現在のフロアでの滞在ターン数
+	windWarning1Shown        bool // 1200ターン警告表示済みフラグ
+	windWarning2Shown        bool // 1300ターン警告表示済みフラグ
 }
 
 func (g *Game) CanAcceptInput() bool {
