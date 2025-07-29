@@ -174,6 +174,8 @@ type Game struct {
 	GroundItemActioned        bool
 	isFrontEnemy              bool
 	currentGroundItem         Item
+	showGroundItemDescription bool
+	groundItemDescriptionText string
 	ThrownItem                ThrownItem
 	ThrownItemDestination     Coordinate
 	TargetEnemy               *Enemy
@@ -213,6 +215,7 @@ type Game struct {
 	returnToMenuFromInventory bool // インベントリからメニューに戻るフラグ
 	returnToMenuFromGround   bool // 足元メニューからメニューに戻るフラグ
 	showEmptyInventoryMessage bool // 空のインベントリメッセージ表示フラグ
+	groundMenuJustOpened     bool // 足元メニューが開かれたばかりかどうかのフラグ
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -355,15 +358,17 @@ func (g *Game) Update() error {
 		g.processF1KeyPress()
 	}
 
-	// Find item at player's position
+	// Find item at player's position (足元メニュー表示中でない場合のみ更新)
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
-	for _, item := range g.state.Items {
-		itemX, itemY := item.GetPosition()
-		if itemX == playerX && itemY == playerY {
-			g.currentGroundItem = item // Assuming g.currentGroundItem is a field of *Game
-			break
-		} else {
-			g.currentGroundItem = nil
+	if !g.ShowGroundItem {
+		for _, item := range g.state.Items {
+			itemX, itemY := item.GetPosition()
+			if itemX == playerX && itemY == playerY {
+				g.currentGroundItem = item // Assuming g.currentGroundItem is a field of *Game
+				break
+			} else {
+				g.currentGroundItem = nil
+			}
 		}
 	}
 
@@ -470,6 +475,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawDescriptions(screen)
 
 	g.DrawGroundItem(screen)
+
+	g.drawGroundItemDescription(screen)
 
 	g.DrawStairsPrompt(screen)
 

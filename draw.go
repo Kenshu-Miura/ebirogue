@@ -432,12 +432,25 @@ func (g *Game) drawItemDescription(screen *ebiten.Image) {
 	}
 }
 
+func (g *Game) drawGroundItemDescription(screen *ebiten.Image) {
+	if g.showGroundItemDescription {
+		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+		descriptionWindowWidth, descriptionWindowHeight := 500, 120
+		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
+
+		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight, 255)
+
+		// Draw description text
+		text.Draw(screen, g.groundItemDescriptionText, mplusNormalFont, windowX+10, windowY+20, color.White)
+	}
+}
+
 func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 	if g.ShowGroundItem {
 		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 		itemWindowWidth, itemWindowHeight := 400, 26
 		itemwindowX, itemwindowY := (screenWidth-itemWindowWidth)/2, (screenHeight-itemWindowHeight)/2
-		actionWindowWidth, actionWindowHeight := 100, 90
+		actionWindowWidth, actionWindowHeight := 100, 110
 		actionWindowX, actionWindowY := (screenWidth-actionWindowWidth)/2, (screenHeight-actionWindowHeight)/2
 
 		// Draw item name window
@@ -482,9 +495,9 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 			// g.currentGroundItemがequipableItemであるかどうかをチェック
 			if _, ok := g.currentGroundItem.(Equipable); ok {
 				// Assume function isEquipped returns true if the item is equipped, false otherwise
-				actions = []string{"拾う", "交換", "装備", "投げる"}
+				actions = []string{"拾う", "交換", "装備", "投げる", "説明"}
 			} else {
-				actions = []string{"拾う", "交換", "使う", "投げる"}
+				actions = []string{"拾う", "交換", "使う", "投げる", "説明"}
 			}
 			for index, action := range actions {
 				text.Draw(screen, action, mplusNormalFont, actionWindowX+30, actionWindowY+actionWindowHeight+20+(index*20), color.White)

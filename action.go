@@ -64,6 +64,7 @@ func (g *Game) executeGroundItemAction() {
 		g.ShowGroundItem = false
 		g.GroundItemActioned = false
 		g.selectedGroundActionIndex = 0
+		g.groundMenuJustOpened = false
 	}
 
 	if g.selectedGroundActionIndex == 1 { // Assuming index 1 corresponds to '交換'
@@ -206,6 +207,7 @@ func (g *Game) executeGroundItemAction() {
 				g.ShowGroundItem = false
 				g.GroundItemActioned = false
 				g.selectedGroundActionIndex = 0
+				g.groundMenuJustOpened = false
 				g.isActioned = true
 			}
 		}
@@ -234,9 +236,22 @@ func (g *Game) executeGroundItemAction() {
 				g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
 
 				g.ShowGroundItem = false
+				g.GroundItemActioned = false
+				g.selectedGroundActionIndex = 0
+				g.groundMenuJustOpened = false
 				g.isActioned = true
 			}
 		}
+	}
+
+	if g.selectedGroundActionIndex == 4 { // Assuming index 4 corresponds to '説明'
+		if g.currentGroundItem != nil {
+			g.groundItemDescriptionText = g.currentGroundItem.GetDescription()
+			g.showGroundItemDescription = true
+		}
+		// 説明の場合はメニューを閉じずに説明ウィンドウのみ表示
+		g.GroundItemActioned = false
+		g.groundMenuJustOpened = false
 	}
 }
 

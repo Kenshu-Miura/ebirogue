@@ -92,6 +92,10 @@ func (g *Game) HandleGroundItemInput() {
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
 		g.ShowGroundItem = false
 		g.selectedGroundActionIndex = 0
+		g.GroundItemActioned = false
+		g.showGroundItemDescription = false
+		g.groundItemDescriptionText = ""
+		g.groundMenuJustOpened = false // フラグもリセット
 		// メニューから開いた場合は、メニューに戻る
 		if g.returnToMenuFromGround {
 			g.showMenu = true
@@ -99,17 +103,51 @@ func (g *Game) HandleGroundItemInput() {
 		}
 	}
 
-	if g.ShowGroundItem && g.currentGroundItem != nil {
-		if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundActionIndex > 0 {
-			g.selectedGroundActionIndex--
-		} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundActionIndex < 3 {
-			g.selectedGroundActionIndex++
-		} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-			g.GroundItemActioned = true // Toggle the item actions menu
+	// Cキーで全てのメニューを閉じる処理
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) && g.ShowGroundItem {
+		g.ShowGroundItem = false
+		g.selectedGroundActionIndex = 0
+		g.GroundItemActioned = false
+		g.showGroundItemDescription = false
+		g.groundItemDescriptionText = ""
+		g.groundMenuJustOpened = false // フラグもリセット
+		g.showMenu = false
+		g.returnToMenuFromGround = false
+	}
+
+	if g.ShowGroundItem && g.currentGroundItem != nil && !g.GroundItemActioned {
+		// 足元メニューが開かれたばかりの場合は、1フレーム分Zキーの処理をスキップ
+		if g.groundMenuJustOpened {
+			g.groundMenuJustOpened = false // フラグをリセット
+			// Zキー以外の入力は受け付ける
+			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundActionIndex > 0 {
+				g.selectedGroundActionIndex--
+			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundActionIndex < 4 {
+				g.selectedGroundActionIndex++
+			}
+		} else {
+			// 通常の足元メニュー選択状態での操作
+			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundActionIndex > 0 {
+				g.selectedGroundActionIndex--
+			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundActionIndex < 4 {
+				g.selectedGroundActionIndex++
+			} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+				g.GroundItemActioned = true // アクション実行状態に移行
+			}
 		}
-		if g.GroundItemActioned {
-			if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-				g.executeGroundItemAction()
+	}
+	
+	if g.ShowGroundItem && g.currentGroundItem != nil && g.GroundItemActioned {
+		// アクション実行状態での操作
+		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			g.executeGroundItemAction()
+		} else if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+			// Xキーで説明ウィンドウを閉じる、または前の状態に戻る
+			if g.showGroundItemDescription {
+				g.showGroundItemDescription = false
+				g.groundItemDescriptionText = ""
+			} else {
+				g.GroundItemActioned = false
 			}
 		}
 	}
@@ -658,7 +696,26 @@ func (g *Game) handleMenuInput() error {
 			// 足元
 			g.showMenu = false
 			g.returnToMenuFromGround = true
+			// 足元のアイテムを確認
+			playerX, playerY := g.state.Player.X, g.state.Player.Y
+			foundItem := false
+			for _, item := range g.state.Items {
+				itemX, itemY := item.GetPosition()
+				if itemX == playerX && itemY == playerY {
+					g.currentGroundItem = item
+					foundItem = true
+					break
+				}
+			}
+			if !foundItem {
+				g.currentGroundItem = nil
+			}
 			g.ShowGroundItem = true
+			g.GroundItemActioned = false // メニュー表示時は初期化
+			g.selectedGroundActionIndex = 0 // 選択インデックスをリセット
+			g.showGroundItemDescription = false // 説明ウィンドウも初期化
+			g.groundItemDescriptionText = "" // 説明テキストもクリア
+			g.groundMenuJustOpened = true // 足元メニューが開かれたばかりのフラグを設定
 		} else if g.menuSelectedRow == 1 && g.menuSelectedCol == 0 {
 			// 設定（今後実装）
 			// TODO: 設定メニューを実装
