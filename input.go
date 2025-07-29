@@ -87,14 +87,16 @@ func (g *Game) processDKeyPress() {
 }
 
 func (g *Game) HandleGroundItemInput() {
-	sPressed := inpututil.IsKeyJustPressed(ebiten.KeyS)
-	if sPressed && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt && !g.ignoreStairs {
-		g.ShowGroundItem = true
-	}
+	// Sキーによる直接的な足元チェックは削除（メニューシステムに統合）
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
 		g.ShowGroundItem = false
 		g.selectedGroundActionIndex = 0
+		// メニューから開いた場合は、メニューに戻る
+		if g.returnToMenuFromGround {
+			g.showMenu = true
+			g.returnToMenuFromGround = false
+		}
 	}
 
 	if g.ShowGroundItem && g.currentGroundItem != nil {
@@ -232,13 +234,39 @@ func (g *Game) handleItemDescriptionInput() error {
 
 func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
-	if cPressed && !g.ShowGroundItem && !g.showStairsPrompt && !g.showInventory {
-		// 睡眠状態の場合はインベントリを開けない
-		if g.state.Player.StatusAilments.Sleep > 0 {
+	
+	// Cキーが押された場合の処理
+	if cPressed {
+		// 何かメニューが開いている場合は全て閉じる
+		if g.showInventory || g.ShowGroundItem || g.showMenu || g.showEmptyInventoryMessage {
+			g.showInventory = false
+			g.ShowGroundItem = false
+			g.showMenu = false
+			g.showEmptyInventoryMessage = false
+			g.returnToMenuFromInventory = false
+			g.returnToMenuFromGround = false
+			g.selectedItemIndex = 0
+			g.selectedActionIndex = 0
+			g.selectedGroundActionIndex = 0
+			// アイテム詳細関連のフラグもリセット
+			g.showItemActions = false
+			g.showItemDescription = false
+			g.useIdentifyItem = false
+			g.tmpSelectedItemIndex = -1
 			return nil
 		}
-		g.showInventory = true
-		return nil // Skip other updates when the inventory window is active
+		
+		// 何もメニューが開いていない場合はメニューを開く
+		if !g.showStairsPrompt {
+			// 睡眠状態の場合はメニューを開けない
+			if g.state.Player.StatusAilments.Sleep > 0 {
+				return nil
+			}
+			g.showMenu = true
+			g.menuSelectedRow = 0 // 初期位置は左上（道具）
+			g.menuSelectedCol = 0
+			return nil // Skip other updates when the menu window is active
+		}
 	}
 
 	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)
@@ -248,6 +276,11 @@ func (g *Game) handleInventoryInput() error {
 		g.selectedActionIndex = 0
 		g.selectedGroundActionIndex = 0
 		g.showInventory = false
+		// メニューから開いた場合は、メニューに戻る
+		if g.returnToMenuFromInventory {
+			g.showMenu = true
+			g.returnToMenuFromInventory = false
+		}
 		return nil // Skip other updates when the inventory window is active
 	}
 
@@ -590,4 +623,73 @@ func (g *Game) processF1KeyPress() {
 			g.Enqueue(action)
 		}
 	}
+}
+
+// メニューシステムの入力処理
+func (g *Game) handleMenuInput() error {
+	if !g.showMenu {
+		return nil
+	}
+	
+	// 矢印キーでメニュー項目を移動
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		g.menuSelectedRow = (g.menuSelectedRow - 1 + 2) % 2
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		g.menuSelectedRow = (g.menuSelectedRow + 1) % 2
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		g.menuSelectedCol = (g.menuSelectedCol - 1 + 2) % 2
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		g.menuSelectedCol = (g.menuSelectedCol + 1) % 2
+	}
+	
+	// Zキーで決定
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		if g.menuSelectedRow == 0 && g.menuSelectedCol == 0 {
+			// 道具（インベントリ）
+			g.showMenu = false
+			g.returnToMenuFromInventory = true
+			// アイテムが空の場合は「何も持っていない」メッセージを表示
+			if len(g.state.Player.Inventory) == 0 {
+				g.showEmptyInventoryMessage = true
+			} else {
+				g.showInventory = true
+			}
+		} else if g.menuSelectedRow == 0 && g.menuSelectedCol == 1 {
+			// 足元
+			g.showMenu = false
+			g.returnToMenuFromGround = true
+			g.ShowGroundItem = true
+		} else if g.menuSelectedRow == 1 && g.menuSelectedCol == 0 {
+			// 設定（今後実装）
+			// TODO: 設定メニューを実装
+		} else if g.menuSelectedRow == 1 && g.menuSelectedCol == 1 {
+			// 中断（今後実装）
+			// TODO: 中断処理を実装
+		}
+	}
+	
+	// Xキーでメニューを閉じる
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		g.showMenu = false
+	}
+	
+	return nil
+}
+
+// 空のインベントリメッセージの入力処理
+func (g *Game) handleEmptyInventoryMessage() error {
+	if !g.showEmptyInventoryMessage {
+		return nil
+	}
+	
+	// ZキーまたはXキーでメニューに戻る
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) || inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		g.showEmptyInventoryMessage = false
+		g.showMenu = true
+		g.returnToMenuFromInventory = false
+	}
+	
+	// Cキーで全メニューを閉じる処理はhandleInventoryInput()で行われる
+	
+	return nil
 }

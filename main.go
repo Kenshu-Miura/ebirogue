@@ -206,6 +206,13 @@ type Game struct {
 	floorTurns               int  // 現在のフロアでの滞在ターン数
 	windWarning1Shown        bool // 1200ターン警告表示済みフラグ
 	windWarning2Shown        bool // 1300ターン警告表示済みフラグ
+	// メニューシステム
+	showMenu                 bool // メニューウィンドウの表示フラグ
+	menuSelectedRow          int  // メニューで選択中の行（0=上, 1=下）
+	menuSelectedCol          int  // メニューで選択中の列（0=左, 1=右）
+	returnToMenuFromInventory bool // インベントリからメニューに戻るフラグ
+	returnToMenuFromGround   bool // 足元メニューからメニューに戻るフラグ
+	showEmptyInventoryMessage bool // 空のインベントリメッセージ表示フラグ
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -294,7 +301,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt {
+	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage {
 		// 睡眠状態の場合は自動的にターンを進行させる
 		if g.state.Player.StatusAilments.Sleep > 0 {
 			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
@@ -372,6 +379,16 @@ func (g *Game) Update() error {
 		return err
 	}
 
+	err = g.handleMenuInput()
+	if err != nil {
+		return err
+	}
+
+	err = g.handleEmptyInventoryMessage()
+	if err != nil {
+		return err
+	}
+
 	g.HandleGroundItemInput()
 
 	g.HandleAnimationProgress()
@@ -430,6 +447,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if err := g.drawInventoryWindow(screen); err != nil {
 			log.Printf("Error drawing inventory window: %v", err)
 		}
+	}
+
+	// Draw the menu window if the showMenu flag is set
+	if g.showMenu {
+		g.drawMenuWindow(screen)
+	}
+
+	// Draw the empty inventory message if the showEmptyInventoryMessage flag is set
+	if g.showEmptyInventoryMessage {
+		g.drawEmptyInventoryMessage(screen)
 	}
 
 	if g.useIdentifyItem {
