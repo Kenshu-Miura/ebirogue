@@ -739,14 +739,19 @@ func (g *Game) handleEmptyInventoryMessage() error {
 		return nil
 	}
 	
-	// ZキーまたはXキーでメニューに戻る
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) || inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	// Xキーでメニューに戻る
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showEmptyInventoryMessage = false
 		g.showMenu = true
 		g.returnToMenuFromInventory = false
 	}
 	
-	// Cキーで全メニューを閉じる処理はhandleInventoryInput()で行われる
+	// Cキーで全メニューを閉じてゲームに戻る
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		g.showEmptyInventoryMessage = false
+		g.showMenu = false
+		g.returnToMenuFromInventory = false
+	}
 	
 	return nil
 }
