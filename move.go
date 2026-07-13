@@ -38,8 +38,11 @@ func (g *Game) IncrementMoveCount() {
 		}
 	}
 
-	// Existing satiety reduction logic
-	if g.moveCount%10 == 0 && g.moveCount != 0 {
+	armorAbilities := []EquipmentAbilityID(nil)
+	if g.state.Player.EquippedArmor != nil {
+		armorAbilities = g.state.Player.EquippedArmor.Abilities
+	}
+	if shouldReduceSatiety(g.moveCount, armorAbilities) {
 		g.state.Player.Satiety -= 1
 		if g.state.Player.Satiety < 0 {
 			g.state.Player.Satiety = 0

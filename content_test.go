@@ -19,6 +19,9 @@ func TestAddedEquipmentTemplates(t *testing.T) {
 		if !ok || armor.DefensePower != wantPower {
 			t.Fatalf("armor %d = %#v, want defense power %d", id, armor, wantPower)
 		}
+		if id == 25 && !hasEquipmentAbility(armor.Abilities, AbilitySatietyConservation) {
+			t.Fatal("皮甲の盾に満腹度消費軽減能力がありません")
+		}
 	}
 }
 

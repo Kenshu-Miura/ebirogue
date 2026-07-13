@@ -18,10 +18,11 @@ type BaseItem struct {
 type Weapon struct {
 	BaseItem
 	AttackPower int
-	Sharpness   int    // 例: 0-100の範囲で切れ味を表現
-	Element     string // 例: "Fire", "Ice", "Electric", etc.
-	Cursed      bool   // 武器が呪われているかどうか
-	Identified  bool   // 武器が識別されているかどうか
+	Sharpness   int                  // 例: 0-100の範囲で切れ味を表現
+	Element     string               // 例: "Fire", "Ice", "Electric", etc.
+	Cursed      bool                 // 武器が呪われているかどうか
+	Identified  bool                 // 武器が識別されているかどうか
+	Abilities   []EquipmentAbilityID // 装備名に依存しない能力ID
 }
 
 type Armor struct {
@@ -30,7 +31,8 @@ type Armor struct {
 	Sharpness    int
 	Element      string
 	Cursed       bool
-	Identified   bool // 鎧が識別されているかどうか
+	Identified   bool                 // 鎧が識別されているかどうか
+	Abilities    []EquipmentAbilityID // 装備名に依存しない能力ID
 }
 
 type Arrow struct {
@@ -88,6 +90,7 @@ type ItemTemplate struct {
 	UseActions   map[string]UseAction
 	AttackPower  int // 武器・矢の基礎攻撃力
 	DefensePower int // 防具の基礎防御力
+	Abilities    []EquipmentAbilityID
 }
 
 // アイテムデータテーブル
@@ -330,10 +333,11 @@ var itemTemplates = map[int]ItemTemplate{
 		ItemType:     "Armor",
 		Type:         "Armor",
 		Name:         "皮甲の盾",
-		Description:  "軽さと守りを両立した盾。防御力が3上昇する。",
+		Description:  "軽さと守りを両立した盾。防御力が3上昇し、満腹度が減りにくくなる。",
 		Char:         '!',
 		UseActions:   map[string]UseAction{"ArmorEffect": func(g *Game) {}},
 		DefensePower: 3,
+		Abilities:    []EquipmentAbilityID{AbilitySatietyConservation},
 	},
 }
 
@@ -395,6 +399,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 			Sharpness:   sharpnessValue,
 			Element:     "None",
 			Cursed:      sharpnessValue == -1,
+			Abilities:   append([]EquipmentAbilityID(nil), template.Abilities...),
 		}
 	case "Armor":
 		item = &Armor{
@@ -403,6 +408,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 			Sharpness:    sharpnessValue,
 			Element:      "None",
 			Cursed:       sharpnessValue == -1,
+			Abilities:    append([]EquipmentAbilityID(nil), template.Abilities...),
 		}
 	case "Arrow":
 		item = &Arrow{
