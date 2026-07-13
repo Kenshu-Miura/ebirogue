@@ -47,34 +47,36 @@ type StatusAilments struct {
 	Confusion int  // 混乱の残りターン数
 	Sleep     int  // 睡眠の残りターン数
 	Blind     int  // 目潰しの残りターン数
+	Poison    int  // 毒の残りターン数
+	Slow      int  // 鈍足の残りターン数
 	Paralysis bool // かなしばり状態
 	Seal      bool // 封印状態
 }
 
 type Player struct {
-	Name             string
-	Entity           // PlayerはEntityのフィールドを継承します
-	Health           int
-	MaxHealth        int
-	AttackPower      int            // 攻撃力
-	DefensePower     int            // 防御力
-	Power            int            // プレイヤーのパワー
-	MaxPower         int            // プレイヤーの最大パワー
-	Satiety          int            // 満腹度
-	MaxSatiety       int            // 最大満腹度
-	Inventory        []Item         // 所持アイテム
-	MaxInventory     int            // 最大所持アイテム数
-	ExperiencePoints int            // 所持経験値
-	Level            int            // プレイヤーのレベル
-	Direction        Direction      // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
-	EquippedWeapon   *Weapon    // 装備中の武器（1個まで）
-	EquippedArmor    *Armor     // 装備中の防具（1個まで）
-	EquippedArrow    *Arrow     // 装備中の矢（1個まで）
-	EquippedAccessories [2]*Accessory // 装備中のアクセサリー（2個まで）
-	EquippedItems    [5]Item        // Array to hold equipped items（後方互換のため残す）
-	Cash             int            // 所持金
-	SetTrap          Item           // トラップを設置する
-	StatusAilments   StatusAilments // 状態異常
+	Name                string
+	Entity              // PlayerはEntityのフィールドを継承します
+	Health              int
+	MaxHealth           int
+	AttackPower         int            // 攻撃力
+	DefensePower        int            // 防御力
+	Power               int            // プレイヤーのパワー
+	MaxPower            int            // プレイヤーの最大パワー
+	Satiety             int            // 満腹度
+	MaxSatiety          int            // 最大満腹度
+	Inventory           []Item         // 所持アイテム
+	MaxInventory        int            // 最大所持アイテム数
+	ExperiencePoints    int            // 所持経験値
+	Level               int            // プレイヤーのレベル
+	Direction           Direction      // Uninitialized: uninitialized, Up: Up, Down: Down, Left: Left, Right: Right, UpRight: UpRight, DownRight: DownRight, UpLeft: UpLeft, DownLeft: DownLeft
+	EquippedWeapon      *Weapon        // 装備中の武器（1個まで）
+	EquippedArmor       *Armor         // 装備中の防具（1個まで）
+	EquippedArrow       *Arrow         // 装備中の矢（1個まで）
+	EquippedAccessories [2]*Accessory  // 装備中のアクセサリー（2個まで）
+	EquippedItems       [5]Item        // Array to hold equipped items（後方互換のため残す）
+	Cash                int            // 所持金
+	SetTrap             Item           // トラップを設置する
+	StatusAilments      StatusAilments // 状態異常
 }
 
 type Coordinate struct {
@@ -124,6 +126,8 @@ type Game struct {
 	playerImg                 *ebiten.Image
 	ebiImg                    *ebiten.Image
 	snakeImg                  *ebiten.Image
+	mamuruImg                 *ebiten.Image
+	honeyImg                  *ebiten.Image
 	kaneImg                   *ebiten.Image
 	cardImg                   *ebiten.Image
 	mintiaImg                 *ebiten.Image
@@ -137,6 +141,9 @@ type Game struct {
 	accessoryImg              *ebiten.Image
 	hatenaImg                 *ebiten.Image
 	sleepTrapImg              *ebiten.Image
+	poisonArrowTrapImg        *ebiten.Image
+	slowTrapImg               *ebiten.Image
+	mineTrapImg               *ebiten.Image
 	offsetX                   int
 	offsetY                   int
 	moveCount                 int
@@ -201,21 +208,21 @@ type Game struct {
 	useIdentifyItem           bool
 	tmpSelectedItemIndex      int
 	// モンスター湧きシステム
-	turnCount                 int // プレイヤーのターン数
-	lastSpawnTurn             int // 最後にモンスターが湧いたターン
-	spawnInterval             int // 次回湧きまでのターン数
+	turnCount     int // プレイヤーのターン数
+	lastSpawnTurn int // 最後にモンスターが湧いたターン
+	spawnInterval int // 次回湧きまでのターン数
 	// フロア滞在時間システム
-	floorTurns               int  // 現在のフロアでの滞在ターン数
-	windWarning1Shown        bool // 1200ターン警告表示済みフラグ
-	windWarning2Shown        bool // 1300ターン警告表示済みフラグ
+	floorTurns        int  // 現在のフロアでの滞在ターン数
+	windWarning1Shown bool // 1200ターン警告表示済みフラグ
+	windWarning2Shown bool // 1300ターン警告表示済みフラグ
 	// メニューシステム
-	showMenu                 bool // メニューウィンドウの表示フラグ
-	menuSelectedRow          int  // メニューで選択中の行（0=上, 1=下）
-	menuSelectedCol          int  // メニューで選択中の列（0=左, 1=右）
+	showMenu                  bool // メニューウィンドウの表示フラグ
+	menuSelectedRow           int  // メニューで選択中の行（0=上, 1=下）
+	menuSelectedCol           int  // メニューで選択中の列（0=左, 1=右）
 	returnToMenuFromInventory bool // インベントリからメニューに戻るフラグ
-	returnToMenuFromGround   bool // 足元メニューからメニューに戻るフラグ
+	returnToMenuFromGround    bool // 足元メニューからメニューに戻るフラグ
 	showEmptyInventoryMessage bool // 空のインベントリメッセージ表示フラグ
-	groundMenuJustOpened     bool // 足元メニューが開かれたばかりかどうかのフラグ
+	groundMenuJustOpened      bool // 足元メニューが開かれたばかりかどうかのフラグ
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -244,15 +251,15 @@ func (g *Game) Update() error {
 	// プレイヤーが死亡している場合の処理
 	if g.playerDead {
 		// log.Printf("DEBUG: Player is dead, queue length: %d, deathMessageAdded: %v", len(g.ActionQueue.Queue), g.deathMessageAdded)
-		
+
 		// 死亡時でも攻撃アニメーション処理を継続
 		g.UpdateAttackTimer()
 		g.HandleEnemyAttackTimers()
-		
+
 		// 死亡時でもメッセージ表示のためManageDescriptionsとActionQueueを処理
 		g.ManageDescriptions()
 		g.HandleActionQueue()
-		
+
 		// ActionQueueが空になったら死亡メッセージを追加
 		if !g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 {
 			log.Printf("DEBUG: Adding death message to ActionQueue, isCombatActive: %v", g.isCombatActive)
@@ -260,9 +267,9 @@ func (g *Game) Update() error {
 			deathAction := Action{
 				Duration: 1.0, // 1秒間表示
 				Message:  deathMessage,
-				Execute:  func(g *Game) {
+				Execute: func(g *Game) {
 					log.Printf("DEBUG: Death message Execute function called")
-				}, 
+				},
 			}
 			g.ActionQueue.Queue = append(g.ActionQueue.Queue, deathAction)
 			g.deathMessageAdded = true
@@ -270,7 +277,7 @@ func (g *Game) Update() error {
 			g.isCombatActive = true
 			log.Printf("DEBUG: Death message added, queue length: %d, set isCombatActive to true", len(g.ActionQueue.Queue))
 		}
-		
+
 		// ActionQueueが再び空になったら（死亡メッセージ表示完了後）フェードアウト開始
 		if g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 && g.fadeOutProgress < 1.0 {
 			g.fadeOutProgress += 1.0 / 60.0 // 1秒でフェードアウト完了
@@ -278,7 +285,7 @@ func (g *Game) Update() error {
 				g.fadeOutProgress = 1.0
 			}
 		}
-		
+
 		// リセットタイマーを減らす
 		g.gameResetTimer -= 1.0 / 60.0
 		if g.gameResetTimer <= 0 {
@@ -287,7 +294,7 @@ func (g *Game) Update() error {
 		}
 		return nil
 	}
-	
+
 	// フェードイン処理
 	if g.fadeInProgress < 1.0 {
 		g.fadeInProgress += 1.0 / 60.0 // 1秒でフェードイン完了
@@ -295,7 +302,7 @@ func (g *Game) Update() error {
 			g.fadeInProgress = 1.0
 		}
 	}
-	
+
 	// 満腹度0時の点滅タイマー更新
 	if g.state.Player.Satiety == 0 {
 		g.starvationBlinkTimer += 1.0 / 60.0
@@ -333,8 +340,8 @@ func (g *Game) Update() error {
 
 		if moved {
 			g.isActioned = true
-			g.Animating = true  // Set the animating flag
-			g.xPressed = false  // Reset the xPressed flag
+			g.Animating = true // Set the animating flag
+			g.xPressed = false // Reset the xPressed flag
 			// 混乱状態でない場合のみ入力方向をアニメーション用に保存
 			if g.state.Player.StatusAilments.Confusion == 0 {
 				g.dx, g.dy = dx, dy // Save the direction of movement
@@ -485,12 +492,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.fadeAlpha > 0 {
 		g.drawOverlay(screen)
 	}
-	
+
 	// 死亡時のフェードアウト処理（メッセージ表示後）
 	if g.playerDead && g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 && g.fadeOutProgress > 0 {
 		g.drawDeathFade(screen)
 	}
-	
+
 	// ゲーム開始時のフェードイン処理
 	if g.fadeInProgress < 1.0 {
 		g.drawFadeIn(screen)
@@ -502,12 +509,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 func (g *Game) drawDeathFade(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	overlay := ebiten.NewImage(screenWidth, screenHeight)
-	
+
 	// フェードアウトの進行度に応じてアルファ値を計算
 	alpha := uint8(g.fadeOutProgress * 255)
 	color := color.RGBA{0, 0, 0, alpha}
 	overlay.Fill(color)
-	
+
 	opts := &ebiten.DrawImageOptions{}
 	screen.DrawImage(overlay, opts)
 }
@@ -516,12 +523,12 @@ func (g *Game) drawDeathFade(screen *ebiten.Image) {
 func (g *Game) drawFadeIn(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	overlay := ebiten.NewImage(screenWidth, screenHeight)
-	
+
 	// フェードインの進行度に応じてアルファ値を計算（逆算）
 	alpha := uint8((1.0 - g.fadeInProgress) * 255)
 	color := color.RGBA{0, 0, 0, alpha}
 	overlay.Fill(color)
-	
+
 	opts := &ebiten.DrawImageOptions{}
 	screen.DrawImage(overlay, opts)
 }
@@ -546,6 +553,8 @@ func NewGame() *Game {
 	ebiImg := loadImage("img/ebi.png")
 	kaneImg := loadImage("img/kane.png")
 	snakeImg := loadImage("img/snake.png")
+	mamuruImg := loadImage("img/mamuru.png")
+	honeyImg := loadImage("img/honey.png")
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
@@ -557,6 +566,9 @@ func NewGame() *Game {
 	accessoryImg := loadImage("img/ring.png")
 	hatenaImg := loadImage("img/hatena.png")
 	sleepTrapImg := loadImage("img/suimin_trap.png")
+	poisonArrowTrapImg := loadImage("img/poison_arrow_trap.png")
+	slowTrapImg := loadImage("img/slow_trap.png")
+	mineTrapImg := loadImage("img/mine_trap.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -589,29 +601,34 @@ func NewGame() *Game {
 			Items:    items,
 			MapTraps: traps,
 		},
-		rooms:            newRoom,
-		playerImg:        img,
-		tilesetImg:       tilesetImg,
-		ebiImg:           ebiImg,
-		snakeImg:         snakeImg,
-		kaneImg:          kaneImg,
-		cardImg:          cardImg,
-		mintiaImg:        mintiaImg,
-		sausageImg:       sausageImg,
-		weaponImg:        weaponImg,
-		armorImg:         armorImg,
-		arrowImg:         arrowImg,
-		caneImg:          caneImg,
-		effectImg:        effectImg,
-		accessoryImg:     accessoryImg,
-		hatenaImg:        hatenaImg,
-		sleepTrapImg:     sleepTrapImg,
-		offsetX:          0,
-		offsetY:          0,
-		Floor:            newFloor,
-		frameCount:       0,
-		tmpPlayerOffsetX: 0,
-		tmpPlayerOffsetY: 0,
+		rooms:              newRoom,
+		playerImg:          img,
+		tilesetImg:         tilesetImg,
+		ebiImg:             ebiImg,
+		snakeImg:           snakeImg,
+		mamuruImg:          mamuruImg,
+		honeyImg:           honeyImg,
+		kaneImg:            kaneImg,
+		cardImg:            cardImg,
+		mintiaImg:          mintiaImg,
+		sausageImg:         sausageImg,
+		weaponImg:          weaponImg,
+		armorImg:           armorImg,
+		arrowImg:           arrowImg,
+		caneImg:            caneImg,
+		effectImg:          effectImg,
+		accessoryImg:       accessoryImg,
+		hatenaImg:          hatenaImg,
+		sleepTrapImg:       sleepTrapImg,
+		poisonArrowTrapImg: poisonArrowTrapImg,
+		slowTrapImg:        slowTrapImg,
+		mineTrapImg:        mineTrapImg,
+		offsetX:            0,
+		offsetY:            0,
+		Floor:              newFloor,
+		frameCount:         0,
+		tmpPlayerOffsetX:   0,
+		tmpPlayerOffsetY:   0,
 		ActionQueue: ActionQueue{
 			Queue: make([]Action, 0),
 		},
@@ -622,7 +639,7 @@ func NewGame() *Game {
 
 	// モンスター湧きシステム初期化
 	game.InitializeSpawnSystem()
-	
+
 	// フェードイン状態を初期化
 	game.fadeInProgress = 0.0
 

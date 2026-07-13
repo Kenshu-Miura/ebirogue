@@ -31,7 +31,7 @@ type Enemy struct {
 	SpecialAttack            SpecialAttackFunc // 敵の特殊攻撃処理
 	SpecialAttackProbability float64           // 敵が特殊攻撃を使ってくる確率 (0.0 to 1.0)
 	ShowOnMiniMap            bool
-	StatusAilments           StatusAilments    // 状態異常
+	StatusAilments           StatusAilments // 状態異常
 }
 
 func (g *Game) updateEnemyVisibility() {
@@ -90,15 +90,15 @@ var MonsterDefinitions = map[int]MonsterDefinition{
 		SpecialAttackProbability: 0.0,
 	},
 	1: {
-		ID:                       1,
-		Type:                     "Snake",
-		Name:                     "毒ヘビ",
-		Char:                     'S',
-		Health:                   30,
-		MaxHealth:                30,
-		AttackPower:              7,
-		DefensePower:             1,
-		ExperiencePoints:         10,
+		ID:               1,
+		Type:             "Snake",
+		Name:             "毒ヘビ",
+		Char:             'S',
+		Health:           30,
+		MaxHealth:        30,
+		AttackPower:      7,
+		DefensePower:     1,
+		ExperiencePoints: 10,
 		SpecialAttack: func(e *Enemy, g *Game) {
 			var message string
 			if g.state.Player.Power > 0 {
@@ -129,6 +129,46 @@ var MonsterDefinitions = map[int]MonsterDefinition{
 		},
 		SpecialAttackProbability: 0.3,
 	},
+	2: {
+		ID:                       2,
+		Type:                     "Mamuru",
+		Name:                     "マムル",
+		Char:                     'M',
+		Health:                   8,
+		MaxHealth:                8,
+		AttackPower:              3,
+		DefensePower:             1,
+		ExperiencePoints:         3,
+		SpecialAttack:            nil,
+		SpecialAttackProbability: 0,
+	},
+	3: {
+		ID:               3,
+		Type:             "Honey",
+		Name:             "くねくねハニー",
+		Char:             'H',
+		Health:           24,
+		MaxHealth:        24,
+		AttackPower:      5,
+		DefensePower:     3,
+		ExperiencePoints: 12,
+		SpecialAttack: func(e *Enemy, g *Game) {
+			enemyName := e.Name
+			if g.state.Player.StatusAilments.Blind > 0 {
+				enemyName = "何者"
+			}
+			g.Enqueue(Action{
+				Duration: 0.5,
+				Message:  fmt.Sprintf("%sのくねくね踊り。海老さんは鈍足になった。", enemyName),
+				Execute: func(g *Game) {
+					if g.state.Player.StatusAilments.Slow < 8 {
+						g.state.Player.StatusAilments.Slow = 8
+					}
+				},
+			})
+		},
+		SpecialAttackProbability: 0.25,
+	},
 }
 
 // 統一されたモンスター生成関数
@@ -158,6 +198,6 @@ func CreateEnemyByID(id, x, y int) Enemy {
 }
 
 func createEnemy(x, y int) Enemy {
-	randomValue := rand.Intn(2)
+	randomValue := rand.Intn(len(MonsterDefinitions))
 	return CreateEnemyByID(randomValue, x, y)
 }

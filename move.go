@@ -10,9 +10,13 @@ import (
 
 func (g *Game) IncrementMoveCount() {
 	g.moveCount++
+	if g.state.Player.StatusAilments.Poison > 0 {
+		g.state.Player.Health = max(0, g.state.Player.Health-2)
+		g.state.Player.checkDeath(g)
+	}
 	// 状態異常のターン数を減らす
 	g.decrementStatusAilments()
-	
+
 	// 満腹度が0の場合の処理
 	if g.state.Player.Satiety == 0 {
 		// 満腹度0の場合、毎ターンHPが1減る
@@ -33,7 +37,7 @@ func (g *Game) IncrementMoveCount() {
 			}
 		}
 	}
-	
+
 	// Existing satiety reduction logic
 	if g.moveCount%10 == 0 && g.moveCount != 0 {
 		g.state.Player.Satiety -= 1
@@ -65,7 +69,7 @@ func moveEnemy(g *Game, i int, dx, dy int) bool {
 
 func moveRandomly(g *Game, i int) {
 	enemy := &g.state.Enemies[i]
-	
+
 	// 敵が部屋内にいるか通路にいるかを判定
 	if isEnemyInRoom(g, enemy) {
 		moveEnemyInRoom(g, i)
@@ -78,8 +82,8 @@ func moveRandomly(g *Game, i int) {
 func isEnemyInRoom(g *Game, enemy *Enemy) bool {
 	for _, room := range g.rooms {
 		// 部屋の内側の境界をチェック（壁を除く）
-		if enemy.X > room.X && enemy.X < room.X+room.Width-1 && 
-		   enemy.Y > room.Y && enemy.Y < room.Y+room.Height-1 {
+		if enemy.X > room.X && enemy.X < room.X+room.Width-1 &&
+			enemy.Y > room.Y && enemy.Y < room.Y+room.Height-1 {
 			return true
 		}
 	}
@@ -89,10 +93,10 @@ func isEnemyInRoom(g *Game, enemy *Enemy) bool {
 // 敵の周囲の方向を取得（8方向）
 func getDirections() []struct{ dx, dy int } {
 	return []struct{ dx, dy int }{
-		{0, -1}, // Up
-		{0, 1},  // Down
-		{-1, 0}, // Left
-		{1, 0},  // Right
+		{0, -1},  // Up
+		{0, 1},   // Down
+		{-1, 0},  // Left
+		{1, 0},   // Right
 		{-1, -1}, // UpLeft
 		{1, -1},  // UpRight
 		{-1, 1},  // DownLeft
@@ -116,7 +120,7 @@ func moveEnemyInRoom(g *Game, i int) {
 	if moveTowardsCorridor(g, i) {
 		return
 	}
-	
+
 	// 通路への移動ができない場合、部屋の外周を歩き回る
 	moveAroundRoomPerimeter(g, i)
 }
@@ -125,18 +129,18 @@ func moveEnemyInRoom(g *Game, i int) {
 func moveTowardsCorridor(g *Game, i int) bool {
 	enemy := &g.state.Enemies[i]
 	directions := getMainDirections()
-	
+
 	// 各方向をチェックして通路を探す
 	var corridorDirections []struct{ dx, dy int }
-	
+
 	for _, dir := range directions {
-		newX, newY := enemy.X + dir.dx, enemy.Y + dir.dy
-		
+		newX, newY := enemy.X+dir.dx, enemy.Y+dir.dy
+
 		// 境界チェック
 		if newX < 0 || newY < 0 || newX >= len(g.state.Map[0]) || newY >= len(g.state.Map) {
 			continue
 		}
-		
+
 		// 通路または床タイルへの移動をチェック
 		tile := g.state.Map[newY][newX]
 		if (tile.Type == "corridor" || tile.Type == "floor") && !tile.Blocked {
@@ -146,26 +150,26 @@ func moveTowardsCorridor(g *Game, i int) bool {
 			}
 		}
 	}
-	
+
 	// 通路方向がある場合、ランダムに一つ選んで移動
 	if len(corridorDirections) > 0 {
 		chosenDir := corridorDirections[rand.Intn(len(corridorDirections))]
 		return moveEnemy(g, i, chosenDir.dx, chosenDir.dy)
 	}
-	
+
 	return false
 }
 
 // 部屋の外周を歩き回る
 func moveAroundRoomPerimeter(g *Game, i int) {
 	enemy := &g.state.Enemies[i]
-	
+
 	// 方向が初期化されていない場合、ランダムに設定
 	if enemy.Direction == Uninitialized {
 		directions := []Direction{Up, Down, Left, Right}
 		enemy.Direction = directions[rand.Intn(len(directions))]
 	}
-	
+
 	// 現在の方向で移動を試行
 	var dx, dy int
 	switch enemy.Direction {
@@ -183,7 +187,7 @@ func moveAroundRoomPerimeter(g *Game, i int) {
 		enemy.Direction = directions[rand.Intn(len(directions))]
 		dx, dy = 0, -1 // とりあえず上方向
 	}
-	
+
 	// 移動可能かチェック
 	if moveEnemy(g, i, dx, dy) {
 		enemy.dx = dx
@@ -191,7 +195,7 @@ func moveAroundRoomPerimeter(g *Game, i int) {
 		enemy.Animating = true
 		return
 	}
-	
+
 	// 移動できない場合、右回りで次の方向を試す
 	nextDirections := map[Direction]Direction{
 		Up:    Right,
@@ -199,10 +203,10 @@ func moveAroundRoomPerimeter(g *Game, i int) {
 		Down:  Left,
 		Left:  Up,
 	}
-	
+
 	for attempts := 0; attempts < 4; attempts++ {
 		enemy.Direction = nextDirections[enemy.Direction]
-		
+
 		switch enemy.Direction {
 		case Up:
 			dx, dy = 0, -1
@@ -213,7 +217,7 @@ func moveAroundRoomPerimeter(g *Game, i int) {
 		case Right:
 			dx, dy = 1, 0
 		}
-		
+
 		if moveEnemy(g, i, dx, dy) {
 			enemy.dx = dx
 			enemy.dy = dy
@@ -226,18 +230,18 @@ func moveAroundRoomPerimeter(g *Game, i int) {
 // 通路での敵の移動
 func moveEnemyInCorridor(g *Game, i int) {
 	enemy := &g.state.Enemies[i]
-	
+
 	// 方向が初期化されていない場合、ランダムに設定
 	if enemy.Direction == Uninitialized {
 		directions := []Direction{Up, Down, Left, Right}
 		enemy.Direction = directions[rand.Intn(len(directions))]
 	}
-	
+
 	// まず直進を試行
 	if moveStraightInCorridor(g, i) {
 		return
 	}
-	
+
 	// 直進できない場合、行き止まり処理
 	handleDeadEnd(g, i)
 }
@@ -245,7 +249,7 @@ func moveEnemyInCorridor(g *Game, i int) {
 // 通路で直進移動
 func moveStraightInCorridor(g *Game, i int) bool {
 	enemy := &g.state.Enemies[i]
-	
+
 	var dx, dy int
 	switch enemy.Direction {
 	case Up:
@@ -262,7 +266,7 @@ func moveStraightInCorridor(g *Game, i int) bool {
 		enemy.Direction = directions[rand.Intn(len(directions))]
 		return moveStraightInCorridor(g, i) // 再帰呼び出し
 	}
-	
+
 	// 直進方向に移動可能かチェック
 	if moveEnemy(g, i, dx, dy) {
 		enemy.dx = dx
@@ -270,17 +274,17 @@ func moveStraightInCorridor(g *Game, i int) bool {
 		enemy.Animating = true
 		return true
 	}
-	
+
 	return false
 }
 
 // 行き止まり処理
 func handleDeadEnd(g *Game, i int) {
 	enemy := &g.state.Enemies[i]
-	
+
 	// 左右の方向を取得
 	leftDx, leftDy, rightDx, rightDy := getLeftRightDirections(enemy.Direction)
-	
+
 	// まず左方向を試行
 	if moveEnemy(g, i, leftDx, leftDy) {
 		enemy.dx = leftDx
@@ -289,7 +293,7 @@ func handleDeadEnd(g *Game, i int) {
 		enemy.Direction = getDirectionFromMovement(leftDx, leftDy)
 		return
 	}
-	
+
 	// 左がダメなら右方向を試行
 	if moveEnemy(g, i, rightDx, rightDy) {
 		enemy.dx = rightDx
@@ -298,7 +302,7 @@ func handleDeadEnd(g *Game, i int) {
 		enemy.Direction = getDirectionFromMovement(rightDx, rightDy)
 		return
 	}
-	
+
 	// 左右もダメなら背後に戻る
 	backDx, backDy := getOppositeDirection(enemy.Direction)
 	if moveEnemy(g, i, backDx, backDy) {
@@ -748,29 +752,29 @@ func determineDirection(dx, dy int) Direction {
 
 func (g *Game) moveEnemyConfused(i int) {
 	enemy := &g.state.Enemies[i]
-	
+
 	// 8方向のランダムな移動先を選択
 	directions := []struct{ dx, dy int }{
 		{-1, -1}, {0, -1}, {1, -1},
-		{-1, 0},           {1, 0},
-		{-1, 1},  {0, 1},  {1, 1},
+		{-1, 0}, {1, 0},
+		{-1, 1}, {0, 1}, {1, 1},
 	}
-	
+
 	direction := directions[rand.Intn(len(directions))]
 	newX := enemy.X + direction.dx
 	newY := enemy.Y + direction.dy
-	
+
 	// 範囲チェック
 	if newX < 0 || newX >= len(g.state.Map[0]) || newY < 0 || newY >= len(g.state.Map) {
 		return
 	}
-	
+
 	// 移動先がプレイヤーの場合、攻撃を行う
 	if newX == g.state.Player.X && newY == g.state.Player.Y {
 		g.AttackFromEnemy(i)
 		return
 	}
-	
+
 	// 移動先が通行可能で他の敵がいない場合、移動
 	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
 		enemy.X = newX
@@ -786,14 +790,14 @@ func (g *Game) movePlayerConfused() bool {
 	// 8方向のランダムな移動先を選択
 	directions := []struct{ dx, dy int }{
 		{-1, -1}, {0, -1}, {1, -1},
-		{-1, 0},           {1, 0},
-		{-1, 1},  {0, 1},  {1, 1},
+		{-1, 0}, {1, 0},
+		{-1, 1}, {0, 1}, {1, 1},
 	}
-	
+
 	direction := directions[rand.Intn(len(directions))]
 	newX := g.state.Player.X + direction.dx
 	newY := g.state.Player.Y + direction.dy
-	
+
 	// 範囲チェック
 	if newX < 0 || newX >= len(g.state.Map[0]) || newY < 0 || newY >= len(g.state.Map) {
 		// 混乱メッセージを表示（移動失敗）
@@ -805,7 +809,7 @@ func (g *Game) movePlayerConfused() bool {
 		g.Enqueue(action)
 		return false // 移動失敗時はターンを消費しない
 	}
-	
+
 	// プレイヤーの方向を設定
 	switch {
 	case direction.dx == 1 && direction.dy == 0:
@@ -825,7 +829,7 @@ func (g *Game) movePlayerConfused() bool {
 	case direction.dx == -1 && direction.dy == 1:
 		g.state.Player.Direction = DownLeft
 	}
-	
+
 	// 移動先に敵がいる場合、移動失敗として扱う
 	for _, enemy := range g.state.Enemies {
 		if enemy.X == newX && enemy.Y == newY {
@@ -838,7 +842,7 @@ func (g *Game) movePlayerConfused() bool {
 			return false // 移動失敗時はターンを消費しない
 		}
 	}
-	
+
 	// 移動先が通行可能な場合、移動
 	if !g.state.Map[newY][newX].Blocked {
 		action := Action{
@@ -847,14 +851,14 @@ func (g *Game) movePlayerConfused() bool {
 			Execute:  func(g *Game) {},
 		}
 		g.Enqueue(action)
-		
+
 		g.state.Player.X = newX
 		g.state.Player.Y = newY
 		// アニメーション用に実際の移動方向を保存
 		g.dx, g.dy = direction.dx, direction.dy
 		return true // 移動成功時はターンを消費
 	}
-	
+
 	// 移動失敗時
 	action := Action{
 		Duration: 0.4,
@@ -865,16 +869,15 @@ func (g *Game) movePlayerConfused() bool {
 	return false // 移動失敗時はターンを消費しない
 }
 
-
 func (g *Game) moveEnemyBlind(i int) {
 	enemy := &g.state.Enemies[i]
-	
+
 	// 方向が初期化されていない場合、ランダムに設定
 	if enemy.Direction == Uninitialized {
 		directions := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
 		enemy.Direction = directions[rand.Intn(len(directions))]
 	}
-	
+
 	// 現在の方向に基づいて移動先を計算
 	var dx, dy int
 	switch enemy.Direction {
@@ -895,28 +898,28 @@ func (g *Game) moveEnemyBlind(i int) {
 	case DownLeft:
 		dx, dy = -1, 1
 	}
-	
+
 	newX := enemy.X + dx
 	newY := enemy.Y + dy
-	
+
 	// 範囲チェック
 	if newX < 0 || newX >= len(g.state.Map[0]) || newY < 0 || newY >= len(g.state.Map) {
 		g.changeBlindEnemyDirection(i)
 		return
 	}
-	
+
 	// 壁にぶつかった場合、方向を変更
 	if g.state.Map[newY][newX].Blocked {
 		g.changeBlindEnemyDirection(i)
 		return
 	}
-	
+
 	// 移動先にプレイヤーがいる場合、攻撃（特技は使用しない）
 	if newX == g.state.Player.X && newY == g.state.Player.Y {
 		g.AttackFromEnemyBlind(i)
 		return
 	}
-	
+
 	// 移動先に他の敵がいる場合、攻撃
 	for j, otherEnemy := range g.state.Enemies {
 		if j != i && otherEnemy.X == newX && otherEnemy.Y == newY {
@@ -924,7 +927,7 @@ func (g *Game) moveEnemyBlind(i int) {
 			return
 		}
 	}
-	
+
 	// 移動可能な場合、移動
 	enemy.X = newX
 	enemy.Y = newY
@@ -935,17 +938,17 @@ func (g *Game) moveEnemyBlind(i int) {
 
 func (g *Game) changeBlindEnemyDirection(i int) {
 	enemy := &g.state.Enemies[i]
-	
+
 	// 現在の方向以外の7方向から選択
 	allDirections := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
 	availableDirections := make([]Direction, 0)
-	
+
 	for _, dir := range allDirections {
 		if dir != enemy.Direction {
 			availableDirections = append(availableDirections, dir)
 		}
 	}
-	
+
 	if len(availableDirections) > 0 {
 		enemy.Direction = availableDirections[rand.Intn(len(availableDirections))]
 	}
@@ -957,29 +960,29 @@ func (g *Game) MoveEnemies() {
 		if enemy.StatusAilments.Sleep == -1 {
 			g.WakeUpSleepingEnemyByProximity(i)
 		}
-		
+
 		// 睡眠状態の敵は移動できない
 		if enemy.StatusAilments.Sleep > 0 || enemy.StatusAilments.Sleep == -1 {
 			continue
 		}
-		
+
 		// 金縛り状態の敵は移動も攻撃もできない
 		if enemy.StatusAilments.Paralysis {
 			continue
 		}
-		
+
 		// 混乱状態の敵は周囲8マスからランダムに移動
 		if enemy.StatusAilments.Confusion > 0 {
 			g.moveEnemyConfused(i)
 			continue
 		}
-		
+
 		// 目潰し状態の敵は直進移動
 		if enemy.StatusAilments.Blind > 0 {
 			g.moveEnemyBlind(i)
 			continue
 		}
-		
+
 		// Variables to store the difference in position
 		dx := enemy.X - g.state.Player.X
 		dy := enemy.Y - g.state.Player.Y
@@ -1047,7 +1050,7 @@ func (p *Player) checkLevelUp(g *Game) {
 		p.Level++ // レベルアップ
 		// 必要に応じて他のプレイヤーステータスをアップデート
 		p.MaxHealth += 10
-		
+
 		// レベルアップメッセージを表示
 		levelUpMessage := fmt.Sprintf("海老さんはレベル%dに上がった", p.Level)
 		levelUpAction := Action{
@@ -1065,7 +1068,7 @@ func (p *Player) checkDeath(g *Game) {
 		g.playerDead = true
 		g.fadeOutProgress = 0.0
 		g.gameResetTimer = 6.0 // 6秒後にリセット（攻撃処理待ち+メッセージ1秒+フェードアウト1秒+待機2秒）
-		
+
 		// 死亡メッセージは後でActionQueueが空になってから追加する
 	}
 }
@@ -1119,7 +1122,7 @@ func (g *Game) resetGame() {
 	g.ActionDurationCounter = 0.0
 	g.isActioned = false
 	g.isCombatActive = false
-	
+
 	// モンスター湧きシステム再初期化
 	g.InitializeSpawnSystem()
 }
@@ -1208,12 +1211,12 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 		g.Enqueue(action)
 		return true // 睡眠状態でもターンを消費する
 	}
-	
+
 	// dx と dy が両方とも0の場合、移動は発生していない
 	if dx == 0 && dy == 0 {
 		return false
 	}
-	
+
 	// プレイヤーが混乱状態の場合、入力方向に関係なくランダムな8方向に移動
 	if g.state.Player.StatusAilments.Confusion > 0 {
 		return g.movePlayerConfused()
@@ -1273,10 +1276,10 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 		g.state.Player.X = newPX
 		g.state.Player.Y = newPY
 		g.isActioned = true
-		
+
 		// 新しい位置に罠があるかチェック
 		g.checkForTrapAtPosition(newPX, newPY)
-		
+
 		g.PickupItem()
 		return true
 	}
@@ -1328,7 +1331,27 @@ func (g *Game) decrementStatusAilments() {
 			g.Enqueue(action)
 		}
 	}
-	
+	if g.state.Player.StatusAilments.Poison > 0 {
+		g.state.Player.StatusAilments.Poison--
+		if g.state.Player.StatusAilments.Poison == 0 {
+			g.Enqueue(Action{
+				Duration: 0.4,
+				Message:  "毒が抜けた",
+				Execute:  func(g *Game) {},
+			})
+		}
+	}
+	if g.state.Player.StatusAilments.Slow > 0 {
+		g.state.Player.StatusAilments.Slow--
+		if g.state.Player.StatusAilments.Slow == 0 {
+			g.Enqueue(Action{
+				Duration: 0.4,
+				Message:  "体の速さが元に戻った",
+				Execute:  func(g *Game) {},
+			})
+		}
+	}
+
 	// 敵の状態異常を減らす
 	for i := range g.state.Enemies {
 		if g.state.Enemies[i].StatusAilments.Confusion > 0 {

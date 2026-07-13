@@ -130,6 +130,9 @@ func (g *Game) CheckCombatState() {
 		if !g.isCombatActive {
 			g.IncrementMoveCount()
 			g.MoveEnemies()
+			if shouldTakeExtraEnemyTurn(g.state.Player.StatusAilments.Slow, g.moveCount) {
+				g.MoveEnemies()
+			}
 			g.isActioned = false
 		}
 	}

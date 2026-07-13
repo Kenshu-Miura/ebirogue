@@ -23,9 +23,9 @@ type MonsterSpawnEntry struct {
 
 // 各階層のスポーンテーブル
 var FloorSpawnTables = map[int][]MonsterSpawnEntry{
-	1: {{0, 70}, {1, 30}}, // 1階: エビ70%, ヘビ30%
-	2: {{0, 50}, {1, 50}}, // 2階: エビ50%, ヘビ50%
-	3: {{0, 30}, {1, 70}}, // 3階: エビ30%, ヘビ70%
+	1: {{0, 50}, {2, 35}, {1, 15}},          // 1階: 基本敵を中心に出現
+	2: {{0, 30}, {2, 30}, {1, 25}, {3, 15}}, // 2階: くねくねハニーが登場
+	3: {{0, 15}, {2, 15}, {1, 35}, {3, 35}}, // 3階以降: 状態異常を使う敵が増える
 	// より深い階層は3階と同じ設定を使用
 }
 
@@ -197,7 +197,6 @@ func (g *Game) SelectMonsterForSpawn() int {
 	return 0
 }
 
-
 // 次回湧き間隔を設定
 func (g *Game) SetNextSpawnInterval() {
 	g.spawnInterval = MinSpawnInterval + rand.Intn(MaxSpawnInterval-MinSpawnInterval+1)
@@ -213,17 +212,17 @@ func (g *Game) InitializeSpawnSystem() {
 // 仮眠状態の敵の起床チェック
 func (g *Game) CheckSleepingEnemyWakeUp() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
-	
+
 	for i := range g.state.Enemies {
 		enemy := &g.state.Enemies[i]
-		
+
 		// 仮眠状態（Sleep = -1）の敵のみチェック
 		if enemy.StatusAilments.Sleep != -1 {
 			continue
 		}
-		
+
 		enemyX, enemyY := enemy.GetPosition()
-		
+
 		// プレイヤーが同じ部屋に入った場合
 		if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
 			if rand.Float64() < 0.5 { // 50%の確率で起床
@@ -236,15 +235,15 @@ func (g *Game) CheckSleepingEnemyWakeUp() {
 // 隣接時や攻撃時の起床チェック（他の関数から呼び出される）
 func (g *Game) WakeUpSleepingEnemyByProximity(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
-	
+
 	// 仮眠状態（Sleep = -1）の敵のみチェック
 	if enemy.StatusAilments.Sleep != -1 {
 		return
 	}
-	
+
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
 	enemyX, enemyY := enemy.GetPosition()
-	
+
 	// プレイヤーが隣接している場合
 	adjacent := (abs(playerX-enemyX) <= 1 && abs(playerY-enemyY) <= 1)
 	if adjacent && rand.Float64() < 0.5 { // 50%の確率で起床
@@ -255,7 +254,7 @@ func (g *Game) WakeUpSleepingEnemyByProximity(enemyIndex int) {
 // 攻撃による確実な起床
 func (g *Game) WakeUpSleepingEnemyByAttack(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
-	
+
 	// 仮眠状態の敵は攻撃を受けると必ず起床
 	if enemy.StatusAilments.Sleep == -1 {
 		enemy.StatusAilments.Sleep = 0
@@ -276,7 +275,7 @@ func (g *Game) checkFloorTimeWarnings() {
 		g.ActionQueue.Queue = append(g.ActionQueue.Queue, windAction)
 		return
 	}
-	
+
 	// 1300ターン経過時の警告
 	if g.floorTurns >= 1300 && !g.windWarning2Shown {
 		g.windWarning2Shown = true
@@ -289,7 +288,7 @@ func (g *Game) checkFloorTimeWarnings() {
 		g.ActionQueue.Queue = append(g.ActionQueue.Queue, windAction)
 		return
 	}
-	
+
 	// 1400ターン経過時の死亡
 	if g.floorTurns >= 1400 {
 		g.playerDead = true

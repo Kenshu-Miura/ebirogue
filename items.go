@@ -6,12 +6,12 @@ import "math/rand"
 
 type BaseItem struct {
 	Entity
-	ID              int
-	Type            string
-	Name            string
-	Description     string
-	UseActions      map[string]UseAction
-	ShowOnMiniMap   bool
+	ID               int
+	Type             string
+	Name             string
+	Description      string
+	UseActions       map[string]UseAction
+	ShowOnMiniMap    bool
 	PlayerDiscovered bool // プレイヤーによって発見されたかどうか
 }
 
@@ -79,13 +79,15 @@ type Trap struct {
 
 // アイテムデータテーブル用の構造体
 type ItemTemplate struct {
-	ID          int
-	ItemType    string // "Money", "Food", "Potion", etc.
-	Type        string // BaseItem.Type用
-	Name        string
-	Description string
-	Char        rune
-	UseActions  map[string]UseAction
+	ID           int
+	ItemType     string // "Money", "Food", "Potion", etc.
+	Type         string // BaseItem.Type用
+	Name         string
+	Description  string
+	Char         rune
+	UseActions   map[string]UseAction
+	AttackPower  int // 武器・矢の基礎攻撃力
+	DefensePower int // 防具の基礎防御力
 }
 
 // アイテムデータテーブル
@@ -134,15 +136,17 @@ var itemTemplates = map[int]ItemTemplate{
 		Description: "伝説の剣。攻撃力が8上昇する。",
 		Char:        '!',
 		UseActions:  map[string]UseAction{"WeaponEffect": func(g *Game) {}},
+		AttackPower: 8,
 	},
 	5: {
-		ID:          5,
-		ItemType:    "Armor",
-		Type:        "Armor",
-		Name:        "光の角",
-		Description: "光の角。防御力が8上昇する。",
-		Char:        '!',
-		UseActions:  map[string]UseAction{"ArmorEffect": func(g *Game) {}},
+		ID:           5,
+		ItemType:     "Armor",
+		Type:         "Armor",
+		Name:         "光の角",
+		Description:  "光の角。防御力が8上昇する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"ArmorEffect": func(g *Game) {}},
+		DefensePower: 8,
 	},
 	6: {
 		ID:          6,
@@ -152,6 +156,7 @@ var itemTemplates = map[int]ItemTemplate{
 		Description: "銀の弓矢。攻撃力が5上昇する。",
 		Char:        '!',
 		UseActions:  map[string]UseAction{"ArrowEffect": func(g *Game) {}},
+		AttackPower: 5,
 	},
 	7: {
 		ID:          7,
@@ -270,6 +275,66 @@ var itemTemplates = map[int]ItemTemplate{
 		Char:        '!',
 		UseActions:  map[string]UseAction{"RestoreHealth": blindPotion},
 	},
+	20: {
+		ID:          20,
+		ItemType:    "Weapon",
+		Type:        "Weapon",
+		Name:        "こん棒",
+		Description: "扱いやすい木の武器。攻撃力が2上昇する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"WeaponEffect": func(g *Game) {}},
+		AttackPower: 2,
+	},
+	21: {
+		ID:          21,
+		ItemType:    "Weapon",
+		Type:        "Weapon",
+		Name:        "長巻",
+		Description: "長い柄を持つ刀。攻撃力が4上昇する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"WeaponEffect": func(g *Game) {}},
+		AttackPower: 4,
+	},
+	22: {
+		ID:          22,
+		ItemType:    "Weapon",
+		Type:        "Weapon",
+		Name:        "どうたぬき",
+		Description: "重く頑丈な刀。攻撃力が6上昇する。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"WeaponEffect": func(g *Game) {}},
+		AttackPower: 6,
+	},
+	23: {
+		ID:           23,
+		ItemType:     "Armor",
+		Type:         "Armor",
+		Name:         "木甲の盾",
+		Description:  "木を組んだ軽い盾。防御力が2上昇する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"ArmorEffect": func(g *Game) {}},
+		DefensePower: 2,
+	},
+	24: {
+		ID:           24,
+		ItemType:     "Armor",
+		Type:         "Armor",
+		Name:         "鉄甲の盾",
+		Description:  "鉄で補強された盾。防御力が5上昇する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"ArmorEffect": func(g *Game) {}},
+		DefensePower: 5,
+	},
+	25: {
+		ID:           25,
+		ItemType:     "Armor",
+		Type:         "Armor",
+		Name:         "皮甲の盾",
+		Description:  "軽さと守りを両立した盾。防御力が3上昇する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"ArmorEffect": func(g *Game) {}},
+		DefensePower: 3,
+	},
 }
 
 // テーブルからアイテムを生成する共通関数
@@ -326,7 +391,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 	case "Weapon":
 		item = &Weapon{
 			BaseItem:    baseItem,
-			AttackPower: 8,
+			AttackPower: template.AttackPower,
 			Sharpness:   sharpnessValue,
 			Element:     "None",
 			Cursed:      sharpnessValue == -1,
@@ -334,7 +399,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 	case "Armor":
 		item = &Armor{
 			BaseItem:     baseItem,
-			DefensePower: 8,
+			DefensePower: template.DefensePower,
 			Sharpness:    sharpnessValue,
 			Element:      "None",
 			Cursed:       sharpnessValue == -1,
@@ -343,7 +408,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 		item = &Arrow{
 			BaseItem:    baseItem,
 			ShotCount:   rand.Intn(11) + 5,
-			AttackPower: 5,
+			AttackPower: template.AttackPower,
 			Cursed:      false,
 			Identified:  true,
 		}
@@ -379,7 +444,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 }
 
 func createItem(x, y int) Item {
-	randomValue := rand.Intn(19) // Store the random value to ensure it's only generated once
+	randomValue := rand.Intn(len(itemTemplates))
 	//randomValue := 9
 	return buildItemFromTemplate(randomValue, x, y)
 }

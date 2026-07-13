@@ -842,6 +842,12 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 				switch trap.Name {
 				case "睡眠ガスの罠":
 					img = g.sleepTrapImg
+				case "毒矢の罠":
+					img = g.poisonArrowTrapImg
+				case "鈍足の罠":
+					img = g.slowTrapImg
+				case "地雷":
+					img = g.mineTrapImg
 				default:
 					img = g.sleepTrapImg // デフォルトで睡眠ガスの罠の画像を使用
 				}
@@ -861,6 +867,10 @@ func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
 		img = g.snakeImg
 	case "Shrimp":
 		img = g.ebiImg
+	case "Mamuru":
+		img = g.mamuruImg
+	case "Honey":
+		img = g.honeyImg
 	}
 	return img
 }
@@ -984,7 +994,7 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	// Player Satiety
 	playerSatietyText := fmt.Sprintf("満腹度:%3d/%3d", g.state.Player.Satiety, g.state.Player.MaxSatiety)
 	satietyTextWidth := font.MeasureString(mplusSmallFont, playerSatietyText).Round() / 64
-	
+
 	// 満腹度0時の点滅処理
 	var satietyTextColor color.Color = color.White
 	if g.state.Player.Satiety == 0 {
@@ -1148,22 +1158,26 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	playerRoomText := logCurrentRoom(g.state.Player, g.rooms)
 	text.Draw(screen, playerRoomText, mplusNormalFont, 10, 230, color.White) // x座標とy座標を直接指定
 
+	// 現在の状態異常と残りターンを表示する
+	statusText := formatPlayerStatus(g.state.Player.StatusAilments)
+	text.Draw(screen, "状態: "+statusText, mplusNormalFont, 10, 250, color.White)
+
 }
 
 // メニューウィンドウの描画
 func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-	
+
 	// メニューウィンドウのサイズと位置
 	menuWidth := 300
 	menuHeight := 200
 	menuX := (screenWidth - menuWidth) / 2
 	menuY := (screenHeight - menuHeight) / 2
-	
+
 	// ウィンドウ背景
 	menuWindow := ebiten.NewImage(menuWidth, menuHeight)
 	menuWindow.Fill(color.NRGBA{50, 50, 50, 220}) // 半透明の暗い背景
-	
+
 	// ウィンドウの枠線
 	for i := 0; i < 2; i++ {
 		// 上下の枠線
@@ -1177,28 +1191,28 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 			menuWindow.Set(menuWidth-1-i, y, color.NRGBA{255, 255, 255, 255})
 		}
 	}
-	
+
 	// ウィンドウを描画
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(menuX), float64(menuY))
 	screen.DrawImage(menuWindow, opts)
-	
+
 	// メニュー項目のテキスト
 	menuItems := [][]string{
 		{"道具", "足元"},
 		{"設定", "中断"},
 	}
-	
+
 	// テキストの描画位置
 	itemWidth := menuWidth / 2
 	itemHeight := menuHeight / 2
-	
+
 	for row := 0; row < 2; row++ {
 		for col := 0; col < 2; col++ {
 			// テキストの描画位置を計算
-			textX := menuX + col*itemWidth + itemWidth/2 - 30 // 中央寄せのための調整
+			textX := menuX + col*itemWidth + itemWidth/2 - 30   // 中央寄せのための調整
 			textY := menuY + row*itemHeight + itemHeight/2 + 10 // 中央寄せのための調整
-			
+
 			// 選択中の項目をハイライト表示
 			textColor := color.White
 			if g.menuSelectedRow == row && g.menuSelectedCol == col {
@@ -1208,12 +1222,12 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 				highlightOpts := &ebiten.DrawImageOptions{}
 				highlightOpts.GeoM.Translate(float64(menuX+col*itemWidth+5), float64(menuY+row*itemHeight+itemHeight/2-10))
 				screen.DrawImage(highlightWindow, highlightOpts)
-				
+
 				// 矢印を描画
 				arrowText := "→"
 				text.Draw(screen, arrowText, mplusMediumFont, textX-30, textY, color.NRGBA{255, 255, 0, 255})
 			}
-			
+
 			// メニュー項目のテキストを描画
 			text.Draw(screen, menuItems[row][col], mplusMediumFont, textX, textY, textColor)
 		}
@@ -1223,17 +1237,17 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 // 空のインベントリメッセージの描画
 func (g *Game) drawEmptyInventoryMessage(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-	
+
 	// メッセージウィンドウのサイズと位置
 	messageWidth := 300
 	messageHeight := 100
 	messageX := (screenWidth - messageWidth) / 2
 	messageY := (screenHeight - messageHeight) / 2
-	
+
 	// ウィンドウ背景
 	messageWindow := ebiten.NewImage(messageWidth, messageHeight)
 	messageWindow.Fill(color.NRGBA{50, 50, 50, 220}) // 半透明の暗い背景
-	
+
 	// ウィンドウの枠線
 	for i := 0; i < 2; i++ {
 		// 上下の枠線
@@ -1247,12 +1261,12 @@ func (g *Game) drawEmptyInventoryMessage(screen *ebiten.Image) {
 			messageWindow.Set(messageWidth-1-i, y, color.NRGBA{255, 255, 255, 255})
 		}
 	}
-	
+
 	// ウィンドウを描画
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(float64(messageX), float64(messageY))
 	screen.DrawImage(messageWindow, opts)
-	
+
 	// メッセージテキストを描画
 	messageText := "何も持っていない"
 	textX := messageX + messageWidth/2 - 80 // 中央寄せのための調整

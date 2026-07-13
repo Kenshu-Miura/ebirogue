@@ -15,8 +15,19 @@ type Entity struct {
 	Char rune
 }
 
+type StatusAilments struct {
+	Confusion int
+	Sleep     int
+	Blind     int
+	Poison    int
+	Slow      int
+	Paralysis bool
+	Seal      bool
+}
+
 type Player struct {
 	Entity
+	StatusAilments StatusAilments
 }
 
 type Enemy struct {
