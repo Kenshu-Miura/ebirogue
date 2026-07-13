@@ -355,7 +355,7 @@ func (g *Game) executeAction() {
 					identified = true
 				}
 				itemName = getItemNameWithSharpness(equipableItem)
-				
+
 				if equipMessage, err := g.state.Player.EquipItem(equipableItem); err != nil {
 					message = fmt.Sprintf("%sを装備できない。", itemName)
 				} else {
@@ -414,10 +414,10 @@ func (g *Game) executeAction() {
 	if arrow, isArrow := item.(*Arrow); isArrow && g.selectedActionIndex == 1 {
 		// 矢を撃つ処理
 		arrow.ShotCount--
-		
+
 		// Create arrow copy for throwing
 		arrowCopy := *arrow
-		
+
 		// If ShotCount becomes 0, remove from inventory
 		if arrow.ShotCount == 0 {
 			g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
@@ -428,7 +428,7 @@ func (g *Game) executeAction() {
 		character := &g.state.Player
 		mapState := g.state.Map
 		enemies := g.state.Enemies
-		
+
 		onWallHit := func(item Item, position Coordinate, itemIndex int) {
 			g.onWallHit(item, position, itemIndex)
 		}
@@ -652,6 +652,8 @@ func (g *Game) processAction(action Action) {
 	if g.playerDead && action.Message != "" {
 		log.Printf("DEBUG: processAction called for dead player: Message='%s'", action.Message)
 	}
+	// 表示されるメッセージを履歴へ記録する
+	g.messageLog.Add(action.Message)
 	// 実際のアクションの実行ロジックはアクションオブジェクトのExecuteメソッドに委譲
 	action.Execute(g)
 	g.ActionDurationCounter = action.Duration // record the duration of the next action
@@ -664,21 +666,21 @@ func (aq *ActionQueue) Enqueue(action Action) {
 
 func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
-	
+
 	// 目潰し状態の敵は特技を使用せず、通常攻撃のみ
 	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
 	if netDamage < 0 {
 		netDamage = 0
 	}
-	
+
 	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
-	
+
 	// 目潰し状態の場合は敵の名前を「何者」に変更
 	enemyDisplayName := enemy.Name
 	if g.state.Player.StatusAilments.Blind > 0 {
 		enemyDisplayName = "何者"
 	}
-	
+
 	action := Action{
 		Duration: 0.5,
 		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemyDisplayName, netDamage),
@@ -692,22 +694,22 @@ func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
 			g.state.Player.checkDeath(g) // 死亡チェック
 		},
 	}
-	
+
 	g.Enqueue(action)
 }
 
 func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 	attacker := &g.state.Enemies[attackerIndex]
 	target := &g.state.Enemies[targetIndex]
-	
+
 	// 敵同士の攻撃（目潰し状態の敵が他の敵を攻撃）
 	netDamage := attacker.AttackPower - target.DefensePower + rand.Intn(3) - 1
 	if netDamage < 0 {
 		netDamage = 0
 	}
-	
+
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
-	
+
 	// 目潰し状態の場合は敵の名前を「何者」に変更
 	attackerDisplayName := attacker.Name
 	targetDisplayName := target.Name
@@ -715,7 +717,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 		attackerDisplayName = "何者"
 		targetDisplayName = "何者"
 	}
-	
+
 	action := Action{
 		Duration: 0.5,
 		Message:  fmt.Sprintf("%sが%sを攻撃して%dダメージを与えた", attackerDisplayName, targetDisplayName, netDamage),
@@ -723,19 +725,19 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 			attacker.AttackTimer = 0.5
 			attacker.AttackDirection = determineDirection(dx, dy)
 			target.Health -= netDamage
-			
+
 			// ダメージを受けた敵の金縛り状態を解除
 			if target.StatusAilments.Paralysis {
 				target.StatusAilments.Paralysis = false
 			}
-			
+
 			if target.Health <= 0 {
 				// 敵を倒した場合、配列から削除
 				g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
 			}
 		},
 	}
-	
+
 	g.Enqueue(action)
 }
 
@@ -749,7 +751,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 		if g.state.Player.StatusAilments.Blind > 0 {
 			enemyDisplayName = "何者"
 		}
-		
+
 		action := Action{
 			Duration: 0.5,
 			Message:  fmt.Sprintf("%sの攻撃。", enemyDisplayName),
@@ -804,7 +806,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 		if g.state.Player.StatusAilments.Blind > 0 {
 			enemyDisplayName = "何者"
 		}
-		
+
 		action := Action{
 			Duration: 0.5,
 			Message:  fmt.Sprintf("%sから%dダメージを受けた", enemyDisplayName, netDamage),
@@ -865,16 +867,16 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			if g.state.Player.StatusAilments.Blind > 0 {
 				enemyDisplayName = "何者"
 			}
-			
+
 			action := Action{
 				Duration: 0.5,
 				Message:  fmt.Sprintf("%sに%dダメージを与えた。", enemyDisplayName, netDamage),
 				Execute: func(g *Game) {
 					// 攻撃を受けた敵の仮眠状態を解除
 					g.WakeUpSleepingEnemyByAttack(enemyIndex)
-					
+
 					g.state.Enemies[enemyIndex].Health -= netDamage
-					
+
 					// ダメージを受けた敵の金縛り状態を解除
 					if g.state.Enemies[enemyIndex].StatusAilments.Paralysis {
 						g.state.Enemies[enemyIndex].StatusAilments.Paralysis = false
@@ -936,12 +938,12 @@ func (g *Game) attackPlayerConfused() {
 	// 8方向のランダムな攻撃方向を選択
 	directions := []struct{ dx, dy int }{
 		{-1, -1}, {0, -1}, {1, -1},
-		{-1, 0},           {1, 0},
-		{-1, 1},  {0, 1},  {1, 1},
+		{-1, 0}, {1, 0},
+		{-1, 1}, {0, 1}, {1, 1},
 	}
-	
+
 	direction := directions[rand.Intn(len(directions))]
-	
+
 	// プレイヤーの方向を設定
 	switch {
 	case direction.dx == 1 && direction.dy == 0:
@@ -961,10 +963,10 @@ func (g *Game) attackPlayerConfused() {
 	case direction.dx == -1 && direction.dy == 1:
 		g.state.Player.Direction = DownLeft
 	}
-	
+
 	// ランダムな方向に攻撃を試行
 	attacked := g.CheckForEnemies(direction.dx, direction.dy)
-	
+
 	if attacked {
 		action := Action{
 			Duration: 0.4,

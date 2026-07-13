@@ -225,6 +225,10 @@ type Game struct {
 	returnToMenuFromGround    bool // 足元メニューからメニューに戻るフラグ
 	showEmptyInventoryMessage bool // 空のインベントリメッセージ表示フラグ
 	groundMenuJustOpened      bool // 足元メニューが開かれたばかりかどうかのフラグ
+	// メッセージ履歴システム
+	messageLog       MessageLog // 表示済みメッセージの履歴
+	showMessageLog   bool       // メッセージ履歴ウィンドウの表示フラグ
+	messageLogScroll int        // 履歴のスクロール量（0で最新）
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -313,7 +317,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage {
+	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog {
 		// 睡眠状態の場合は自動的にターンを進行させる
 		if g.state.Player.StatusAilments.Sleep > 0 {
 			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
@@ -359,8 +363,8 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// 睡眠状態の場合はDキーとF1キーも無効
-	if g.state.Player.StatusAilments.Sleep == 0 {
+	// 睡眠状態・メッセージ履歴表示中はDキーとF1キーも無効
+	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog {
 		g.processDKeyPress()
 
 		// デバッグ用F1キー処理
@@ -399,6 +403,11 @@ func (g *Game) Update() error {
 	}
 
 	err = g.handleEmptyInventoryMessage()
+	if err != nil {
+		return err
+	}
+
+	err = g.handleMessageLogInput()
 	if err != nil {
 		return err
 	}
@@ -488,6 +497,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.drawGroundItemDescription(screen)
 
 	g.DrawStairsPrompt(screen)
+
+	// Draw the message log window if the showMessageLog flag is set
+	if g.showMessageLog {
+		g.drawMessageLogWindow(screen)
+	}
 
 	g.UpdateAndDrawMiniMap(screen)
 

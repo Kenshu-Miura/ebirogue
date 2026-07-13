@@ -136,7 +136,7 @@ func (g *Game) HandleGroundItemInput() {
 			}
 		}
 	}
-	
+
 	if g.ShowGroundItem && g.currentGroundItem != nil && g.GroundItemActioned {
 		// アクション実行状態での操作
 		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
@@ -272,7 +272,7 @@ func (g *Game) handleItemDescriptionInput() error {
 
 func (g *Game) handleInventoryInput() error {
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
-	
+
 	// Cキーが押された場合の処理
 	if cPressed {
 		// 何かメニューが開いている場合は全て閉じる
@@ -293,9 +293,9 @@ func (g *Game) handleInventoryInput() error {
 			g.tmpSelectedItemIndex = -1
 			return nil
 		}
-		
-		// 何もメニューが開いていない場合はメニューを開く
-		if !g.showStairsPrompt {
+
+		// 何もメニューが開いていない場合はメニューを開く（メッセージ履歴表示中は除く）
+		if !g.showStairsPrompt && !g.showMessageLog {
 			// 睡眠状態の場合はメニューを開けない
 			if g.state.Player.StatusAilments.Sleep > 0 {
 				return nil
@@ -668,7 +668,7 @@ func (g *Game) handleMenuInput() error {
 	if !g.showMenu {
 		return nil
 	}
-	
+
 	// 矢印キーでメニュー項目を移動
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 		g.menuSelectedRow = (g.menuSelectedRow - 1 + 2) % 2
@@ -679,7 +679,7 @@ func (g *Game) handleMenuInput() error {
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
 		g.menuSelectedCol = (g.menuSelectedCol + 1) % 2
 	}
-	
+
 	// Zキーで決定
 	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
 		if g.menuSelectedRow == 0 && g.menuSelectedCol == 0 {
@@ -711,11 +711,11 @@ func (g *Game) handleMenuInput() error {
 				g.currentGroundItem = nil
 			}
 			g.ShowGroundItem = true
-			g.GroundItemActioned = false // メニュー表示時は初期化
-			g.selectedGroundActionIndex = 0 // 選択インデックスをリセット
+			g.GroundItemActioned = false        // メニュー表示時は初期化
+			g.selectedGroundActionIndex = 0     // 選択インデックスをリセット
 			g.showGroundItemDescription = false // 説明ウィンドウも初期化
-			g.groundItemDescriptionText = "" // 説明テキストもクリア
-			g.groundMenuJustOpened = true // 足元メニューが開かれたばかりのフラグを設定
+			g.groundItemDescriptionText = ""    // 説明テキストもクリア
+			g.groundMenuJustOpened = true       // 足元メニューが開かれたばかりのフラグを設定
 		} else if g.menuSelectedRow == 1 && g.menuSelectedCol == 0 {
 			// 設定（今後実装）
 			// TODO: 設定メニューを実装
@@ -724,13 +724,53 @@ func (g *Game) handleMenuInput() error {
 			// TODO: 中断処理を実装
 		}
 	}
-	
+
 	// Xキーでメニューを閉じる
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showMenu = false
 	}
-	
+
 	return nil
+}
+
+// メッセージ履歴ウィンドウの入力処理
+func (g *Game) handleMessageLogInput() error {
+	if g.showMessageLog {
+		// ↑↓でスクロール（押しっぱなしでリピート）
+		if logScrollKeyPressed(ebiten.KeyUp) {
+			if g.messageLogScroll < g.messageLog.MaxScroll(messageLogPageSize) {
+				g.messageLogScroll++
+			}
+		} else if logScrollKeyPressed(ebiten.KeyDown) {
+			if g.messageLogScroll > 0 {
+				g.messageLogScroll--
+			}
+		}
+
+		// XキーまたはLキーで閉じる
+		if inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeyL) {
+			g.showMessageLog = false
+			g.messageLogScroll = 0
+		}
+		return nil
+	}
+
+	// 他のウィンドウが開いていない時だけLキーで履歴を開く
+	if inpututil.IsKeyJustPressed(ebiten.KeyL) &&
+		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
+		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
+		g.state.Player.StatusAilments.Sleep == 0 {
+		g.showMessageLog = true
+		g.messageLogScroll = 0
+	}
+
+	return nil
+}
+
+// スクロールキーの押下判定（押した瞬間と長押しリピート）
+func logScrollKeyPressed(key ebiten.Key) bool {
+	d := inpututil.KeyPressDuration(key)
+	return d == 1 || (d >= 20 && d%5 == 0)
 }
 
 // 空のインベントリメッセージの入力処理
@@ -738,20 +778,20 @@ func (g *Game) handleEmptyInventoryMessage() error {
 	if !g.showEmptyInventoryMessage {
 		return nil
 	}
-	
+
 	// Xキーでメニューに戻る
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showEmptyInventoryMessage = false
 		g.showMenu = true
 		g.returnToMenuFromInventory = false
 	}
-	
+
 	// Cキーで全メニューを閉じてゲームに戻る
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
 		g.showEmptyInventoryMessage = false
 		g.showMenu = false
 		g.returnToMenuFromInventory = false
 	}
-	
+
 	return nil
 }

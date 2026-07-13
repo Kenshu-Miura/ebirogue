@@ -1273,3 +1273,36 @@ func (g *Game) drawEmptyInventoryMessage(screen *ebiten.Image) {
 	textY := messageY + messageHeight/2 + 5
 	text.Draw(screen, messageText, mplusMediumFont, textX, textY, color.White)
 }
+
+// メッセージ履歴ウィンドウを描画する
+func (g *Game) drawMessageLogWindow(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	windowWidth, windowHeight := 540, 420
+	windowX := (screenWidth - windowWidth) / 2
+	windowY := (screenHeight - windowHeight) / 2
+
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 220)
+
+	// タイトルと操作説明
+	text.Draw(screen, "メッセージ履歴", mplusMediumFont, windowX+10, windowY+30, color.White)
+	text.Draw(screen, "↑↓:スクロール  X:閉じる", mplusNormalFont, windowX+windowWidth-220, windowY+30, color.NRGBA{200, 200, 200, 255})
+
+	messages := g.messageLog.Visible(g.messageLogScroll, messageLogPageSize)
+	if len(messages) == 0 {
+		text.Draw(screen, "まだメッセージはありません", mplusNormalFont, windowX+20, windowY+70, color.White)
+		return
+	}
+
+	lineHeight := 22
+	for i, msg := range messages {
+		text.Draw(screen, msg, mplusNormalFont, windowX+20, windowY+60+i*lineHeight, color.White)
+	}
+
+	// さかのぼれる方向を示すインジケーター
+	if g.messageLogScroll < g.messageLog.MaxScroll(messageLogPageSize) {
+		text.Draw(screen, "↑", mplusNormalFont, windowX+windowWidth-25, windowY+60, color.NRGBA{255, 255, 0, 255})
+	}
+	if g.messageLogScroll > 0 {
+		text.Draw(screen, "↓", mplusNormalFont, windowX+windowWidth-25, windowY+60+(len(messages)-1)*lineHeight, color.NRGBA{255, 255, 0, 255})
+	}
+}
