@@ -37,3 +37,35 @@ func TestAddedContentDefinitions(t *testing.T) {
 		}
 	}
 }
+
+func TestRecoveryItemTemplates(t *testing.T) {
+	foods := map[int]struct {
+		name         string
+		satiety      int
+		fullRecovery bool
+	}{
+		26: {name: "ジャンボウインナー", satiety: 100},
+		27: {name: "海老天むす", fullRecovery: true},
+	}
+	for id, want := range foods {
+		food, ok := buildItemFromTemplate(id, 0, 0).(*Food)
+		if !ok || food.Name != want.name || food.Satiety != want.satiety || food.FullRecovery != want.fullRecovery {
+			t.Fatalf("food %d = %#v, want %#v", id, food, want)
+		}
+	}
+
+	potions := map[int]struct {
+		name         string
+		health       int
+		fullRecovery bool
+	}{
+		28: {name: "大粒ミンティア", health: 60},
+		29: {name: "海老印の栄養ドリンク", fullRecovery: true},
+	}
+	for id, want := range potions {
+		potion, ok := buildItemFromTemplate(id, 0, 0).(*Potion)
+		if !ok || potion.Name != want.name || potion.Health != want.health || potion.FullRecovery != want.fullRecovery {
+			t.Fatalf("potion %d = %#v, want %#v", id, potion, want)
+		}
+	}
+}

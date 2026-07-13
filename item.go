@@ -16,7 +16,7 @@ func (g *Game) updateItemVisibility() {
 	for _, item := range g.state.Items {
 		// アイテムの座標を取得
 		itemX, itemY := item.GetPosition()
-		
+
 		// プレイヤーが盲目状態の場合、アイテムを非表示にする
 		if g.state.Player.StatusAilments.Blind > 0 {
 			item.SetShowOnMiniMap(false)
@@ -24,7 +24,7 @@ func (g *Game) updateItemVisibility() {
 		} else {
 			// プレイヤーとアイテムが同じ部屋にあるかどうかを確認
 			inSameRoom := isSameRoom(playerX, playerY, itemX, itemY, g.rooms)
-			
+
 			if inSameRoom {
 				// 同じ部屋にある場合、発見状態に設定し、ミニマップに表示
 				item.SetPlayerDiscovered(true)
@@ -390,7 +390,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				// If target is of type *Enemy - 永続的な目潰し状態にする
 				g.state.Enemies[index].StatusAilments.Blind = 999
 			}
-			
+
 			action := Action{
 				Duration: 0.5,
 				Message:  fmt.Sprintf("%sは目が見えなくなった", target.GetName()),
@@ -401,23 +401,18 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			g.Enqueue(action)
 		} else {
 			// 通常のポーションの場合の処理
+			recovery := recoveredValue(target.GetHealth(), target.GetMaxHealth(), potion.Health, potion.FullRecovery) - target.GetHealth()
 			action := Action{
 				Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-				Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), potion.Health),
+				Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), recovery),
 				Execute: func(g *Game) {
 					// Type assertion to check if target is of type *Player or *Enemy
 					if _, ok := target.(*Player); ok {
 						// If target is of type *Player
-						g.state.Player.Health += potion.Health
-						if g.state.Player.Health > g.state.Player.GetMaxHealth() {
-							g.state.Player.Health = g.state.Player.GetMaxHealth()
-						}
+						g.state.Player.Health = recoveredValue(g.state.Player.Health, g.state.Player.GetMaxHealth(), potion.Health, potion.FullRecovery)
 					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 						// If target is of type *Enemy
-						g.state.Enemies[index].Health += potion.Health
-						if g.state.Enemies[index].Health > g.state.Enemies[index].GetMaxHealth() {
-							g.state.Enemies[index].Health = g.state.Enemies[index].GetMaxHealth()
-						}
+						g.state.Enemies[index].Health = recoveredValue(g.state.Enemies[index].Health, g.state.Enemies[index].GetMaxHealth(), potion.Health, potion.FullRecovery)
 					}
 					g.isActioned = true
 					// Reset the target character after processing
@@ -447,7 +442,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				targetDisplayName = "何者"
 			}
 		}
-		
+
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
 			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", targetDisplayName, damage),
@@ -462,12 +457,12 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				} else if enemy, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 					// If target is of type *Enemy
 					g.state.Enemies[index].Health -= damage
-					
+
 					// ダメージを受けた敵の金縛り状態を解除
 					if g.state.Enemies[index].StatusAilments.Paralysis {
 						g.state.Enemies[index].StatusAilments.Paralysis = false
 					}
-					
+
 					if g.state.Enemies[index].Health < 0 {
 						g.state.Enemies[index].Health = 0
 					}

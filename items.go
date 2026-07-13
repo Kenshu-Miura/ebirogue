@@ -45,12 +45,16 @@ type Arrow struct {
 
 type Food struct {
 	BaseItem
-	Satiety int
+	Satiety      int
+	FullRecovery bool
+	MaxStatBonus int
 }
 
 type Potion struct {
 	BaseItem
-	Health int
+	Health       int
+	FullRecovery bool
+	MaxStatBonus int
 }
 
 type Card struct {
@@ -91,6 +95,9 @@ type ItemTemplate struct {
 	AttackPower  int // 武器・矢の基礎攻撃力
 	DefensePower int // 防具の基礎防御力
 	Abilities    []EquipmentAbilityID
+	Recovery     int  // 満腹度またはHPの回復量
+	FullRecovery bool // 現在の最大値まで回復するか
+	MaxStatBonus int  // 満タン時に使った場合の最大値上昇量
 }
 
 // アイテムデータテーブル
@@ -105,31 +112,37 @@ var itemTemplates = map[int]ItemTemplate{
 		UseActions:  map[string]UseAction{"UseMoney": money},
 	},
 	1: {
-		ID:          1,
-		ItemType:    "Food",
-		Type:        "Sausage",
-		Name:        "ウインナー",
-		Description: "海老さんが配信中に食べる食事。満腹度を50回復する。",
-		Char:        '!',
-		UseActions:  map[string]UseAction{"RestoreSatiety": restoreSatiety50},
+		ID:           1,
+		ItemType:     "Food",
+		Type:         "Sausage",
+		Name:         "ウインナー",
+		Description:  "海老さんが配信中に食べる食事。満腹度を50回復する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"RestoreSatiety": restoreSatiety},
+		Recovery:     50,
+		MaxStatBonus: 1,
 	},
 	2: {
-		ID:          2,
-		ItemType:    "Potion",
-		Type:        "Mintia",
-		Name:        "ミンティア",
-		Description: "海老さんを元気にする薬。HPを30回復する。",
-		Char:        '!',
-		UseActions:  map[string]UseAction{"RestoreHealth": restoreHP30},
+		ID:           2,
+		ItemType:     "Potion",
+		Type:         "Mintia",
+		Name:         "ミンティア",
+		Description:  "海老さんを元気にする薬。HPを30回復する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"RestoreHealth": restoreHP},
+		Recovery:     30,
+		MaxStatBonus: 1,
 	},
 	3: {
-		ID:          3,
-		ItemType:    "Potion",
-		Type:        "Mintia",
-		Name:        "すごいミンティア",
-		Description: "海老さんをすごく元気にする薬。HPを100回復する。",
-		Char:        '!',
-		UseActions:  map[string]UseAction{"RestoreHealth": restoreHP100},
+		ID:           3,
+		ItemType:     "Potion",
+		Type:         "Mintia",
+		Name:         "すごいミンティア",
+		Description:  "海老さんをすごく元気にする薬。HPを100回復する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"RestoreHealth": restoreHP},
+		Recovery:     100,
+		MaxStatBonus: 2,
 	},
 	4: {
 		ID:          4,
@@ -339,6 +352,50 @@ var itemTemplates = map[int]ItemTemplate{
 		DefensePower: 3,
 		Abilities:    []EquipmentAbilityID{AbilitySatietyConservation},
 	},
+	26: {
+		ID:           26,
+		ItemType:     "Food",
+		Type:         "Sausage",
+		Name:         "ジャンボウインナー",
+		Description:  "食べ応えのある大きなウインナー。満腹度を100回復する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"RestoreSatiety": restoreSatiety},
+		Recovery:     100,
+		MaxStatBonus: 2,
+	},
+	27: {
+		ID:           27,
+		ItemType:     "Food",
+		Type:         "Sausage",
+		Name:         "海老天むす",
+		Description:  "海老天がはみ出す特製天むす。満腹度を最大まで回復する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"RestoreSatiety": restoreSatiety},
+		FullRecovery: true,
+		MaxStatBonus: 3,
+	},
+	28: {
+		ID:           28,
+		ItemType:     "Potion",
+		Type:         "Mintia",
+		Name:         "大粒ミンティア",
+		Description:  "大粒で効き目の強いミンティア。HPを60回復する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"RestoreHealth": restoreHP},
+		Recovery:     60,
+		MaxStatBonus: 1,
+	},
+	29: {
+		ID:           29,
+		ItemType:     "Potion",
+		Type:         "Mintia",
+		Name:         "海老印の栄養ドリンク",
+		Description:  "海老印の滋養たっぷりな飲み物。HPを最大まで回復する。",
+		Char:         '!',
+		UseActions:   map[string]UseAction{"RestoreHealth": restoreHP},
+		FullRecovery: true,
+		MaxStatBonus: 2,
+	},
 }
 
 // テーブルからアイテムを生成する共通関数
@@ -373,24 +430,18 @@ func buildItemFromTemplate(id, x, y int) Item {
 			Identified: true,
 		}
 	case "Food":
-		satiety := 50 // デフォルト値
 		item = &Food{
-			BaseItem: baseItem,
-			Satiety:  satiety,
+			BaseItem:     baseItem,
+			Satiety:      template.Recovery,
+			FullRecovery: template.FullRecovery,
+			MaxStatBonus: template.MaxStatBonus,
 		}
 	case "Potion":
-		var health int
-		switch id {
-		case 2:
-			health = 30
-		case 3:
-			health = 100
-		default:
-			health = 0 // 睡眠薬・混乱薬
-		}
 		item = &Potion{
-			BaseItem: baseItem,
-			Health:   health,
+			BaseItem:     baseItem,
+			Health:       template.Recovery,
+			FullRecovery: template.FullRecovery,
+			MaxStatBonus: template.MaxStatBonus,
 		}
 	case "Weapon":
 		item = &Weapon{

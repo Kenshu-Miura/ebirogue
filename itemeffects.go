@@ -29,7 +29,7 @@ func removeUsedItem(g *Game, isInventoryItem bool) {
 	}
 }
 
-var restoreSatiety50 = func(g *Game) {
+var restoreSatiety = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
 
 	action := Action{
@@ -39,25 +39,24 @@ var restoreSatiety50 = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	if g.state.Player.Satiety == g.state.Player.MaxSatiety {
+	if foodItem, ok := item.(*Food); ok && g.state.Player.Satiety == g.state.Player.MaxSatiety {
 		action := Action{
 			Duration: 0.4,
-			Message:  "最大満腹度が1上昇した。",
+			Message:  fmt.Sprintf("最大満腹度が%d上昇した。", foodItem.MaxStatBonus),
 			Execute: func(g *Game) {
-				g.state.Player.MaxSatiety++
+				g.state.Player.MaxSatiety += foodItem.MaxStatBonus
+				g.state.Player.Satiety = g.state.Player.MaxSatiety
 			},
 		}
 		g.Enqueue(action)
 	} else {
 		if foodItem, ok := item.(*Food); ok {
+			recovered := recoveredValue(g.state.Player.Satiety, g.state.Player.MaxSatiety, foodItem.Satiety, foodItem.FullRecovery)
 			action := Action{
 				Duration: 0.4,
-				Message:  fmt.Sprintf("満腹度が%d回復した。", foodItem.Satiety),
+				Message:  fmt.Sprintf("満腹度が%d回復した。", recovered-g.state.Player.Satiety),
 				Execute: func(g *Game) {
-					g.state.Player.Satiety += foodItem.Satiety
-					if g.state.Player.Satiety > g.state.Player.MaxSatiety {
-						g.state.Player.Satiety = g.state.Player.MaxSatiety
-					}
+					g.state.Player.Satiety = recovered
 				},
 			}
 			g.Enqueue(action)
@@ -67,7 +66,7 @@ var restoreSatiety50 = func(g *Game) {
 	removeUsedItem(g, isInventoryItem)
 }
 
-var restoreHP30 = func(g *Game) {
+var restoreHP = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
 
 	// アクションの生成
@@ -79,66 +78,24 @@ var restoreHP30 = func(g *Game) {
 	g.Enqueue(action)
 
 	// HP回復の処理
-	if g.state.Player.Health == g.state.Player.MaxHealth {
+	if potionItem, ok := item.(*Potion); ok && g.state.Player.Health == g.state.Player.MaxHealth {
 		action := Action{
 			Duration: 0.4,
-			Message:  "最大HPが1上昇した。",
+			Message:  fmt.Sprintf("最大HPが%d上昇した。", potionItem.MaxStatBonus),
 			Execute: func(g *Game) {
-				g.state.Player.MaxHealth++
+				g.state.Player.MaxHealth += potionItem.MaxStatBonus
+				g.state.Player.Health = g.state.Player.MaxHealth
 			},
 		}
 		g.Enqueue(action)
 	} else {
 		if potionItem, ok := item.(*Potion); ok {
+			recovered := recoveredValue(g.state.Player.Health, g.state.Player.MaxHealth, potionItem.Health, potionItem.FullRecovery)
 			action := Action{
 				Duration: 0.4,
-				Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
+				Message:  fmt.Sprintf("HPが%d回復した。", recovered-g.state.Player.Health),
 				Execute: func(g *Game) {
-					g.state.Player.Health += potionItem.Health
-					if g.state.Player.Health > g.state.Player.MaxHealth {
-						g.state.Player.Health = g.state.Player.MaxHealth
-					}
-				},
-			}
-			g.Enqueue(action)
-		}
-	}
-
-	// アイテムの使用後の処理
-	removeUsedItem(g, isInventoryItem)
-}
-
-var restoreHP100 = func(g *Game) {
-	item, isInventoryItem := determineItemSource(g)
-
-	// アクションの生成
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを食べた", item.GetName()),
-		Execute:  func(g *Game) {},
-	}
-	g.Enqueue(action)
-
-	// HP回復の処理
-	if g.state.Player.Health == g.state.Player.MaxHealth {
-		action := Action{
-			Duration: 0.4,
-			Message:  "最大HPが2上昇した。",
-			Execute: func(g *Game) {
-				g.state.Player.MaxHealth += 2
-			},
-		}
-		g.Enqueue(action)
-	} else {
-		if potionItem, ok := item.(*Potion); ok {
-			action := Action{
-				Duration: 0.4,
-				Message:  fmt.Sprintf("HPが%d回復した。", potionItem.Health),
-				Execute: func(g *Game) {
-					g.state.Player.Health += potionItem.Health
-					if g.state.Player.Health > g.state.Player.MaxHealth {
-						g.state.Player.Health = g.state.Player.MaxHealth
-					}
+					g.state.Player.Health = recovered
 				},
 			}
 			g.Enqueue(action)
@@ -189,18 +146,18 @@ var damageHP30 = func(g *Game) {
 					if g.state.Player.StatusAilments.Blind > 0 {
 						enemyDisplayName = "何者"
 					}
-					
+
 					action := Action{
 						Duration: 0.5,
 						Message:  fmt.Sprintf("%sに30ダメージを与えた。", enemyDisplayName),
 						Execute: func(g *Game) {
 							g.state.Enemies[i].Health -= 30
-							
+
 							// ダメージを受けた敵の金縛り状態を解除
 							if g.state.Enemies[i].StatusAilments.Paralysis {
 								g.state.Enemies[i].StatusAilments.Paralysis = false
 							}
-							
+
 							if g.state.Enemies[i].Health <= 0 {
 								// 敵のHealthが0以下の場合、敵を配列から削除
 								defeatAction := Action{
@@ -347,14 +304,14 @@ func (g *Game) executeItemIdentify() {
 // 睡眠効果関数 - 部屋内では同じ部屋の敵全員、通路では周囲1マスの敵を睡眠状態にする
 var sleepAllEnemiesInRoom = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	
+
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
 		Execute: func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
 			enemiesPutToSleep := 0
-			
+
 			// プレイヤーが部屋内にいるかどうかを判定
 			if isInsideRoom(playerX, playerY, g.rooms) {
 				// 部屋内の場合：同じ部屋にいる敵を全員睡眠状態にする
@@ -393,7 +350,7 @@ var sleepAllEnemiesInRoom = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	
+
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
@@ -401,14 +358,14 @@ var sleepAllEnemiesInRoom = func(g *Game) {
 // 混乱効果関数 - 部屋内では同じ部屋の敵全員、通路では周囲1マスの敵を混乱状態にする
 var confuseAllEnemiesInRoom = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	
+
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
 		Execute: func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
 			enemiesConfused := 0
-			
+
 			// プレイヤーが部屋内にいるかどうかを判定
 			if isInsideRoom(playerX, playerY, g.rooms) {
 				// 部屋内の場合：同じ部屋にいる敵を全員混乱状態にする
@@ -447,7 +404,7 @@ var confuseAllEnemiesInRoom = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	
+
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
@@ -455,14 +412,14 @@ var confuseAllEnemiesInRoom = func(g *Game) {
 // 目潰し効果関数 - 部屋内では同じ部屋の敵全員、通路では周囲1マスの敵を目潰し状態にする
 var blindAllEnemiesInRoom = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	
+
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
 		Execute: func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
 			enemiesBlinded := 0
-			
+
 			// プレイヤーが部屋内にいるかどうかを判定
 			if isInsideRoom(playerX, playerY, g.rooms) {
 				// 部屋内の場合：同じ部屋にいる敵を全員目潰し状態にする
@@ -501,7 +458,7 @@ var blindAllEnemiesInRoom = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	
+
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
@@ -509,14 +466,14 @@ var blindAllEnemiesInRoom = func(g *Game) {
 // 金縛り効果関数 - 周囲8マスの敵を金縛り状態にする
 var paralyzeAllEnemiesAround = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	
+
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
 		Execute: func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
 			enemiesParalyzed := 0
-			
+
 			// 周囲8マスの敵を金縛り状態にする
 			for i := range g.state.Enemies {
 				enemyX, enemyY := g.state.Enemies[i].GetPosition()
@@ -526,7 +483,7 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 					enemiesParalyzed++
 				}
 			}
-			
+
 			if enemiesParalyzed > 0 {
 				log.Printf("周囲の敵%d体を金縛り状態にした", enemiesParalyzed)
 			} else {
@@ -535,7 +492,7 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	
+
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
@@ -543,7 +500,7 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 // 睡眠ポーション効果関数 - プレイヤーを睡眠状態にする
 var sleepPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	
+
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
@@ -552,14 +509,14 @@ var sleepPotion = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	
+
 	action = Action{
 		Duration: 0.4,
 		Message:  "海老さんは眠った",
-		Execute: func(g *Game) {},
+		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)
-	
+
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
@@ -567,7 +524,7 @@ var sleepPotion = func(g *Game) {
 // 混乱ポーション効果関数 - プレイヤーを混乱状態にする
 var confusionPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	
+
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
@@ -576,14 +533,14 @@ var confusionPotion = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	
+
 	action = Action{
 		Duration: 0.4,
 		Message:  "海老さんは混乱した",
-		Execute: func(g *Game) {},
+		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)
-	
+
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
@@ -591,7 +548,7 @@ var confusionPotion = func(g *Game) {
 // 目潰しポーション効果関数 - プレイヤーを目潰し状態にする
 var blindPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	
+
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
@@ -600,14 +557,14 @@ var blindPotion = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	
+
 	action = Action{
 		Duration: 0.4,
 		Message:  "海老さんは目が見えなくなった",
-		Execute: func(g *Game) {},
+		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)
-	
+
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
 }
