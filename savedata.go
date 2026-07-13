@@ -102,6 +102,7 @@ type SaveData struct {
 	WindWarning1Shown bool
 	WindWarning2Shown bool
 	Messages          []string
+	CustomNames       map[int]string // 未識別アイテム種別に付けた任意名
 }
 
 // decodeSaveData はJSONを解析し、検証済みのセーブデータを返す

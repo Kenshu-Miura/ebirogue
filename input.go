@@ -5,7 +5,6 @@ package main
 import (
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
-	"sort"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -175,14 +174,17 @@ func (g *Game) handleItemActionsInput() error {
 }
 
 func (g *Game) handleInventoryNavigationInput() error {
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedItemIndex > 0 {
-		g.selectedItemIndex--
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedItemIndex < len(g.state.Player.Inventory)-1 {
-		g.selectedItemIndex++
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) && g.selectedItemIndex >= 10 {
-		g.selectedItemIndex -= 10
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) && g.selectedItemIndex < len(g.state.Player.Inventory)-10 {
-		g.selectedItemIndex += 10
+	// 絞り込み後の表示リストを取得し、選択位置を表示リスト内へ合わせる
+	indices := g.normalizeInventoryView()
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, -1)
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, 1)
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, -10)
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, 10)
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) && len(g.state.Player.Inventory) > 0 {
 		if g.selectedGroundActionIndex == 1 && g.showInventory {
 			if len(g.state.Player.Inventory) > 0 {
@@ -202,60 +204,69 @@ func (g *Game) handleInventoryNavigationInput() error {
 		g.useIdentifyItem = false
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
-		// Sort the inventory by ID
-		sort.Slice(g.state.Player.Inventory, func(i, j int) bool {
-			return g.state.Player.Inventory[i].GetID() < g.state.Player.Inventory[j].GetID()
-		})
-
-		// Initialize a map to keep track of Arrow items with the same ID
-		arrowItemsMap := make(map[int][]*Arrow)
-
-		// Populate the map with Arrow items
-		for _, item := range g.state.Player.Inventory {
-			if arrow, ok := item.(*Arrow); ok {
-				arrowItemsMap[arrow.GetID()] = append(arrowItemsMap[arrow.GetID()], arrow)
-			}
+	// Fキー: カテゴリ絞り込みの切り替え（所持しているカテゴリだけを巡回）
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) && !g.useIdentifyItem {
+		g.inventoryFilter = nextFilter(g.inventoryFilter, g.presentCategories())
+		if indices := g.normalizeInventoryView(); len(indices) > 0 {
+			g.selectedItemIndex = indices[0]
 		}
+	}
 
-		// Iterate through the map and merge Arrow items with the same ID
-		for _, arrows := range arrowItemsMap {
-			if len(arrows) > 1 { // More than one Arrow item with the same ID
-				var totalShotCount int
-				var equippedArrow *Arrow
-				for _, arrow := range arrows {
-					totalShotCount += arrow.ShotCount
-					// Check if the arrow is equipped using new system
-					if g.state.Player.EquippedArrow == arrow {
-						equippedArrow = arrow
-					}
-				}
+	// Sキー: カテゴリ別ソート（整頓）。同じ矢は1つへ統合される
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) && !g.useIdentifyItem {
+		g.sortInventory()
+		g.normalizeInventoryView()
+	}
 
-				// If an arrow is equipped, use it as the base arrow
-				mergedArrow := equippedArrow
-				if mergedArrow == nil {
-					mergedArrow = arrows[0] // Use the first arrow as the base arrow if none are equipped
-				}
-				mergedArrow.ShotCount = totalShotCount // Update the ShotCount of the merged arrow
-
-				// Remove the other arrows from the inventory
-				newInventory := []Item{}
-				for _, item := range g.state.Player.Inventory {
-					keep := true
-					for _, arrow := range arrows {
-						if item == arrow && arrow != mergedArrow {
-							keep = false
-							break
-						}
-					}
-					if keep {
-						newInventory = append(newInventory, item)
-					}
-				}
-				g.state.Player.Inventory = newInventory // Update the player's inventory
-			}
+	// Nキー: 未識別アイテムへ任意の名前を付ける
+	if inpututil.IsKeyJustPressed(ebiten.KeyN) && !g.useIdentifyItem &&
+		g.selectedItemIndex < len(g.state.Player.Inventory) {
+		item := g.state.Player.Inventory[g.selectedItemIndex]
+		if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
+			g.showNameInput = true
+			g.nameInputTargetID = item.GetID()
+			g.nameInput = NameInput{Runes: []rune(g.customNames[item.GetID()])}
+			g.nameInputCursor = 0
 		}
-		return nil
+	}
+
+	return nil
+}
+
+// 未識別アイテムの名前入力ウィンドウの入力処理
+func (g *Game) handleNameInputWindow() error {
+	// 五十音グリッドのカーソル移動
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		g.nameInputCursor = moveGridCursor(g.nameInputCursor, -kanaGridColumns, len(kanaChars))
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		g.nameInputCursor = moveGridCursor(g.nameInputCursor, kanaGridColumns, len(kanaChars))
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		g.nameInputCursor = moveGridCursor(g.nameInputCursor, -1, len(kanaChars))
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		g.nameInputCursor = moveGridCursor(g.nameInputCursor, 1, len(kanaChars))
+	}
+
+	// Zキーで選択中の文字を入力
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		g.nameInput.Append(kanaChars[g.nameInputCursor])
+	}
+
+	// Xキーで1文字削除。空の状態ならキャンセルして閉じる
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		if !g.nameInput.Backspace() {
+			g.showNameInput = false
+		}
+	}
+
+	// Enterキーで決定。空の名前で決定すると設定を消去する
+	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		name := g.nameInput.String()
+		if name == "" {
+			delete(g.customNames, g.nameInputTargetID)
+		} else {
+			g.customNames[g.nameInputTargetID] = name
+		}
+		g.showNameInput = false
 	}
 
 	return nil
@@ -271,6 +282,11 @@ func (g *Game) handleItemDescriptionInput() error {
 }
 
 func (g *Game) handleInventoryInput() error {
+	// 名前入力中は他のインベントリ操作を受け付けない
+	if g.showNameInput {
+		return g.handleNameInputWindow()
+	}
+
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
 
 	// Cキーが押された場合の処理

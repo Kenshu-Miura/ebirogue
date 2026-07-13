@@ -99,7 +99,6 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 - ゲーム内に操作ヘルプと状態異常の説明画面を追加する。
 - 足踏みとダッシュは、敵の接近、アイテム、分岐、発見済み罠などの危険条件で自動停止させる。
 - 矢・杖・投擲アイテムの射線と到達地点を使用前に表示する。
-- インベントリへカテゴリ別ソート、絞り込み、未識別品への任意名設定を追加する。
 
 ### Priority B: dungeon systems
 

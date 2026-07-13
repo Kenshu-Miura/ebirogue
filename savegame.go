@@ -261,6 +261,7 @@ func (g *Game) buildSaveData() *SaveData {
 		WindWarning1Shown: g.windWarning1Shown,
 		WindWarning2Shown: g.windWarning2Shown,
 		Messages:          g.messageLog.Messages,
+		CustomNames:       g.customNames,
 	}
 
 	for _, room := range g.rooms {
@@ -424,6 +425,16 @@ func (g *Game) applySaveData(save *SaveData) error {
 		messages = messages[len(messages)-maxLogMessages:]
 	}
 	g.messageLog.Messages = messages
+
+	// 未識別アイテムの任意名を復元
+	g.customNames = map[int]string{}
+	for id, name := range save.CustomNames {
+		runes := []rune(name)
+		if len(runes) > maxItemNameLength {
+			runes = runes[:maxItemNameLength]
+		}
+		g.customNames[id] = string(runes)
+	}
 
 	// ミニマップの再構築を促す
 	g.miniMap = nil

@@ -577,18 +577,21 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	const itemsPerColumn = 10 // 1列に表示するアイテムの数
 	const columnWidth = 180   // 列の幅 (ピクセル)
 
-	if len(g.state.Player.Inventory) > 0 {
-		for i, item := range g.state.Player.Inventory {
-			// アイテムが識別されているかどうかを判断し、表示するテキストを設定
-			var itemText string
-			var textColor color.Color = color.White // デフォルトのテキストカラーは白
-			if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
-				// アイテムが識別されていなければ、GetName()を使って名前を取得し、テキストカラーを黄色に設定
-				itemText = identifiableItem.GetName()
-				textColor = color.RGBA{0xff, 0xff, 0x00, 0xff} // 黄色
-			} else {
-				// アイテムが識別されているか、識別可能な型ではない場合はSharpnessを含む名前を取得
-				itemText = getItemNameWithSharpness(item)
+	// 絞り込み中のカテゴリと操作説明をウィンドウ下部に表示
+	footerText := "【" + categoryLabel(g.inventoryFilter) + "】 F:絞り込み S:整頓 N:名前"
+	text.Draw(screen, footerText, mplusNormalFont, windowX+15, windowY+windowHeight-8, color.NRGBA{200, 200, 200, 255})
+
+	indices := g.normalizeInventoryView()
+
+	if len(indices) > 0 {
+		for displayPos, i := range indices {
+			item := g.state.Player.Inventory[i]
+
+			// 表示名を取得（未識別で任意名があればそれを表示）
+			itemText, unidentified := g.inventoryItemLabel(item)
+			var textColor color.Color = color.White
+			if unidentified {
+				textColor = color.RGBA{0xff, 0xff, 0x00, 0xff} // 未識別は黄色
 			}
 
 			// もしiの値がg.tmpSelectedItemIndexと等しければ、textColorを灰色に設定
@@ -596,9 +599,9 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 				textColor = color.RGBA{0x80, 0x80, 0x80, 0xff} // 灰色
 			}
 
-			// 現在の列と行の計算
-			column := i / itemsPerColumn
-			row := i % itemsPerColumn
+			// 表示位置は絞り込み後のリスト内の順序で計算
+			column := displayPos / itemsPerColumn
+			row := displayPos % itemsPerColumn
 
 			// アイテムテキストの描画位置の計算
 			x := windowX + 30 + column*columnWidth
@@ -635,6 +638,49 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	}
 
 	return nil
+}
+
+// 未識別アイテムの名前入力ウィンドウを描画する
+func (g *Game) drawNameInputWindow(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	windowWidth, windowHeight := 400, 380
+	windowX := (screenWidth - windowWidth) / 2
+	windowY := (screenHeight - windowHeight) / 2
+
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 240)
+
+	// タイトルと入力中の名前
+	text.Draw(screen, "名前を入力", mplusMediumFont, windowX+15, windowY+30, color.White)
+	nameText := g.nameInput.String()
+	if len(g.nameInput.Runes) < maxItemNameLength {
+		nameText += "_"
+	}
+	text.Draw(screen, "名前: "+nameText, mplusNormalFont, windowX+15, windowY+60, color.NRGBA{255, 255, 0, 255})
+
+	// 五十音グリッド
+	cellWidth, cellHeight := 36, 30
+	gridX := windowX + 20
+	gridY := windowY + 80
+	for i, r := range kanaChars {
+		col := i % kanaGridColumns
+		row := i / kanaGridColumns
+		x := gridX + col*cellWidth
+		y := gridY + row*cellHeight + 20
+
+		// カーソル位置の文字をハイライト表示
+		if i == g.nameInputCursor {
+			highlight := ebiten.NewImage(cellWidth-4, cellHeight-4)
+			highlight.Fill(color.NRGBA{100, 100, 200, 160})
+			opts := &ebiten.DrawImageOptions{}
+			opts.GeoM.Translate(float64(x-6), float64(y-cellHeight+10))
+			screen.DrawImage(highlight, opts)
+		}
+
+		text.Draw(screen, string(r), mplusNormalFont, x, y, color.White)
+	}
+
+	// 操作説明
+	text.Draw(screen, "Z:入力  X:削除(空で閉じる)  Enter:決定", mplusNormalFont, windowX+15, windowY+windowHeight-15, color.NRGBA{200, 200, 200, 255})
 }
 
 func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {

@@ -204,7 +204,8 @@ func (g *Game) checkForStairs() {
 	player := &g.state.Player
 	playerTile := g.state.Map[player.Y][player.X]
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyS) && g.ignoreStairs && playerTile.Type == "stairs" {
+	// インベントリ表示中はSキーが整頓操作のため階段プロンプトを開かない
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) && g.ignoreStairs && playerTile.Type == "stairs" && !g.showInventory {
 		g.showStairsPrompt = true
 		g.ignoreStairs = false // Optionally reset ignoreStairs flag
 		return

@@ -1140,6 +1140,11 @@ func (g *Game) resetGame() {
 	g.isActioned = false
 	g.isCombatActive = false
 
+	// インベントリ拡張の状態をリセット
+	g.inventoryFilter = CategoryAll
+	g.customNames = map[int]string{}
+	g.showNameInput = false
+
 	// モンスター湧きシステム再初期化
 	g.InitializeSpawnSystem()
 }

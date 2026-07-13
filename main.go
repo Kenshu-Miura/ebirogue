@@ -229,6 +229,13 @@ type Game struct {
 	messageLog       MessageLog // 表示済みメッセージの履歴
 	showMessageLog   bool       // メッセージ履歴ウィンドウの表示フラグ
 	messageLogScroll int        // 履歴のスクロール量（0で最新）
+	// インベントリ拡張（絞り込み・任意名）
+	inventoryFilter   ItemCategory   // 絞り込み中のカテゴリ（CategoryAllで全て表示）
+	customNames       map[int]string // 未識別アイテム種別（テンプレートID）に付けた任意名
+	showNameInput     bool           // 名前入力ウィンドウの表示フラグ
+	nameInput         NameInput      // 入力中の名前
+	nameInputCursor   int            // 五十音グリッドのカーソル位置
+	nameInputTargetID int            // 名前を付ける対象のテンプレートID
 	// 設定・中断システム
 	settings                GameSettings // ゲーム設定
 	showSettings            bool         // 設定ウィンドウの表示フラグ
@@ -493,6 +500,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if err := g.drawInventoryWindow(screen); err != nil {
 			log.Printf("Error drawing inventory window: %v", err)
 		}
+		// 名前入力ウィンドウはインベントリの上に重ねて表示する
+		if g.showNameInput {
+			g.drawNameInputWindow(screen)
+		}
 	}
 
 	// Draw the menu window if the showMenu flag is set
@@ -684,6 +695,7 @@ func NewGame() *Game {
 		isCombatActive:       false,
 		zPressed:             false,
 		tmpSelectedItemIndex: -1,
+		customNames:          map[int]string{},
 	}
 
 	// モンスター湧きシステム初期化
