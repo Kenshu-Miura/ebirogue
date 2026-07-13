@@ -214,6 +214,98 @@ func TestIdentifyAllInventory(t *testing.T) {
 	}
 }
 
+func TestEquipmentCardTemplates(t *testing.T) {
+	cards := map[int]string{
+		32: "おはらいのカード",
+		33: "武器強化のカード",
+		34: "盾強化のカード",
+	}
+	for id, wantName := range cards {
+		card, ok := buildItemFromTemplate(id, 0, 0).(*Card)
+		if !ok || card.Name != wantName {
+			t.Fatalf("card %d = %#v, want %q", id, card, wantName)
+		}
+	}
+}
+
+func TestUncursePlayerBelongings(t *testing.T) {
+	weapon := &Weapon{BaseItem: BaseItem{Name: "こん棒", Type: "Weapon"}, AttackPower: 2, Sharpness: -1, Cursed: true}
+	accessory := &Accessory{BaseItem: BaseItem{Name: "鼓舞の指輪", Type: "Accessory"}, Cursed: true}
+	plainArmor := &Armor{BaseItem: BaseItem{Name: "木甲の盾", Type: "Armor"}, DefensePower: 2}
+	player := &Player{Inventory: []Item{weapon, accessory, plainArmor}}
+	player.EquipItem(weapon)
+	player.EquipItem(accessory)
+	attackAfterEquip := player.AttackPower
+
+	uncursed := uncursePlayerBelongings(player)
+
+	if len(uncursed) != 2 {
+		t.Fatalf("uncursed = %v, want 2 items", uncursed)
+	}
+	if weapon.Cursed || accessory.Cursed {
+		t.Fatal("装備中の呪いはすべて解けるはず")
+	}
+	if player.AttackPower != attackAfterEquip {
+		t.Fatalf("attack power = %d, want unchanged %d", player.AttackPower, attackAfterEquip)
+	}
+	// 呪われたアクセサリは補正が反転しているため、解呪後は正の補正へ付け直される
+	if player.Power != 3 || player.MaxPower != 3 {
+		t.Fatalf("accessory stats = Power %d MaxPower %d, want 3/3", player.Power, player.MaxPower)
+	}
+}
+
+func TestReinforceWeaponCard(t *testing.T) {
+	card := buildItemFromTemplate(33, 0, 0)
+	weapon := &Weapon{BaseItem: BaseItem{Name: "こん棒", Type: "Weapon"}, AttackPower: 2, Cursed: true}
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card, weapon}}}}
+	g.state.Player.EquipItem(weapon)
+
+	card.Use(g)
+	if len(g.state.Player.Inventory) != 1 {
+		t.Fatal("used card should be removed from inventory")
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if weapon.Sharpness != 1 || weapon.Cursed {
+		t.Fatalf("weapon = %#v, want Sharpness 1 and uncursed", weapon)
+	}
+	if g.state.Player.AttackPower != 3 {
+		t.Fatalf("player attack power = %d, want 3", g.state.Player.AttackPower)
+	}
+}
+
+func TestReinforceArmorCard(t *testing.T) {
+	card := buildItemFromTemplate(34, 0, 0)
+	armor := &Armor{BaseItem: BaseItem{Name: "木甲の盾", Type: "Armor"}, DefensePower: 2}
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card, armor}}}}
+	g.state.Player.EquipItem(armor)
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if armor.Sharpness != 1 {
+		t.Fatalf("armor sharpness = %d, want 1", armor.Sharpness)
+	}
+	if g.state.Player.DefensePower != 3 {
+		t.Fatalf("player defense power = %d, want 3", g.state.Player.DefensePower)
+	}
+}
+
+func TestReinforceArmorCardWithoutShield(t *testing.T) {
+	card := buildItemFromTemplate(34, 0, 0)
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card}}}}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if g.state.Player.DefensePower != 0 {
+		t.Fatalf("defense power = %d, want unchanged 0", g.state.Player.DefensePower)
+	}
+	if len(g.ActionQueue.Queue) < 2 || g.ActionQueue.Queue[1].Message != "しかし何も起こらなかった" {
+		t.Fatal("盾なしで使用した場合は不発メッセージを表示するはず")
+	}
+}
+
 func TestVacuumSlashCardDamagesOnlyEffectArea(t *testing.T) {
 	card := buildItemFromTemplate(31, 0, 0)
 	g := &Game{

@@ -287,6 +287,136 @@ var identifyItem = func(g *Game) {
 	g.showInventory = true
 }
 
+// uncursePlayerBelongings は装備品と所持品の呪いをすべて解き、解いた装備の名前を返す。
+func uncursePlayerBelongings(player *Player) []string {
+	uncursed := []string{}
+	uncurseAccessory := func(a *Accessory) {
+		if a == nil || !a.Cursed {
+			return
+		}
+		// 呪われたアクセサリは装備補正が反転しているため、解呪の前後で装備効果を付け直す
+		equipped := player.IsEquipped(a)
+		if equipped {
+			a.UpdatePlayerStats(player, false)
+		}
+		a.Cursed = false
+		if equipped {
+			a.UpdatePlayerStats(player, true)
+		}
+		uncursed = append(uncursed, a.GetName())
+	}
+
+	for _, item := range player.Inventory {
+		switch v := item.(type) {
+		case *Weapon:
+			if v.Cursed {
+				v.Cursed = false
+				uncursed = append(uncursed, v.GetName())
+			}
+		case *Armor:
+			if v.Cursed {
+				v.Cursed = false
+				uncursed = append(uncursed, v.GetName())
+			}
+		case *Arrow:
+			if v.Cursed {
+				v.Cursed = false
+				uncursed = append(uncursed, v.GetName())
+			}
+		case *Accessory:
+			uncurseAccessory(v)
+		}
+	}
+
+	// 装備品はインベントリと同じポインタを共有するが、念のため装備欄も確認する
+	if w := player.EquippedWeapon; w != nil && w.Cursed {
+		w.Cursed = false
+		uncursed = append(uncursed, w.GetName())
+	}
+	if a := player.EquippedArmor; a != nil && a.Cursed {
+		a.Cursed = false
+		uncursed = append(uncursed, a.GetName())
+	}
+	if ar := player.EquippedArrow; ar != nil && ar.Cursed {
+		ar.Cursed = false
+		uncursed = append(uncursed, ar.GetName())
+	}
+	uncurseAccessory(player.EquippedAccessories[0])
+	uncurseAccessory(player.EquippedAccessories[1])
+
+	return uncursed
+}
+
+// おはらいのカードは装備品と所持品の呪いをすべて解く。
+var removeCurse = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。白い光が海老さんを包んだ", item.GetName()),
+		Execute: func(g *Game) {
+			uncursed := uncursePlayerBelongings(&g.state.Player)
+			if len(uncursed) == 0 {
+				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				return
+			}
+			for _, name := range uncursed {
+				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sの呪いが解けた", name), Execute: func(g *Game) {}})
+			}
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 武器強化のカードは装備中の武器の強化値を1上げ、呪いも解く。
+var reinforceWeapon = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
+		Execute: func(g *Game) {
+			weapon := g.state.Player.EquippedWeapon
+			if weapon == nil {
+				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				return
+			}
+			if weapon.Cursed {
+				weapon.Cursed = false
+				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sの呪いが解けた", weapon.GetName()), Execute: func(g *Game) {}})
+			}
+			weapon.Sharpness++
+			// 装備中の武器の強化値上昇を攻撃力へ即時反映する
+			g.state.Player.AttackPower++
+			g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sは強くなった", weapon.GetName()), Execute: func(g *Game) {}})
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 盾強化のカードは装備中の盾の強化値を1上げ、呪いも解く。
+var reinforceArmor = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
+		Execute: func(g *Game) {
+			armor := g.state.Player.EquippedArmor
+			if armor == nil {
+				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				return
+			}
+			if armor.Cursed {
+				armor.Cursed = false
+				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sの呪いが解けた", armor.GetName()), Execute: func(g *Game) {}})
+			}
+			armor.Sharpness++
+			// 装備中の盾の強化値上昇を防御力へ即時反映する
+			g.state.Player.DefensePower++
+			g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sは強くなった", armor.GetName()), Execute: func(g *Game) {}})
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
 // あかりのカードはフロアの地形と敵、アイテムをミニマップへ表示する。
 var revealFloor = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)

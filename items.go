@@ -414,6 +414,33 @@ var itemTemplates = map[int]ItemTemplate{
 		Char:        'C',
 		UseActions:  map[string]UseAction{"UseCard": vacuumSlash},
 	},
+	32: {
+		ID:          32,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "おはらいのカード",
+		Description: "装備品と所持品の呪いをすべて解く。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": removeCurse},
+	},
+	33: {
+		ID:          33,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "武器強化のカード",
+		Description: "装備中の武器の強化値を1上げる。呪われていた場合は呪いも解く。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": reinforceWeapon},
+	},
+	34: {
+		ID:          34,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "盾強化のカード",
+		Description: "装備中の盾の強化値を1上げる。呪われていた場合は呪いも解く。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": reinforceArmor},
+	},
 }
 
 // テーブルからアイテムを生成する共通関数
