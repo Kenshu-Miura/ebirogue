@@ -396,6 +396,24 @@ var itemTemplates = map[int]ItemTemplate{
 		FullRecovery: true,
 		MaxStatBonus: 2,
 	},
+	30: {
+		ID:          30,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "あかりのカード",
+		Description: "フロアの地形と敵、アイテムの位置を明らかにする。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": revealFloor},
+	},
+	31: {
+		ID:          31,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "真空斬りのカード",
+		Description: "同じ部屋の敵全員に12～24ダメージを与える。通路では周囲1マスに有効。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": vacuumSlash},
+	},
 }
 
 // テーブルからアイテムを生成する共通関数

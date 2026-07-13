@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 )
 
 func determineItemSource(g *Game) (item Item, isInventoryItem bool) {
@@ -254,6 +255,84 @@ var identifyItem = func(g *Game) {
 
 	g.useIdentifyItem = true
 	g.showInventory = true
+}
+
+// あかりのカードはフロアの地形と敵、アイテムをミニマップへ表示する。
+var revealFloor = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。フロアが明るく照らされた", item.GetName()),
+		Execute: func(g *Game) {
+			for y := range g.state.Map {
+				for x := range g.state.Map[y] {
+					g.state.Map[y][x].Visited = true
+				}
+			}
+			for i := range g.state.Enemies {
+				g.state.Enemies[i].PlayerDiscovered = true
+				g.state.Enemies[i].ShowOnMiniMap = true
+			}
+			for _, floorItem := range g.state.Items {
+				floorItem.SetPlayerDiscovered(true)
+				floorItem.SetShowOnMiniMap(true)
+			}
+			g.miniMapDirty = true
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+func rollVacuumSlashDamage(intn func(int) int) int {
+	return 12 + intn(13)
+}
+
+func isInRoomWideEffect(playerX, playerY, targetX, targetY int, rooms []Room) bool {
+	if isInsideRoom(playerX, playerY, rooms) {
+		return isSameRoom(playerX, playerY, targetX, targetY, rooms)
+	}
+	return abs(targetX-playerX) <= 1 && abs(targetY-playerY) <= 1
+}
+
+// 真空斬りのカードは部屋全体、通路では周囲1マスの敵へダメージを与える。
+var vacuumSlash = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	damage := rollVacuumSlashDamage(rand.Intn)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。真空の刃が走った", item.GetName()),
+		Execute: func(g *Game) {
+			playerX, playerY := g.state.Player.GetPosition()
+			survivors := g.state.Enemies[:0]
+			defeatedExperience := 0
+			for i := range g.state.Enemies {
+				enemy := g.state.Enemies[i]
+				if !isInRoomWideEffect(playerX, playerY, enemy.X, enemy.Y, g.rooms) {
+					survivors = append(survivors, enemy)
+					continue
+				}
+
+				enemy.Health -= damage
+				enemy.StatusAilments.Sleep = 0
+				enemy.StatusAilments.Paralysis = false
+				if enemy.Health <= 0 {
+					defeatedExperience += enemy.ExperiencePoints
+					g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sを倒した。", enemy.Name), Execute: func(g *Game) {}})
+					continue
+				}
+				survivors = append(survivors, enemy)
+			}
+			g.state.Enemies = survivors
+			if defeatedExperience > 0 {
+				g.state.Player.ExperiencePoints += defeatedExperience
+				g.state.Player.checkLevelUp(g)
+			}
+			g.miniMapDirty = true
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
 }
 
 func (g *Game) executeItemIdentify() {
