@@ -57,6 +57,11 @@ func (g *Game) DrawStairsPrompt(screen *ebiten.Image) {
 }
 
 func (g *Game) UpdateAndDrawMiniMap(screen *ebiten.Image) {
+	// 設定でミニマップ表示がOFFの場合は描画しない
+	if !g.settings.ShowMiniMap {
+		return
+	}
+
 	if g.miniMapDirty {
 		// ミニマップを更新
 		g.updateMiniMap(screen)
@@ -1272,6 +1277,73 @@ func (g *Game) drawEmptyInventoryMessage(screen *ebiten.Image) {
 	textX := messageX + messageWidth/2 - 80 // 中央寄せのための調整
 	textY := messageY + messageHeight/2 + 5
 	text.Draw(screen, messageText, mplusMediumFont, textX, textY, color.White)
+}
+
+// 設定ウィンドウを描画する
+func (g *Game) drawSettingsWindow(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	windowWidth, windowHeight := 340, 200
+	windowX := (screenWidth - windowWidth) / 2
+	windowY := (screenHeight - windowHeight) / 2
+
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 220)
+
+	// タイトル
+	text.Draw(screen, "設定", mplusMediumFont, windowX+10, windowY+30, color.White)
+
+	// 設定項目と現在の値
+	items := []struct {
+		label string
+		value bool
+	}{
+		{"フルスクリーン", g.settings.Fullscreen},
+		{"ミニマップ表示", g.settings.ShowMiniMap},
+	}
+
+	lineHeight := 35
+	for i, item := range items {
+		y := windowY + 70 + i*lineHeight
+
+		// 選択中の項目に矢印を表示
+		labelColor := color.Color(color.White)
+		if g.settingsSelectedIndex == i {
+			text.Draw(screen, "→", mplusNormalFont, windowX+15, y, color.NRGBA{255, 255, 0, 255})
+		}
+		text.Draw(screen, item.label, mplusNormalFont, windowX+45, y, labelColor)
+
+		valueText := "OFF"
+		valueColor := color.Color(color.NRGBA{150, 150, 150, 255})
+		if item.value {
+			valueText = "ON"
+			valueColor = color.NRGBA{100, 255, 100, 255}
+		}
+		text.Draw(screen, valueText, mplusNormalFont, windowX+windowWidth-70, y, valueColor)
+	}
+
+	// 操作説明
+	text.Draw(screen, "↑↓:選択  ←→:切替  X:戻る", mplusNormalFont, windowX+15, windowY+windowHeight-20, color.NRGBA{200, 200, 200, 255})
+}
+
+// 中断確認ダイアログを描画する
+func (g *Game) drawSuspendPrompt(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	windowWidth, windowHeight := 360, 110
+	windowX := (screenWidth - windowWidth) / 2
+	windowY := (screenHeight - windowHeight) / 2
+
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 220)
+
+	text.Draw(screen, "冒険を中断して終了しますか？", mplusNormalFont, windowX+20, windowY+30, color.White)
+
+	options := []string{"中断する", "やめる"}
+	for i, option := range options {
+		x := windowX + 50 + i*150
+		y := windowY + 75
+		if g.suspendSelectedOption == i {
+			text.Draw(screen, "→", mplusNormalFont, x-25, y, color.NRGBA{255, 255, 0, 255})
+		}
+		text.Draw(screen, option, mplusNormalFont, x, y, color.White)
+	}
 }
 
 // メッセージ履歴ウィンドウを描画する

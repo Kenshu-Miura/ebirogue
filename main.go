@@ -229,6 +229,14 @@ type Game struct {
 	messageLog       MessageLog // 表示済みメッセージの履歴
 	showMessageLog   bool       // メッセージ履歴ウィンドウの表示フラグ
 	messageLogScroll int        // 履歴のスクロール量（0で最新）
+	// 設定・中断システム
+	settings                GameSettings // ゲーム設定
+	showSettings            bool         // 設定ウィンドウの表示フラグ
+	settingsSelectedIndex   int          // 設定ウィンドウで選択中の項目
+	showSuspendPrompt       bool         // 中断確認ダイアログの表示フラグ
+	suspendSelectedOption   int          // 中断確認で選択中の項目（0=中断する, 1=やめる）
+	suspendPromptJustOpened bool         // 中断確認が開かれたばかりかどうかのフラグ
+	suspendRequested        bool         // 中断セーブが完了しゲーム終了を要求するフラグ
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -254,6 +262,11 @@ func (g *Game) IsEnemyAdjacent() bool {
 }
 
 func (g *Game) Update() error {
+	// 中断セーブ完了後はゲームを終了する
+	if g.suspendRequested {
+		return ebiten.Termination
+	}
+
 	// プレイヤーが死亡している場合の処理
 	if g.playerDead {
 		// log.Printf("DEBUG: Player is dead, queue length: %d, deathMessageAdded: %v", len(g.ActionQueue.Queue), g.deathMessageAdded)
@@ -317,7 +330,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog {
+	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt {
 		// 睡眠状態の場合は自動的にターンを進行させる
 		if g.state.Player.StatusAilments.Sleep > 0 {
 			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
@@ -363,8 +376,8 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// 睡眠状態・メッセージ履歴表示中はDキーとF1キーも無効
-	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog {
+	// 睡眠状態・メッセージ履歴/メニュー/設定/中断確認の表示中はDキーとF1キーも無効
+	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt {
 		g.processDKeyPress()
 
 		// デバッグ用F1キー処理
@@ -398,6 +411,16 @@ func (g *Game) Update() error {
 	}
 
 	err = g.handleMenuInput()
+	if err != nil {
+		return err
+	}
+
+	err = g.handleSettingsInput()
+	if err != nil {
+		return err
+	}
+
+	err = g.handleSuspendPromptInput()
 	if err != nil {
 		return err
 	}
@@ -480,6 +503,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw the empty inventory message if the showEmptyInventoryMessage flag is set
 	if g.showEmptyInventoryMessage {
 		g.drawEmptyInventoryMessage(screen)
+	}
+
+	// Draw the settings window if the showSettings flag is set
+	if g.showSettings {
+		g.drawSettingsWindow(screen)
+	}
+
+	// Draw the suspend prompt if the showSuspendPrompt flag is set
+	if g.showSuspendPrompt {
+		g.drawSuspendPrompt(screen)
 	}
 
 	if g.useIdentifyItem {
@@ -659,6 +692,14 @@ func NewGame() *Game {
 	// フェードイン状態を初期化
 	game.fadeInProgress = 0.0
 
+	// 設定ファイルを読み込む（存在しない・壊れている場合は初期値）
+	game.settings = loadSettings()
+
+	// 中断データがあれば再開する（壊れている場合は新しい冒険のまま）
+	if game.tryResumeFromSave() {
+		log.Println("中断データから冒険を再開します")
+	}
+
 	return game
 }
 
@@ -667,6 +708,7 @@ func main() {
 
 	ebiten.SetWindowSize(1280, 960)
 	ebiten.SetWindowTitle("ebirogue")
+	ebiten.SetFullscreen(game.settings.Fullscreen)
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}

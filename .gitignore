@@ -18,3 +18,7 @@
 # Native Go build artifacts
 /ebirogue
 /ebirogue.exe
+
+# Save and settings files generated at runtime
+ebirogue_save.json
+ebirogue_settings.json

@@ -293,6 +293,8 @@ func (g *Game) checkFloorTimeWarnings() {
 	if g.floorTurns >= 1400 {
 		g.playerDead = true
 		g.gameResetTimer = 2.0 // 2秒後にリセット
+		// 死亡したら中断データを削除する（復活による再開を防ぐ）
+		deleteSaveFile()
 		windDeathAction := Action{
 			Duration: 2.0, // 2秒間表示
 			Message:  "突風だ！海老さんは風に飛ばされた",

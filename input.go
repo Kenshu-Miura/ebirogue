@@ -294,8 +294,8 @@ func (g *Game) handleInventoryInput() error {
 			return nil
 		}
 
-		// 何もメニューが開いていない場合はメニューを開く（メッセージ履歴表示中は除く）
-		if !g.showStairsPrompt && !g.showMessageLog {
+		// 何もメニューが開いていない場合はメニューを開く（メッセージ履歴・設定・中断確認の表示中は除く）
+		if !g.showStairsPrompt && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt {
 			// 睡眠状態の場合はメニューを開けない
 			if g.state.Player.StatusAilments.Sleep > 0 {
 				return nil
@@ -717,17 +717,126 @@ func (g *Game) handleMenuInput() error {
 			g.groundItemDescriptionText = ""    // 説明テキストもクリア
 			g.groundMenuJustOpened = true       // 足元メニューが開かれたばかりのフラグを設定
 		} else if g.menuSelectedRow == 1 && g.menuSelectedCol == 0 {
-			// 設定（今後実装）
-			// TODO: 設定メニューを実装
+			// 設定
+			g.showMenu = false
+			g.showSettings = true
+			g.settingsSelectedIndex = 0
 		} else if g.menuSelectedRow == 1 && g.menuSelectedCol == 1 {
-			// 中断（今後実装）
-			// TODO: 中断処理を実装
+			// 中断
+			if len(g.ActionQueue.Queue) > 0 {
+				// 行動処理中は状態が確定していないため中断できない
+				g.showMenu = false
+				g.Enqueue(Action{
+					Duration: 0.8,
+					Message:  "行動中は中断できない",
+					Execute:  func(*Game) {},
+				})
+			} else {
+				g.showMenu = false
+				g.showSuspendPrompt = true
+				g.suspendSelectedOption = 0
+				g.suspendPromptJustOpened = true
+			}
 		}
 	}
 
 	// Xキーでメニューを閉じる
 	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
 		g.showMenu = false
+	}
+
+	return nil
+}
+
+// 設定ウィンドウの入力処理
+func (g *Game) handleSettingsInput() error {
+	if !g.showSettings {
+		return nil
+	}
+
+	const settingsItemCount = 2
+
+	// ↑↓で項目を移動
+	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+		g.settingsSelectedIndex = (g.settingsSelectedIndex - 1 + settingsItemCount) % settingsItemCount
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+		g.settingsSelectedIndex = (g.settingsSelectedIndex + 1) % settingsItemCount
+	}
+
+	// ←→で設定値を切り替え（即時反映）
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		switch g.settingsSelectedIndex {
+		case 0:
+			g.settings.Fullscreen = !g.settings.Fullscreen
+			ebiten.SetFullscreen(g.settings.Fullscreen)
+		case 1:
+			g.settings.ShowMiniMap = !g.settings.ShowMiniMap
+		}
+	}
+
+	// Xキーで設定を保存してメニューに戻る
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		g.showSettings = false
+		saveSettings(g.settings)
+		g.showMenu = true
+	}
+
+	// Cキーで設定を保存して全て閉じる
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		g.showSettings = false
+		saveSettings(g.settings)
+	}
+
+	return nil
+}
+
+// 中断確認ダイアログの入力処理
+func (g *Game) handleSuspendPromptInput() error {
+	if !g.showSuspendPrompt {
+		return nil
+	}
+
+	// メニューのZキー決定と同じフレームで確定しないよう1フレームスキップ
+	if g.suspendPromptJustOpened {
+		g.suspendPromptJustOpened = false
+		return nil
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		g.suspendSelectedOption = (g.suspendSelectedOption + 1) % 2
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		if g.suspendSelectedOption == 0 { // 中断する
+			g.showSuspendPrompt = false
+			if err := g.saveSuspendData(); err != nil {
+				log.Printf("中断セーブに失敗: %v", err)
+				g.Enqueue(Action{
+					Duration: 0.8,
+					Message:  "中断データの保存に失敗した",
+					Execute:  func(*Game) {},
+				})
+			} else {
+				g.suspendRequested = true
+			}
+		} else { // やめる
+			g.showSuspendPrompt = false
+			g.showMenu = true
+		}
+		g.suspendSelectedOption = 0
+	}
+
+	// Xキーでメニューに戻る
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		g.showSuspendPrompt = false
+		g.suspendSelectedOption = 0
+		g.showMenu = true
+	}
+
+	// Cキーで全て閉じる
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		g.showSuspendPrompt = false
+		g.suspendSelectedOption = 0
 	}
 
 	return nil
@@ -759,6 +868,7 @@ func (g *Game) handleMessageLogInput() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyL) &&
 		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
 		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
+		!g.showSettings && !g.showSuspendPrompt &&
 		g.state.Player.StatusAilments.Sleep == 0 {
 		g.showMessageLog = true
 		g.messageLogScroll = 0

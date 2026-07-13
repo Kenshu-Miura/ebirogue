@@ -38,6 +38,8 @@ func (g *Game) handleFadingOut() {
 			g.floorTurns = 0
 			g.windWarning1Shown = false
 			g.windWarning2Shown = false
+			// フロア到着時にオートセーブ（クラッシュ時の復旧用）
+			g.autoSave()
 		}
 		g.frameCounter++
 		if g.frameCounter >= 60 { // 1秒経過した後
@@ -450,12 +452,12 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 				if rand.Intn(2) == 0 {
 					// Align horizontally
 					roomWidth = rand.Intn(10) + 6 // Random width between 6 and 15
-					roomHeight = alignWith.Height      // Match the height of the room to align with
+					roomHeight = alignWith.Height // Match the height of the room to align with
 					roomX = rand.Intn(width-roomWidth-1) + 1
 					roomY = alignWith.Y
 				} else {
 					// Align vertically
-					roomWidth = alignWith.Width         // Match the width of the room to align with
+					roomWidth = alignWith.Width    // Match the width of the room to align with
 					roomHeight = rand.Intn(10) + 6 // Random height between 6 and 15
 					roomX = alignWith.X
 					roomY = rand.Intn(height-roomHeight-1) + 1
@@ -526,30 +528,30 @@ func setRoomCenter(room *Room) {
 
 func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 	var enemies []Enemy
-	
+
 	// 4~9体のモンスターを生成
 	numEnemies := 4 + rand.Intn(6) // 4 + (0~5) = 4~9
-	
+
 	// 使用済み部屋を追跡
 	usedRooms := make(map[int]bool)
 	usedRooms[playerRoom.ID] = true // プレイヤーの部屋は除外
-	
+
 	for i := 0; i < numEnemies; i++ {
 		var enemyRoom Room
 		var enemyX, enemyY int
 		maxAttempts := 100
-		
+
 		for attempt := 0; attempt < maxAttempts; attempt++ {
 			enemyRoom = rooms[rand.Intn(len(rooms))]
-			
+
 			// できる限り異なる部屋に配置（全部屋使用済みの場合は重複を許可）
 			if len(usedRooms) < len(rooms) && usedRooms[enemyRoom.ID] {
 				continue
 			}
-			
+
 			enemyX = rand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
 			enemyY = rand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
-			
+
 			// 位置の重複チェック
 			occupied := false
 			for _, enemy := range enemies {
@@ -558,19 +560,19 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 					break
 				}
 			}
-			
+
 			if !occupied {
 				usedRooms[enemyRoom.ID] = true
 				break
 			}
 		}
-		
+
 		// 敵を生成し、50%の確率で仮眠状態にする
 		enemy := createEnemy(enemyX, enemyY)
 		if rand.Float64() < 0.5 {
 			enemy.StatusAilments.Sleep = -1 // -1で仮眠状態を表現（通常の睡眠と区別）
 		}
-		
+
 		enemies = append(enemies, enemy)
 	}
 	return enemies
@@ -644,7 +646,7 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 	// Call the newly created functions to generate enemies and items
 	enemies := generateEnemies(rooms, playerRoom)
 	items := generateItems(rooms)
-	
+
 	// Generate map traps
 	traps := generateMapTraps(rooms)
 

@@ -1083,6 +1083,9 @@ func (p *Player) checkDeath(g *Game) {
 		g.fadeOutProgress = 0.0
 		g.gameResetTimer = 6.0 // 6秒後にリセット（攻撃処理待ち+メッセージ1秒+フェードアウト1秒+待機2秒）
 
+		// 死亡したら中断データを削除する（復活による再開を防ぐ）
+		deleteSaveFile()
+
 		// 死亡メッセージは後でActionQueueが空になってから追加する
 	}
 }
