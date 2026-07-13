@@ -244,6 +244,11 @@ type Game struct {
 	suspendSelectedOption   int          // 中断確認で選択中の項目（0=中断する, 1=やめる）
 	suspendPromptJustOpened bool         // 中断確認が開かれたばかりかどうかのフラグ
 	suspendRequested        bool         // 中断セーブが完了しゲーム終了を要求するフラグ
+	// ヘルプシステム
+	showHelp             bool // ヘルプウィンドウの表示フラグ
+	helpPage             int  // ヘルプで表示中のページ番号
+	helpScroll           int  // ヘルプページのスクロール量（0で先頭）
+	returnToMenuFromHelp bool // ヘルプからメニューに戻るフラグ
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -337,7 +342,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt {
+	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp {
 		// 睡眠状態の場合は自動的にターンを進行させる
 		if g.state.Player.StatusAilments.Sleep > 0 {
 			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
@@ -383,8 +388,8 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// 睡眠状態・メッセージ履歴/メニュー/設定/中断確認の表示中はDキーとF1キーも無効
-	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt {
+	// 睡眠状態・メッセージ履歴/メニュー/設定/中断確認/ヘルプの表示中はDキーとF1キーも無効
+	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt && !g.showHelp {
 		g.processDKeyPress()
 
 		// デバッグ用F1キー処理
@@ -438,6 +443,11 @@ func (g *Game) Update() error {
 	}
 
 	err = g.handleMessageLogInput()
+	if err != nil {
+		return err
+	}
+
+	err = g.handleHelpInput()
 	if err != nil {
 		return err
 	}
@@ -545,6 +555,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw the message log window if the showMessageLog flag is set
 	if g.showMessageLog {
 		g.drawMessageLogWindow(screen)
+	}
+
+	// Draw the help window if the showHelp flag is set
+	if g.showHelp {
+		g.drawHelpWindow(screen)
 	}
 
 	g.UpdateAndDrawMiniMap(screen)

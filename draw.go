@@ -1221,7 +1221,7 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 
 	// メニューウィンドウのサイズと位置
 	menuWidth := 300
-	menuHeight := 200
+	menuHeight := 280
 	menuX := (screenWidth - menuWidth) / 2
 	menuY := (screenHeight - menuHeight) / 2
 
@@ -1248,25 +1248,26 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 	opts.GeoM.Translate(float64(menuX), float64(menuY))
 	screen.DrawImage(menuWindow, opts)
 
-	// メニュー項目のテキスト
+	// メニュー項目のテキスト（3行目はヘルプのみで全幅を使う）
 	menuItems := [][]string{
 		{"道具", "足元"},
 		{"設定", "中断"},
+		{"ヘルプ"},
 	}
 
 	// テキストの描画位置
-	itemWidth := menuWidth / 2
-	itemHeight := menuHeight / 2
+	itemHeight := menuHeight / len(menuItems)
 
-	for row := 0; row < 2; row++ {
-		for col := 0; col < 2; col++ {
+	for row := range menuItems {
+		itemWidth := menuWidth / len(menuItems[row])
+		for col := range menuItems[row] {
 			// テキストの描画位置を計算
 			textX := menuX + col*itemWidth + itemWidth/2 - 30   // 中央寄せのための調整
 			textY := menuY + row*itemHeight + itemHeight/2 + 10 // 中央寄せのための調整
 
-			// 選択中の項目をハイライト表示
+			// 選択中の項目をハイライト表示（1項目だけの行は列に関係なく選択扱い）
 			textColor := color.White
-			if g.menuSelectedRow == row && g.menuSelectedCol == col {
+			if g.menuSelectedRow == row && (len(menuItems[row]) == 1 || g.menuSelectedCol == col) {
 				// 選択中の項目の背景をハイライト
 				highlightWindow := ebiten.NewImage(itemWidth-10, 40)
 				highlightWindow.Fill(color.NRGBA{100, 100, 200, 100})
@@ -1422,5 +1423,37 @@ func (g *Game) drawMessageLogWindow(screen *ebiten.Image) {
 	}
 	if g.messageLogScroll > 0 {
 		text.Draw(screen, "↓", mplusNormalFont, windowX+windowWidth-25, windowY+60+(len(messages)-1)*lineHeight, color.NRGBA{255, 255, 0, 255})
+	}
+}
+
+// ヘルプウィンドウを描画する
+func (g *Game) drawHelpWindow(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	windowWidth, windowHeight := 540, 420
+	windowX := (screenWidth - windowWidth) / 2
+	windowY := (screenHeight - windowHeight) / 2
+
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 220)
+
+	pages := helpPages()
+	page := pages[g.helpPage]
+
+	// タイトルとページ番号、操作説明
+	title := fmt.Sprintf("%s (%d/%d)", page.Title, g.helpPage+1, len(pages))
+	text.Draw(screen, title, mplusMediumFont, windowX+10, windowY+30, color.White)
+	text.Draw(screen, "←→:ページ  ↑↓:スクロール  X:閉じる", mplusNormalFont, windowX+windowWidth-290, windowY+30, color.NRGBA{200, 200, 200, 255})
+
+	lineHeight := 22
+	lines := helpVisibleLines(page.Lines, g.helpScroll, helpPageSize)
+	for i, line := range lines {
+		text.Draw(screen, line, mplusNormalFont, windowX+20, windowY+60+i*lineHeight, color.White)
+	}
+
+	// スクロールできる方向を示すインジケーター
+	if g.helpScroll > 0 {
+		text.Draw(screen, "↑", mplusNormalFont, windowX+windowWidth-25, windowY+60, color.NRGBA{255, 255, 0, 255})
+	}
+	if g.helpScroll < helpMaxScroll(len(page.Lines), helpPageSize) {
+		text.Draw(screen, "↓", mplusNormalFont, windowX+windowWidth-25, windowY+60+(len(lines)-1)*lineHeight, color.NRGBA{255, 255, 0, 255})
 	}
 }

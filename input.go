@@ -310,8 +310,8 @@ func (g *Game) handleInventoryInput() error {
 			return nil
 		}
 
-		// 何もメニューが開いていない場合はメニューを開く（メッセージ履歴・設定・中断確認の表示中は除く）
-		if !g.showStairsPrompt && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt {
+		// 何もメニューが開いていない場合はメニューを開く（メッセージ履歴・設定・中断確認・ヘルプの表示中は除く）
+		if !g.showStairsPrompt && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp {
 			// 睡眠状態の場合はメニューを開けない
 			if g.state.Player.StatusAilments.Sleep > 0 {
 				return nil
@@ -685,11 +685,12 @@ func (g *Game) handleMenuInput() error {
 		return nil
 	}
 
-	// 矢印キーでメニュー項目を移動
+	// 矢印キーでメニュー項目を移動（3行目はヘルプのみの1項目）
+	const menuRowCount = 3
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
-		g.menuSelectedRow = (g.menuSelectedRow - 1 + 2) % 2
+		g.menuSelectedRow = (g.menuSelectedRow - 1 + menuRowCount) % menuRowCount
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
-		g.menuSelectedRow = (g.menuSelectedRow + 1) % 2
+		g.menuSelectedRow = (g.menuSelectedRow + 1) % menuRowCount
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
 		g.menuSelectedCol = (g.menuSelectedCol - 1 + 2) % 2
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
@@ -753,6 +754,13 @@ func (g *Game) handleMenuInput() error {
 				g.suspendSelectedOption = 0
 				g.suspendPromptJustOpened = true
 			}
+		} else if g.menuSelectedRow == 2 {
+			// ヘルプ（3行目は列に関係なくヘルプを開く）
+			g.showMenu = false
+			g.showHelp = true
+			g.returnToMenuFromHelp = true
+			g.helpPage = 0
+			g.helpScroll = 0
 		}
 	}
 
@@ -884,10 +892,69 @@ func (g *Game) handleMessageLogInput() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyL) &&
 		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
 		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
-		!g.showSettings && !g.showSuspendPrompt &&
+		!g.showSettings && !g.showSuspendPrompt && !g.showHelp &&
 		g.state.Player.StatusAilments.Sleep == 0 {
 		g.showMessageLog = true
 		g.messageLogScroll = 0
+	}
+
+	return nil
+}
+
+// ヘルプウィンドウの入力処理
+func (g *Game) handleHelpInput() error {
+	if g.showHelp {
+		pages := helpPages()
+
+		// ←→でページを切り替え
+		if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+			g.helpPage = (g.helpPage - 1 + len(pages)) % len(pages)
+			g.helpScroll = 0
+		} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+			g.helpPage = (g.helpPage + 1) % len(pages)
+			g.helpScroll = 0
+		}
+
+		// ↑↓でスクロール（押しっぱなしでリピート）
+		if logScrollKeyPressed(ebiten.KeyDown) {
+			if g.helpScroll < helpMaxScroll(len(pages[g.helpPage].Lines), helpPageSize) {
+				g.helpScroll++
+			}
+		} else if logScrollKeyPressed(ebiten.KeyUp) {
+			if g.helpScroll > 0 {
+				g.helpScroll--
+			}
+		}
+
+		// XキーまたはHキーで閉じる（メニューから開いた場合はメニューへ戻る）
+		if inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeyH) {
+			g.showHelp = false
+			g.helpScroll = 0
+			if g.returnToMenuFromHelp {
+				g.showMenu = true
+				g.returnToMenuFromHelp = false
+			}
+		}
+
+		// Cキーで全て閉じる
+		if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+			g.showHelp = false
+			g.showMenu = false
+			g.helpScroll = 0
+			g.returnToMenuFromHelp = false
+		}
+		return nil
+	}
+
+	// 他のウィンドウが開いていない時だけHキーでヘルプを開く
+	if inpututil.IsKeyJustPressed(ebiten.KeyH) &&
+		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
+		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
+		!g.showSettings && !g.showSuspendPrompt && !g.showMessageLog &&
+		g.state.Player.StatusAilments.Sleep == 0 {
+		g.showHelp = true
+		g.helpPage = 0
+		g.helpScroll = 0
 	}
 
 	return nil
