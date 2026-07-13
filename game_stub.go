@@ -16,13 +16,15 @@ type Entity struct {
 }
 
 type StatusAilments struct {
-	Confusion int
-	Sleep     int
-	Blind     int
-	Poison    int
-	Slow      int
-	Paralysis bool
-	Seal      bool
+	Confusion   int
+	Sleep       int
+	Blind       int
+	Poison      int
+	Slow        int
+	Haste       int
+	Paralysis   bool
+	Seal        bool
+	HasteOnWake bool
 }
 
 type Player struct {

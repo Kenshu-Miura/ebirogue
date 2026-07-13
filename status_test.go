@@ -38,4 +38,26 @@ func TestFormatPlayerStatus(t *testing.T) {
 	if got := formatPlayerStatus(status); got != "毒(4) 鈍足(2) 金縛り" {
 		t.Fatalf("formatted status = %q", got)
 	}
+
+	if got := formatPlayerStatus(StatusAilments{Haste: 3}); got != "倍速(3)" {
+		t.Fatalf("haste status = %q, want 倍速(3)", got)
+	}
+}
+
+func TestWakeFromSleep(t *testing.T) {
+	status := StatusAilments{Sleep: 3, HasteOnWake: true}
+	if !wakeFromSleep(&status) {
+		t.Fatal("目覚め時倍速化フラグ付きの睡眠解除は倍速化するはず")
+	}
+	if status.Sleep != 0 || status.Haste != hasteOnWakeTurns || status.HasteOnWake {
+		t.Fatalf("unexpected status after wake: %#v", status)
+	}
+
+	plain := StatusAilments{Sleep: 3}
+	if wakeFromSleep(&plain) {
+		t.Fatal("フラグなしの睡眠解除は倍速化しないはず")
+	}
+	if plain.Sleep != 0 || plain.Haste != 0 {
+		t.Fatalf("unexpected status after wake: %#v", plain)
+	}
 }

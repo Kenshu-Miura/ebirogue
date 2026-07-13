@@ -958,93 +958,104 @@ func (g *Game) changeBlindEnemyDirection(i int) {
 }
 
 func (g *Game) MoveEnemies() {
-	for i, enemy := range g.state.Enemies {
-		// 仮眠状態の敵の起床チェック（隣接時）
-		if enemy.StatusAilments.Sleep == -1 {
-			g.WakeUpSleepingEnemyByProximity(i)
+	for i := range g.state.Enemies {
+		g.actEnemy(i)
+		// 倍速状態の敵はもう一度行動する
+		if g.state.Enemies[i].StatusAilments.Haste > 0 {
+			g.actEnemy(i)
+		}
+	}
+}
+
+// actEnemy はインデックスで指定した敵を1回行動させる
+func (g *Game) actEnemy(i int) {
+	enemy := g.state.Enemies[i]
+
+	// 仮眠状態の敵の起床チェック（隣接時）
+	if enemy.StatusAilments.Sleep == -1 {
+		g.WakeUpSleepingEnemyByProximity(i)
+	}
+
+	// 睡眠状態の敵は移動できない
+	if enemy.StatusAilments.Sleep > 0 || enemy.StatusAilments.Sleep == -1 {
+		return
+	}
+
+	// 金縛り状態の敵は移動も攻撃もできない
+	if enemy.StatusAilments.Paralysis {
+		return
+	}
+
+	// 混乱状態の敵は周囲8マスからランダムに移動
+	if enemy.StatusAilments.Confusion > 0 {
+		g.moveEnemyConfused(i)
+		return
+	}
+
+	// 目潰し状態の敵は直進移動
+	if enemy.StatusAilments.Blind > 0 {
+		g.moveEnemyBlind(i)
+		return
+	}
+
+	// Variables to store the difference in position
+	dx := enemy.X - g.state.Player.X
+	dy := enemy.Y - g.state.Player.Y
+
+	// Calculate Manhattan distance between enemy and player
+	distance := abs(dx) + abs(dy)
+
+	// Check if the enemy and player are in the same room
+	inSameRoom := isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms)
+
+	if distance >= 15 && !inSameRoom {
+		g.state.Enemies[i].PlayerDiscovered = false
+	} else if inSameRoom {
+		g.state.Enemies[i].PlayerDiscovered = true
+	}
+
+	// Check if the enemy is adjacent or diagonally adjacent to the player
+	if abs(dx) <= 1 && abs(dy) <= 1 {
+		g.state.Enemies[i].PlayerDiscovered = true
+		//log.Printf("Enemy position: (%d, %d), Player position: (%d, %d)\n", enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y)
+		// Determine if there are walls that should prevent attacking
+		blockUp := enemy.Y > 0 && g.state.Map[enemy.Y-1][enemy.X].Blocked
+		blockDown := enemy.Y < len(g.state.Map)-1 && g.state.Map[enemy.Y+1][enemy.X].Blocked
+		blockLeft := enemy.X > 0 && g.state.Map[enemy.Y][enemy.X-1].Blocked
+		blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
+
+		// Log the values of blockUp, blockDown, blockLeft, blockRight
+		//log.Printf("blockUp: %v, blockDown: %v, blockLeft: %v, blockRight: %v\n", blockUp, blockDown, blockLeft, blockRight)
+
+		preventAttack := false
+
+		if dx == 1 && dy == 1 { // Player is to the top-left of enemy
+			//log.Printf("the top-left of enemy")
+			preventAttack = blockUp || blockLeft
+		} else if dx == -1 && dy == 1 { // Player is to the top-right of enemy
+			//log.Printf("the top-right of enemy")
+			preventAttack = blockUp || blockRight
+		} else if dx == 1 && dy == -1 { // Player is to the bottom-left of enemy
+			//log.Printf("the bottom-left of enemy")
+			preventAttack = blockDown || blockLeft
+		} else if dx == -1 && dy == -1 { // Player is to the bottom-right of enemy
+			//log.Printf("the bottom-right of enemy")
+			preventAttack = blockDown || blockRight
 		}
 
-		// 睡眠状態の敵は移動できない
-		if enemy.StatusAilments.Sleep > 0 || enemy.StatusAilments.Sleep == -1 {
-			continue
-		}
+		// Log the value of preventAttack
+		//log.Printf("preventAttack: %v\n", preventAttack)
 
-		// 金縛り状態の敵は移動も攻撃もできない
-		if enemy.StatusAilments.Paralysis {
-			continue
-		}
-
-		// 混乱状態の敵は周囲8マスからランダムに移動
-		if enemy.StatusAilments.Confusion > 0 {
-			g.moveEnemyConfused(i)
-			continue
-		}
-
-		// 目潰し状態の敵は直進移動
-		if enemy.StatusAilments.Blind > 0 {
-			g.moveEnemyBlind(i)
-			continue
-		}
-
-		// Variables to store the difference in position
-		dx := enemy.X - g.state.Player.X
-		dy := enemy.Y - g.state.Player.Y
-
-		// Calculate Manhattan distance between enemy and player
-		distance := abs(dx) + abs(dy)
-
-		// Check if the enemy and player are in the same room
-		inSameRoom := isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms)
-
-		if distance >= 15 && !inSameRoom {
-			g.state.Enemies[i].PlayerDiscovered = false
-		} else if inSameRoom {
-			g.state.Enemies[i].PlayerDiscovered = true
-		}
-
-		// Check if the enemy is adjacent or diagonally adjacent to the player
-		if abs(dx) <= 1 && abs(dy) <= 1 {
-			g.state.Enemies[i].PlayerDiscovered = true
-			//log.Printf("Enemy position: (%d, %d), Player position: (%d, %d)\n", enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y)
-			// Determine if there are walls that should prevent attacking
-			blockUp := enemy.Y > 0 && g.state.Map[enemy.Y-1][enemy.X].Blocked
-			blockDown := enemy.Y < len(g.state.Map)-1 && g.state.Map[enemy.Y+1][enemy.X].Blocked
-			blockLeft := enemy.X > 0 && g.state.Map[enemy.Y][enemy.X-1].Blocked
-			blockRight := enemy.X < len(g.state.Map[0])-1 && g.state.Map[enemy.Y][enemy.X+1].Blocked
-
-			// Log the values of blockUp, blockDown, blockLeft, blockRight
-			//log.Printf("blockUp: %v, blockDown: %v, blockLeft: %v, blockRight: %v\n", blockUp, blockDown, blockLeft, blockRight)
-
-			preventAttack := false
-
-			if dx == 1 && dy == 1 { // Player is to the top-left of enemy
-				//log.Printf("the top-left of enemy")
-				preventAttack = blockUp || blockLeft
-			} else if dx == -1 && dy == 1 { // Player is to the top-right of enemy
-				//log.Printf("the top-right of enemy")
-				preventAttack = blockUp || blockRight
-			} else if dx == 1 && dy == -1 { // Player is to the bottom-left of enemy
-				//log.Printf("the bottom-left of enemy")
-				preventAttack = blockDown || blockLeft
-			} else if dx == -1 && dy == -1 { // Player is to the bottom-right of enemy
-				//log.Printf("the bottom-right of enemy")
-				preventAttack = blockDown || blockRight
-			}
-
-			// Log the value of preventAttack
-			//log.Printf("preventAttack: %v\n", preventAttack)
-
-			if preventAttack {
-				g.MoveTowardsPlayer(i) // Call function to move enemy towards player
-			} else {
-				g.AttackFromEnemy(i) // Call function to attack player
-			}
-
-		} else if g.state.Enemies[i].PlayerDiscovered {
+		if preventAttack {
 			g.MoveTowardsPlayer(i) // Call function to move enemy towards player
 		} else {
-			moveRandomly(g, i) // Call function to move enemy randomly
+			g.AttackFromEnemy(i) // Call function to attack player
 		}
+
+	} else if g.state.Enemies[i].PlayerDiscovered {
+		g.MoveTowardsPlayer(i) // Call function to move enemy towards player
+	} else {
+		moveRandomly(g, i) // Call function to move enemy randomly
 	}
 }
 
@@ -1360,8 +1371,19 @@ func (g *Game) decrementStatusAilments() {
 		if g.state.Enemies[i].StatusAilments.Confusion > 0 {
 			g.state.Enemies[i].StatusAilments.Confusion--
 		}
+		if g.state.Enemies[i].StatusAilments.Haste > 0 {
+			g.state.Enemies[i].StatusAilments.Haste--
+		}
 		if g.state.Enemies[i].StatusAilments.Sleep > 0 {
 			g.state.Enemies[i].StatusAilments.Sleep--
+			// 睡眠のカードで眠らされた敵は目覚めた時に倍速化する
+			if g.state.Enemies[i].StatusAilments.Sleep == 0 && wakeFromSleep(&g.state.Enemies[i].StatusAilments) {
+				g.Enqueue(Action{
+					Duration: 0.4,
+					Message:  fmt.Sprintf("%sは目を覚まし、倍速で動き出した", g.state.Enemies[i].Name),
+					Execute:  func(g *Game) {},
+				})
+			}
 		}
 	}
 }

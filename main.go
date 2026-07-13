@@ -44,13 +44,15 @@ type Entity struct {
 
 // 状態異常を管理する構造体
 type StatusAilments struct {
-	Confusion int  // 混乱の残りターン数
-	Sleep     int  // 睡眠の残りターン数
-	Blind     int  // 目潰しの残りターン数
-	Poison    int  // 毒の残りターン数
-	Slow      int  // 鈍足の残りターン数
-	Paralysis bool // かなしばり状態
-	Seal      bool // 封印状態
+	Confusion   int  // 混乱の残りターン数
+	Sleep       int  // 睡眠の残りターン数
+	Blind       int  // 目潰しの残りターン数
+	Poison      int  // 毒の残りターン数
+	Slow        int  // 鈍足の残りターン数
+	Haste       int  // 倍速の残りターン数
+	Paralysis   bool // かなしばり状態
+	Seal        bool // 封印状態
+	HasteOnWake bool // 睡眠から目覚めた時に倍速化するかどうか
 }
 
 type Player struct {

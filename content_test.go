@@ -141,6 +141,79 @@ func TestRevealFloorCard(t *testing.T) {
 	}
 }
 
+func TestSleepCardMarksHasteOnWake(t *testing.T) {
+	card := buildItemFromTemplate(12, 0, 0)
+	g := &Game{
+		state: GameState{
+			Player: Player{Entity: Entity{X: 2, Y: 2}, Inventory: []Item{card}},
+			Enemies: []Enemy{
+				{Entity: Entity{X: 3, Y: 3}, Health: 10},
+				{Entity: Entity{X: 6, Y: 6}, Health: 10},
+			},
+		},
+		rooms: []Room{{ID: 1, X: 0, Y: 0, Width: 5, Height: 5}},
+	}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if got := g.state.Enemies[0].StatusAilments; got.Sleep != 10 || !got.HasteOnWake {
+		t.Fatalf("same-room enemy status = %#v, want Sleep 10 with HasteOnWake", got)
+	}
+	if got := g.state.Enemies[1].StatusAilments; got.Sleep != 0 || got.HasteOnWake {
+		t.Fatalf("outside enemy status = %#v, want unaffected", got)
+	}
+}
+
+func TestEnemyWakesUpHasted(t *testing.T) {
+	g := &Game{
+		state: GameState{
+			Enemies: []Enemy{{Name: "マムル", StatusAilments: StatusAilments{Sleep: 1, HasteOnWake: true}}},
+		},
+	}
+
+	g.decrementStatusAilments()
+
+	if got := g.state.Enemies[0].StatusAilments; got.Sleep != 0 || got.HasteOnWake || got.Haste != hasteOnWakeTurns {
+		t.Fatalf("enemy status after waking = %#v, want Haste %d", got, hasteOnWakeTurns)
+	}
+	if len(g.ActionQueue.Queue) == 0 {
+		t.Fatal("waking up hasted should enqueue a message")
+	}
+
+	g.decrementStatusAilments()
+	if got := g.state.Enemies[0].StatusAilments.Haste; got != hasteOnWakeTurns-1 {
+		t.Fatalf("haste turns = %d, want %d", got, hasteOnWakeTurns-1)
+	}
+}
+
+func TestRollIdentifyAll(t *testing.T) {
+	if !rollIdentifyAll(func(int) int { return 0 }) {
+		t.Fatal("最小値では全識別が発動するはず")
+	}
+	if rollIdentifyAll(func(n int) int { return n - 1 }) {
+		t.Fatal("最大値では全識別は発動しないはず")
+	}
+}
+
+func TestIdentifyAllInventory(t *testing.T) {
+	weapon := buildItemFromTemplate(20, 0, 0)
+	cane := buildItemFromTemplate(9, 0, 0)
+	food := buildItemFromTemplate(1, 0, 0)
+	g := &Game{
+		state: GameState{
+			Player: Player{Inventory: []Item{weapon, cane, food}},
+		},
+	}
+
+	if got := identifyAllInventory(g); got != 2 {
+		t.Fatalf("identified %d items, want 2", got)
+	}
+	if !weapon.(Identifiable).GetIdentified() || !cane.(Identifiable).GetIdentified() {
+		t.Fatal("識別可能なアイテムはすべて識別されるはず")
+	}
+}
+
 func TestVacuumSlashCardDamagesOnlyEffectArea(t *testing.T) {
 	card := buildItemFromTemplate(31, 0, 0)
 	g := &Game{

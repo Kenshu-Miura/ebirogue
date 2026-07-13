@@ -16,6 +16,21 @@ func shouldTakeExtraEnemyTurn(slowTurns, moveCount int) bool {
 	return slowTurns > 0 && moveCount%2 == 0
 }
 
+// 睡眠のカードで眠らされた敵が目覚めた時に倍速化するターン数
+const hasteOnWakeTurns = 5
+
+// wakeFromSleep は睡眠状態を解除し、目覚め時倍速化フラグが立っていれば倍速状態にする。
+// 倍速化した場合は true を返す。
+func wakeFromSleep(status *StatusAilments) bool {
+	status.Sleep = 0
+	if !status.HasteOnWake {
+		return false
+	}
+	status.HasteOnWake = false
+	status.Haste = hasteOnWakeTurns
+	return true
+}
+
 func formatPlayerStatus(status StatusAilments) string {
 	statuses := make([]string, 0, 7)
 	if status.Poison > 0 {
@@ -23,6 +38,9 @@ func formatPlayerStatus(status StatusAilments) string {
 	}
 	if status.Slow > 0 {
 		statuses = append(statuses, fmt.Sprintf("鈍足(%d)", status.Slow))
+	}
+	if status.Haste > 0 {
+		statuses = append(statuses, fmt.Sprintf("倍速(%d)", status.Haste))
 	}
 	if status.Sleep > 0 {
 		statuses = append(statuses, fmt.Sprintf("睡眠(%d)", status.Sleep))

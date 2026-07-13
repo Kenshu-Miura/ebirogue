@@ -25,9 +25,6 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 
 ### Priority A: cards based on scrolls
 
-- 実装済みカードの効果を拡張する。
-  - 睡眠のカードで眠りから覚めた敵が一時的に倍速になるようにする（バクスイの巻物相当）。
-  - 真実の眼のカードに、低確率で所持品をすべて識別する効果を追加する（識別の巻物相当）。
 - フロアや部屋へ作用するカードを追加する。
   - モンスターハウス生成、敵倍速、地図忘却、拾得禁止、大部屋化、罠増加
 - プレイヤー自身へ作用するカードを追加する。

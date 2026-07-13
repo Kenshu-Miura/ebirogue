@@ -244,8 +244,38 @@ var sealEnemy = func(g *Game) {
 
 }
 
+// rollIdentifyAll は真実の眼のカードが持ち物すべてを識別するかどうかを判定する。
+func rollIdentifyAll(intn func(int) int) bool {
+	return intn(5) == 0
+}
+
+// identifyAllInventory は所持アイテムのうち識別可能なものをすべて識別し、識別した数を返す。
+func identifyAllInventory(g *Game) int {
+	identified := 0
+	for _, item := range g.state.Player.Inventory {
+		if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.GetIdentified() {
+			identifiableItem.SetIdentified(true)
+			identified++
+		}
+	}
+	return identified
+}
+
 var identifyItem = func(g *Game) {
-	_, isInventoryItem := determineItemSource(g)
+	item, isInventoryItem := determineItemSource(g)
+
+	// 低確率で持ち物すべてを識別する（識別の巻物相当）
+	if rollIdentifyAll(rand.Intn) {
+		g.Enqueue(Action{
+			Duration: 0.5,
+			Message:  fmt.Sprintf("%sが強く輝いた。持ち物すべての正体が明らかになった", item.GetName()),
+			Execute: func(g *Game) {
+				identifyAllInventory(g)
+			},
+		})
+		removeUsedItem(g, isInventoryItem)
+		return
+	}
 
 	if isInventoryItem {
 		g.tmpSelectedItemIndex = g.selectedItemIndex
@@ -314,7 +344,7 @@ var vacuumSlash = func(g *Game) {
 				}
 
 				enemy.Health -= damage
-				enemy.StatusAilments.Sleep = 0
+				wakeFromSleep(&enemy.StatusAilments)
 				enemy.StatusAilments.Paralysis = false
 				if enemy.Health <= 0 {
 					defeatedExperience += enemy.ExperiencePoints
@@ -397,7 +427,8 @@ var sleepAllEnemiesInRoom = func(g *Game) {
 				for i := range g.state.Enemies {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
-						g.state.Enemies[i].StatusAilments.Sleep = 10 // 10ターン睡眠
+						g.state.Enemies[i].StatusAilments.Sleep = 10         // 10ターン睡眠
+						g.state.Enemies[i].StatusAilments.HasteOnWake = true // 目覚めた時に倍速化する
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
@@ -414,7 +445,8 @@ var sleepAllEnemiesInRoom = func(g *Game) {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					// 周囲1マス以内の判定
 					if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 {
-						g.state.Enemies[i].StatusAilments.Sleep = 10 // 10ターン睡眠
+						g.state.Enemies[i].StatusAilments.Sleep = 10         // 10ターン睡眠
+						g.state.Enemies[i].StatusAilments.HasteOnWake = true // 目覚めた時に倍速化する
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
