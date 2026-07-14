@@ -421,6 +421,48 @@ func (g *Game) CheatHandleInput() (int, int) {
 	return dx, dy
 }
 
+// enemyThreatens は敵が接近している（同じ部屋にいる、または2マス以内にいる）かを判定する
+func (g *Game) enemyThreatens() bool {
+	px, py := g.state.Player.X, g.state.Player.Y
+	if enemyWithinDistance(px, py, 2, g.state.Enemies) {
+		return true
+	}
+	for i := range g.state.Enemies {
+		enemy := &g.state.Enemies[i]
+		if isSameRoom(px, py, enemy.X, enemy.Y, g.rooms) {
+			return true
+		}
+	}
+	return false
+}
+
+// dashDangerReason はダッシュで (dx, dy) へ進む際の危険条件を返す。危険がなければ空文字を返す。
+func (g *Game) dashDangerReason(dx, dy int) string {
+	// 敵の接近
+	if g.enemyThreatens() {
+		return "enemy"
+	}
+
+	nextX, nextY := g.state.Player.X+dx, g.state.Player.Y+dy
+
+	// 進行方向のアイテム
+	for _, item := range g.state.Items {
+		itemX, itemY := item.GetPosition()
+		if itemX == nextX && itemY == nextY {
+			return "item"
+		}
+	}
+
+	// 進行方向の発見済みの罠
+	for _, trap := range g.state.MapTraps {
+		if trap.Discovered && trap.X == nextX && trap.Y == nextY {
+			return "trap"
+		}
+	}
+
+	return ""
+}
+
 func (g *Game) HandleInput() (int, int) {
 	var dx, dy = 0, 0
 
@@ -510,8 +552,11 @@ func (g *Game) HandleInput() (int, int) {
 		// 足踏みロジック
 		if ebiten.IsKeyPressed(ebiten.KeyZ) && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
 			!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
-			g.isActioned = true
-			g.lastIncrement = time.Now() // lastIncrementの更新
+			// 敵接近時は押しっぱなしでの連続足踏みを自動停止する（Zの押し直しで1回ずつは可能）
+			if !g.enemyThreatens() || inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+				g.isActioned = true
+				g.lastIncrement = time.Now() // lastIncrementの更新
+			}
 		}
 	}
 
@@ -560,6 +605,16 @@ func (g *Game) HandleInput() (int, int) {
 				}
 			}
 
+			// 敵の接近・アイテム・発見済みの罠などの危険条件で自動停止する
+			if dx != 0 || dy != 0 {
+				if reason := g.dashDangerReason(dx, dy); reason != "" {
+					log.Printf("Dash stopped (%s): (%d,%d)", reason, g.state.Player.X+dx, g.state.Player.Y+dy)
+					g.dashStopped = true
+					g.lastDashStop = time.Now()
+					return 0, 0
+				}
+			}
+
 			for _, room := range g.rooms {
 				if isOnBoundary(g.state.Player.X+dx, g.state.Player.Y+dy, room) {
 					log.Printf("Dash stopped at entrance: (%d,%d)", g.state.Player.X+dx, g.state.Player.Y+dy)
@@ -569,9 +624,9 @@ func (g *Game) HandleInput() (int, int) {
 				}
 			}
 
+			// 通路の分岐・曲がり角で自動停止する
 			nowX, nowY := g.state.Player.X, g.state.Player.Y
-			if (g.state.Player.Direction == Up || g.state.Player.Direction == Down) && (g.state.Map[nowY][nowX+1].Type == "corridor" || g.state.Map[nowY][nowX-1].Type == "corridor") ||
-				((g.state.Player.Direction == Left || g.state.Player.Direction == Right) && (g.state.Map[nowY+1][nowX].Type == "corridor" || g.state.Map[nowY-1][nowX].Type == "corridor")) {
+			if corridorBranch(g.state.Map, nowX, nowY, dx, dy) {
 				log.Printf("Dash stopped at corner: (%d,%d)", nowX, nowY)
 				g.dashStopped = true
 				g.lastDashStop = time.Now()
