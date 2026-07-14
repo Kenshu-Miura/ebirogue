@@ -15,6 +15,10 @@ type Entity struct {
 	Char rune
 }
 
+type Coordinate struct {
+	X, Y int
+}
+
 type StatusAilments struct {
 	Confusion   int
 	Sleep       int

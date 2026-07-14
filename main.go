@@ -501,6 +501,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawMapTraps(screen, offsetX, offsetY)
 	g.DrawThrownItem(screen, offsetX, offsetY)
 	g.DrawEnemies(screen, offsetX, offsetY)
+	g.DrawTrajectoryPreview(screen, offsetX, offsetY)
 	g.DrawHUD(screen)
 	g.DrawPlayer(screen, centerX, centerY)
 

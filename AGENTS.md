@@ -98,7 +98,6 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
   - BGM・効果音の音量設定（音声システム自体が未実装のため、その導入後に追加する）
   - キー設定（キーの割り当て変更）
 - WASMビルド向けの中断セーブ保存先（ローカルストレージ等）を用意する。現在はOSのファイルシステムに保存するため、WASMでは中断セーブが失敗しメッセージを表示する。
-- 矢・杖・投擲アイテムの射線と到達地点を使用前に表示する。
 
 ### Priority B: dungeon systems
 

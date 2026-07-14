@@ -860,6 +860,125 @@ func (g *Game) DrawThrownItem(screen *ebiten.Image, offsetX, offsetY int) {
 	}
 }
 
+// 射線プレビュー用のマーカー画像（初回描画時に生成してキャッシュする）
+var trajectoryDotImg, trajectoryLandingImg *ebiten.Image
+
+// directionToDelta は向きから1マス分の移動量 (dx, dy) を返す
+func directionToDelta(direction Direction) (int, int) {
+	switch direction {
+	case Up:
+		return 0, -1
+	case Down:
+		return 0, 1
+	case Left:
+		return -1, 0
+	case Right:
+		return 1, 0
+	case UpRight:
+		return 1, -1
+	case DownRight:
+		return 1, 1
+	case UpLeft:
+		return -1, -1
+	case DownLeft:
+		return -1, 1
+	}
+	return 0, 0
+}
+
+// trajectoryPreviewSpec は射線プレビューを表示すべきかどうかと、
+// その射程・壁のマス自体に到達するか（杖の魔法弾）を返す
+func (g *Game) trajectoryPreviewSpec() (throwRange int, stopOnWallTile bool, active bool) {
+	// インベントリのアクションメニューで「撃つ」「投げる」「使う（杖）」を選択中
+	if g.showItemActions && g.selectedItemIndex >= 0 && g.selectedItemIndex < len(g.state.Player.Inventory) {
+		item := g.state.Player.Inventory[g.selectedItemIndex]
+		if _, isArrow := item.(*Arrow); isArrow {
+			// 矢のメニューは「装備/はずす」「撃つ」「投げる」の並び
+			if g.selectedActionIndex == 1 || g.selectedActionIndex == 2 {
+				return 10, false, true
+			}
+			return 0, false, false
+		}
+		if _, isCane := item.(*Cane); isCane && g.selectedActionIndex == 0 { // 使う（魔法弾）
+			return 30, true, true
+		}
+		if g.selectedActionIndex == 1 { // 投げる
+			return 10, false, true
+		}
+		return 0, false, false
+	}
+
+	// 足元メニューで「投げる」「使う（杖）」を選択中
+	if g.ShowGroundItem && g.currentGroundItem != nil && !g.showGroundItemDescription {
+		if g.selectedGroundActionIndex == 3 { // 投げる
+			return 10, false, true
+		}
+		if _, isCane := g.currentGroundItem.(*Cane); isCane && g.selectedGroundActionIndex == 2 { // 使う（魔法弾）
+			return 30, true, true
+		}
+		return 0, false, false
+	}
+
+	// Aキーで向きを変えている間、装備中の矢の射線を表示する
+	if ebiten.IsKeyPressed(ebiten.KeyA) && g.state.Player.EquippedArrow != nil &&
+		!g.showInventory && !g.showMenu && !g.showSettings && !g.showSuspendPrompt &&
+		!g.showMessageLog && !g.showHelp && !g.showStairsPrompt &&
+		!g.isCombatActive && g.ThrownItem.Image == nil &&
+		g.state.Player.StatusAilments.Sleep == 0 {
+		return 10, false, true
+	}
+
+	return 0, false, false
+}
+
+// DrawTrajectoryPreview は矢・杖・投擲アイテムの射線と到達地点を使用前に表示する
+func (g *Game) DrawTrajectoryPreview(screen *ebiten.Image, offsetX, offsetY int) {
+	throwRange, stopOnWallTile, active := g.trajectoryPreviewSpec()
+	if !active {
+		return
+	}
+	dx, dy := directionToDelta(g.state.Player.Direction)
+	if dx == 0 && dy == 0 {
+		return
+	}
+
+	// 見えている（明るいマスにいる）敵だけを対象にして、未発見の敵の位置が漏れないようにする
+	visibleEnemies := make([]Enemy, 0, len(g.state.Enemies))
+	for _, enemy := range g.state.Enemies {
+		if enemy.Y >= 0 && enemy.Y < len(g.state.Map) && enemy.X >= 0 && enemy.X < len(g.state.Map[0]) &&
+			g.state.Map[enemy.Y][enemy.X].Brightness == 1.0 {
+			visibleEnemies = append(visibleEnemies, enemy)
+		}
+	}
+
+	path, landing, _ := computeTrajectory(g.state.Player.X, g.state.Player.Y, dx, dy, throwRange, g.state.Map, visibleEnemies, stopOnWallTile)
+
+	if trajectoryDotImg == nil {
+		trajectoryDotImg = ebiten.NewImage(8, 8)
+		trajectoryDotImg.Fill(color.RGBA{255, 255, 100, 200})
+		trajectoryLandingImg = ebiten.NewImage(22, 22)
+		trajectoryLandingImg.Fill(color.RGBA{255, 120, 40, 160})
+	}
+
+	// 射線（到達地点の手前まで）を描画。暗いマスには表示しない
+	for _, p := range path {
+		if p == landing || g.state.Map[p.Y][p.X].Brightness != 1.0 {
+			continue
+		}
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(p.X*tileSize+offsetX+(tileSize-8)/2), float64(p.Y*tileSize+offsetY+(tileSize-8)/2))
+		screen.DrawImage(trajectoryDotImg, opts)
+	}
+
+	// 到達地点を描画
+	if landing.Y >= 0 && landing.Y < len(g.state.Map) && landing.X >= 0 && landing.X < len(g.state.Map[0]) &&
+		g.state.Map[landing.Y][landing.X].Brightness == 1.0 {
+		opts := &ebiten.DrawImageOptions{}
+		opts.GeoM.Translate(float64(landing.X*tileSize+offsetX+(tileSize-22)/2), float64(landing.Y*tileSize+offsetY+(tileSize-22)/2))
+		screen.DrawImage(trajectoryLandingImg, opts)
+	}
+}
+
 func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, item := range g.state.Items {
 		itemX, itemY := item.GetPosition()
