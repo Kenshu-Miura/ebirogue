@@ -47,10 +47,10 @@ func itemToSaved(item Item) SavedItem {
 	switch v := item.(type) {
 	case *Weapon:
 		return SavedItem{Kind: "Weapon", ID: v.ID, X: v.X, Y: v.Y,
-			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified}
+			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
 	case *Armor:
 		return SavedItem{Kind: "Armor", ID: v.ID, X: v.X, Y: v.Y,
-			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified}
+			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
 	case *Arrow:
 		return SavedItem{Kind: "Arrow", ID: v.ID, X: v.X, Y: v.Y,
 			ShotCount: v.ShotCount, Cursed: v.Cursed, Identified: v.Identified}
@@ -89,6 +89,7 @@ func savedToItem(s SavedItem) (Item, error) {
 		v.Sharpness = s.Sharpness
 		v.Cursed = s.Cursed
 		v.Identified = s.Identified
+		v.RustProof = s.RustProof
 	case "Armor":
 		v, ok := item.(*Armor)
 		if !ok {
@@ -97,6 +98,7 @@ func savedToItem(s SavedItem) (Item, error) {
 		v.Sharpness = s.Sharpness
 		v.Cursed = s.Cursed
 		v.Identified = s.Identified
+		v.RustProof = s.RustProof
 	case "Arrow":
 		v, ok := item.(*Arrow)
 		if !ok {

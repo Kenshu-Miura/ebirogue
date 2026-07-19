@@ -374,6 +374,40 @@ var reinforceArmor = func(g *Game) {
 	removeUsedItem(g, isInventoryItem)
 }
 
+// rustProofPlayerEquipment は装備中の武器・盾を錆びない状態にし、対象の名前を返す
+func rustProofPlayerEquipment(player *Player) []string {
+	var protected []string
+	if weapon := player.EquippedWeapon; weapon != nil && !weapon.RustProof {
+		weapon.RustProof = true
+		protected = append(protected, weapon.GetName())
+	}
+	if armor := player.EquippedArmor; armor != nil && !armor.RustProof {
+		armor.RustProof = true
+		protected = append(protected, armor.GetName())
+	}
+	return protected
+}
+
+// さび止めのカードは装備中の武器と盾を錆びない状態にする。
+var rustProofCard = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
+		Execute: func(g *Game) {
+			protected := rustProofPlayerEquipment(&g.state.Player)
+			if len(protected) == 0 {
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
+				return
+			}
+			for _, name := range protected {
+				g.EnqueueMessage(fmt.Sprintf("%sは錆びなくなった", name), 0.4)
+			}
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
 // あかりのカードはフロアの地形と敵、アイテムをミニマップへ表示する。
 var revealFloor = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)

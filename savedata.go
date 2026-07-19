@@ -32,6 +32,7 @@ type SavedItem struct {
 	Sharpness  int
 	Cursed     bool
 	Identified bool
+	RustProof  bool
 	ShotCount  int
 	Uses       int
 	Amount     int

@@ -30,7 +30,7 @@ func TestAddedContentDefinitions(t *testing.T) {
 		t.Fatal("added monster definitions are missing")
 	}
 
-	wantTraps := []string{"睡眠ガスの罠", "毒矢の罠", "鈍足の罠", "地雷"}
+	wantTraps := []string{"睡眠ガスの罠", "毒矢の罠", "鈍足の罠", "地雷", "サビの罠"}
 	for id, wantName := range wantTraps {
 		if got := createMapTrapByID(id, 1, 2); got.Name != wantName {
 			t.Fatalf("trap %d = %q, want %q", id, got.Name, wantName)
@@ -793,6 +793,137 @@ func TestFullHealCardCuresPoison(t *testing.T) {
 	}
 	if g.state.Player.StatusAilments.Poison != 0 {
 		t.Fatal("毒も治るはず")
+	}
+}
+
+func TestRustProofCardTemplate(t *testing.T) {
+	card, ok := buildItemFromTemplate(45, 0, 0).(*Card)
+	if !ok || card.Name != "さび止めのカード" {
+		t.Fatalf("card 45 = %#v, want さび止めのカード", card)
+	}
+}
+
+func TestRollRustTarget(t *testing.T) {
+	intnZero := func(int) int { return 0 }
+	intnOne := func(int) int { return 1 }
+	if got := rollRustTarget(true, true, intnZero); got != rustWeapon {
+		t.Fatalf("both equipped with roll 0 = %d, want rustWeapon", got)
+	}
+	if got := rollRustTarget(true, true, intnOne); got != rustArmor {
+		t.Fatalf("both equipped with roll 1 = %d, want rustArmor", got)
+	}
+	if got := rollRustTarget(true, false, intnZero); got != rustWeapon {
+		t.Fatalf("weapon only = %d, want rustWeapon", got)
+	}
+	if got := rollRustTarget(false, true, intnZero); got != rustArmor {
+		t.Fatalf("armor only = %d, want rustArmor", got)
+	}
+	if got := rollRustTarget(false, false, intnZero); got != rustNone {
+		t.Fatalf("nothing equipped = %d, want rustNone", got)
+	}
+}
+
+func TestRustTrapRustsWeapon(t *testing.T) {
+	weapon := &Weapon{BaseItem: BaseItem{Name: "こん棒", Type: "Weapon"}, AttackPower: 2, Sharpness: 1}
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{weapon}}}}
+	g.state.Player.EquipItem(weapon)
+	attackAfterEquip := g.state.Player.AttackPower
+
+	rustTrapEffect(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if weapon.Sharpness != 0 {
+		t.Fatalf("weapon sharpness = %d, want 0", weapon.Sharpness)
+	}
+	if g.state.Player.AttackPower != attackAfterEquip-1 {
+		t.Fatalf("attack power = %d, want %d", g.state.Player.AttackPower, attackAfterEquip-1)
+	}
+}
+
+func TestRustTrapRespectsRustProof(t *testing.T) {
+	armor := &Armor{BaseItem: BaseItem{Name: "木甲の盾", Type: "Armor"}, DefensePower: 2, Sharpness: 1, RustProof: true}
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{armor}}}}
+	g.state.Player.EquipItem(armor)
+	defenseAfterEquip := g.state.Player.DefensePower
+
+	rustTrapEffect(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if armor.Sharpness != 1 || g.state.Player.DefensePower != defenseAfterEquip {
+		t.Fatalf("rust-proof armor changed: sharpness %d, defense %d", armor.Sharpness, g.state.Player.DefensePower)
+	}
+	if len(g.ActionQueue.Queue) < 2 || g.ActionQueue.Queue[1].Message != "しかし木甲の盾は錆びなかった" {
+		t.Fatal("さび止め済みの装備は錆びないメッセージを表示するはず")
+	}
+}
+
+func TestRustTrapWithoutEquipment(t *testing.T) {
+	g := &Game{state: GameState{Player: Player{}}}
+
+	rustTrapEffect(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.ActionQueue.Queue) < 2 || g.ActionQueue.Queue[1].Message != "しかし何も起こらなかった" {
+		t.Fatal("装備なしでは不発メッセージを表示するはず")
+	}
+}
+
+func TestRustProofCard(t *testing.T) {
+	card := buildItemFromTemplate(45, 0, 0)
+	weapon := &Weapon{BaseItem: BaseItem{Name: "こん棒", Type: "Weapon"}, AttackPower: 2}
+	armor := &Armor{BaseItem: BaseItem{Name: "木甲の盾", Type: "Armor"}, DefensePower: 2}
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card, weapon, armor}}}}
+	g.state.Player.EquipItem(weapon)
+	g.state.Player.EquipItem(armor)
+
+	card.Use(g)
+	if len(g.state.Player.Inventory) != 2 {
+		t.Fatal("used card should be removed from inventory")
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if !weapon.RustProof || !armor.RustProof {
+		t.Fatal("装備中の武器と盾が錆びなくなるはず")
+	}
+}
+
+func TestRustProofCardWithoutEquipment(t *testing.T) {
+	card := buildItemFromTemplate(45, 0, 0)
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card}}}}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.ActionQueue.Queue) < 2 || g.ActionQueue.Queue[1].Message != "しかし何も起こらなかった" {
+		t.Fatal("装備なしで使用した場合は不発メッセージを表示するはず")
+	}
+}
+
+func TestRustProofSurvivesSaveRoundTrip(t *testing.T) {
+	weapon, ok := buildItemFromTemplate(20, 0, 0).(*Weapon)
+	if !ok {
+		t.Fatal("template 20 should be a weapon")
+	}
+	weapon.RustProof = true
+	restored, err := savedToItem(itemToSaved(weapon))
+	if err != nil {
+		t.Fatalf("savedToItem error: %v", err)
+	}
+	if restoredWeapon, ok := restored.(*Weapon); !ok || !restoredWeapon.RustProof {
+		t.Fatal("RustProof should survive a save round trip")
+	}
+
+	armor, ok := buildItemFromTemplate(23, 0, 0).(*Armor)
+	if !ok {
+		t.Fatal("template 23 should be an armor")
+	}
+	armor.RustProof = true
+	restored, err = savedToItem(itemToSaved(armor))
+	if err != nil {
+		t.Fatalf("savedToItem error: %v", err)
+	}
+	if restoredArmor, ok := restored.(*Armor); !ok || !restoredArmor.RustProof {
+		t.Fatal("RustProof should survive a save round trip")
 	}
 }
 

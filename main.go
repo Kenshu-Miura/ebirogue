@@ -147,6 +147,7 @@ type Game struct {
 	poisonArrowTrapImg        *ebiten.Image
 	slowTrapImg               *ebiten.Image
 	mineTrapImg               *ebiten.Image
+	rustTrapImg               *ebiten.Image
 	offsetX                   int
 	offsetY                   int
 	moveCount                 int
@@ -648,6 +649,7 @@ func NewGame() *Game {
 	poisonArrowTrapImg := loadImage("img/poison_arrow_trap.png")
 	slowTrapImg := loadImage("img/slow_trap.png")
 	mineTrapImg := loadImage("img/mine_trap.png")
+	rustTrapImg := loadImage("img/rust_trap.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -702,6 +704,7 @@ func NewGame() *Game {
 		poisonArrowTrapImg: poisonArrowTrapImg,
 		slowTrapImg:        slowTrapImg,
 		mineTrapImg:        mineTrapImg,
+		rustTrapImg:        rustTrapImg,
 		offsetX:            0,
 		offsetY:            0,
 		Floor:              newFloor,

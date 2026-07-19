@@ -22,6 +22,7 @@ type Weapon struct {
 	Element     string               // 例: "Fire", "Ice", "Electric", etc.
 	Cursed      bool                 // 武器が呪われているかどうか
 	Identified  bool                 // 武器が識別されているかどうか
+	RustProof   bool                 // さび止め済みで強化値が下がらないかどうか
 	Abilities   []EquipmentAbilityID // 装備名に依存しない能力ID
 }
 
@@ -32,6 +33,7 @@ type Armor struct {
 	Element      string
 	Cursed       bool
 	Identified   bool                 // 鎧が識別されているかどうか
+	RustProof    bool                 // さび止め済みで強化値が下がらないかどうか
 	Abilities    []EquipmentAbilityID // 装備名に依存しない能力ID
 }
 
@@ -530,6 +532,15 @@ var itemTemplates = map[int]ItemTemplate{
 		Description: "HPが完全に回復し、毒も治る。HPが満タンのときは最大HPが5上昇する。",
 		Char:        'C',
 		UseActions:  map[string]UseAction{"UseCard": fullHealCard},
+	},
+	45: {
+		ID:          45,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "さび止めのカード",
+		Description: "装備中の武器と盾がサビの罠などで錆びなくなり、強化値が下がらなくなる。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": rustProofCard},
 	},
 }
 

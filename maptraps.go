@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 )
@@ -60,6 +61,66 @@ var mineTrapEffect = func(g *Game) {
 	})
 }
 
+// サビの罠が武器と盾のどちらを錆びさせるかを表す
+type rustTarget int
+
+const (
+	rustNone rustTarget = iota
+	rustWeapon
+	rustArmor
+)
+
+// rollRustTarget は装備状況からサビの罠の対象を決める純粋関数
+func rollRustTarget(hasWeapon, hasArmor bool, intn func(int) int) rustTarget {
+	switch {
+	case hasWeapon && hasArmor:
+		if intn(2) == 0 {
+			return rustWeapon
+		}
+		return rustArmor
+	case hasWeapon:
+		return rustWeapon
+	case hasArmor:
+		return rustArmor
+	default:
+		return rustNone
+	}
+}
+
+var rustTrapEffect = func(g *Game) {
+	g.Enqueue(Action{
+		Duration: 0.5,
+		Message:  "赤茶けた液体が噴き出した",
+		Execute: func(g *Game) {
+			player := &g.state.Player
+			switch rollRustTarget(player.EquippedWeapon != nil, player.EquippedArmor != nil, rand.Intn) {
+			case rustWeapon:
+				weapon := player.EquippedWeapon
+				if weapon.RustProof {
+					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", weapon.GetName()), 0.4)
+					return
+				}
+				weapon.Sharpness--
+				// 装備中の武器の強化値低下を攻撃力へ即時反映する
+				player.AttackPower--
+				g.EnqueueMessage(fmt.Sprintf("%sが錆びてしまった", weapon.GetName()), 0.4)
+			case rustArmor:
+				armor := player.EquippedArmor
+				if armor.RustProof {
+					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", armor.GetName()), 0.4)
+					return
+				}
+				armor.Sharpness--
+				// 装備中の盾の強化値低下を防御力へ即時反映する
+				player.DefensePower--
+				g.EnqueueMessage(fmt.Sprintf("%sが錆びてしまった", armor.GetName()), 0.4)
+			default:
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
+			}
+		},
+	})
+}
+
 type mapTrapTemplate struct {
 	Name     string
 	Effect   func(g *Game)
@@ -71,6 +132,7 @@ var mapTrapTemplates = []mapTrapTemplate{
 	{Name: "毒矢の罠", Effect: poisonArrowTrapEffect, FailRate: 20},
 	{Name: "鈍足の罠", Effect: slowTrapEffect, FailRate: 20},
 	{Name: "地雷", Effect: mineTrapEffect, FailRate: 10},
+	{Name: "サビの罠", Effect: rustTrapEffect, FailRate: 20},
 }
 
 func createMapTrapByID(id, x, y int) MapTrap {
@@ -177,7 +239,7 @@ func generateMapTraps(rooms []Room) []MapTrap {
 
 		// 睡眠ガスを多めにしつつ、ほかの罠も混ぜる
 		if !duplicate {
-			trapIDs := []int{0, 0, 1, 2, 3}
+			trapIDs := []int{0, 0, 1, 2, 3, 4}
 			trap := createMapTrapByID(trapIDs[rand.Intn(len(trapIDs))], x, y)
 			traps = append(traps, trap)
 			log.Printf("罠を生成しました: %s 座標(%d, %d)", trap.Name, x, y)

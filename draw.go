@@ -419,6 +419,8 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 					img = g.slowTrapImg
 				case "地雷":
 					img = g.mineTrapImg
+				case "サビの罠":
+					img = g.rustTrapImg
 				default:
 					img = g.sleepTrapImg // デフォルトで睡眠ガスの罠の画像を使用
 				}
