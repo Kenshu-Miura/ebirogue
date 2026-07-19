@@ -148,6 +148,7 @@ type Game struct {
 	slowTrapImg               *ebiten.Image
 	mineTrapImg               *ebiten.Image
 	rustTrapImg               *ebiten.Image
+	potImg                    *ebiten.Image
 	offsetX                   int
 	offsetY                   int
 	moveCount                 int
@@ -211,6 +212,8 @@ type Game struct {
 	enemyYOffsetTimer         int
 	useIdentifyItem           bool
 	tmpSelectedItemIndex      int
+	usePotInsert              bool // 壺へ入れるアイテムを選択中かどうか
+	potInsertIndex            int  // 入れる対象の壺のインベントリ位置
 	// モンスター湧きシステム
 	turnCount     int // プレイヤーのターン数
 	lastSpawnTurn int // 最後にモンスターが湧いたターン
@@ -541,7 +544,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.drawSuspendPrompt(screen)
 	}
 
-	if g.useIdentifyItem {
+	if g.useIdentifyItem || g.usePotInsert {
 		g.drawUseIdentifyItemWindow(screen)
 	}
 
@@ -650,6 +653,7 @@ func NewGame() *Game {
 	slowTrapImg := loadImage("img/slow_trap.png")
 	mineTrapImg := loadImage("img/mine_trap.png")
 	rustTrapImg := loadImage("img/rust_trap.png")
+	potImg := loadImage("img/pot.png")
 
 	// プレイヤーの初期化
 	player := Player{
@@ -705,6 +709,7 @@ func NewGame() *Game {
 		slowTrapImg:        slowTrapImg,
 		mineTrapImg:        mineTrapImg,
 		rustTrapImg:        rustTrapImg,
+		potImg:             potImg,
 		offsetX:            0,
 		offsetY:            0,
 		Floor:              newFloor,

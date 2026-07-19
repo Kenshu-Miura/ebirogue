@@ -228,28 +228,8 @@ func (g *Game) drawActionMenu(screen *ebiten.Image) {
 
 		drawWindowWithBorder(screen, menuX, menuY, menuWidth, menuHeight, 255)
 
-		// Draw menu actions
-		var actions []string
-		item := g.state.Player.Inventory[g.selectedItemIndex]
-
-		if equipableItem, isEquipable := item.(Equipable); isEquipable {
-			// Assume function isEquipped returns true if the item is equipped, false otherwise
-			if g.state.Player.IsEquipped(equipableItem) {
-				if _, isArrow := equipableItem.(*Arrow); isArrow {
-					actions = []string{"はずす", "撃つ", "投げる", "置く", "説明"}
-				} else {
-					actions = []string{"はずす", "投げる", "置く", "説明"}
-				}
-			} else {
-				if _, isArrow := equipableItem.(*Arrow); isArrow {
-					actions = []string{"装備", "撃つ", "投げる", "置く", "説明"}
-				} else {
-					actions = []string{"装備", "投げる", "置く", "説明"}
-				}
-			}
-		} else {
-			actions = []string{"使う", "投げる", "置く", "説明"}
-		}
+		// Draw menu actions（項目リストは入力処理と共通のヘルパーで決める）
+		actions := g.currentItemActions()
 
 		for i, action := range actions {
 			textColor := color.White

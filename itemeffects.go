@@ -218,6 +218,48 @@ func identifyAllInventory(g *Game) int {
 	return identified
 }
 
+// 壺拡大のカード: 持っている壺すべての容量を1増やす
+var expandPotsCard = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.EnqueueMessage(fmt.Sprintf("%sを使った。", item.GetName()), 0.4)
+
+	if len(g.inventoryPots()) == 0 {
+		g.EnqueueMessage("しかし何も起こらなかった。", 0.4)
+	} else {
+		g.Enqueue(Action{
+			Duration: 0.4,
+			Message:  "壺が大きくなった！",
+			Execute: func(g *Game) {
+				for _, pot := range g.inventoryPots() {
+					pot.Capacity = expandedPotCapacity(pot.Capacity)
+				}
+			},
+		})
+	}
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 吸い出しのカード: 持っている壺すべての中身を壺を壊さずに取り出す
+var suckOutPotsCard = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使った。", item.GetName()),
+		Execute: func(g *Game) {
+			moved, leftover := g.suckOutAllPots()
+			if moved == 0 {
+				g.EnqueueMessage("しかし何も起こらなかった。", 0.4)
+				return
+			}
+			g.EnqueueMessage("壺の中身が飛び出してきた！", 0.4)
+			if leftover {
+				g.EnqueueMessage("持ち物がいっぱいで全部は取り出せなかった。", 0.4)
+			}
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
 var identifyItem = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
 

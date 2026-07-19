@@ -18,6 +18,32 @@ func isMouthItem(item Item) bool {
 	return false
 }
 
+// currentItemActions は選択中のインベントリアイテムに表示するアクションメニュー項目を返す。
+// 描画（drawActionMenu）とカーソル移動範囲（handleItemActionsInput）で共用する。
+func (g *Game) currentItemActions() []string {
+	if g.selectedItemIndex >= len(g.state.Player.Inventory) {
+		return nil
+	}
+	item := g.state.Player.Inventory[g.selectedItemIndex]
+	if _, isPot := item.(*Pot); isPot {
+		return []string{"入れる", "出す", "投げる", "置く", "説明"}
+	}
+	if equipableItem, isEquipable := item.(Equipable); isEquipable {
+		_, isArrow := equipableItem.(*Arrow)
+		if g.state.Player.IsEquipped(equipableItem) {
+			if isArrow {
+				return []string{"はずす", "撃つ", "投げる", "置く", "説明"}
+			}
+			return []string{"はずす", "投げる", "置く", "説明"}
+		}
+		if isArrow {
+			return []string{"装備", "撃つ", "投げる", "置く", "説明"}
+		}
+		return []string{"装備", "投げる", "置く", "説明"}
+	}
+	return []string{"使う", "投げる", "置く", "説明"}
+}
+
 func (g *Game) executeGroundItemAction() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
@@ -88,6 +114,13 @@ func (g *Game) executeGroundItemAction() {
 				// 口封じ状態ではカード・薬・食料を使えない
 				if g.state.Player.StatusAilments.MouthSeal > 0 && isMouthItem(item) {
 					g.EnqueueMessage("口が封じられていて使えない", 0.4)
+					g.closeGroundItemMenu()
+					return
+				}
+
+				// 足元の壺は拾ってからでないと出し入れできない
+				if _, isPot := item.(*Pot); isPot {
+					g.EnqueueMessage("壺は拾ってから使おう", 0.4)
 					g.closeGroundItemMenu()
 					return
 				}
@@ -180,6 +213,18 @@ func (g *Game) executeGroundItemAction() {
 }
 
 func (g *Game) executeAction() {
+
+	// 壺の「入れる」「出す」はここで処理する（それ以降の項目は汎用処理へ流す）
+	if pot, isPot := g.state.Player.Inventory[g.selectedItemIndex].(*Pot); isPot {
+		if g.selectedActionIndex == 0 { // 入れる
+			g.startPotInsert(pot)
+			return
+		}
+		if g.selectedActionIndex == 1 { // 出す
+			g.executePotTakeOut(pot)
+			return
+		}
+	}
 
 	if g.selectedActionIndex == 0 { // Assuming index 0 corresponds to '使う' or '装備'
 		item := g.state.Player.Inventory[g.selectedItemIndex]
@@ -282,6 +327,10 @@ func (g *Game) executeAction() {
 	actionIndex := g.selectedActionIndex
 	if _, isArrow := item.(*Arrow); isArrow && g.selectedActionIndex > 1 {
 		// 矢の場合、「撃つ」が1番目に追加されているので、インデックスを調整
+		actionIndex = g.selectedActionIndex - 1
+	}
+	if _, isPot := item.(*Pot); isPot && g.selectedActionIndex > 1 {
+		// 壺の場合、「入れる」「出す」が先頭にあるので、インデックスを調整
 		actionIndex = g.selectedActionIndex - 1
 	}
 

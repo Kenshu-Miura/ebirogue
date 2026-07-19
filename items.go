@@ -85,6 +85,13 @@ type Trap struct {
 	BaseItem
 }
 
+type Pot struct {
+	BaseItem
+	Capacity   int    // 中身を入れられる最大数
+	Contents   []Item // 壺の中身
+	Identified bool   // 壺が識別されているかどうか
+}
+
 // アイテムデータテーブル用の構造体
 type ItemTemplate struct {
 	ID           int
@@ -542,6 +549,33 @@ var itemTemplates = map[int]ItemTemplate{
 		Char:        'C',
 		UseActions:  map[string]UseAction{"UseCard": rustProofCard},
 	},
+	46: {
+		ID:          46,
+		ItemType:    "Pot",
+		Type:        "Pot",
+		Name:        "保存の壺",
+		Description: "アイテムを入れて持ち運べる壺。中身は自由に出し入れできる。投げると割れて中身が飛び出す。",
+		Char:        '!',
+		UseActions:  map[string]UseAction{"PotEffect": func(g *Game) {}},
+	},
+	47: {
+		ID:          47,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "壺拡大のカード",
+		Description: "持っている壺すべての容量を1増やす。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": expandPotsCard},
+	},
+	48: {
+		ID:          48,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "吸い出しのカード",
+		Description: "持っている壺すべての中身を壺を壊さずに取り出す。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": suckOutPotsCard},
+	},
 }
 
 // テーブルからアイテムを生成する共通関数
@@ -622,6 +656,12 @@ func buildItemFromTemplate(id, x, y int) Item {
 	case "Trap":
 		item = &Trap{
 			BaseItem: baseItem,
+		}
+	case "Pot":
+		item = &Pot{
+			BaseItem:   baseItem,
+			Capacity:   rand.Intn(3) + 3, // 容量3〜5
+			Identified: true,
 		}
 	case "Cane":
 		item = &Cane{

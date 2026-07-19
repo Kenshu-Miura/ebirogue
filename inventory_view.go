@@ -13,6 +13,7 @@ const (
 	CategoryArrow
 	CategoryAccessory
 	CategoryCane
+	CategoryPot
 	CategoryFood
 	CategoryPotion
 	CategoryCard
@@ -37,6 +38,8 @@ func categoryLabel(c ItemCategory) string {
 		return "アクセサリー"
 	case CategoryCane:
 		return "杖"
+	case CategoryPot:
+		return "壺"
 	case CategoryFood:
 		return "食料"
 	case CategoryPotion:

@@ -61,7 +61,11 @@ func (g *Game) UpdateThrownItem() {
 					}
 				}
 
-				if itemExists && g.TargetEnemy == nil {
+				if pot, isPot := g.ThrownItem.Item.(*Pot); isPot {
+					// 壺は着地・命中時に割れて中身が散らばる
+					g.EnqueueMessage(fmt.Sprintf("%sは割れた！", pot.GetName()), 0.5)
+					g.scatterPotContents(pot, g.ThrownItemDestination.X, g.ThrownItemDestination.Y)
+				} else if itemExists && g.TargetEnemy == nil {
 					// Check surrounding tiles for placement
 					directions := []Coordinate{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}
 					placed := false
@@ -511,6 +515,8 @@ func getItemNameWithSharpness(item Item) string {
 				return fmt.Sprintf("%d本の%s", item.ShotCount, item.GetName()) // Format the arrow item with shot count
 			case *Cane:
 				return fmt.Sprintf("%s[%d]", item.GetName(), item.Uses) // Format the cane item with uses count
+			case *Pot:
+				return fmt.Sprintf("%s[%d/%d]", item.GetName(), len(item.Contents), item.Capacity) // 壺は中身数と容量を表示
 			default:
 				return item.GetName()
 			}

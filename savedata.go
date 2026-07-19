@@ -36,6 +36,8 @@ type SavedItem struct {
 	ShotCount  int
 	Uses       int
 	Amount     int
+	Capacity   int         // 壺の容量
+	Contents   []SavedItem // 壺の中身
 }
 
 // SavedEnemy は敵1体のセーブ用表現。

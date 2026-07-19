@@ -17,6 +17,8 @@ func itemCategory(item Item) ItemCategory {
 		return CategoryAccessory
 	case *Cane:
 		return CategoryCane
+	case *Pot:
+		return CategoryPot
 	case *Food:
 		return CategoryFood
 	case *Potion:

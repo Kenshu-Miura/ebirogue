@@ -153,9 +153,10 @@ func (g *Game) HandleGroundItemInput() {
 }
 
 func (g *Game) handleItemActionsInput() error {
+	maxActionIndex := len(g.currentItemActions()) - 1
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedActionIndex > 0 {
 		g.selectedActionIndex--
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedActionIndex < 3 {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedActionIndex < maxActionIndex {
 		g.selectedActionIndex++
 	}
 
@@ -194,18 +195,21 @@ func (g *Game) handleInventoryNavigationInput() error {
 			}
 		} else if g.useIdentifyItem && g.tmpSelectedItemIndex != g.selectedItemIndex {
 			g.executeItemIdentify()
-		} else if !g.useIdentifyItem {
+		} else if g.usePotInsert && g.tmpSelectedItemIndex != g.selectedItemIndex {
+			g.executePotInsertSelection()
+		} else if !g.useIdentifyItem && !g.usePotInsert {
 			g.showItemActions = true // Toggle the item actions menu
 		}
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.useIdentifyItem {
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyX) && (g.useIdentifyItem || g.usePotInsert) {
 		g.selectedItemIndex = 0
 		g.selectedActionIndex = 0
 		g.tmpSelectedItemIndex = -1
 		g.useIdentifyItem = false
+		g.usePotInsert = false
 	}
 
 	// Fキー: カテゴリ絞り込みの切り替え（所持しているカテゴリだけを巡回）
-	if inpututil.IsKeyJustPressed(ebiten.KeyF) && !g.useIdentifyItem {
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) && !g.useIdentifyItem && !g.usePotInsert {
 		g.inventoryFilter = nextFilter(g.inventoryFilter, g.presentCategories())
 		if indices := g.normalizeInventoryView(); len(indices) > 0 {
 			g.selectedItemIndex = indices[0]
@@ -213,13 +217,13 @@ func (g *Game) handleInventoryNavigationInput() error {
 	}
 
 	// Sキー: カテゴリ別ソート（整頓）。同じ矢は1つへ統合される
-	if inpututil.IsKeyJustPressed(ebiten.KeyS) && !g.useIdentifyItem {
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) && !g.useIdentifyItem && !g.usePotInsert {
 		g.sortInventory()
 		g.normalizeInventoryView()
 	}
 
 	// Nキー: 未識別アイテムへ任意の名前を付ける
-	if inpututil.IsKeyJustPressed(ebiten.KeyN) && !g.useIdentifyItem &&
+	if inpututil.IsKeyJustPressed(ebiten.KeyN) && !g.useIdentifyItem && !g.usePotInsert &&
 		g.selectedItemIndex < len(g.state.Player.Inventory) {
 		item := g.state.Player.Inventory[g.selectedItemIndex]
 		if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
@@ -306,6 +310,7 @@ func (g *Game) handleInventoryInput() error {
 			g.showItemActions = false
 			g.showItemDescription = false
 			g.useIdentifyItem = false
+			g.usePotInsert = false
 			g.tmpSelectedItemIndex = -1
 			return nil
 		}
@@ -325,7 +330,7 @@ func (g *Game) handleInventoryInput() error {
 
 	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)
 
-	if xPressed && g.showInventory && !g.showItemActions && !g.useIdentifyItem {
+	if xPressed && g.showInventory && !g.showItemActions && !g.useIdentifyItem && !g.usePotInsert {
 		g.selectedItemIndex = 0
 		g.selectedActionIndex = 0
 		g.selectedGroundActionIndex = 0

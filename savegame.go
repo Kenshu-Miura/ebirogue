@@ -71,6 +71,13 @@ func itemToSaved(item Item) SavedItem {
 			Uses: v.Uses, Identified: v.Identified}
 	case *Trap:
 		return SavedItem{Kind: "Trap", ID: v.ID, X: v.X, Y: v.Y}
+	case *Pot:
+		saved := SavedItem{Kind: "Pot", ID: v.ID, X: v.X, Y: v.Y,
+			Capacity: v.Capacity, Identified: v.Identified}
+		for _, content := range v.Contents {
+			saved.Contents = append(saved.Contents, itemToSaved(content))
+		}
+		return saved
 	default:
 		return SavedItem{Kind: "Unknown"}
 	}
@@ -143,6 +150,21 @@ func savedToItem(s SavedItem) (Item, error) {
 	case "Trap":
 		if _, ok := item.(*Trap); !ok {
 			return nil, fmt.Errorf("アイテムID %dはTrapではない", s.ID)
+		}
+	case "Pot":
+		v, ok := item.(*Pot)
+		if !ok {
+			return nil, fmt.Errorf("アイテムID %dはPotではない", s.ID)
+		}
+		v.Capacity = s.Capacity
+		v.Identified = s.Identified
+		v.Contents = nil
+		for _, content := range s.Contents {
+			contentItem, err := savedToItem(content)
+			if err != nil {
+				return nil, fmt.Errorf("壺の中身の復元に失敗: %w", err)
+			}
+			v.Contents = append(v.Contents, contentItem)
 		}
 	default:
 		return nil, fmt.Errorf("不明なアイテム種別: %q", s.Kind)
