@@ -544,6 +544,12 @@ func (g *Game) actEnemy(i int) {
 		g.state.Enemies[i].PlayerDiscovered = true
 	}
 
+	// 射程・射線条件を満たす遠距離役は、接近する前に固有の攻撃を行う。
+	// 封印・混乱・目潰し・睡眠などは上の共通状態処理で無効化される。
+	if g.tryEnemyRangedAttack(i) {
+		return
+	}
+
 	// Check if the enemy is adjacent or diagonally adjacent to the player
 	if abs(dx) <= 1 && abs(dy) <= 1 {
 		g.state.Enemies[i].PlayerDiscovered = true

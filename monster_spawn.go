@@ -13,6 +13,7 @@ const (
 	MinSpawnInterval  = 20 // 最小湧き間隔（ターン）
 	MaxSpawnInterval  = 30 // 最大湧き間隔（ターン）
 	SpawnCheckRange   = 8  // プレイヤーからこの距離内では湧かない
+	deepestSpawnFloor = 4
 )
 
 // 階層別モンスタースポーンテーブル
@@ -23,10 +24,10 @@ type MonsterSpawnEntry struct {
 
 // 各階層のスポーンテーブル
 var FloorSpawnTables = map[int][]MonsterSpawnEntry{
-	1: {{0, 50}, {2, 35}, {1, 15}},          // 1階: 基本敵を中心に出現
-	2: {{0, 30}, {2, 30}, {1, 25}, {3, 15}}, // 2階: くねくねハニーが登場
-	3: {{0, 15}, {2, 15}, {1, 35}, {3, 35}}, // 3階以降: 状態異常を使う敵が増える
-	// より深い階層は3階と同じ設定を使用
+	1: {{0, 50}, {2, 35}, {1, 15}},                            // 1階: 基本敵を中心に出現
+	2: {{0, 25}, {2, 25}, {1, 20}, {3, 20}, {4, 10}},          // 2階: 直線射撃のハリセンボウが登場
+	3: {{0, 10}, {2, 10}, {1, 25}, {3, 25}, {4, 15}, {5, 15}}, // 3階: 障害物越しに投石するイシガニが登場
+	4: {{1, 15}, {3, 20}, {4, 20}, {5, 25}, {6, 20}},          // 4階以降: 爆発弾を使うバクダンウニが登場
 }
 
 // プレイヤーターン進行時の処理
@@ -168,13 +169,18 @@ func (g *Game) IsInPlayerVisibleRoom(x, y int) bool {
 
 // 階層に応じたモンスター選択
 func (g *Game) SelectMonsterForSpawn() int {
-	floor := g.Floor
+	return selectMonsterForFloor(g.Floor, rand.Intn)
+}
+
+// selectMonsterForFloor は階層別テーブルから敵IDを重み付きで選ぶ。
+// 乱数関数を注入できるため、マップ初期配置とテストでも同じ選択規則を使える。
+func selectMonsterForFloor(floor int, intn func(int) int) int {
 
 	// 階層に応じたスポーンテーブル取得
 	spawnTable := FloorSpawnTables[floor]
 	if spawnTable == nil {
-		// 定義されていない階層は最後の階層設定を使用
-		spawnTable = FloorSpawnTables[3]
+		// 定義されていない深い階層は最後の階層設定を使用
+		spawnTable = FloorSpawnTables[deepestSpawnFloor]
 	}
 
 	// 重み付き選択
@@ -183,7 +189,7 @@ func (g *Game) SelectMonsterForSpawn() int {
 		totalWeight += entry.Weight
 	}
 
-	randomValue := rand.Intn(totalWeight)
+	randomValue := intn(totalWeight)
 	currentWeight := 0
 
 	for _, entry := range spawnTable {

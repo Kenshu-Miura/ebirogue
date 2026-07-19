@@ -172,10 +172,6 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 ### Priority A: enemies and monster behavior
 
-- 遠距離攻撃役を追加する。
-  - 直線上へ矢を撃つ敵
-  - 障害物越しに石を投げる敵
-  - 周囲を巻き込む爆発攻撃を行う敵
 - 所持品へ干渉する敵を追加する。
   - アイテムを盗んで逃げる敵
   - 所持品を食料へ変える敵

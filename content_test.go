@@ -32,12 +32,187 @@ func TestAddedContentDefinitions(t *testing.T) {
 	if MonsterDefinitions[2].Name != "マムル" || MonsterDefinitions[3].Name != "くねくねハニー" {
 		t.Fatal("added monster definitions are missing")
 	}
+	rangedEnemies := map[int]struct {
+		name string
+		kind RangedAttackKind
+	}{
+		4: {name: "ハリセンボウ", kind: RangedAttackArrow},
+		5: {name: "イシガニ", kind: RangedAttackRock},
+		6: {name: "バクダンウニ", kind: RangedAttackExplosion},
+	}
+	for id, want := range rangedEnemies {
+		definition := MonsterDefinitions[id]
+		if definition.Name != want.name || definition.RangedAttack.Kind != want.kind {
+			t.Fatalf("ranged monster %d = %#v, want %q with kind %d", id, definition, want.name, want.kind)
+		}
+	}
 
 	wantTraps := []string{"睡眠ガスの罠", "毒矢の罠", "鈍足の罠", "地雷", "サビの罠"}
 	for id, wantName := range wantTraps {
 		if got := createMapTrapByID(id, 1, 2); got.Name != wantName {
 			t.Fatalf("trap %d = %q, want %q", id, got.Name, wantName)
 		}
+	}
+}
+
+func TestRangedEnemyAttackConditions(t *testing.T) {
+	tests := []struct {
+		name       string
+		enemyID    int
+		enemyX     int
+		enemyY     int
+		playerX    int
+		playerY    int
+		wallX      int
+		wallY      int
+		wantAttack bool
+	}{
+		{name: "arrow clear line", enemyID: 4, enemyX: 1, enemyY: 4, playerX: 7, playerY: 4, wantAttack: true},
+		{name: "arrow blocked by wall", enemyID: 4, enemyX: 1, enemyY: 4, playerX: 7, playerY: 4, wallX: 4, wallY: 4},
+		{name: "arrow requires straight line", enemyID: 4, enemyX: 1, enemyY: 4, playerX: 6, playerY: 6},
+		{name: "rock crosses wall", enemyID: 5, enemyX: 1, enemyY: 4, playerX: 5, playerY: 6, wallX: 3, wallY: 5, wantAttack: true},
+		{name: "explosion clear line", enemyID: 6, enemyX: 2, enemyY: 2, playerX: 6, playerY: 6, wantAttack: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mapState := makeTestFloorMap(10, 10)
+			if tt.wallX != 0 || tt.wallY != 0 {
+				mapState[tt.wallY][tt.wallX] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+			}
+			enemy := CreateEnemyByID(tt.enemyID, tt.enemyX, tt.enemyY)
+			enemy.PlayerDiscovered = true
+			g := &Game{state: GameState{
+				Map:     mapState,
+				Player:  Player{Entity: Entity{X: tt.playerX, Y: tt.playerY}, Health: 100, DefensePower: 3},
+				Enemies: []Enemy{enemy},
+			}}
+
+			if got := g.tryEnemyRangedAttack(0); got != tt.wantAttack {
+				t.Fatalf("tryEnemyRangedAttack = %v, want %v", got, tt.wantAttack)
+			}
+			if tt.wantAttack {
+				if len(g.ActionQueue.Queue) != 1 {
+					t.Fatalf("queued actions = %d, want 1", len(g.ActionQueue.Queue))
+				}
+				g.ActionQueue.Queue[0].Execute(g)
+				if g.state.Player.Health >= 100 {
+					t.Fatal("ranged attack should damage the player")
+				}
+				if g.rangedAttackEffect.Kind != enemy.RangedAttack.Kind {
+					t.Fatalf("effect kind = %d, want %d", g.rangedAttackEffect.Kind, enemy.RangedAttack.Kind)
+				}
+			}
+		})
+	}
+}
+
+func TestSealedRangedEnemyCannotUseAbility(t *testing.T) {
+	enemy := CreateEnemyByID(5, 2, 2)
+	enemy.PlayerDiscovered = true
+	enemy.StatusAilments.Seal = true
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(10, 10),
+		Player:  Player{Entity: Entity{X: 6, Y: 5}, Health: 100},
+		Enemies: []Enemy{enemy},
+	}}
+
+	if g.tryEnemyRangedAttack(0) || len(g.ActionQueue.Queue) != 0 {
+		t.Fatal("sealed enemy should not queue a ranged attack")
+	}
+}
+
+func TestRangedEnemyRespectsCommonActionBlockingStatuses(t *testing.T) {
+	tests := []struct {
+		name   string
+		status StatusAilments
+	}{
+		{name: "sleep", status: StatusAilments{Sleep: 3}},
+		{name: "paralysis", status: StatusAilments{Paralysis: true}},
+		{name: "confusion", status: StatusAilments{Confusion: 3}},
+		{name: "blind", status: StatusAilments{Blind: 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			enemy := CreateEnemyByID(4, 2, 5)
+			enemy.PlayerDiscovered = true
+			enemy.StatusAilments = tt.status
+			g := &Game{state: GameState{
+				Map:     makeTestFloorMap(12, 12),
+				Player:  Player{Entity: Entity{X: 8, Y: 5}, Health: 100},
+				Enemies: []Enemy{enemy},
+			}}
+
+			g.actEnemy(0)
+			if len(g.ActionQueue.Queue) != 0 {
+				t.Fatalf("%s enemy should not queue a ranged attack", tt.name)
+			}
+		})
+	}
+}
+
+func TestExplosionRangedAttackDamagesNearbyEnemies(t *testing.T) {
+	attacker := CreateEnemyByID(6, 2, 2)
+	attacker.PlayerDiscovered = true
+	nearby := CreateEnemyByID(0, 7, 5)
+	nearby.Health = 100
+	distant := CreateEnemyByID(0, 8, 2)
+	distant.Health = 100
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(12, 12),
+		Player:  Player{Entity: Entity{X: 6, Y: 6}, Health: 100, DefensePower: 3},
+		Enemies: []Enemy{attacker, nearby, distant},
+	}}
+
+	if !g.tryEnemyRangedAttack(0) {
+		t.Fatal("explosion enemy should queue its ranged attack")
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+	if len(g.ActionQueue.Queue) != 2 {
+		t.Fatalf("actions after impact = %d, want primary attack and delayed collateral", len(g.ActionQueue.Queue))
+	}
+	g.ActionQueue.Queue[1].Execute(g)
+
+	if g.state.Enemies[1].Health >= 100 {
+		t.Fatal("enemy adjacent to the impact should take blast damage")
+	}
+	if g.state.Enemies[2].Health != 100 {
+		t.Fatal("enemy outside the blast radius should not take damage")
+	}
+}
+
+func TestRangedEnemySaveRoundTrip(t *testing.T) {
+	enemy := CreateEnemyByID(6, 3, 4)
+	restored := savedToEnemy(enemyToSaved(&enemy))
+	if restored.ID != 6 || restored.RangedAttack.Kind != RangedAttackExplosion || restored.RangedAttack.BlastRadius != 1 {
+		t.Fatalf("restored ranged enemy = %#v", restored.RangedAttack)
+	}
+}
+
+func TestRangedEnemyFloorSpawnTables(t *testing.T) {
+	for _, entry := range FloorSpawnTables[1] {
+		if entry.MonsterID >= 4 {
+			t.Fatalf("ranged enemy %d should not appear on floor 1", entry.MonsterID)
+		}
+	}
+	wantIDs := map[int]bool{4: false, 5: false, 6: false}
+	for floor := 2; floor <= deepestSpawnFloor; floor++ {
+		for _, entry := range FloorSpawnTables[floor] {
+			if _, ok := wantIDs[entry.MonsterID]; ok {
+				wantIDs[entry.MonsterID] = true
+			}
+		}
+	}
+	for id, found := range wantIDs {
+		if !found {
+			t.Fatalf("ranged enemy %d is missing from floor spawn tables", id)
+		}
+	}
+
+	lastEntry := FloorSpawnTables[deepestSpawnFloor][len(FloorSpawnTables[deepestSpawnFloor])-1]
+	got := selectMonsterForFloor(99, func(n int) int { return n - 1 })
+	if got != lastEntry.MonsterID {
+		t.Fatalf("deep floor fallback selected %d, want %d", got, lastEntry.MonsterID)
 	}
 }
 

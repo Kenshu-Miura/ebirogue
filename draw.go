@@ -286,6 +286,78 @@ func (g *Game) DrawThrownItem(screen *ebiten.Image, offsetX, offsetY int) {
 	}
 }
 
+var rangedRockEffectImg, rangedBlastEffectImg *ebiten.Image
+
+// DrawRangedAttackEffect は敵の矢・投石・爆発弾を短時間表示する。
+func (g *Game) DrawRangedAttackEffect(screen *ebiten.Image, offsetX, offsetY int) {
+	effect := g.rangedAttackEffect
+	if effect.Timer <= 0 {
+		return
+	}
+
+	progress := 1 - effect.Timer/rangedAttackEffectDuration
+	if progress < 0 {
+		progress = 0
+	} else if progress > 1 {
+		progress = 1
+	}
+	originX := float64(effect.OriginX*tileSize + offsetX + tileSize/2)
+	originY := float64(effect.OriginY*tileSize + offsetY + tileSize/2)
+	targetX := float64(effect.TargetX*tileSize + offsetX + tileSize/2)
+	targetY := float64(effect.TargetY*tileSize + offsetY + tileSize/2)
+
+	drawProjectile := func(img *ebiten.Image, x, y, angle float64) {
+		opts := &ebiten.DrawImageOptions{}
+		w, h := img.Bounds().Dx(), img.Bounds().Dy()
+		opts.GeoM.Translate(float64(-w)/2, float64(-h)/2)
+		opts.GeoM.Rotate(angle)
+		opts.GeoM.Translate(x, y)
+		screen.DrawImage(img, opts)
+	}
+
+	switch effect.Kind {
+	case RangedAttackArrow:
+		x := originX + (targetX-originX)*progress
+		y := originY + (targetY-originY)*progress
+		angle := math.Atan2(targetY-originY, targetX-originX) - math.Pi/2
+		drawProjectile(g.arrowImg, x, y, angle)
+	case RangedAttackRock:
+		if rangedRockEffectImg == nil {
+			rangedRockEffectImg = ebiten.NewImage(10, 10)
+			rangedRockEffectImg.Fill(color.RGBA{105, 105, 115, 255})
+		}
+		x := originX + (targetX-originX)*progress
+		y := originY + (targetY-originY)*progress - math.Sin(math.Pi*progress)*tileSize
+		drawProjectile(rangedRockEffectImg, x, y, progress*math.Pi*2)
+	case RangedAttackExplosion:
+		const flightEnd = 0.65
+		if progress < flightEnd {
+			flightProgress := progress / flightEnd
+			x := originX + (targetX-originX)*flightProgress
+			y := originY + (targetY-originY)*flightProgress
+			drawProjectile(g.effectImg, x, y, 0)
+			return
+		}
+		if rangedBlastEffectImg == nil {
+			rangedBlastEffectImg = ebiten.NewImage(tileSize, tileSize)
+			rangedBlastEffectImg.Fill(color.RGBA{255, 105, 20, 150})
+		}
+		fade := float32(1 - (progress-flightEnd)/(1-flightEnd))
+		for dy := -effect.BlastRadius; dy <= effect.BlastRadius; dy++ {
+			for dx := -effect.BlastRadius; dx <= effect.BlastRadius; dx++ {
+				x, y := effect.TargetX+dx, effect.TargetY+dy
+				if y < 0 || y >= len(g.state.Map) || x < 0 || x >= len(g.state.Map[y]) {
+					continue
+				}
+				opts := &ebiten.DrawImageOptions{}
+				opts.ColorScale.ScaleAlpha(fade)
+				opts.GeoM.Translate(float64(x*tileSize+offsetX), float64(y*tileSize+offsetY))
+				screen.DrawImage(rangedBlastEffectImg, opts)
+			}
+		}
+	}
+}
+
 // 射線プレビュー用のマーカー画像（初回描画時に生成してキャッシュする）
 var trajectoryDotImg, trajectoryLandingImg *ebiten.Image
 
@@ -446,6 +518,12 @@ func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
 		img = g.mamuruImg
 	case "Honey":
 		img = g.honeyImg
+	case "Harisenbow":
+		img = g.harisenbowImg
+	case "Ishigani":
+		img = g.ishiganiImg
+	case "BombUrchin":
+		img = g.bakudanUniImg
 	}
 	return img
 }

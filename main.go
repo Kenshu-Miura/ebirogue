@@ -131,6 +131,9 @@ type Game struct {
 	snakeImg                  *ebiten.Image
 	mamuruImg                 *ebiten.Image
 	honeyImg                  *ebiten.Image
+	harisenbowImg             *ebiten.Image
+	ishiganiImg               *ebiten.Image
+	bakudanUniImg             *ebiten.Image
 	kaneImg                   *ebiten.Image
 	cardImg                   *ebiten.Image
 	mintiaImg                 *ebiten.Image
@@ -190,6 +193,7 @@ type Game struct {
 	groundItemDescriptionText string
 	ThrownItem                ThrownItem
 	ThrownItemDestination     Coordinate
+	rangedAttackEffect        RangedAttackEffect
 	TargetEnemy               *Enemy
 	TargetEnemyIndex          int
 	playerDead                bool    // プレイヤーが死亡したかどうか
@@ -467,6 +471,8 @@ func (g *Game) Update() error {
 
 	g.UpdateThrownItem()
 
+	g.UpdateRangedAttackEffect()
+
 	g.updateEnemyYOffset()
 
 	g.HandleEnemyAttackTimers()
@@ -507,6 +513,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	g.DrawItems(screen, offsetX, offsetY)
 	g.DrawMapTraps(screen, offsetX, offsetY)
 	g.DrawThrownItem(screen, offsetX, offsetY)
+	g.DrawRangedAttackEffect(screen, offsetX, offsetY)
 	g.DrawEnemies(screen, offsetX, offsetY)
 	g.DrawTrajectoryPreview(screen, offsetX, offsetY)
 	g.DrawHUD(screen)
@@ -638,6 +645,9 @@ func NewGame() *Game {
 	snakeImg := loadImage("img/snake.png")
 	mamuruImg := loadImage("img/mamuru.png")
 	honeyImg := loadImage("img/honey.png")
+	harisenbowImg := loadImage("img/harisenbow.png")
+	ishiganiImg := loadImage("img/ishigani.png")
+	bakudanUniImg := loadImage("img/bakudan_uni.png")
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
@@ -693,6 +703,9 @@ func NewGame() *Game {
 		snakeImg:           snakeImg,
 		mamuruImg:          mamuruImg,
 		honeyImg:           honeyImg,
+		harisenbowImg:      harisenbowImg,
+		ishiganiImg:        ishiganiImg,
+		bakudanUniImg:      bakudanUniImg,
 		kaneImg:            kaneImg,
 		cardImg:            cardImg,
 		mintiaImg:          mintiaImg,

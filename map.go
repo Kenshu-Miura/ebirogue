@@ -528,7 +528,7 @@ func setRoomCenter(room *Room) {
 	room.Center = Coordinate{X: centerX, Y: centerY}
 }
 
-func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
+func generateEnemies(rooms []Room, playerRoom Room, floor int) []Enemy {
 	var enemies []Enemy
 
 	// 4~9体のモンスターを生成
@@ -570,7 +570,8 @@ func generateEnemies(rooms []Room, playerRoom Room) []Enemy {
 		}
 
 		// 敵を生成し、50%の確率で仮眠状態にする
-		enemy := createEnemy(enemyX, enemyY)
+		enemyID := selectMonsterForFloor(floor, rand.Intn)
+		enemy := CreateEnemyByID(enemyID, enemyX, enemyY)
 		if rand.Float64() < 0.5 {
 			enemy.StatusAilments.Sleep = -1 // -1で仮眠状態を表現（通常の睡眠と区別）
 		}
@@ -645,12 +646,14 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 	// 階段タイルを配置
 	mapGrid[stairsY][stairsX] = Tile{Type: "stairs", Blocked: false, BlockSight: false}
 
+	newFloor := currentFloor + 1
+
 	// Call the newly created functions to generate enemies and items
-	enemies := generateEnemies(rooms, playerRoom)
+	enemies := generateEnemies(rooms, playerRoom, newFloor)
 	items := generateItems(rooms)
 
 	// Generate map traps
 	traps := generateMapTraps(rooms)
 
-	return mapGrid, enemies, items, currentFloor + 1, rooms, traps
+	return mapGrid, enemies, items, newFloor, rooms, traps
 }

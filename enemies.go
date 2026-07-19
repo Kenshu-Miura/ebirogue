@@ -10,6 +10,23 @@ import (
 
 type SpecialAttackFunc func(e *Enemy, g *Game)
 
+type RangedAttackKind int
+
+const (
+	RangedAttackNone RangedAttackKind = iota
+	RangedAttackArrow
+	RangedAttackRock
+	RangedAttackExplosion
+)
+
+type RangedAttackDefinition struct {
+	Kind        RangedAttackKind
+	MinRange    int
+	MaxRange    int
+	AttackPower int
+	BlastRadius int
+}
+
 type Enemy struct {
 	Entity                   // Enemy inherits fields from Entity
 	ID                       int
@@ -30,6 +47,7 @@ type Enemy struct {
 	OffsetX, OffsetY         int               // アニメーションのオフセット
 	SpecialAttack            SpecialAttackFunc // 敵の特殊攻撃処理
 	SpecialAttackProbability float64           // 敵が特殊攻撃を使ってくる確率 (0.0 to 1.0)
+	RangedAttack             RangedAttackDefinition
 	ShowOnMiniMap            bool
 	StatusAilments           StatusAilments // 状態異常
 }
@@ -72,6 +90,7 @@ type MonsterDefinition struct {
 	ExperiencePoints         int
 	SpecialAttack            SpecialAttackFunc
 	SpecialAttackProbability float64
+	RangedAttack             RangedAttackDefinition
 }
 
 // モンスター定義テーブル
@@ -169,6 +188,58 @@ var MonsterDefinitions = map[int]MonsterDefinition{
 		},
 		SpecialAttackProbability: 0.25,
 	},
+	4: {
+		ID:               4,
+		Type:             "Harisenbow",
+		Name:             "ハリセンボウ",
+		Char:             'B',
+		Health:           18,
+		MaxHealth:        18,
+		AttackPower:      6,
+		DefensePower:     2,
+		ExperiencePoints: 8,
+		RangedAttack: RangedAttackDefinition{
+			Kind:        RangedAttackArrow,
+			MinRange:    2,
+			MaxRange:    8,
+			AttackPower: 9,
+		},
+	},
+	5: {
+		ID:               5,
+		Type:             "Ishigani",
+		Name:             "イシガニ",
+		Char:             'C',
+		Health:           32,
+		MaxHealth:        32,
+		AttackPower:      7,
+		DefensePower:     5,
+		ExperiencePoints: 15,
+		RangedAttack: RangedAttackDefinition{
+			Kind:        RangedAttackRock,
+			MinRange:    2,
+			MaxRange:    5,
+			AttackPower: 12,
+		},
+	},
+	6: {
+		ID:               6,
+		Type:             "BombUrchin",
+		Name:             "バクダンウニ",
+		Char:             'U',
+		Health:           45,
+		MaxHealth:        45,
+		AttackPower:      10,
+		DefensePower:     6,
+		ExperiencePoints: 25,
+		RangedAttack: RangedAttackDefinition{
+			Kind:        RangedAttackExplosion,
+			MinRange:    2,
+			MaxRange:    6,
+			AttackPower: 16,
+			BlastRadius: 1,
+		},
+	},
 }
 
 // 統一されたモンスター生成関数
@@ -193,6 +264,7 @@ func CreateEnemyByID(id, x, y int) Enemy {
 		PlayerDiscovered:         false,
 		SpecialAttack:            def.SpecialAttack,
 		SpecialAttackProbability: def.SpecialAttackProbability,
+		RangedAttack:             def.RangedAttack,
 		ShowOnMiniMap:            true,
 	}
 }
