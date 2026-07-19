@@ -217,6 +217,8 @@ type Game struct {
 	floorTurns        int  // 現在のフロアでの滞在ターン数
 	windWarning1Shown bool // 1200ターン警告表示済みフラグ
 	windWarning2Shown bool // 1300ターン警告表示済みフラグ
+	// フロア効果システム
+	pickupBanned bool // 拾得禁止のカードの効果中かどうか（フロア移動で解除）
 	// メニューシステム
 	showMenu                  bool // メニューウィンドウの表示フラグ
 	menuSelectedRow           int  // メニューで選択中の行（0=上, 1=下）

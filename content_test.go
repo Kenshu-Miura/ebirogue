@@ -306,6 +306,297 @@ func TestReinforceArmorCardWithoutShield(t *testing.T) {
 	}
 }
 
+func TestFloorCardTemplates(t *testing.T) {
+	cards := map[int]string{
+		35: "モンスターハウスのカード",
+		36: "敵倍速のカード",
+		37: "地図忘却のカード",
+		38: "拾得禁止のカード",
+		39: "大部屋のカード",
+		40: "罠のカード",
+	}
+	for id, wantName := range cards {
+		card, ok := buildItemFromTemplate(id, 0, 0).(*Card)
+		if !ok || card.Name != wantName {
+			t.Fatalf("card %d = %#v, want %q", id, card, wantName)
+		}
+	}
+}
+
+func TestFloorCardRolls(t *testing.T) {
+	minIntn := func(int) int { return 0 }
+	maxIntn := func(n int) int { return n - 1 }
+	if got := rollMonsterHouseEnemyCount(minIntn); got != 5 {
+		t.Fatalf("minimum enemy count = %d, want 5", got)
+	}
+	if got := rollMonsterHouseEnemyCount(maxIntn); got != 8 {
+		t.Fatalf("maximum enemy count = %d, want 8", got)
+	}
+	if got := rollMonsterHouseItemCount(minIntn); got != 2 {
+		t.Fatalf("minimum item count = %d, want 2", got)
+	}
+	if got := rollMonsterHouseItemCount(maxIntn); got != 3 {
+		t.Fatalf("maximum item count = %d, want 3", got)
+	}
+	if got := rollExtraTrapCount(minIntn); got != 5 {
+		t.Fatalf("minimum trap count = %d, want 5", got)
+	}
+	if got := rollExtraTrapCount(maxIntn); got != 8 {
+		t.Fatalf("maximum trap count = %d, want 8", got)
+	}
+}
+
+func TestPickFreeCellsInRoom(t *testing.T) {
+	room := Room{X: 0, Y: 0, Width: 5, Height: 5} // 内側は3x3の9マス
+	isFree := func(x, y int) bool { return !(x == 1 && y == 1) }
+	intn := func(n int) int { return 0 }
+
+	cells := pickFreeCellsInRoom(room, isFree, 20, intn)
+	if len(cells) != 8 {
+		t.Fatalf("free cells = %d, want 8 (clamped to available)", len(cells))
+	}
+	for _, cell := range cells {
+		if cell.X < 1 || cell.X > 3 || cell.Y < 1 || cell.Y > 3 {
+			t.Fatalf("cell %v is outside the room interior", cell)
+		}
+		if cell.X == 1 && cell.Y == 1 {
+			t.Fatal("occupied cell should not be picked")
+		}
+	}
+
+	if got := pickFreeCellsInRoom(room, isFree, 3, intn); len(got) != 3 {
+		t.Fatalf("picked cells = %d, want 3", len(got))
+	}
+}
+
+// テスト用に外周が壁、内側が床のマップを作る
+func makeTestFloorMap(width, height int) [][]Tile {
+	mapGrid := make([][]Tile, height)
+	for y := range mapGrid {
+		mapGrid[y] = make([]Tile, width)
+		for x := range mapGrid[y] {
+			if x == 0 || x == width-1 || y == 0 || y == height-1 {
+				mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+			} else {
+				mapGrid[y][x] = Tile{Type: "floor"}
+			}
+		}
+	}
+	return mapGrid
+}
+
+func TestMonsterHouseCard(t *testing.T) {
+	card := buildItemFromTemplate(35, 0, 0)
+	g := &Game{
+		state: GameState{
+			Map:    makeTestFloorMap(8, 8),
+			Player: Player{Entity: Entity{X: 2, Y: 2}, Inventory: []Item{card}},
+		},
+		rooms: []Room{{ID: 0, X: 0, Y: 0, Width: 8, Height: 8}},
+	}
+
+	card.Use(g)
+	if len(g.state.Player.Inventory) != 0 {
+		t.Fatal("used card should be removed from inventory")
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Enemies) < 5 || len(g.state.Enemies) > 8 {
+		t.Fatalf("spawned enemies = %d, want 5..8", len(g.state.Enemies))
+	}
+	for _, enemy := range g.state.Enemies {
+		if enemy.X < 1 || enemy.X > 6 || enemy.Y < 1 || enemy.Y > 6 {
+			t.Fatalf("enemy at (%d, %d) is outside the room interior", enemy.X, enemy.Y)
+		}
+		if enemy.X == 2 && enemy.Y == 2 {
+			t.Fatal("enemy should not spawn on the player")
+		}
+		if !enemy.PlayerDiscovered || !enemy.ShowOnMiniMap || enemy.StatusAilments.Sleep != 0 {
+			t.Fatalf("enemy %#v should be awake and discovered", enemy.StatusAilments)
+		}
+	}
+	if len(g.state.Items) < 2 || len(g.state.Items) > 3 {
+		t.Fatalf("spawned items = %d, want 2..3", len(g.state.Items))
+	}
+}
+
+func TestMonsterHouseCardInCorridor(t *testing.T) {
+	card := buildItemFromTemplate(35, 0, 0)
+	g := &Game{
+		state: GameState{
+			Map:    makeTestFloorMap(8, 8),
+			Player: Player{Entity: Entity{X: 2, Y: 2}, Inventory: []Item{card}},
+		},
+		rooms: []Room{}, // プレイヤーはどの部屋にもいない
+	}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Enemies) != 0 {
+		t.Fatalf("enemies = %d, want 0 in corridor", len(g.state.Enemies))
+	}
+	if len(g.ActionQueue.Queue) < 2 || g.ActionQueue.Queue[1].Message != "しかし何も起こらなかった" {
+		t.Fatal("通路で使用した場合は不発メッセージを表示するはず")
+	}
+}
+
+func TestHasteAllEnemiesCard(t *testing.T) {
+	card := buildItemFromTemplate(36, 0, 0)
+	g := &Game{
+		state: GameState{
+			Player:  Player{Inventory: []Item{card}},
+			Enemies: []Enemy{{Entity: Entity{X: 1, Y: 1}}, {Entity: Entity{X: 5, Y: 5}}},
+		},
+	}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	for i, enemy := range g.state.Enemies {
+		if enemy.StatusAilments.Haste != enemyHasteCardTurns {
+			t.Fatalf("enemy %d haste = %d, want %d", i, enemy.StatusAilments.Haste, enemyHasteCardTurns)
+		}
+	}
+}
+
+func TestForgetFloorMapCard(t *testing.T) {
+	card := buildItemFromTemplate(37, 0, 0)
+	floorItem := buildItemFromTemplate(1, 1, 1)
+	floorItem.SetPlayerDiscovered(true)
+	floorItem.SetShowOnMiniMap(true)
+	g := &Game{
+		state: GameState{
+			Map:     [][]Tile{{{Type: "floor", Visited: true}, {Type: "wall", Visited: true}}},
+			Player:  Player{Inventory: []Item{card}},
+			Enemies: []Enemy{{PlayerDiscovered: true, ShowOnMiniMap: true}},
+			Items:   []Item{floorItem},
+		},
+	}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if g.state.Map[0][0].Visited || g.state.Map[0][1].Visited {
+		t.Fatal("all map tiles should be forgotten")
+	}
+	if g.state.Enemies[0].PlayerDiscovered || g.state.Enemies[0].ShowOnMiniMap {
+		t.Fatal("enemy should be hidden from the minimap")
+	}
+	if floorItem.GetPlayerDiscovered() || floorItem.GetShowOnMiniMap() {
+		t.Fatal("floor item should be hidden from the minimap")
+	}
+	if !g.miniMapDirty {
+		t.Fatal("minimap should be marked dirty")
+	}
+}
+
+func TestPickupBanCard(t *testing.T) {
+	card := buildItemFromTemplate(38, 0, 0)
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card}}}}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if !g.pickupBanned {
+		t.Fatal("pickupBanned should be set")
+	}
+}
+
+func TestPickupBannedBlocksPickup(t *testing.T) {
+	floorItem := buildItemFromTemplate(1, 2, 2)
+	g := &Game{
+		state: GameState{
+			Player: Player{Entity: Entity{X: 2, Y: 2}},
+			Items:  []Item{floorItem},
+		},
+		pickupBanned: true,
+	}
+
+	g.PickupItem()
+	if len(g.ActionQueue.Queue) == 0 {
+		t.Fatal("拾得禁止中はメッセージを表示するはず")
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Player.Inventory) != 0 {
+		t.Fatal("拾得禁止中はアイテムを拾えないはず")
+	}
+	if len(g.state.Items) != 1 {
+		t.Fatal("床のアイテムはそのまま残るはず")
+	}
+}
+
+func TestBigRoomCard(t *testing.T) {
+	card := buildItemFromTemplate(39, 0, 0)
+	mapGrid := make([][]Tile, 6)
+	for y := range mapGrid {
+		mapGrid[y] = make([]Tile, 6)
+		for x := range mapGrid[y] {
+			mapGrid[y][x] = Tile{Type: "other", Blocked: true, BlockSight: true}
+		}
+	}
+	mapGrid[3][3] = Tile{Type: "stairs"}
+	g := &Game{
+		state: GameState{
+			Map:    mapGrid,
+			Player: Player{Entity: Entity{X: 2, Y: 2}, Inventory: []Item{card}},
+		},
+		rooms: []Room{{ID: 1, X: 1, Y: 1, Width: 3, Height: 3}},
+	}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.rooms) != 1 || g.rooms[0].Width != 6 || g.rooms[0].Height != 6 {
+		t.Fatalf("rooms = %#v, want one room covering the map", g.rooms)
+	}
+	if g.state.Map[0][0].Type != "wall" || !g.state.Map[0][0].Blocked {
+		t.Fatal("map boundary should be wall")
+	}
+	if g.state.Map[2][4].Type != "floor" || g.state.Map[2][4].Blocked {
+		t.Fatal("map interior should be floor")
+	}
+	if g.state.Map[3][3].Type != "stairs" {
+		t.Fatal("stairs should be preserved")
+	}
+}
+
+func TestTrapCardIncreasesTraps(t *testing.T) {
+	card := buildItemFromTemplate(40, 0, 0)
+	g := &Game{
+		state: GameState{
+			Map:      makeTestFloorMap(8, 8),
+			Player:   Player{Entity: Entity{X: 2, Y: 2}, Inventory: []Item{card}},
+			MapTraps: []MapTrap{createMapTrapByID(0, 3, 3)},
+		},
+		rooms: []Room{{ID: 0, X: 0, Y: 0, Width: 8, Height: 8}},
+	}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.MapTraps) < 6 || len(g.state.MapTraps) > 9 {
+		t.Fatalf("traps = %d, want 6..9", len(g.state.MapTraps))
+	}
+	seen := map[Coordinate]bool{}
+	for _, trap := range g.state.MapTraps {
+		pos := Coordinate{X: trap.X, Y: trap.Y}
+		if seen[pos] {
+			t.Fatalf("duplicate trap at (%d, %d)", trap.X, trap.Y)
+		}
+		seen[pos] = true
+		if trap.X == 2 && trap.Y == 2 {
+			t.Fatal("trap should not be placed on the player")
+		}
+	}
+	for _, trap := range g.state.MapTraps[1:] {
+		if trap.Discovered {
+			t.Fatal("added traps should be undiscovered")
+		}
+	}
+}
+
 func TestVacuumSlashCardDamagesOnlyEffectArea(t *testing.T) {
 	card := buildItemFromTemplate(31, 0, 0)
 	g := &Game{

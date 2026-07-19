@@ -558,6 +558,18 @@ func (g *Game) executeItemSwap() {
 	for i, item := range g.state.Items {
 		itemX, itemY := item.GetPosition()
 		if itemX == playerX && itemY == playerY {
+			// 拾得禁止のカードの効果中は交換でも足元のアイテムを入手できない
+			if g.pickupBanned {
+				g.ActionQueue.Enqueue(Action{
+					Duration: 0.4,
+					Message:  "カードの効果で足元のアイテムを拾えない",
+					Execute: func(g *Game) {
+						g.selectedItemIndex = 0
+					},
+				})
+				break
+			}
+
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
 			//itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
 
@@ -673,6 +685,20 @@ func (g *Game) PickupItem() {
 				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
 				if identified {
 					itemName = getItemNameWithSharpness(item)
+				}
+
+				// 拾得禁止のカードの効果中は拾わずに上へ乗るだけ
+				if g.pickupBanned {
+					action := Action{
+						Duration:     0.5,
+						Message:      fmt.Sprintf("カードの効果で%sを拾えない", itemName),
+						ItemName:     itemName,
+						Execute:      func(g *Game) {},
+						IsIdentified: identified,
+						NonBlocking:  !g.IsEnemyAdjacent(),
+					}
+					g.Enqueue(action)
+					break
 				}
 
 				// プレイヤーのインベントリサイズをチェック

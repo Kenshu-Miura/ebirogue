@@ -101,6 +101,7 @@ type SaveData struct {
 	FloorTurns        int
 	WindWarning1Shown bool
 	WindWarning2Shown bool
+	PickupBanned      bool // 拾得禁止のカードの効果中かどうか
 	Messages          []string
 	CustomNames       map[int]string // 未識別アイテム種別に付けた任意名
 }

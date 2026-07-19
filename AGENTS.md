@@ -27,8 +27,6 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 
 ### Priority A: cards based on scrolls
 
-- フロアや部屋へ作用するカードを追加する。
-  - モンスターハウス生成、敵倍速、地図忘却、拾得禁止、大部屋化、罠増加
 - プレイヤー自身へ作用するカードを追加する。
   - 自爆、口封じ、攻撃力上昇、HP全回復と状況別の追加効果
 - 装備へ作用するカードを追加する。

@@ -103,6 +103,7 @@ func TestDecodeSaveDataCorrupted(t *testing.T) {
 func TestDecodeSaveDataRoundTrip(t *testing.T) {
 	original := makeValidSaveData()
 	original.Messages = []string{"メッセージ1", "メッセージ2"}
+	original.PickupBanned = true
 	data, err := json.Marshal(original)
 	if err != nil {
 		t.Fatalf("シリアライズに失敗: %v", err)
@@ -116,6 +117,9 @@ func TestDecodeSaveDataRoundTrip(t *testing.T) {
 	}
 	if len(decoded.Messages) != 2 || decoded.Messages[0] != "メッセージ1" {
 		t.Errorf("Messagesが一致しない: %v", decoded.Messages)
+	}
+	if !decoded.PickupBanned {
+		t.Error("PickupBannedが一致しない")
 	}
 }
 

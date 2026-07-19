@@ -260,6 +260,7 @@ func (g *Game) buildSaveData() *SaveData {
 		FloorTurns:        g.floorTurns,
 		WindWarning1Shown: g.windWarning1Shown,
 		WindWarning2Shown: g.windWarning2Shown,
+		PickupBanned:      g.pickupBanned,
 		Messages:          g.messageLog.Messages,
 		CustomNames:       g.customNames,
 	}
@@ -418,6 +419,7 @@ func (g *Game) applySaveData(save *SaveData) error {
 	g.floorTurns = save.FloorTurns
 	g.windWarning1Shown = save.WindWarning1Shown
 	g.windWarning2Shown = save.WindWarning2Shown
+	g.pickupBanned = save.PickupBanned
 
 	// メッセージ履歴を復元（上限を超える分は古いものから捨てる）
 	messages := save.Messages

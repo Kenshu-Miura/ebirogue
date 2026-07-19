@@ -495,6 +495,253 @@ var vacuumSlash = func(g *Game) {
 	removeUsedItem(g, isInventoryItem)
 }
 
+// --- フロアや部屋へ作用するカード ---
+
+// モンスターハウスで湧く敵の数（5〜8体）
+func rollMonsterHouseEnemyCount(intn func(int) int) int {
+	return 5 + intn(4)
+}
+
+// モンスターハウスで床に増えるアイテムの数（2〜3個）
+func rollMonsterHouseItemCount(intn func(int) int) int {
+	return 2 + intn(2)
+}
+
+// createItemを直接参照するとitemTemplatesとの初期化循環になるため、init時に間接参照を張る
+var newRandomFloorItem func(x, y int) Item
+
+func init() {
+	newRandomFloorItem = createItem
+}
+
+// pickFreeCellsInRoom は部屋の内側から isFree を満たすマスを最大 count 個ランダムに選ぶ。
+func pickFreeCellsInRoom(room Room, isFree func(x, y int) bool, count int, intn func(int) int) []Coordinate {
+	var free []Coordinate
+	for y := room.Y + 1; y < room.Y+room.Height-1; y++ {
+		for x := room.X + 1; x < room.X+room.Width-1; x++ {
+			if isFree(x, y) {
+				free = append(free, Coordinate{X: x, Y: y})
+			}
+		}
+	}
+	// Fisher-Yatesシャッフルで順序をランダム化する
+	for i := len(free) - 1; i > 0; i-- {
+		j := intn(i + 1)
+		free[i], free[j] = free[j], free[i]
+	}
+	if count > len(free) {
+		count = len(free)
+	}
+	return free[:count]
+}
+
+// モンスターハウスのカードは今いる部屋を敵とアイテムで埋め尽くす。通路では不発。
+var summonMonsterHouse = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
+		Execute: func(g *Game) {
+			playerX, playerY := g.state.Player.GetPosition()
+			room := getPlayerRoom(playerX, playerY, g.rooms)
+			if room == nil {
+				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				return
+			}
+			isFree := func(x, y int) bool {
+				if x == playerX && y == playerY {
+					return false
+				}
+				if g.state.Map[y][x].Blocked || g.state.Map[y][x].Type == "stairs" {
+					return false
+				}
+				for _, enemy := range g.state.Enemies {
+					if enemy.X == x && enemy.Y == y {
+						return false
+					}
+				}
+				for _, floorItem := range g.state.Items {
+					itemX, itemY := floorItem.GetPosition()
+					if itemX == x && itemY == y {
+						return false
+					}
+				}
+				return true
+			}
+			enemyCount := rollMonsterHouseEnemyCount(rand.Intn)
+			itemCount := rollMonsterHouseItemCount(rand.Intn)
+			cells := pickFreeCellsInRoom(*room, isFree, enemyCount+itemCount, rand.Intn)
+			if len(cells) == 0 {
+				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				return
+			}
+			for i, cell := range cells {
+				if i < enemyCount {
+					// 階層に応じた敵を起きた状態で配置する
+					enemy := CreateEnemyByID(g.SelectMonsterForSpawn(), cell.X, cell.Y)
+					enemy.PlayerDiscovered = true
+					enemy.ShowOnMiniMap = true
+					g.state.Enemies = append(g.state.Enemies, enemy)
+				} else {
+					g.state.Items = append(g.state.Items, newRandomFloorItem(cell.X, cell.Y))
+				}
+			}
+			g.Enqueue(Action{Duration: 0.5, Message: "モンスターハウスだ！", Execute: func(g *Game) {}})
+			g.miniMapDirty = true
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 敵倍速のカードで敵が倍速になるターン数
+const enemyHasteCardTurns = 20
+
+// 敵倍速のカードはフロアにいる敵全員を倍速状態にする。
+var hasteAllEnemies = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
+		Execute: func(g *Game) {
+			if len(g.state.Enemies) == 0 {
+				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				return
+			}
+			for i := range g.state.Enemies {
+				g.state.Enemies[i].StatusAilments.Haste = enemyHasteCardTurns
+			}
+			g.Enqueue(Action{Duration: 0.5, Message: "フロアの敵たちの動きが速くなった！", Execute: func(g *Game) {}})
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 地図忘却のカードはフロアの探索情報とミニマップ表示をすべて消す。
+var forgetFloorMap = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。フロアの記憶が頭から消えてしまった", item.GetName()),
+		Execute: func(g *Game) {
+			for y := range g.state.Map {
+				for x := range g.state.Map[y] {
+					g.state.Map[y][x].Visited = false
+				}
+			}
+			for i := range g.state.Enemies {
+				g.state.Enemies[i].PlayerDiscovered = false
+				g.state.Enemies[i].ShowOnMiniMap = false
+			}
+			for _, floorItem := range g.state.Items {
+				floorItem.SetPlayerDiscovered(false)
+				floorItem.SetShowOnMiniMap(false)
+			}
+			g.miniMap = nil
+			g.miniMapDirty = true
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 拾得禁止のカードはフロアを移るまで床のアイテムを拾えなくする。
+var banItemPickup = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。フロアを移るまで床のアイテムを拾えなくなった", item.GetName()),
+		Execute: func(g *Game) {
+			g.pickupBanned = true
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// makeBigRoom はマップ全体をひとつの大部屋へ変換し、その部屋情報を返す。
+// 外周は壁になり、内側は階段を残してすべて床になる。
+func makeBigRoom(mapGrid [][]Tile) Room {
+	height := len(mapGrid)
+	width := len(mapGrid[0])
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			visited := mapGrid[y][x].Visited
+			if x == 0 || x == width-1 || y == 0 || y == height-1 {
+				mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true, Visited: visited}
+			} else if mapGrid[y][x].Type != "stairs" {
+				mapGrid[y][x] = Tile{Type: "floor", Blocked: false, BlockSight: false, Visited: visited}
+			}
+		}
+	}
+	room := Room{ID: 0, X: 0, Y: 0, Width: width, Height: height}
+	setRoomCenter(&room)
+	return room
+}
+
+// 大部屋のカードはフロア全体をひとつの大部屋にする。
+var expandFloorToBigRoom = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。壁が崩れ、フロア全体がひとつの大部屋になった", item.GetName()),
+		Execute: func(g *Game) {
+			g.rooms = []Room{makeBigRoom(g.state.Map)}
+			g.miniMap = nil
+			g.miniMapDirty = true
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 罠のカードで増える罠の数（5〜8個）
+func rollExtraTrapCount(intn func(int) int) int {
+	return 5 + intn(4)
+}
+
+// 罠のカードはフロアの部屋に未発見の罠を追加する。
+var increaseFloorTraps = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。なんだか嫌な予感がする…", item.GetName()),
+		Execute: func(g *Game) {
+			playerX, playerY := g.state.Player.GetPosition()
+			count := rollExtraTrapCount(rand.Intn)
+			added := 0
+			for attempt := 0; attempt < 100 && added < count; attempt++ {
+				room := g.rooms[rand.Intn(len(g.rooms))]
+				x := rand.Intn(room.Width-2) + room.X + 1
+				y := rand.Intn(room.Height-2) + room.Y + 1
+				if x == playerX && y == playerY {
+					continue
+				}
+				if g.state.Map[y][x].Blocked || g.state.Map[y][x].Type == "stairs" {
+					continue
+				}
+				occupied := false
+				for _, trap := range g.state.MapTraps {
+					if trap.X == x && trap.Y == y {
+						occupied = true
+						break
+					}
+				}
+				if occupied {
+					continue
+				}
+				// 既存の罠生成と同じく睡眠ガスを多めに混ぜる
+				trapIDs := []int{0, 0, 1, 2, 3}
+				g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(trapIDs[rand.Intn(len(trapIDs))], x, y))
+				added++
+			}
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
 func (g *Game) executeItemIdentify() {
 	g.showInventory = false
 	item, _ := determineItemSource(g)

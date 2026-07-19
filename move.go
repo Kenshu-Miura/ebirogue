@@ -1126,6 +1126,7 @@ func (g *Game) resetGame() {
 
 	// その他のゲーム状態をリセット
 	g.rooms = rooms // 部屋情報を更新
+	g.pickupBanned = false
 	g.playerDead = false
 	g.deathMessageAdded = false
 	g.fadeOutProgress = 0.0

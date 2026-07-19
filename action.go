@@ -31,6 +31,21 @@ func (g *Game) executeGroundItemAction() {
 				if identified {
 					itemName = getItemNameWithSharpness(item)
 				}
+
+				// 拾得禁止のカードの効果中は拾えない
+				if g.pickupBanned {
+					action := Action{
+						Duration:     0.5,
+						Message:      fmt.Sprintf("カードの効果で%sを拾えない", itemName),
+						ItemName:     itemName,
+						Execute:      func(g *Game) {},
+						IsIdentified: identified,
+						NonBlocking:  !g.IsEnemyAdjacent(),
+					}
+					g.Enqueue(action)
+					break
+				}
+
 				// プレイヤーのインベントリサイズをチェック
 				if len(g.state.Player.Inventory) < 20 {
 					action := Action{
