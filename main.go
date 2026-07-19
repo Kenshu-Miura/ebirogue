@@ -50,6 +50,7 @@ type StatusAilments struct {
 	Poison      int  // 毒の残りターン数
 	Slow        int  // 鈍足の残りターン数
 	Haste       int  // 倍速の残りターン数
+	MouthSeal   int  // 口封じの残りターン数（カード・薬・食料を口にできない）
 	Paralysis   bool // かなしばり状態
 	Seal        bool // 封印状態
 	HasteOnWake bool // 睡眠から目覚めた時に倍速化するかどうか

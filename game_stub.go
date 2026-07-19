@@ -26,6 +26,7 @@ type StatusAilments struct {
 	Poison      int
 	Slow        int
 	Haste       int
+	MouthSeal   int
 	Paralysis   bool
 	Seal        bool
 	HasteOnWake bool

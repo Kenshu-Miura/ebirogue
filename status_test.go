@@ -42,6 +42,10 @@ func TestFormatPlayerStatus(t *testing.T) {
 	if got := formatPlayerStatus(StatusAilments{Haste: 3}); got != "倍速(3)" {
 		t.Fatalf("haste status = %q, want 倍速(3)", got)
 	}
+
+	if got := formatPlayerStatus(StatusAilments{MouthSeal: 5}); got != "口封じ(5)" {
+		t.Fatalf("mouth seal status = %q, want 口封じ(5)", got)
+	}
 }
 
 func TestWakeFromSleep(t *testing.T) {

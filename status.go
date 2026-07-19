@@ -32,7 +32,7 @@ func wakeFromSleep(status *StatusAilments) bool {
 }
 
 func formatPlayerStatus(status StatusAilments) string {
-	statuses := make([]string, 0, 7)
+	statuses := make([]string, 0, 8)
 	if status.Poison > 0 {
 		statuses = append(statuses, fmt.Sprintf("毒(%d)", status.Poison))
 	}
@@ -50,6 +50,9 @@ func formatPlayerStatus(status StatusAilments) string {
 	}
 	if status.Blind > 0 {
 		statuses = append(statuses, fmt.Sprintf("目潰し(%d)", status.Blind))
+	}
+	if status.MouthSeal > 0 {
+		statuses = append(statuses, fmt.Sprintf("口封じ(%d)", status.MouthSeal))
 	}
 	if status.Paralysis {
 		statuses = append(statuses, "金縛り")

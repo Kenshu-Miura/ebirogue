@@ -742,6 +742,145 @@ var increaseFloorTraps = func(g *Game) {
 	removeUsedItem(g, isInventoryItem)
 }
 
+// --- プレイヤー自身へ作用するカード ---
+
+// splitEnemiesByExplosion は自爆の爆発（周囲1マス）に巻き込まれる敵と生き残る敵を分ける。
+func splitEnemiesByExplosion(playerX, playerY int, enemies []Enemy) (survivors []Enemy, destroyed []string) {
+	for _, enemy := range enemies {
+		if abs(enemy.X-playerX) <= 1 && abs(enemy.Y-playerY) <= 1 {
+			destroyed = append(destroyed, enemy.Name)
+			continue
+		}
+		survivors = append(survivors, enemy)
+	}
+	return survivors, destroyed
+}
+
+// 自爆のカードは自分のHPを半分にする代わりに周囲1マスの敵を消し飛ばす。
+// 消し飛んだ敵の経験値は入らない。
+var selfDestruct = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。カードが激しく輝いた", item.GetName()),
+		Execute: func(g *Game) {
+			playerX, playerY := g.state.Player.GetPosition()
+			survivors, destroyed := splitEnemiesByExplosion(playerX, playerY, g.state.Enemies)
+			damage := mineTrapDamage(g.state.Player.Health)
+			g.Enqueue(Action{
+				Duration: 0.5,
+				Message:  "大爆発が起こった！",
+				Execute: func(g *Game) {
+					g.state.Enemies = survivors
+					g.state.Player.Health -= damage
+					g.state.Player.checkDeath(g)
+				},
+			})
+			for _, name := range destroyed {
+				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sは爆発に巻き込まれて消し飛んだ", name), Execute: func(g *Game) {}})
+			}
+			g.miniMapDirty = true
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 口封じのカードでプレイヤーの口が封じられるターン数
+const mouthSealCardTurns = 15
+
+// 口封じのカードはしばらくの間カード・薬・食料を使えなくする。
+var sealPlayerMouth = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。口が封じられて開かなくなった", item.GetName()),
+		Execute: func(g *Game) {
+			g.state.Player.StatusAilments.MouthSeal = mouthSealCardTurns
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// パワーアップのカードで上昇するパワーの量
+const powerBoostAmount = 3
+
+// boostPower はパワーアップのカードの結果を返す。
+// パワーが満タンのときは最大パワーが1上がり、パワーも満タンになる。
+func boostPower(power, maxPower int) (newPower, newMaxPower int) {
+	if power >= maxPower {
+		maxPower++
+		return maxPower, maxPower
+	}
+	power += powerBoostAmount
+	if power > maxPower {
+		power = maxPower
+	}
+	return power, maxPower
+}
+
+// パワーアップのカードはパワーを上昇させる。
+var powerUpCard = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。力がみなぎってきた", item.GetName()),
+		Execute: func(g *Game) {
+			player := &g.state.Player
+			newPower, newMaxPower := boostPower(player.Power, player.MaxPower)
+			var message string
+			if newMaxPower > player.MaxPower {
+				message = fmt.Sprintf("最大パワーが%d上昇した", newMaxPower-player.MaxPower)
+			} else {
+				message = fmt.Sprintf("パワーが%d上昇した", newPower-player.Power)
+			}
+			player.Power, player.MaxPower = newPower, newMaxPower
+			g.Enqueue(Action{Duration: 0.4, Message: message, Execute: func(g *Game) {}})
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// 完全回復のカードでHPが満タンだった場合に上がる最大HPの量
+const fullHealMaxHealthBonus = 5
+
+// fullHealResult は完全回復のカードの回復結果を返す。
+// HPが満タンのときは最大HPが上昇する。
+func fullHealResult(health, maxHealth int) (newHealth, newMaxHealth int) {
+	if health >= maxHealth {
+		maxHealth += fullHealMaxHealthBonus
+	}
+	return maxHealth, maxHealth
+}
+
+// 完全回復のカードはHPを全回復する。毒状態なら毒も治り、満タンなら最大HPが上がる。
+var fullHealCard = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。温かい光が体を包んだ", item.GetName()),
+		Execute: func(g *Game) {
+			player := &g.state.Player
+			wasFull := player.Health >= player.MaxHealth
+			healed := player.MaxHealth - player.Health
+			player.Health, player.MaxHealth = fullHealResult(player.Health, player.MaxHealth)
+			if wasFull {
+				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("最大HPが%d上昇した", fullHealMaxHealthBonus), Execute: func(g *Game) {}})
+			} else {
+				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("HPが%d回復した", healed), Execute: func(g *Game) {}})
+			}
+			if player.StatusAilments.Poison > 0 {
+				player.StatusAilments.Poison = 0
+				g.Enqueue(Action{Duration: 0.4, Message: "毒も治った", Execute: func(g *Game) {}})
+			}
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
 func (g *Game) executeItemIdentify() {
 	g.showInventory = false
 	item, _ := determineItemSource(g)

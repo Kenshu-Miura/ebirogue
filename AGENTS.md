@@ -2,6 +2,118 @@
 
 This codebase implements a roguelike game in Go using the Ebiten library.  Each feature lives in its own file (see `README.md` for an overview).
 
+## プロジェクト概要
+
+- 主人公「海老さん」のターン制ローグライク。SFC シレンを参考にしたゲームデザイン。
+- Go 1.24 / Ebiten v2 (`github.com/hajimehoshi/ebiten/v2`)。モジュール名は `github.com/Kenshu-Miura/ebirogue`。
+- 全ソースはリポジトリ直下の単一 `main` パッケージにフラットに配置（サブパッケージは `ebitenstub/` のみ）。
+- コメント・メッセージ・アイテム名などは日本語が基本。
+- 画面は論理解像度 640x480（`Layout`）、タイルは 30x30 ピクセル（`tileSize`）。マップは 70x70 タイル。
+
+## ビルド・実行・テスト
+
+```bash
+go run .                                   # ローカル実行（ウィンドウが開く）
+go build                                   # 実行ファイル生成
+gofmt -w <変更したファイル>                  # コミット前に必須
+go test ./...                              # 通常ビルドのテスト（content_test.go など）
+go test -tags test ./...                   # スタブビルドのテスト（純粋ロジック系）
+GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
+```
+
+**テストは2系統ある**点に注意:
+
+- `go test ./...`（タグなし）: 実際のゲームコード（`//go:build !test` 付きファイル）と一緒にコンパイルされる。`content_test.go`（アイテム・カード・敵などコンテンツの結合テスト）はこちらでのみ実行される。
+- `go test -tags test ./...`: Ebiten 依存ファイルを除外し、`*_stub.go` と `ebitenstub/` で代替した軽量ビルド。`autostop_test.go` や `inventory_view_test.go` など純粋ロジックのテストが対象。
+- **変更時は両方実行すること。**
+
+### ビルドタグの仕組み（重要）
+
+| 種別 | タグ | 例 |
+|---|---|---|
+| Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go` など |
+| テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `savedata.go` |
+
+- タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
+- 新機能のロジックはなるべく「純粋関数をタグなしファイルへ切り出し + 単体テスト」の形にする（`autostop.go` + `autostop_test.go` が手本）。
+
+## コアゲームループとターン進行
+
+- `main.go` の `Game.Update()` が毎フレーム呼ばれる（60FPS 前提のフレームカウント処理が多い）。`Game.Draw()` が描画。
+- 入力受付は `CanAcceptInput()`（ActionQueue にブロッキング Action が無いこと）と各種ウィンドウ表示フラグ（`showInventory`, `showMenu`, `showHelp` など）が全て false のときのみ。
+- **ターン進行の流れ**:
+  1. `HandleInput()`（input.go）が方向を返し、`MovePlayer(dx, dy)`（move.go）で移動、または `Z` キーで `CheckForEnemies`（攻撃, action.go）。
+  2. 行動すると `isActioned = true` になり `AdvanceTurn()`（monster_spawn.go）でターン数加算・湧きチェック。
+  3. 攻撃・アイテム効果・罠などはすべて `Action`（`Duration`/`Message`/`Execute`）として `g.Enqueue()` で `ActionQueue` に積まれ、`HandleActionQueue()`（animation.go）が 1 件ずつ実行してメッセージ表示とアニメーションのタイミングを制御する。`Message` は自動的に `messageLog` にも入る。
+  4. キューが空になると `CheckCombatState()`（animation.go）が `IncrementMoveCount()`（毒ダメージ・満腹度減少・HP自然回復・状態異常ターン減算）と `MoveEnemies()`（敵ターン）を実行する。プレイヤーが鈍足なら敵は 2 回動く。
+- 死亡処理は `checkDeath` → `playerDead` フラグ → 死亡メッセージ → フェードアウト → `resetGame()`（move.go）。
+
+## 主要データ構造（定義場所）
+
+- `Game`（main.go）: 全状態のルート。`state GameState`, `rooms []Room`, 各種画像、UI フラグ多数、`ActionQueue`, ターン/湧き/フロア滞在カウンタ, `settings`, `messageLog`, `customNames` など。
+- `GameState`（main.go）: `Map [][]Tile`, `Player`, `Enemies []Enemy`, `Items []Item`, `MapTraps []MapTrap`。
+- `Player`（main.go）: HP/満腹度/パワー/レベル/経験値/所持金、`Inventory []Item`（最大20）、装備スロット（武器・防具・矢 各1、アクセサリ2）、`StatusAilments`。
+- `Enemy`（enemies.go）: ステータス + `SpecialAttack SpecialAttackFunc` + `SpecialAttackProbability` + `StatusAilments`。
+- `StatusAilments`（main.go / game_stub.go 両方に定義）: 混乱・睡眠・目潰し・毒・鈍足・倍速・口封じ（残りターン int）、金縛り・封印（bool）、`HasteOnWake`。
+- `Tile`（main.go / game_stub.go）: `Type`（"floor", "wall", "corridor", "door" 等の文字列）, `Blocked`, `BlockSight`, `Visited`, `Brightness`。
+- `Room`（map.go）: `ID, X, Y, Width, Height, Center`。
+- `MapTrap`（maptraps.go）: 座標・名前・発見済みフラグ・効果関数・不発率。
+- アイテムは `BaseItem`（items.go）を埋め込んだ具象型 `Weapon`/`Armor`/`Arrow`/`Food`/`Potion`/`Card`/`Money`/`Accessory`/`Cane`/`Trap`。インタフェース `Item`/`Equipable`/`Identifiable`/`Character` は `interfaces.go`。
+- 武具の `Sharpness` は強化値（生成時 -1〜3 のランダム、-1 なら呪い付き）。
+
+## コンテンツのデータテーブル（新要素の追加場所）
+
+| コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
+|---|---|---|---|
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜44 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
+| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜3 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
+| 罠 | `mapTrapTemplates []mapTrapTemplate`（maptraps.go） | `createMapTrapByID` | 同ファイルの効果クロージャ |
+| 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
+| 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
+
+- アイテム効果関数（`UseAction = func(g *Game)`）は `determineItemSource(g)` で「インベントリから使ったか足元か」を判定し、最後に `removeUsedItem(g, isInventoryItem)` で消費する、というパターンが基本（itemeffects.go 冒頭参照）。
+- 既存カード効果（睡眠・混乱・部屋全体・フロア全体系）はランダム部分を `rollXxx(intn func(int) int)` の純粋関数に分離して `content_test.go` でテストしている。新規効果も同じ形式にする。
+
+## 新要素追加チェックリスト
+
+新しいアイテム・敵・罠を 1 つ追加するときに触る場所:
+
+1. **テーブル**: 上記の該当テーブルへ追加（ID は連番を維持）。
+2. **効果**: `itemeffects.go`（アイテム）/ 定義内クロージャ（敵・罠）。
+3. **画像**: `img/` に 30x30 透過 PNG。`NewGame()`（main.go）で読み込み、`getItemImage` / `getEnemyImage` / `DrawMapTraps`（draw.go）の分岐に追加。画像は `BaseItem.Type` や `Enemy.Type` の文字列で選ばれる（例: `"Mintia"` → mintiaImg, `"Card"` → cardImg）。
+4. **セーブ対応**: アイテムはテンプレート ID から再生成される（`SavedItem`, savegame.go の `itemToSaved`/`savedToItem`）ので、**新しい可変フィールドを追加した場合は `SavedItem` と両変換関数に追記**する。敵は `SavedEnemy`（ID + 可変ステータス）。罠は**名前→テンプレート ID の対応表 `mapTrapTemplateID`（savegame.go）に必ず追加**する。
+5. **湧き/出現**: 敵なら `FloorSpawnTables`。アイテムの床出現は現状 `createItem` が全テンプレートから一様ランダム。
+6. **テスト**: `content_test.go` にテンプレート存在チェックと効果のテストを追加。
+7. **説明**: 必要なら `help.go` のヘルプページも更新。
+
+## セーブ・設定システム
+
+- `savedata.go`（タグなし・純粋）: `SaveData`/`SavedPlayer` 等の構造体、`decodeSaveData`、破損検出の `validateSaveData`、`GameSettings`。`saveDataVersion = 1`（構造を壊す変更をしたらインクリメント。旧セーブは破棄され新規冒険になる）。
+- `savegame.go`（`!test`）: `os.ReadFile`/`WriteFile` による I/O、`buildSaveData`/`applySaveData`、メニューの「中断」→ `saveSuspendData`、フロア移動時の `autoSave`、起動時の `tryResumeFromSave`、死亡時の `deleteSaveFile`。
+- ファイルはカレントディレクトリの `ebirogue_save.json` / `ebirogue_settings.json`。**WASM ではファイル保存が失敗する**（ロードマップに localStorage 対応の残タスクあり）。
+
+## ゲーム仕様早見表
+
+- 初期ステータス: HP 100 / 満腹度 100 / パワー 8 / 攻撃 3 / 防御 3 / インベントリ上限 20。経験値テーブルは `levelExpRequirements`（main.go, レベル10まで）。
+- 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は毎ターン HP-2。
+- 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）。
+- モンスター湧き: 上限 19 体、20〜30 ターン間隔、プレイヤーから 8 マス以内には湧かない（monster_spawn.go の定数）。
+- フロア滞在 1200/1300 ターンで風の警告（`checkFloorTimeWarnings`）。
+- 視界: 部屋単位。`updateTileBrightness`（map.go）が現在の部屋+隣接タイルのみ明るくする。敵・アイテムのミニマップ表示は同部屋・隣接・発見済みで決まる（`updateEnemyVisibility` / `updateItemVisibility`）。目潰し中は敵非表示。
+- マップ生成: `GenerateRandomMap`（map.go）→ `generateRooms` → `connectRooms`（通路・扉）→ 階段・敵・アイテム・罠配置。
+- 主なキー操作: 方向キー移動 / `Z` 攻撃（正面の罠調査を兼ねる）/ `X`+方向 ダッシュ / `A`+方向 方向転換 / `D` 矢を撃つ / Space 扉を開く / `C` メニュー / `L` メッセージ履歴 / インベントリ内 `F` 絞り込み・`S` ソート・`N` 任意名。`F1` はデバッグ用（`processF1KeyPress`, input.go）。
+
+## 落とし穴・注意点
+
+- **`createItem` は `rand.Intn(len(itemTemplates))`、`createEnemy` は `rand.Intn(len(MonsterDefinitions))` で ID を引く**ため、テーブルの ID は 0 からの連番を維持しないと存在しない ID を引いてフォールバック（混乱薬 / エビ）になる。
+- `Action` の `Execute` はメッセージ表示タイミングで遅延実行される。効果の副作用は `Execute` 内に書くこと（Enqueue した時点で即実行してはいけない）。`NonBlocking: true` の Action は入力を止めない。
+- 敵・アイテムはスライス（`[]Enemy`, `[]Item`）で保持され、インデックスで参照する処理が多い。ループ中の要素削除は既存コードのパターン（`append(s[:i], s[i+1:]...)` 後の break 等）に合わせる。
+- `Player.EquippedItems [5]Item` は後方互換のために残っている旧配列。新規コードは `EquippedWeapon`/`EquippedArmor`/`EquippedArrow`/`EquippedAccessories` を使う（equipment.go）。
+- 未識別アイテムの表示名は `inventoryItemLabel`（inventory.go）と `customNames`（テンプレート ID キー）で決まる。識別状態は `Identifiable` インタフェース。
+- 画像ロードは `loadImage` が失敗時 `log.Fatal` する。画像ファイルを追加し忘れると起動しない。
+- リポジトリ直下のビルド成果物（`ebirogue.exe`, `ebirogue.wasm` 等）はコミット対象にしない。
+
 ## Coding style
 - Use `gofmt -w` on all modified Go files before committing.
 - Follow camelCase naming for variables and functions.
@@ -9,13 +121,13 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 - Keep functions short and related logic grouped in the existing files (e.g. `input.go`, `move.go`).
 
 ## Tests
-- テストでは Ebiten のスタブを利用するため `go test -tags test ./...` を実行してください。
+- 純粋ロジックのテストは Ebiten のスタブを利用するため `go test -tags test ./...` を実行してください。
+- コンテンツ（アイテム・カード・敵）の結合テスト `content_test.go` は通常ビルドでのみ動くため `go test ./...` も実行してください。
 - Unit tests are in `*_test.go` files.  They rely on stub files such as `draw_stub.go` and `fonts_stub.go` when built with the `test` tag.
-- Run `go test -tags test ./...` to execute tests in a headless environment.
 
 ## Pull requests
 - Summaries should briefly describe the change and mention if tests were added or updated.
-- Always run `go test -tags test ./...` before submitting a PR.
+- Always run `go test -tags test ./...` and `go test ./...` before submitting a PR.
 
 ## Implementation roadmap
 
@@ -27,8 +139,6 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 
 ### Priority A: cards based on scrolls
 
-- プレイヤー自身へ作用するカードを追加する。
-  - 自爆、口封じ、攻撃力上昇、HP全回復と状況別の追加効果
 - 装備へ作用するカードを追加する。
   - さび止め（武器・盾の強化値を下げる罠や敵を追加した後に実装する）
 - 壺の実装後に、容量増加と中身吸い出しのカードを追加する。
@@ -86,7 +196,7 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 - 矢、投擲アイテム、爆発で罠を起動できるようにし、罠を攻略へ利用可能にする。
 - 追加予定の状態異常・一時効果:
   - おにぎり状態、キグニ族状態、倍速、身代わり、透明、無敵
-  - 攻撃力・防御力の上昇と低下、レベル低下、回復不能、口封じ
+  - 攻撃力・防御力の上昇と低下、レベル低下、回復不能（口封じは実装済み）
 - 状態異常は残りターン、重複時の規則、解除手段、耐性を共通処理へまとめる。可能な状態はプレイヤーと敵の双方へ適用できるようにする。
 - 新しい罠には `img/` 配下へ30x30の透過PNGを用意し、発見済み表示とミニマップ表示を確認する。
 
@@ -120,4 +230,4 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 - ランダム処理は、可能な限り純粋関数や注入可能な乱数へ分離して単体テストを追加する。
 - 状態異常、装備能力、敵の特殊攻撃、罠効果には、正常系と解除・無効化・境界値のテストを追加する。
 - 画像を追加した場合は30x30、アルファチャンネル、透明な四隅、ゲーム内での視認性を確認する。
-- 実装完了後は `gofmt -w` と `go test -tags test ./...` を実行し、可能であれば通常ビルドとWASMビルドも確認する。
+- 実装完了後は `gofmt -w` と `go test -tags test ./...`、`go test ./...` を実行し、可能であれば通常ビルドとWASMビルドも確認する。

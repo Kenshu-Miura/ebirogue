@@ -495,6 +495,42 @@ var itemTemplates = map[int]ItemTemplate{
 		Char:        'C',
 		UseActions:  map[string]UseAction{"UseCard": increaseFloorTraps},
 	},
+	41: {
+		ID:          41,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "自爆のカード",
+		Description: "大爆発が起こり、自分のHPが半分になるが、周囲1マスの敵を消し飛ばす。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": selfDestruct},
+	},
+	42: {
+		ID:          42,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "口封じのカード",
+		Description: "しばらくの間口が開かなくなり、カード・薬・食料を使えなくなってしまう。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": sealPlayerMouth},
+	},
+	43: {
+		ID:          43,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "パワーアップのカード",
+		Description: "パワーが3上昇する。パワーが満タンのときは最大パワーが1上昇する。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": powerUpCard},
+	},
+	44: {
+		ID:          44,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "完全回復のカード",
+		Description: "HPが完全に回復し、毒も治る。HPが満タンのときは最大HPが5上昇する。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": fullHealCard},
+	},
 }
 
 // テーブルからアイテムを生成する共通関数

@@ -623,3 +623,187 @@ func TestVacuumSlashCardDamagesOnlyEffectArea(t *testing.T) {
 		t.Fatalf("outside enemy health = %d, want 100", got)
 	}
 }
+
+func TestSelfTargetCardTemplates(t *testing.T) {
+	cards := map[int]string{
+		41: "自爆のカード",
+		42: "口封じのカード",
+		43: "パワーアップのカード",
+		44: "完全回復のカード",
+	}
+	for id, wantName := range cards {
+		card, ok := buildItemFromTemplate(id, 0, 0).(*Card)
+		if !ok || card.Name != wantName {
+			t.Fatalf("card %d = %#v, want %q", id, card, wantName)
+		}
+	}
+}
+
+func TestSplitEnemiesByExplosion(t *testing.T) {
+	enemies := []Enemy{
+		{Entity: Entity{X: 3, Y: 3}, Name: "隣接"},
+		{Entity: Entity{X: 1, Y: 1}, Name: "斜め隣接"},
+		{Entity: Entity{X: 5, Y: 2}, Name: "遠く"},
+	}
+	survivors, destroyed := splitEnemiesByExplosion(2, 2, enemies)
+	if len(survivors) != 1 || survivors[0].Name != "遠く" {
+		t.Fatalf("survivors = %#v, want only 遠く", survivors)
+	}
+	if len(destroyed) != 2 {
+		t.Fatalf("destroyed = %#v, want 2 enemies", destroyed)
+	}
+}
+
+func TestSelfDestructCard(t *testing.T) {
+	card := buildItemFromTemplate(41, 0, 0)
+	g := &Game{
+		state: GameState{
+			Player: Player{Entity: Entity{X: 2, Y: 2}, Health: 100, MaxHealth: 100, Inventory: []Item{card}},
+			Enemies: []Enemy{
+				{Entity: Entity{X: 3, Y: 2}, Health: 100, ExperiencePoints: 10},
+				{Entity: Entity{X: 6, Y: 6}, Health: 100},
+			},
+		},
+	}
+
+	card.Use(g)
+	for i := 0; i < len(g.ActionQueue.Queue); i++ {
+		g.ActionQueue.Queue[i].Execute(g)
+	}
+
+	if g.state.Player.Health != 50 {
+		t.Fatalf("player health = %d, want 50", g.state.Player.Health)
+	}
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].X != 6 {
+		t.Fatalf("enemies = %#v, want only the distant enemy", g.state.Enemies)
+	}
+	if g.state.Player.ExperiencePoints != 0 {
+		t.Fatal("消し飛んだ敵の経験値は入らないはず")
+	}
+	if len(g.state.Player.Inventory) != 0 {
+		t.Fatal("card should be consumed")
+	}
+}
+
+func TestMouthSealCard(t *testing.T) {
+	card := buildItemFromTemplate(42, 0, 0)
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card}}}}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if got := g.state.Player.StatusAilments.MouthSeal; got != mouthSealCardTurns {
+		t.Fatalf("mouth seal turns = %d, want %d", got, mouthSealCardTurns)
+	}
+
+	g.decrementStatusAilments()
+	if got := g.state.Player.StatusAilments.MouthSeal; got != mouthSealCardTurns-1 {
+		t.Fatalf("mouth seal turns after a turn = %d, want %d", got, mouthSealCardTurns-1)
+	}
+}
+
+func TestIsMouthItem(t *testing.T) {
+	if !isMouthItem(buildItemFromTemplate(1, 0, 0)) || !isMouthItem(buildItemFromTemplate(2, 0, 0)) || !isMouthItem(buildItemFromTemplate(30, 0, 0)) {
+		t.Fatal("食料・薬・カードは口封じの対象のはず")
+	}
+	if isMouthItem(buildItemFromTemplate(9, 0, 0)) || isMouthItem(buildItemFromTemplate(20, 0, 0)) {
+		t.Fatal("杖や武器は口封じの対象外のはず")
+	}
+}
+
+func TestMouthSealBlocksItemUse(t *testing.T) {
+	potion := buildItemFromTemplate(2, 0, 0)
+	g := &Game{
+		state: GameState{
+			Player: Player{
+				Inventory:      []Item{potion},
+				StatusAilments: StatusAilments{MouthSeal: 5},
+			},
+		},
+	}
+
+	g.executeAction()
+
+	if len(g.state.Player.Inventory) != 1 {
+		t.Fatal("口封じ中はアイテムが消費されないはず")
+	}
+	if len(g.ActionQueue.Queue) != 1 || g.ActionQueue.Queue[0].Message != "口が封じられていて使えない" {
+		t.Fatalf("queue = %#v, want blocked message", g.ActionQueue.Queue)
+	}
+	if g.isActioned {
+		t.Fatal("口封じで使えなかった場合はターンを消費しないはず")
+	}
+}
+
+func TestBoostPower(t *testing.T) {
+	tests := []struct {
+		power, maxPower    int
+		wantPower, wantMax int
+	}{
+		{power: 5, maxPower: 8, wantPower: 8, wantMax: 8},
+		{power: 0, maxPower: 8, wantPower: 3, wantMax: 8},
+		{power: 8, maxPower: 8, wantPower: 9, wantMax: 9},
+	}
+	for _, tt := range tests {
+		gotPower, gotMax := boostPower(tt.power, tt.maxPower)
+		if gotPower != tt.wantPower || gotMax != tt.wantMax {
+			t.Errorf("boostPower(%d, %d) = (%d, %d), want (%d, %d)", tt.power, tt.maxPower, gotPower, gotMax, tt.wantPower, tt.wantMax)
+		}
+	}
+}
+
+func TestPowerUpCard(t *testing.T) {
+	card := buildItemFromTemplate(43, 0, 0)
+	g := &Game{state: GameState{Player: Player{Power: 4, MaxPower: 8, Inventory: []Item{card}}}}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if g.state.Player.Power != 7 || g.state.Player.MaxPower != 8 {
+		t.Fatalf("power = %d/%d, want 7/8", g.state.Player.Power, g.state.Player.MaxPower)
+	}
+}
+
+func TestFullHealResult(t *testing.T) {
+	if health, maxHealth := fullHealResult(40, 100); health != 100 || maxHealth != 100 {
+		t.Fatalf("fullHealResult(40, 100) = (%d, %d), want (100, 100)", health, maxHealth)
+	}
+	if health, maxHealth := fullHealResult(100, 100); health != 105 || maxHealth != 105 {
+		t.Fatalf("fullHealResult(100, 100) = (%d, %d), want (105, 105)", health, maxHealth)
+	}
+}
+
+func TestFullHealCardCuresPoison(t *testing.T) {
+	card := buildItemFromTemplate(44, 0, 0)
+	g := &Game{
+		state: GameState{
+			Player: Player{
+				Health: 40, MaxHealth: 100,
+				Inventory:      []Item{card},
+				StatusAilments: StatusAilments{Poison: 4},
+			},
+		},
+	}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if g.state.Player.Health != 100 || g.state.Player.MaxHealth != 100 {
+		t.Fatalf("health = %d/%d, want 100/100", g.state.Player.Health, g.state.Player.MaxHealth)
+	}
+	if g.state.Player.StatusAilments.Poison != 0 {
+		t.Fatal("毒も治るはず")
+	}
+}
+
+func TestFullHealCardAtFullHealth(t *testing.T) {
+	card := buildItemFromTemplate(44, 0, 0)
+	g := &Game{state: GameState{Player: Player{Health: 100, MaxHealth: 100, Inventory: []Item{card}}}}
+
+	card.Use(g)
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if g.state.Player.Health != 105 || g.state.Player.MaxHealth != 105 {
+		t.Fatalf("health = %d/%d, want 105/105", g.state.Player.Health, g.state.Player.MaxHealth)
+	}
+}

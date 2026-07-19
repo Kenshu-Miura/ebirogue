@@ -1374,6 +1374,16 @@ func (g *Game) decrementStatusAilments() {
 			})
 		}
 	}
+	if g.state.Player.StatusAilments.MouthSeal > 0 {
+		g.state.Player.StatusAilments.MouthSeal--
+		if g.state.Player.StatusAilments.MouthSeal == 0 {
+			g.Enqueue(Action{
+				Duration: 0.4,
+				Message:  "口が動くようになった",
+				Execute:  func(g *Game) {},
+			})
+		}
+	}
 
 	// 敵の状態異常を減らす
 	for i := range g.state.Enemies {

@@ -9,6 +9,15 @@ import (
 	"math/rand"
 )
 
+// isMouthItem は口封じ状態で使えないアイテム（口にする・読み上げるもの）かどうかを返す。
+func isMouthItem(item Item) bool {
+	switch item.(type) {
+	case *Food, *Potion, *Card:
+		return true
+	}
+	return false
+}
+
 func (g *Game) executeGroundItemAction() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
@@ -92,6 +101,21 @@ func (g *Game) executeGroundItemAction() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 				g.selectedGroundItemIndex = i
+
+				// 口封じ状態ではカード・薬・食料を使えない
+				if g.state.Player.StatusAilments.MouthSeal > 0 && isMouthItem(item) {
+					g.Enqueue(Action{
+						Duration: 0.4,
+						Message:  "口が封じられていて使えない",
+						Execute:  func(g *Game) {},
+					})
+					g.ShowGroundItem = false
+					g.GroundItemActioned = false
+					g.selectedGroundActionIndex = 0
+					g.groundMenuJustOpened = false
+					return
+				}
+
 				if foodItem, ok := item.(*Food); ok {
 					foodItem.Use(g)
 				} else if potionItem, ok := item.(*Potion); ok {
@@ -274,6 +298,21 @@ func (g *Game) executeAction() {
 
 	if g.selectedActionIndex == 0 { // Assuming index 0 corresponds to '使う' or '装備'
 		item := g.state.Player.Inventory[g.selectedItemIndex]
+
+		// 口封じ状態ではカード・薬・食料を使えない
+		if g.state.Player.StatusAilments.MouthSeal > 0 && isMouthItem(item) {
+			g.Enqueue(Action{
+				Duration: 0.4,
+				Message:  "口が封じられていて使えない",
+				Execute:  func(g *Game) {},
+			})
+			g.showItemActions = false
+			g.showInventory = false
+			g.selectedItemIndex = 0
+			g.selectedActionIndex = 0
+			return
+		}
+
 		if foodItem, ok := item.(*Food); ok {
 			foodItem.Use(g)
 		} else if potionItem, ok := item.(*Potion); ok {
