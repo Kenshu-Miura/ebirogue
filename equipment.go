@@ -40,7 +40,7 @@ func (p *Player) EquipItem(item Equipable) (string, error) {
 		p.EquippedWeapon = v
 		v.UpdatePlayerStats(p, true)
 		return fmt.Sprintf("%sを装備した。", v.GetName()), nil
-		
+
 	case *Armor:
 		// 既存の防具があれば装備解除
 		if p.EquippedArmor != nil {
@@ -50,7 +50,7 @@ func (p *Player) EquipItem(item Equipable) (string, error) {
 		p.EquippedArmor = v
 		v.UpdatePlayerStats(p, true)
 		return fmt.Sprintf("%sを装備した。", v.GetName()), nil
-		
+
 	case *Arrow:
 		// 既存の矢があれば装備解除
 		if p.EquippedArrow != nil {
@@ -60,7 +60,7 @@ func (p *Player) EquipItem(item Equipable) (string, error) {
 		p.EquippedArrow = v
 		v.UpdatePlayerStats(p, true)
 		return fmt.Sprintf("%sを装備した。", v.GetName()), nil
-		
+
 	case *Accessory:
 		// 最初の空きスロットに装備
 		if p.EquippedAccessories[0] == nil {
@@ -76,7 +76,7 @@ func (p *Player) EquipItem(item Equipable) (string, error) {
 		}
 		v.UpdatePlayerStats(p, true)
 		return fmt.Sprintf("%sを装備した。", v.GetName()), nil
-		
+
 	default:
 		return "", fmt.Errorf("装備できないアイテムです")
 	}
@@ -91,21 +91,21 @@ func (p *Player) UnequipItem(item Equipable) (string, error) {
 			p.EquippedWeapon = nil
 			return fmt.Sprintf("%sをはずした。", v.GetName()), nil
 		}
-		
+
 	case *Armor:
 		if p.EquippedArmor == v {
 			p.EquippedArmor.UpdatePlayerStats(p, false)
 			p.EquippedArmor = nil
 			return fmt.Sprintf("%sをはずした。", v.GetName()), nil
 		}
-		
+
 	case *Arrow:
 		if p.EquippedArrow == v {
 			p.EquippedArrow.UpdatePlayerStats(p, false)
 			p.EquippedArrow = nil
 			return fmt.Sprintf("%sをはずした。", v.GetName()), nil
 		}
-		
+
 	case *Accessory:
 		if p.EquippedAccessories[0] == v {
 			p.EquippedAccessories[0].UpdatePlayerStats(p, false)
@@ -118,7 +118,7 @@ func (p *Player) UnequipItem(item Equipable) (string, error) {
 			return fmt.Sprintf("%sをはずした。", v.GetName()), nil
 		}
 	}
-	
+
 	return "", fmt.Errorf("装備されていません")
 }
 
@@ -141,7 +141,7 @@ func (p *Player) IsEquipped(item Equipable) bool {
 // 装備中のアイテム一覧を取得
 func (p *Player) GetEquippedItems() []Equipable {
 	var equipped []Equipable
-	
+
 	if p.EquippedWeapon != nil {
 		equipped = append(equipped, p.EquippedWeapon)
 	}
@@ -157,6 +157,6 @@ func (p *Player) GetEquippedItems() []Equipable {
 	if p.EquippedAccessories[1] != nil {
 		equipped = append(equipped, p.EquippedAccessories[1])
 	}
-	
+
 	return equipped
 }

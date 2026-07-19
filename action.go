@@ -25,21 +25,7 @@ func (g *Game) executeGroundItemAction() {
 		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
-				// アイテムが識別されているかどうかをチェック
-				identified := true
-				var itemName string
-				if identifiableItem, ok := item.(Identifiable); ok {
-					identified = identifiableItem.IsIdentified()
-					// 識別されていない場合は識別されていないアイテム名を取得
-					if !identified {
-						itemName = identifiableItem.GetName()
-					}
-				}
-
-				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
-				if identified {
-					itemName = getItemNameWithSharpness(item)
-				}
+				itemName, identified := displayItemName(item)
 
 				// 拾得禁止のカードの効果中は拾えない
 				if g.pickupBanned {
@@ -85,10 +71,7 @@ func (g *Game) executeGroundItemAction() {
 				}
 			}
 		}
-		g.ShowGroundItem = false
-		g.GroundItemActioned = false
-		g.selectedGroundActionIndex = 0
-		g.groundMenuJustOpened = false
+		g.closeGroundItemMenu()
 	}
 
 	if g.selectedGroundActionIndex == 1 { // Assuming index 1 corresponds to '交換'
@@ -104,72 +87,22 @@ func (g *Game) executeGroundItemAction() {
 
 				// 口封じ状態ではカード・薬・食料を使えない
 				if g.state.Player.StatusAilments.MouthSeal > 0 && isMouthItem(item) {
-					g.Enqueue(Action{
-						Duration: 0.4,
-						Message:  "口が封じられていて使えない",
-						Execute:  func(g *Game) {},
-					})
-					g.ShowGroundItem = false
-					g.GroundItemActioned = false
-					g.selectedGroundActionIndex = 0
-					g.groundMenuJustOpened = false
+					g.EnqueueMessage("口が封じられていて使えない", 0.4)
+					g.closeGroundItemMenu()
 					return
 				}
 
-				if foodItem, ok := item.(*Food); ok {
-					foodItem.Use(g)
-				} else if potionItem, ok := item.(*Potion); ok {
-					potionItem.Use(g)
-				} else if cardItem, ok := item.(*Card); ok {
-					cardItem.Use(g)
-				} else if moneyItem, ok := item.(*Money); ok {
-					moneyItem.Use(g)
-				} else if trapItem, ok := item.(*Trap); ok {
-					trapItem.Use(g)
+				if g.useConsumable(item) {
+					// 使用処理はアイテム側のUseへ委譲済み
 				} else if caneItem, ok := item.(*Cane); ok {
-
-					if caneItem.Uses <= 0 {
-						action := Action{
-							Duration: 0.5,
-							Message:  fmt.Sprintf("%sを使った。しかし何も起こらなかった。", caneItem.GetName()),
-							Execute: func(g *Game) {
-							},
-						}
-						g.Enqueue(action)
-
+					if !g.useCane(caneItem) {
+						// 残り回数がない場合はメッセージのみでメニューを閉じる
 						g.ShowGroundItem = false
 						g.GroundItemActioned = false
 						g.selectedGroundActionIndex = 0
 						g.isActioned = true
 						return
 					}
-
-					//caneItemの複製を作成する。
-
-					caneItemCopy := *caneItem
-
-					//caneItemCopyのUsesを1減らす
-					caneItem.Uses--
-
-					//caneItemCopyのBaseItem.Typeを"Effect"にする
-					caneItemCopy.BaseItem.Type = "Effect"
-
-					throwRange := 30
-					character := &g.state.Player
-					mapState := g.state.Map
-					enemies := g.state.Enemies
-
-					onWallHit := func(item Item, position Coordinate, itemIndex int) {
-						g.onWallHit(item, position, itemIndex)
-					}
-
-					onTargetHit := func(target Character, item Item, index int) {
-						g.onTargetHit(target, item, index)
-					}
-
-					// Continue with the throwing logic if the item is not cursed and equipped
-					g.ThrowItem(&caneItemCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
-
 				} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 
 					// インベントリのサイズを確認し、いっぱいの場合はアイテムを拾わない
@@ -178,9 +111,7 @@ func (g *Game) executeGroundItemAction() {
 							Duration: 0.5,
 							Message:  fmt.Sprintf("持ち物がいっぱいで%sを拾えなかった", item.GetName()),
 							ItemName: item.GetName(),
-							Execute: func(g *Game) {
-
-							},
+							Execute:  func(g *Game) {},
 						}
 						g.Enqueue(action)
 						break
@@ -188,9 +119,9 @@ func (g *Game) executeGroundItemAction() {
 
 					var message string
 					identified := false
-					itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
+					itemName := getItemNameWithSharpness(equipableItem)
 
-					// equipableItemがAccessory型の場合はIdentifiedをtrueにしない
+					// アクセサリは装備しても識別されない
 					if _, ok := equipableItem.(*Accessory); !ok {
 						equipableItem.SetIdentified(true) // Set the item as identified when equipping
 						identified = true
@@ -206,47 +137,18 @@ func (g *Game) executeGroundItemAction() {
 					g.PickUpItem(item, i)
 
 					action := Action{
-						Duration: 0.5,
-						Message:  message,
-						ItemName: itemName,
-						Execute: func(g *Game) {
-							// The equipped/unequipped item is already set above
-						},
+						Duration:     0.5,
+						Message:      message,
+						ItemName:     itemName,
+						Execute:      func(g *Game) {},
 						IsIdentified: identified,
 					}
 					g.Enqueue(action)
-					// Check if the item is cursed after equipping
-					cursedMessage := ""
-					switch v := equipableItem.(type) {
-					case *Weapon:
-						if v.Cursed {
-							cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
-						}
-					case *Armor:
-						if v.Cursed {
-							cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
-						}
-					}
-
-					// If the item is cursed, enqueue the cursed message
-					if cursedMessage != "" {
-						cursedAction := Action{
-							Duration: 0.5,
-							Message:  cursedMessage,
-							ItemName: itemName,
-							Execute: func(g *Game) {
-								// This can be left empty if no additional behavior is needed other than displaying the message
-							},
-							IsIdentified: identified,
-						}
-						g.Enqueue(cursedAction)
-					}
+					// 装備した武器・防具が呪われていた場合はメッセージを表示
+					g.enqueueCursedEquipReveal(equipableItem, itemName, identified)
 				}
 
-				g.ShowGroundItem = false
-				g.GroundItemActioned = false
-				g.selectedGroundActionIndex = 0
-				g.groundMenuJustOpened = false
+				g.closeGroundItemMenu()
 				g.isActioned = true
 			}
 		}
@@ -258,26 +160,9 @@ func (g *Game) executeGroundItemAction() {
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 				g.selectedGroundItemIndex = i
 
-				throwRange := 10
-				character := &g.state.Player
-				mapState := g.state.Map
-				enemies := g.state.Enemies
+				g.throwWithCallbacks(item, 10)
 
-				onWallHit := func(item Item, position Coordinate, itemIndex int) {
-					g.onWallHit(item, position, itemIndex)
-				}
-
-				onTargetHit := func(target Character, item Item, index int) {
-					g.onTargetHit(target, item, index)
-				}
-
-				// Continue with the throwing logic if the item is not cursed and equipped
-				g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
-
-				g.ShowGroundItem = false
-				g.GroundItemActioned = false
-				g.selectedGroundActionIndex = 0
-				g.groundMenuJustOpened = false
+				g.closeGroundItemMenu()
 				g.isActioned = true
 			}
 		}
@@ -301,11 +186,7 @@ func (g *Game) executeAction() {
 
 		// 口封じ状態ではカード・薬・食料を使えない
 		if g.state.Player.StatusAilments.MouthSeal > 0 && isMouthItem(item) {
-			g.Enqueue(Action{
-				Duration: 0.4,
-				Message:  "口が封じられていて使えない",
-				Execute:  func(g *Game) {},
-			})
+			g.EnqueueMessage("口が封じられていて使えない", 0.4)
 			g.showItemActions = false
 			g.showInventory = false
 			g.selectedItemIndex = 0
@@ -313,26 +194,11 @@ func (g *Game) executeAction() {
 			return
 		}
 
-		if foodItem, ok := item.(*Food); ok {
-			foodItem.Use(g)
-		} else if potionItem, ok := item.(*Potion); ok {
-			potionItem.Use(g)
-		} else if cardItem, ok := item.(*Card); ok {
-			cardItem.Use(g)
-		} else if moneyItem, ok := item.(*Money); ok {
-			moneyItem.Use(g)
-		} else if trapItem, ok := item.(*Trap); ok {
-			trapItem.Use(g)
+		if g.useConsumable(item) {
+			// 使用処理はアイテム側のUseへ委譲済み
 		} else if caneItem, ok := item.(*Cane); ok {
-
-			if caneItem.Uses <= 0 {
-				action := Action{
-					Duration: 0.5,
-					Message:  fmt.Sprintf("%sを使った。しかし何も起こらなかった。", caneItem.GetName()),
-					Execute: func(g *Game) {
-					},
-				}
-				g.Enqueue(action)
+			if !g.useCane(caneItem) {
+				// 残り回数がない場合はメッセージのみでメニューを閉じる
 				g.showItemActions = false
 				g.showInventory = false
 				g.isActioned = true
@@ -340,70 +206,23 @@ func (g *Game) executeAction() {
 				g.selectedActionIndex = 0
 				return
 			}
-
-			//caneItemの複製を作成する。
-
-			caneItemCopy := *caneItem
-
-			//caneItemCopyのUsesを1減らす
-			caneItem.Uses--
-
-			//caneItemCopyのBaseItem.Typeを"Effect"にする
-			caneItemCopy.BaseItem.Type = "Effect"
-
-			throwRange := 30
-			character := &g.state.Player
-			mapState := g.state.Map
-			enemies := g.state.Enemies
-
-			onWallHit := func(item Item, position Coordinate, itemIndex int) {
-				g.onWallHit(item, position, itemIndex)
-			}
-
-			onTargetHit := func(target Character, item Item, index int) {
-				g.onTargetHit(target, item, index)
-			}
-
-			// Continue with the throwing logic if the item is not cursed and equipped
-			g.ThrowItem(&caneItemCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
-
 		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
 			identified := false
-			itemName := getItemNameWithSharpness(equipableItem) // Assume this function can handle Equipable type
+			itemName := getItemNameWithSharpness(equipableItem)
 
 			// Check if the item is already equipped
 			if g.state.Player.IsEquipped(equipableItem) {
-				// Check if the equipped item is cursed
-				isCursed := false
-				switch v := equipableItem.(type) {
-				case *Weapon:
-					if v.Cursed {
-						isCursed = true
-					}
-				case *Armor:
-					if v.Cursed {
-						isCursed = true
-					}
-				case *Accessory:
-					if v.Cursed {
-						isCursed = true
-					}
-				}
-
-				if isCursed {
-					// If the item is cursed, update the message and do not unequip
+				if isCursedEquipment(equipableItem) {
+					// 呪われた装備ははずせない
+					message = fmt.Sprintf("%sをはずせない。", itemName)
+				} else if unequipMessage, err := g.state.Player.UnequipItem(equipableItem); err != nil {
 					message = fmt.Sprintf("%sをはずせない。", itemName)
 				} else {
-					// Unequip the item using new system
-					if unequipMessage, err := g.state.Player.UnequipItem(equipableItem); err != nil {
-						message = fmt.Sprintf("%sをはずせない。", itemName)
-					} else {
-						message = unequipMessage
-					}
+					message = unequipMessage
 				}
 			} else {
-				// Equip the item using new system
+				// アクセサリは装備しても識別されない
 				if _, ok := equipableItem.(*Accessory); !ok {
 					equipableItem.SetIdentified(true) // Set the item as identified when equipping
 					identified = true
@@ -418,41 +237,15 @@ func (g *Game) executeAction() {
 			}
 
 			action := Action{
-				Duration: 0.5,
-				Message:  message,
-				ItemName: itemName,
-				Execute: func(g *Game) {
-					// The equipped/unequipped item is already set above
-				},
+				Duration:     0.5,
+				Message:      message,
+				ItemName:     itemName,
+				Execute:      func(g *Game) {},
 				IsIdentified: identified,
 			}
 			g.Enqueue(action)
-			// Check if the item is cursed after equipping
-			cursedMessage := ""
-			switch v := equipableItem.(type) {
-			case *Weapon:
-				if v.Cursed {
-					cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
-				}
-			case *Armor:
-				if v.Cursed {
-					cursedMessage = fmt.Sprintf("%sは呪われていた。", itemName)
-				}
-			}
-
-			// If the item is cursed, enqueue the cursed message
-			if cursedMessage != "" {
-				cursedAction := Action{
-					Duration: 0.5,
-					Message:  cursedMessage,
-					ItemName: itemName,
-					Execute: func(g *Game) {
-						// This can be left empty if no additional behavior is needed other than displaying the message
-					},
-					IsIdentified: identified,
-				}
-				g.Enqueue(cursedAction)
-			}
+			// 装備した武器・防具が呪われていた場合はメッセージを表示
+			g.enqueueCursedEquipReveal(equipableItem, itemName, identified)
 		}
 
 		if !g.useIdentifyItem {
@@ -477,20 +270,7 @@ func (g *Game) executeAction() {
 			g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
 		}
 
-		// ThrowItem parameters
-		throwRange := 10
-		character := &g.state.Player
-		mapState := g.state.Map
-		enemies := g.state.Enemies
-
-		onWallHit := func(item Item, position Coordinate, itemIndex int) {
-			g.onWallHit(item, position, itemIndex)
-		}
-		onTargetHit := func(target Character, item Item, index int) {
-			g.onTargetHit(target, item, index)
-		}
-
-		g.ThrowItem(&arrowCopy, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+		g.throwWithCallbacks(&arrowCopy, 10)
 
 		g.showItemActions = false
 		g.selectedItemIndex = 0
@@ -514,20 +294,7 @@ func (g *Game) executeAction() {
 		if equipableItem, ok := item.(Equipable); ok {
 			for i, equippedItem := range g.state.Player.EquippedItems {
 				if equippedItem == equipableItem {
-					switch v := equipableItem.(type) {
-					case *Weapon:
-						if v.Cursed {
-							isCursedEquipped = true
-						}
-					case *Armor:
-						if v.Cursed {
-							isCursedEquipped = true
-						}
-					case *Accessory:
-						if v.Cursed {
-							isCursedEquipped = true
-						}
-					}
+					isCursedEquipped = isCursedEquipment(equipableItem)
 					if isCursedEquipped {
 						// If the item is cursed and equipped, do not throw and enqueue an action with a message that it cannot be thrown
 						action := Action{
@@ -552,23 +319,9 @@ func (g *Game) executeAction() {
 		}
 
 		if !isCursedEquipped {
-			throwRange := 10
-			character := &g.state.Player
-			mapState := g.state.Map
-			enemies := g.state.Enemies
-
-			onWallHit := func(item Item, position Coordinate, itemIndex int) {
-				g.onWallHit(item, position, itemIndex)
-			}
-
-			onTargetHit := func(target Character, item Item, index int) {
-				g.onTargetHit(target, item, index)
-			}
-
 			// Continue with the throwing logic if the item is not cursed and equipped
-			g.ThrowItem(item, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+			g.throwWithCallbacks(item, 10)
 			g.isActioned = true
-
 		}
 	}
 
@@ -582,21 +335,7 @@ func (g *Game) executeAction() {
 				break
 			}
 		}
-		// アイテムが識別されているかどうかをチェック
-		identified := true
-		var itemName string
-		if identifiableItem, ok := g.state.Player.Inventory[g.selectedItemIndex].(Identifiable); ok {
-			identified = identifiableItem.IsIdentified()
-			// 識別されていない場合は識別されていないアイテム名を取得
-			if !identified {
-				itemName = identifiableItem.GetName()
-			}
-		}
-
-		// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
-		if identified {
-			itemName = getItemNameWithSharpness(g.state.Player.Inventory[g.selectedItemIndex])
-		}
+		itemName, identified := displayItemName(g.state.Player.Inventory[g.selectedItemIndex])
 
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
 
@@ -718,10 +457,10 @@ func (aq *ActionQueue) Enqueue(action Action) {
 	aq.Queue = append(aq.Queue, action)
 }
 
-func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
+// enqueueEnemyNormalAttack は敵の通常攻撃（ダメージ計算・攻撃アニメーション・死亡チェック）をキューへ追加する。
+func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 
-	// 目潰し状態の敵は特技を使用せず、通常攻撃のみ
 	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
 	if netDamage < 0 {
 		netDamage = 0
@@ -729,18 +468,12 @@ func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
 
 	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
 
-	// 目潰し状態の場合は敵の名前を「何者」に変更
-	enemyDisplayName := enemy.Name
-	if g.state.Player.StatusAilments.Blind > 0 {
-		enemyDisplayName = "何者"
-	}
-
 	action := Action{
 		Duration: 0.5,
-		Message:  fmt.Sprintf("%sから%dダメージを受けた", enemyDisplayName, netDamage),
+		Message:  fmt.Sprintf("%sから%dダメージを受けた", g.enemyDisplayName(enemy.Name), netDamage),
 		Execute: func(g *Game) {
-			enemy.AttackTimer = 0.5
-			enemy.AttackDirection = determineDirection(dx, dy)
+			enemy.AttackTimer = 0.5                            // AttackTimerを設定することで敵の攻撃アニメーションが実行される
+			enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
 			g.state.Player.Health -= netDamage
 			if g.state.Player.Health < 0 {
 				g.state.Player.Health = 0
@@ -750,6 +483,11 @@ func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
 	}
 
 	g.Enqueue(action)
+}
+
+func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
+	// 目潰し状態の敵は特技を使用せず、通常攻撃のみ
+	g.enqueueEnemyNormalAttack(enemyIndex)
 }
 
 func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
@@ -764,17 +502,9 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
 
-	// 目潰し状態の場合は敵の名前を「何者」に変更
-	attackerDisplayName := attacker.Name
-	targetDisplayName := target.Name
-	if g.state.Player.StatusAilments.Blind > 0 {
-		attackerDisplayName = "何者"
-		targetDisplayName = "何者"
-	}
-
 	action := Action{
 		Duration: 0.5,
-		Message:  fmt.Sprintf("%sが%sを攻撃して%dダメージを与えた", attackerDisplayName, targetDisplayName, netDamage),
+		Message:  fmt.Sprintf("%sが%sを攻撃して%dダメージを与えた", g.enemyDisplayName(attacker.Name), g.enemyDisplayName(target.Name), netDamage),
 		Execute: func(g *Game) {
 			attacker.AttackTimer = 0.5
 			attacker.AttackDirection = determineDirection(dx, dy)
@@ -800,25 +530,8 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 
 	if trap := g.state.Player.SetTrap; trap != nil && trap.GetName() == "炸裂装甲のカード" {
 		// If the player has set a trap and it is the '炸裂装甲のカード', the trap will be triggered
-		// 目潰し状態の場合は敵の名前を「何者」に変更
-		enemyDisplayName := enemy.Name
-		if g.state.Player.StatusAilments.Blind > 0 {
-			enemyDisplayName = "何者"
-		}
-
-		action := Action{
-			Duration: 0.5,
-			Message:  fmt.Sprintf("%sの攻撃。", enemyDisplayName),
-			Execute:  func(g *Game) {},
-		}
-		g.Enqueue(action)
-
-		action = Action{
-			Duration: 0.5,
-			Message:  fmt.Sprintf("罠カード、%sが発動した。", trap.GetName()),
-			Execute:  func(g *Game) {},
-		}
-		g.Enqueue(action)
+		g.EnqueueMessage(fmt.Sprintf("%sの攻撃。", g.enemyDisplayName(enemy.Name)), 0.5)
+		g.EnqueueMessage(fmt.Sprintf("罠カード、%sが発動した。", trap.GetName()), 0.5)
 
 		defeatAction := Action{
 			Duration: 0.5,
@@ -848,34 +561,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 		enemy.SpecialAttack(enemy, g)
 	} else {
 		// Perform the normal attack
-		netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
-		if netDamage < 0 { // Ensure damage does not go below 0
-			netDamage = 0
-		}
-
-		dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y // プレイヤーと敵の位置の差を計算
-
-		// 目潰し状態の場合は敵の名前を「何者」に変更
-		enemyDisplayName := enemy.Name
-		if g.state.Player.StatusAilments.Blind > 0 {
-			enemyDisplayName = "何者"
-		}
-
-		action := Action{
-			Duration: 0.5,
-			Message:  fmt.Sprintf("%sから%dダメージを受けた", enemyDisplayName, netDamage),
-			Execute: func(g *Game) {
-				enemy.AttackTimer = 0.5                            // ここでAttackTimerを設定することで、敵の攻撃アニメーションが実行される
-				enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
-				g.state.Player.Health -= netDamage
-				if g.state.Player.Health < 0 {
-					g.state.Player.Health = 0 // Ensure health does not go below 0
-				}
-				g.state.Player.checkDeath(g) // 死亡チェック
-			},
-		}
-
-		g.Enqueue(action)
+		g.enqueueEnemyNormalAttack(enemyIndex)
 	}
 }
 
@@ -895,65 +581,20 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			dx, dy := enemy.X-g.state.Player.X, enemy.Y-g.state.Player.Y
 
 			// Determine the direction based on the change in position
-			switch {
-			case dx == 1 && dy == 0:
-				g.state.Player.Direction = Right
-			case dx == -1 && dy == 0:
-				g.state.Player.Direction = Left
-			case dx == 0 && dy == 1:
-				g.state.Player.Direction = Down
-			case dx == 0 && dy == -1:
-				g.state.Player.Direction = Up
-			case dx == 1 && dy == 1:
-				g.state.Player.Direction = DownRight
-			case dx == -1 && dy == 1:
-				g.state.Player.Direction = DownLeft
-			case dx == 1 && dy == -1:
-				g.state.Player.Direction = UpRight
-			case dx == -1 && dy == -1:
-				g.state.Player.Direction = UpLeft
-			}
+			g.state.Player.Direction = determineDirection(dx, dy)
 
 			g.attackTimer = 0.5 // set timer for 0.5 seconds
 			enemyIndex := i     // capture the index here
-			// 目潰し状態の場合は敵の名前を「何者」に変更
-			enemyDisplayName := g.state.Enemies[enemyIndex].Name
-			if g.state.Player.StatusAilments.Blind > 0 {
-				enemyDisplayName = "何者"
-			}
 
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sに%dダメージを与えた。", enemyDisplayName, netDamage),
+				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(g.state.Enemies[enemyIndex].Name), netDamage),
 				Execute: func(g *Game) {
 					// 攻撃を受けた敵の仮眠状態を解除
 					g.WakeUpSleepingEnemyByAttack(enemyIndex)
-
-					g.state.Enemies[enemyIndex].Health -= netDamage
-
-					// ダメージを受けた敵の金縛り状態を解除
-					if g.state.Enemies[enemyIndex].StatusAilments.Paralysis {
-						g.state.Enemies[enemyIndex].StatusAilments.Paralysis = false
-					}
-
-					if g.state.Enemies[enemyIndex].Health <= 0 {
-						// 敵のHealthが0以下の場合、敵を配列から削除
-						defeatAction := Action{
-							Duration: 0.5,
-							Message:  fmt.Sprintf("%sを倒した。", g.state.Enemies[enemyIndex].Name),
-							Execute:  func(g *Game) {},
-						}
-						g.Enqueue(defeatAction)
-
-						g.state.Enemies = append(g.state.Enemies[:enemyIndex], g.state.Enemies[enemyIndex+1:]...)
-
-						// 敵の経験値をプレイヤーの所持経験値に加える
-						g.state.Player.ExperiencePoints += enemy.ExperiencePoints
-
-						g.state.Player.checkLevelUp(g) // レベルアップをチェック
-					}
+					// ダメージ適用・金縛り解除・撃破処理
+					g.applyDamageToEnemy(enemyIndex, netDamage)
 					g.isActioned = true
-
 				},
 			}
 
@@ -990,50 +631,16 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 // プレイヤーが混乱状態の時のランダム攻撃処理
 func (g *Game) attackPlayerConfused() {
 	// 8方向のランダムな攻撃方向を選択
-	directions := []struct{ dx, dy int }{
-		{-1, -1}, {0, -1}, {1, -1},
-		{-1, 0}, {1, 0},
-		{-1, 1}, {0, 1}, {1, 1},
-	}
-
+	directions := getDirections()
 	direction := directions[rand.Intn(len(directions))]
 
 	// プレイヤーの方向を設定
-	switch {
-	case direction.dx == 1 && direction.dy == 0:
-		g.state.Player.Direction = Right
-	case direction.dx == -1 && direction.dy == 0:
-		g.state.Player.Direction = Left
-	case direction.dx == 0 && direction.dy == 1:
-		g.state.Player.Direction = Down
-	case direction.dx == 0 && direction.dy == -1:
-		g.state.Player.Direction = Up
-	case direction.dx == 1 && direction.dy == -1:
-		g.state.Player.Direction = UpRight
-	case direction.dx == 1 && direction.dy == 1:
-		g.state.Player.Direction = DownRight
-	case direction.dx == -1 && direction.dy == -1:
-		g.state.Player.Direction = UpLeft
-	case direction.dx == -1 && direction.dy == 1:
-		g.state.Player.Direction = DownLeft
-	}
+	g.state.Player.Direction = determineDirection(direction.dx, direction.dy)
 
 	// ランダムな方向に攻撃を試行
-	attacked := g.CheckForEnemies(direction.dx, direction.dy)
-
-	if attacked {
-		action := Action{
-			Duration: 0.4,
-			Message:  "混乱して攻撃した！",
-			Execute:  func(g *Game) {},
-		}
-		g.Enqueue(action)
+	if g.CheckForEnemies(direction.dx, direction.dy) {
+		g.EnqueueMessage("混乱して攻撃した！", 0.4)
 	} else {
-		action := Action{
-			Duration: 0.4,
-			Message:  "混乱して空振りした",
-			Execute:  func(g *Game) {},
-		}
-		g.Enqueue(action)
+		g.EnqueueMessage("混乱して空振りした", 0.4)
 	}
 }

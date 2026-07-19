@@ -121,60 +121,17 @@ var damageHP30 = func(g *Game) {
 		Duration: 0.4,
 		Message:  "",
 		Execute: func(g *Game) {
-			var targetX, targetY int
-			switch g.state.Player.Direction {
-			case Up:
-				targetX, targetY = g.state.Player.X, g.state.Player.Y-1
-			case Down:
-				targetX, targetY = g.state.Player.X, g.state.Player.Y+1
-			case Left:
-				targetX, targetY = g.state.Player.X-1, g.state.Player.Y
-			case Right:
-				targetX, targetY = g.state.Player.X+1, g.state.Player.Y
-			case UpRight:
-				targetX, targetY = g.state.Player.X+1, g.state.Player.Y-1
-			case DownRight:
-				targetX, targetY = g.state.Player.X+1, g.state.Player.Y+1
-			case UpLeft:
-				targetX, targetY = g.state.Player.X-1, g.state.Player.Y-1
-			case DownLeft:
-				targetX, targetY = g.state.Player.X-1, g.state.Player.Y+1
-			}
+			// プレイヤーの向いている方向の1マス先を対象にする
+			dx, dy := directionToDelta(g.state.Player.Direction)
+			targetX, targetY := g.state.Player.X+dx, g.state.Player.Y+dy
 			for i, enemy := range g.state.Enemies {
 				if enemy.X == targetX && enemy.Y == targetY {
-					// 目潰し状態の場合は敵の名前を「何者」に変更
-					enemyDisplayName := g.state.Enemies[i].Name
-					if g.state.Player.StatusAilments.Blind > 0 {
-						enemyDisplayName = "何者"
-					}
-
 					action := Action{
 						Duration: 0.5,
-						Message:  fmt.Sprintf("%sに30ダメージを与えた。", enemyDisplayName),
+						Message:  fmt.Sprintf("%sに30ダメージを与えた。", g.enemyDisplayName(g.state.Enemies[i].Name)),
 						Execute: func(g *Game) {
-							g.state.Enemies[i].Health -= 30
-
-							// ダメージを受けた敵の金縛り状態を解除
-							if g.state.Enemies[i].StatusAilments.Paralysis {
-								g.state.Enemies[i].StatusAilments.Paralysis = false
-							}
-
-							if g.state.Enemies[i].Health <= 0 {
-								// 敵のHealthが0以下の場合、敵を配列から削除
-								defeatAction := Action{
-									Duration: 0.5,
-									Message:  fmt.Sprintf("%sを倒した。", g.state.Enemies[i].Name),
-									Execute:  func(g *Game) {},
-								}
-								g.Enqueue(defeatAction)
-
-								g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
-
-								// 敵の経験値をプレイヤーの所持経験値に加える
-								g.state.Player.ExperiencePoints += enemy.ExperiencePoints
-
-								g.state.Player.checkLevelUp(g) // レベルアップをチェック
-							}
+							// ダメージ適用・金縛り解除・撃破処理
+							g.applyDamageToEnemy(i, 30)
 						},
 					}
 					g.Enqueue(action)
@@ -356,11 +313,11 @@ var removeCurse = func(g *Game) {
 		Execute: func(g *Game) {
 			uncursed := uncursePlayerBelongings(&g.state.Player)
 			if len(uncursed) == 0 {
-				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
 				return
 			}
 			for _, name := range uncursed {
-				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sの呪いが解けた", name), Execute: func(g *Game) {}})
+				g.EnqueueMessage(fmt.Sprintf("%sの呪いが解けた", name), 0.4)
 			}
 		},
 	})
@@ -376,17 +333,17 @@ var reinforceWeapon = func(g *Game) {
 		Execute: func(g *Game) {
 			weapon := g.state.Player.EquippedWeapon
 			if weapon == nil {
-				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
 				return
 			}
 			if weapon.Cursed {
 				weapon.Cursed = false
-				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sの呪いが解けた", weapon.GetName()), Execute: func(g *Game) {}})
+				g.EnqueueMessage(fmt.Sprintf("%sの呪いが解けた", weapon.GetName()), 0.4)
 			}
 			weapon.Sharpness++
 			// 装備中の武器の強化値上昇を攻撃力へ即時反映する
 			g.state.Player.AttackPower++
-			g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sは強くなった", weapon.GetName()), Execute: func(g *Game) {}})
+			g.EnqueueMessage(fmt.Sprintf("%sは強くなった", weapon.GetName()), 0.4)
 		},
 	})
 	removeUsedItem(g, isInventoryItem)
@@ -401,17 +358,17 @@ var reinforceArmor = func(g *Game) {
 		Execute: func(g *Game) {
 			armor := g.state.Player.EquippedArmor
 			if armor == nil {
-				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
 				return
 			}
 			if armor.Cursed {
 				armor.Cursed = false
-				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sの呪いが解けた", armor.GetName()), Execute: func(g *Game) {}})
+				g.EnqueueMessage(fmt.Sprintf("%sの呪いが解けた", armor.GetName()), 0.4)
 			}
 			armor.Sharpness++
 			// 装備中の盾の強化値上昇を防御力へ即時反映する
 			g.state.Player.DefensePower++
-			g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sは強くなった", armor.GetName()), Execute: func(g *Game) {}})
+			g.EnqueueMessage(fmt.Sprintf("%sは強くなった", armor.GetName()), 0.4)
 		},
 	})
 	removeUsedItem(g, isInventoryItem)
@@ -478,7 +435,7 @@ var vacuumSlash = func(g *Game) {
 				enemy.StatusAilments.Paralysis = false
 				if enemy.Health <= 0 {
 					defeatedExperience += enemy.ExperiencePoints
-					g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sを倒した。", enemy.Name), Execute: func(g *Game) {}})
+					g.EnqueueMessage(fmt.Sprintf("%sを倒した。", enemy.Name), 0.4)
 					continue
 				}
 				survivors = append(survivors, enemy)
@@ -545,7 +502,7 @@ var summonMonsterHouse = func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
 			room := getPlayerRoom(playerX, playerY, g.rooms)
 			if room == nil {
-				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
 				return
 			}
 			isFree := func(x, y int) bool {
@@ -572,7 +529,7 @@ var summonMonsterHouse = func(g *Game) {
 			itemCount := rollMonsterHouseItemCount(rand.Intn)
 			cells := pickFreeCellsInRoom(*room, isFree, enemyCount+itemCount, rand.Intn)
 			if len(cells) == 0 {
-				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
 				return
 			}
 			for i, cell := range cells {
@@ -586,7 +543,7 @@ var summonMonsterHouse = func(g *Game) {
 					g.state.Items = append(g.state.Items, newRandomFloorItem(cell.X, cell.Y))
 				}
 			}
-			g.Enqueue(Action{Duration: 0.5, Message: "モンスターハウスだ！", Execute: func(g *Game) {}})
+			g.EnqueueMessage("モンスターハウスだ！", 0.5)
 			g.miniMapDirty = true
 			g.isActioned = true
 		},
@@ -605,13 +562,13 @@ var hasteAllEnemies = func(g *Game) {
 		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
 		Execute: func(g *Game) {
 			if len(g.state.Enemies) == 0 {
-				g.Enqueue(Action{Duration: 0.4, Message: "しかし何も起こらなかった", Execute: func(g *Game) {}})
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
 				return
 			}
 			for i := range g.state.Enemies {
 				g.state.Enemies[i].StatusAilments.Haste = enemyHasteCardTurns
 			}
-			g.Enqueue(Action{Duration: 0.5, Message: "フロアの敵たちの動きが速くなった！", Execute: func(g *Game) {}})
+			g.EnqueueMessage("フロアの敵たちの動きが速くなった！", 0.5)
 			g.isActioned = true
 		},
 	})
@@ -777,7 +734,7 @@ var selfDestruct = func(g *Game) {
 				},
 			})
 			for _, name := range destroyed {
-				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("%sは爆発に巻き込まれて消し飛んだ", name), Execute: func(g *Game) {}})
+				g.EnqueueMessage(fmt.Sprintf("%sは爆発に巻き込まれて消し飛んだ", name), 0.4)
 			}
 			g.miniMapDirty = true
 			g.isActioned = true
@@ -836,7 +793,7 @@ var powerUpCard = func(g *Game) {
 				message = fmt.Sprintf("パワーが%d上昇した", newPower-player.Power)
 			}
 			player.Power, player.MaxPower = newPower, newMaxPower
-			g.Enqueue(Action{Duration: 0.4, Message: message, Execute: func(g *Game) {}})
+			g.EnqueueMessage(message, 0.4)
 			g.isActioned = true
 		},
 	})
@@ -867,13 +824,13 @@ var fullHealCard = func(g *Game) {
 			healed := player.MaxHealth - player.Health
 			player.Health, player.MaxHealth = fullHealResult(player.Health, player.MaxHealth)
 			if wasFull {
-				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("最大HPが%d上昇した", fullHealMaxHealthBonus), Execute: func(g *Game) {}})
+				g.EnqueueMessage(fmt.Sprintf("最大HPが%d上昇した", fullHealMaxHealthBonus), 0.4)
 			} else {
-				g.Enqueue(Action{Duration: 0.4, Message: fmt.Sprintf("HPが%d回復した", healed), Execute: func(g *Game) {}})
+				g.EnqueueMessage(fmt.Sprintf("HPが%d回復した", healed), 0.4)
 			}
 			if player.StatusAilments.Poison > 0 {
 				player.StatusAilments.Poison = 0
-				g.Enqueue(Action{Duration: 0.4, Message: "毒も治った", Execute: func(g *Game) {}})
+				g.EnqueueMessage("毒も治った", 0.4)
 			}
 			g.isActioned = true
 		},

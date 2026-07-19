@@ -31,12 +31,19 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 | 種別 | タグ | 例 |
 |---|---|---|
-| Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go` など |
+| Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go` |
 | タグなし（両ビルドで共有） | なし | `helpers.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `savedata.go` |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
 - 新機能のロジックはなるべく「純粋関数をタグなしファイルへ切り出し + 単体テスト」の形にする（`autostop.go` + `autostop_test.go` が手本）。
+
+### ファイル分担（責務ごとの分割）
+
+- `move.go`: プレイヤーの移動・レベルアップ/死亡・`resetGame`。敵の行動AI（`MoveEnemies`/`actEnemy`/`MoveTowardsPlayer`/混乱・目潰し移動）は `enemy_ai.go`。
+- `draw.go`: マップ・キャラ・アイテム・投擲・射線などワールド描画とアニメーション。HUD・ミニマップは `draw_hud.go`、インベントリ・メニュー・説明・設定などのウィンドウ描画は `draw_ui.go`。
+- `direction.go`: `Direction` ⇔ 移動量 (dx, dy) の変換ヘルパー（`determineDirection`/`directionToDelta`/`getDirections` 等）。方向変換の switch を手書きしない。
+- `gamehelpers.go`: 頻出パターンの共通ヘルパー。メッセージだけの Action は `g.EnqueueMessage(msg, duration)`、敵へのダメージ＋撃破処理は `g.applyDamageToEnemy(index, damage)`、投擲は `g.throwWithCallbacks(item, range)`、呪い判定は `isCursedEquipment` 等。**新規コードは同じ処理を手書きせずこれらを使う。**
 
 ## コアゲームループとターン進行
 
@@ -46,7 +53,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
   1. `HandleInput()`（input.go）が方向を返し、`MovePlayer(dx, dy)`（move.go）で移動、または `Z` キーで `CheckForEnemies`（攻撃, action.go）。
   2. 行動すると `isActioned = true` になり `AdvanceTurn()`（monster_spawn.go）でターン数加算・湧きチェック。
   3. 攻撃・アイテム効果・罠などはすべて `Action`（`Duration`/`Message`/`Execute`）として `g.Enqueue()` で `ActionQueue` に積まれ、`HandleActionQueue()`（animation.go）が 1 件ずつ実行してメッセージ表示とアニメーションのタイミングを制御する。`Message` は自動的に `messageLog` にも入る。
-  4. キューが空になると `CheckCombatState()`（animation.go）が `IncrementMoveCount()`（毒ダメージ・満腹度減少・HP自然回復・状態異常ターン減算）と `MoveEnemies()`（敵ターン）を実行する。プレイヤーが鈍足なら敵は 2 回動く。
+  4. キューが空になると `CheckCombatState()`（animation.go）が `IncrementMoveCount()`（毒ダメージ・満腹度減少・HP自然回復・状態異常ターン減算）と `MoveEnemies()`（敵ターン, enemy_ai.go）を実行する。プレイヤーが鈍足なら敵は 2 回動く。
 - 死亡処理は `checkDeath` → `playerDead` フラグ → 死亡メッセージ → フェードアウト → `resetGame()`（move.go）。
 
 ## 主要データ構造（定義場所）
@@ -112,6 +119,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 - `Player.EquippedItems [5]Item` は後方互換のために残っている旧配列。新規コードは `EquippedWeapon`/`EquippedArmor`/`EquippedArrow`/`EquippedAccessories` を使う（equipment.go）。
 - 未識別アイテムの表示名は `inventoryItemLabel`（inventory.go）と `customNames`（テンプレート ID キー）で決まる。識別状態は `Identifiable` インタフェース。
 - 画像ロードは `loadImage` が失敗時 `log.Fatal` する。画像ファイルを追加し忘れると起動しない。
+- **ファイル名末尾の `_windows.go` / `_js.go` / `_linux.go` 等は Go が暗黙の GOOS ビルド制約として扱う**。例えば `draw_windows.go` という名前は Windows 専用となり WASM ビルドから除外されてしまう（UI 描画ファイルは `draw_ui.go` と命名している）。
 - リポジトリ直下のビルド成果物（`ebirogue.exe`, `ebirogue.wasm` 等）はコミット対象にしない。
 
 ## Coding style

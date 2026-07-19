@@ -29,10 +29,12 @@ This is a roguelike game written in Go using the Ebiten game engine. The codebas
 ### Key Components
 - **Map Generation** (`map.go`) - Room generation, connections, lighting, stairs, minimap
 - **Input Handling** (`input.go`) - Keyboard input for movement, inventory, item usage
-- **Movement Logic** (`move.go`) - Player/enemy movement, health/hunger recovery
-- **Rendering** (`draw.go`) - Map, character, HUD, minimap, item window rendering
+- **Player Movement** (`move.go`) - Player movement, level up/death, game reset
+- **Enemy AI** (`enemy_ai.go`) - Enemy movement, chasing, status-ailment behavior
+- **Rendering** (`draw.go` world/animation, `draw_hud.go` HUD/minimap, `draw_ui.go` menus/windows)
 - **Item System** (`item.go`, `items.go`, `itemeffects.go`) - Item definitions, effects, throwing mechanics
 - **Enemy System** (`enemies.go`) - Enemy definitions and spawning
+- **Shared Helpers** (`direction.go`, `gamehelpers.go`) - Direction/delta conversion, message actions, damage/defeat, cursed-equipment checks
 
 ### Interface System
 - `interfaces.go` defines core interfaces: `Item`, `Equipable`, `Identifiable`

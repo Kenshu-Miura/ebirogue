@@ -434,13 +434,10 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		} else {
 			damage = rand.Intn(3) + 1
 		}
-		// 目潰し状態の場合は敵の名前を「何者」に変更
+		// 目潰し状態の場合は敵の名前を「何者」に変更（targetがEnemyの場合のみ）
 		targetDisplayName := target.GetName()
-		if g.state.Player.StatusAilments.Blind > 0 {
-			// targetがEnemyの場合のみ「何者」に変更
-			if _, ok := target.(*Enemy); ok {
-				targetDisplayName = "何者"
-			}
+		if _, ok := target.(*Enemy); ok {
+			targetDisplayName = g.enemyDisplayName(targetDisplayName)
 		}
 
 		action := Action{
@@ -454,37 +451,9 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 					if g.state.Player.Health < 0 {
 						g.state.Player.Health = 0
 					}
-				} else if enemy, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
-					// If target is of type *Enemy
-					g.state.Enemies[index].Health -= damage
-
-					// ダメージを受けた敵の金縛り状態を解除
-					if g.state.Enemies[index].StatusAilments.Paralysis {
-						g.state.Enemies[index].StatusAilments.Paralysis = false
-					}
-
-					if g.state.Enemies[index].Health < 0 {
-						g.state.Enemies[index].Health = 0
-					}
-					if g.state.Enemies[index].Health <= 0 {
-						// 敵のHealthが0以下の場合、敵を配列から削除
-						defeatAction := Action{
-							Duration: 0.5,
-							Message:  fmt.Sprintf("%sを倒した。", target.GetName()),
-							Execute:  func(g *Game) {},
-						}
-						g.Enqueue(defeatAction)
-
-						g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
-
-						// 敵の経験値をプレイヤーの所持経験値に加える
-						g.state.Player.ExperiencePoints += enemy.ExperiencePoints
-
-						g.state.Player.checkLevelUp(g) // レベルアップをチェック
-
-						// Reset the target enemy after processing
-						// (If necessary. This part may need to be adjusted based on your game's logic)
-					}
+				} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+					// ダメージ適用・金縛り解除・撃破処理
+					g.applyDamageToEnemy(index, damage)
 				}
 				g.isActioned = true
 			},
