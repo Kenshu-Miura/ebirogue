@@ -27,6 +27,25 @@ type RangedAttackDefinition struct {
 	BlastRadius int
 }
 
+type SpecialMovement int
+
+const (
+	SpecialMovementNone SpecialMovement = iota
+	SpecialMovementWallPass
+	SpecialMovementDoubleSpeed
+	SpecialMovementWarp
+	SpecialMovementSwap
+	SpecialMovementCreateTrap
+)
+
+type EnemyDisguise int
+
+const (
+	EnemyDisguiseNone EnemyDisguise = iota
+	EnemyDisguiseItem
+	EnemyDisguiseStairs
+)
+
 type Enemy struct {
 	Entity                   // Enemy inherits fields from Entity
 	ID                       int
@@ -48,10 +67,17 @@ type Enemy struct {
 	SpecialAttack            SpecialAttackFunc // 敵の特殊攻撃処理
 	SpecialAttackProbability float64           // 敵が特殊攻撃を使ってくる確率 (0.0 to 1.0)
 	RangedAttack             RangedAttackDefinition
+	SpecialMovement          SpecialMovement
+	Disguise                 EnemyDisguise
+	Revealed                 bool
 	ShowOnMiniMap            bool
 	StatusAilments           StatusAilments // 状態異常
 	HeldItem                 Item           // 盗賊系の敵が持ち去ったアイテム
 	Fleeing                  bool           // 盗品を持ってプレイヤーから逃走中かどうか
+}
+
+func isEnemyDisguised(enemy Enemy) bool {
+	return enemy.Disguise != EnemyDisguiseNone && !enemy.Revealed && !enemy.StatusAilments.Seal
 }
 
 func (g *Game) updateEnemyVisibility() {
@@ -65,6 +91,9 @@ func (g *Game) updateEnemyVisibility() {
 
 		// Check if the player and enemy are adjacent
 		adjacent := (math.Abs(float64(playerX-enemyX)) <= 1 && math.Abs(float64(playerY-enemyY)) <= 1)
+		if isEnemyDisguised(*enemy) && (inSameRoom || adjacent) {
+			enemy.PlayerDiscovered = true
+		}
 
 		// プレイヤーが盲目状態の場合、敵を非表示にする
 		if g.state.Player.StatusAilments.Blind > 0 {
@@ -93,6 +122,8 @@ type MonsterDefinition struct {
 	SpecialAttack            SpecialAttackFunc
 	SpecialAttackProbability float64
 	RangedAttack             RangedAttackDefinition
+	SpecialMovement          SpecialMovement
+	Disguise                 EnemyDisguise
 }
 
 // モンスター定義テーブル
@@ -294,6 +325,90 @@ var MonsterDefinitions = map[int]MonsterDefinition{
 		SpecialAttack:            func(e *Enemy, g *Game) { enqueueManipulationAttack(e, g, rand.Intn) },
 		SpecialAttackProbability: 0.3,
 	},
+	11: {
+		ID:               11,
+		Type:             "GhostShrimp",
+		Name:             "ユウレイエビ",
+		Char:             'G',
+		Health:           28,
+		MaxHealth:        28,
+		AttackPower:      8,
+		DefensePower:     2,
+		ExperiencePoints: 18,
+		SpecialMovement:  SpecialMovementWallPass,
+	},
+	12: {
+		ID:               12,
+		Type:             "MantisShrimp",
+		Name:             "ハヤテシャコ",
+		Char:             'F',
+		Health:           22,
+		MaxHealth:        22,
+		AttackPower:      6,
+		DefensePower:     3,
+		ExperiencePoints: 20,
+		SpecialMovement:  SpecialMovementDoubleSpeed,
+	},
+	13: {
+		ID:               13,
+		Type:             "WarpJellyfish",
+		Name:             "ワープクラゲ",
+		Char:             'W',
+		Health:           30,
+		MaxHealth:        30,
+		AttackPower:      8,
+		DefensePower:     4,
+		ExperiencePoints: 24,
+		SpecialMovement:  SpecialMovementWarp,
+	},
+	14: {
+		ID:               14,
+		Type:             "SwapOctopus",
+		Name:             "イレカエダコ",
+		Char:             'O',
+		Health:           36,
+		MaxHealth:        36,
+		AttackPower:      9,
+		DefensePower:     5,
+		ExperiencePoints: 30,
+		SpecialMovement:  SpecialMovementSwap,
+	},
+	15: {
+		ID:               15,
+		Type:             "TrapHermitCrab",
+		Name:             "ワナシヤドカリ",
+		Char:             'R',
+		Health:           40,
+		MaxHealth:        40,
+		AttackPower:      8,
+		DefensePower:     7,
+		ExperiencePoints: 32,
+		SpecialMovement:  SpecialMovementCreateTrap,
+	},
+	16: {
+		ID:               16,
+		Type:             "MimicClam",
+		Name:             "化け貝",
+		Char:             'Q',
+		Health:           34,
+		MaxHealth:        34,
+		AttackPower:      10,
+		DefensePower:     6,
+		ExperiencePoints: 28,
+		Disguise:         EnemyDisguiseItem,
+	},
+	17: {
+		ID:               17,
+		Type:             "MimicClam",
+		Name:             "化け貝",
+		Char:             'Q',
+		Health:           42,
+		MaxHealth:        42,
+		AttackPower:      12,
+		DefensePower:     7,
+		ExperiencePoints: 36,
+		Disguise:         EnemyDisguiseStairs,
+	},
 }
 
 // 統一されたモンスター生成関数
@@ -319,6 +434,9 @@ func CreateEnemyByID(id, x, y int) Enemy {
 		SpecialAttack:            def.SpecialAttack,
 		SpecialAttackProbability: def.SpecialAttackProbability,
 		RangedAttack:             def.RangedAttack,
+		SpecialMovement:          def.SpecialMovement,
+		Disguise:                 def.Disguise,
+		Revealed:                 def.Disguise == EnemyDisguiseNone,
 		ShowOnMiniMap:            true,
 	}
 }

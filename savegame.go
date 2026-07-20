@@ -187,6 +187,7 @@ func enemyToSaved(enemy *Enemy) SavedEnemy {
 		PlayerDiscovered: enemy.PlayerDiscovered,
 		StatusAilments:   enemy.StatusAilments,
 		Fleeing:          enemy.Fleeing,
+		Revealed:         enemy.Revealed,
 	}
 	if enemy.HeldItem != nil {
 		heldItem := itemToSaved(enemy.HeldItem)
@@ -208,6 +209,7 @@ func savedToEnemy(s SavedEnemy) Enemy {
 	enemy.PlayerDiscovered = s.PlayerDiscovered
 	enemy.StatusAilments = s.StatusAilments
 	enemy.Fleeing = s.Fleeing
+	enemy.Revealed = s.Revealed
 	if s.HeldItem != nil {
 		if heldItem, err := savedToItem(*s.HeldItem); err == nil {
 			enemy.HeldItem = heldItem

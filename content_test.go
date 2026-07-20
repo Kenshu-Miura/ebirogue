@@ -4,6 +4,8 @@ package main
 
 import (
 	"fmt"
+	"image/png"
+	"os"
 	"testing"
 )
 
@@ -63,6 +65,284 @@ func TestAddedContentDefinitions(t *testing.T) {
 	for id, wantName := range wantTraps {
 		if got := createMapTrapByID(id, 1, 2); got.Name != wantName {
 			t.Fatalf("trap %d = %q, want %q", id, got.Name, wantName)
+		}
+	}
+}
+
+func TestSpecialMovementEnemyDefinitions(t *testing.T) {
+	wantMovement := map[int]SpecialMovement{
+		11: SpecialMovementWallPass,
+		12: SpecialMovementDoubleSpeed,
+		13: SpecialMovementWarp,
+		14: SpecialMovementSwap,
+		15: SpecialMovementCreateTrap,
+	}
+	for id, movement := range wantMovement {
+		definition, ok := MonsterDefinitions[id]
+		if !ok || definition.SpecialMovement != movement {
+			t.Fatalf("monster %d = %#v, want movement %d", id, definition, movement)
+		}
+	}
+	if MonsterDefinitions[16].Disguise != EnemyDisguiseItem || MonsterDefinitions[17].Disguise != EnemyDisguiseStairs {
+		t.Fatal("item and stairs mimic definitions are missing")
+	}
+	for id := 0; id < len(MonsterDefinitions); id++ {
+		if _, ok := MonsterDefinitions[id]; !ok {
+			t.Fatalf("monster definition IDs must stay contiguous; missing %d", id)
+		}
+	}
+}
+
+func TestWallPassingEnemyAndSeal(t *testing.T) {
+	mapGrid := makeTestFloorMap(7, 5)
+	mapGrid[2][2] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+	enemy := CreateEnemyByID(11, 1, 2)
+	enemy.PlayerDiscovered = true
+	g := &Game{state: GameState{
+		Map:     mapGrid,
+		Player:  Player{Entity: Entity{X: 4, Y: 2}},
+		Enemies: []Enemy{enemy},
+	}}
+
+	g.moveEnemyTowardsPlayer(0)
+	if g.state.Enemies[0].X != 2 || g.state.Enemies[0].Y != 2 {
+		t.Fatalf("wall-passing enemy moved to (%d, %d), want wall tile (2, 2)", g.state.Enemies[0].X, g.state.Enemies[0].Y)
+	}
+
+	g.state.Enemies[0] = CreateEnemyByID(11, 1, 2)
+	g.state.Enemies[0].StatusAilments.Seal = true
+	g.moveEnemyTowardsPlayer(0)
+	if g.state.Enemies[0].X == 2 && g.state.Enemies[0].Y == 2 {
+		t.Fatal("sealed wall-passing enemy must not enter a wall")
+	}
+}
+
+func TestNativeDoubleSpeedAndSeal(t *testing.T) {
+	newGame := func(sealed bool) *Game {
+		enemy := CreateEnemyByID(12, 2, 2)
+		enemy.PlayerDiscovered = true
+		enemy.StatusAilments.Seal = sealed
+		return &Game{state: GameState{
+			Map:     makeTestFloorMap(12, 6),
+			Player:  Player{Entity: Entity{X: 9, Y: 2}, Health: 100},
+			Enemies: []Enemy{enemy},
+		}}
+	}
+
+	fast := newGame(false)
+	fast.MoveEnemies()
+	if fast.state.Enemies[0].X != 4 {
+		t.Fatalf("double-speed enemy x = %d, want 4", fast.state.Enemies[0].X)
+	}
+	sealed := newGame(true)
+	sealed.MoveEnemies()
+	if sealed.state.Enemies[0].X != 3 {
+		t.Fatalf("sealed double-speed enemy x = %d, want 3", sealed.state.Enemies[0].X)
+	}
+	slowed := newGame(false)
+	slowed.state.Enemies[0].StatusAilments.Slow = 3
+	slowed.MoveEnemies()
+	if slowed.state.Enemies[0].X != 3 {
+		t.Fatalf("slowed double-speed enemy x = %d, want 3", slowed.state.Enemies[0].X)
+	}
+}
+
+func TestWarpEnemyAndSeal(t *testing.T) {
+	enemy := CreateEnemyByID(13, 1, 1)
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(10, 10),
+		Player:  Player{Entity: Entity{X: 5, Y: 5}},
+		Enemies: []Enemy{enemy},
+	}}
+	if !g.tryWarpEnemy(0, func(int) int { return 0 }) {
+		t.Fatal("warp enemy should warp when its roll succeeds")
+	}
+	if g.state.Enemies[0].X == 1 && g.state.Enemies[0].Y == 1 {
+		t.Fatal("warp enemy should change position")
+	}
+
+	g.state.Enemies[0] = CreateEnemyByID(13, 1, 1)
+	g.state.Enemies[0].StatusAilments.Seal = true
+	if g.tryWarpEnemy(0, func(int) int { return 0 }) {
+		t.Fatal("sealed warp enemy should not warp")
+	}
+}
+
+func TestSwapEnemyAndSeal(t *testing.T) {
+	enemy := CreateEnemyByID(14, 2, 2)
+	g := &Game{
+		state: GameState{
+			Map:     makeTestFloorMap(10, 10),
+			Player:  Player{Entity: Entity{X: 5, Y: 2}},
+			Enemies: []Enemy{enemy},
+		},
+		rooms: []Room{{ID: 1, X: 0, Y: 0, Width: 10, Height: 10}},
+	}
+	if !g.trySwapEnemyWithPlayer(0, func(int) int { return 0 }) {
+		t.Fatal("swap enemy should exchange positions when its roll succeeds")
+	}
+	if g.state.Player.X != 2 || g.state.Enemies[0].X != 5 {
+		t.Fatalf("swapped positions = player %d, enemy %d", g.state.Player.X, g.state.Enemies[0].X)
+	}
+
+	g.state.Player.X, g.state.Player.Y = 5, 2
+	g.state.Enemies[0] = CreateEnemyByID(14, 2, 2)
+	g.state.Enemies[0].StatusAilments.Seal = true
+	if g.trySwapEnemyWithPlayer(0, func(int) int { return 0 }) {
+		t.Fatal("sealed swap enemy should not exchange positions")
+	}
+}
+
+func TestTrapCreatingEnemyLeavesHiddenTrapAndRespectsSeal(t *testing.T) {
+	enemy := CreateEnemyByID(15, 2, 2)
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(8, 8),
+		Player:  Player{Entity: Entity{X: 7, Y: 7}},
+		Enemies: []Enemy{enemy},
+	}}
+	if !g.tryMoveEnemy(0, 1, 0) || !g.createTrapAfterEnemyMove(0, 2, 2, func(int) int { return 0 }) {
+		t.Fatal("trap-creating enemy should leave a trap after moving")
+	}
+	if len(g.state.MapTraps) != 1 || g.state.MapTraps[0].X != 3 || g.state.MapTraps[0].Y != 2 || g.state.MapTraps[0].Discovered {
+		t.Fatalf("created trap = %#v, want hidden trap at (3, 2)", g.state.MapTraps)
+	}
+
+	g.state.Enemies[0].StatusAilments.Seal = true
+	g.tryMoveEnemy(0, 1, 0)
+	if g.createTrapAfterEnemyMove(0, 3, 2, func(int) int { return 0 }) || len(g.state.MapTraps) != 1 {
+		t.Fatal("sealed trap-creating enemy should not create a trap")
+	}
+}
+
+func TestMimicRevealAndSaveRoundTrip(t *testing.T) {
+	for _, id := range []int{16, 17} {
+		enemy := CreateEnemyByID(id, 2, 2)
+		if enemy.Revealed {
+			t.Fatalf("mimic %d should start disguised", id)
+		}
+		hiddenRestored := savedToEnemy(enemyToSaved(&enemy))
+		if hiddenRestored.Revealed || hiddenRestored.Disguise != enemy.Disguise {
+			t.Fatalf("hidden restored mimic %d = %#v", id, hiddenRestored)
+		}
+		g := &Game{state: GameState{Enemies: []Enemy{enemy}}}
+		if !g.revealEnemy(0) || !g.state.Enemies[0].Revealed {
+			t.Fatalf("mimic %d should reveal", id)
+		}
+		restored := savedToEnemy(enemyToSaved(&g.state.Enemies[0]))
+		if !restored.Revealed || restored.Disguise != enemy.Disguise {
+			t.Fatalf("restored mimic %d = %#v", id, restored)
+		}
+	}
+	sealed := CreateEnemyByID(16, 2, 2)
+	sealed.StatusAilments.Seal = true
+	if isEnemyDisguised(sealed) {
+		t.Fatal("sealed mimic should not keep its disguise ability")
+	}
+}
+
+func TestSeenMimicStaysOnMiniMapAsDisguise(t *testing.T) {
+	enemy := CreateEnemyByID(16, 4, 4)
+	enemy.ShowOnMiniMap = false
+	g := &Game{
+		state: GameState{
+			Player:  Player{Entity: Entity{X: 2, Y: 2}},
+			Enemies: []Enemy{enemy},
+		},
+		rooms: []Room{{ID: 1, X: 0, Y: 0, Width: 8, Height: 8}},
+	}
+	g.updateEnemyVisibility()
+	if !g.state.Enemies[0].PlayerDiscovered || !g.state.Enemies[0].ShowOnMiniMap {
+		t.Fatal("seen mimic should be remembered on the minimap while disguised")
+	}
+}
+
+func TestSpecialMovementRespectsCommonActionStatuses(t *testing.T) {
+	wallMap := makeTestFloorMap(7, 5)
+	wallMap[2][2] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+	wallEnemy := CreateEnemyByID(11, 1, 2)
+	wallEnemy.PlayerDiscovered = true
+	wallEnemy.StatusAilments.Confusion = 3
+	wallGame := &Game{state: GameState{
+		Map:     wallMap,
+		Player:  Player{Entity: Entity{X: 4, Y: 2}},
+		Enemies: []Enemy{wallEnemy},
+	}}
+	wallGame.actEnemy(0)
+	if wallGame.state.Map[wallGame.state.Enemies[0].Y][wallGame.state.Enemies[0].X].Blocked {
+		t.Fatal("confused wall-passing enemy should use common confused movement")
+	}
+
+	warpEnemy := CreateEnemyByID(13, 2, 2)
+	warpEnemy.PlayerDiscovered = true
+	warpEnemy.StatusAilments.Sleep = 3
+	warpGame := &Game{state: GameState{
+		Map:     makeTestFloorMap(8, 8),
+		Player:  Player{Entity: Entity{X: 6, Y: 6}},
+		Enemies: []Enemy{warpEnemy},
+	}}
+	warpGame.actEnemy(0)
+	if warpGame.state.Enemies[0].X != 2 || warpGame.state.Enemies[0].Y != 2 || len(warpGame.ActionQueue.Queue) != 0 {
+		t.Fatal("sleeping warp enemy should not move or use its ability")
+	}
+
+	trapEnemy := CreateEnemyByID(15, 2, 2)
+	trapEnemy.Direction = Right
+	trapEnemy.StatusAilments.Blind = 3
+	trapGame := &Game{state: GameState{
+		Map:     makeTestFloorMap(8, 8),
+		Player:  Player{Entity: Entity{X: 6, Y: 6}},
+		Enemies: []Enemy{trapEnemy},
+	}}
+	trapGame.actEnemy(0)
+	if len(trapGame.state.MapTraps) != 0 {
+		t.Fatal("blind trap-creating enemy should use common blind movement without creating a trap")
+	}
+}
+
+func TestSpecialMovementEnemiesAppearInFloorSpawnTables(t *testing.T) {
+	wantIDs := map[int]bool{11: false, 12: false, 13: false, 14: false, 15: false, 16: false, 17: false}
+	for floor := 1; floor <= deepestSpawnFloor; floor++ {
+		for _, entry := range FloorSpawnTables[floor] {
+			if _, ok := wantIDs[entry.MonsterID]; ok {
+				wantIDs[entry.MonsterID] = true
+			}
+		}
+	}
+	for id, found := range wantIDs {
+		if !found {
+			t.Fatalf("special movement enemy %d is missing from floor spawn tables", id)
+		}
+	}
+}
+
+func TestSpecialMovementEnemySprites(t *testing.T) {
+	files := []string{
+		"img/yurei_ebi.png",
+		"img/hayate_shako.png",
+		"img/warp_kurage.png",
+		"img/irekae_dako.png",
+		"img/wanashi_yadokari.png",
+		"img/mimic_gai.png",
+	}
+	for _, filename := range files {
+		file, err := os.Open(filename)
+		if err != nil {
+			t.Fatalf("open %s: %v", filename, err)
+		}
+		image, err := png.Decode(file)
+		file.Close()
+		if err != nil {
+			t.Fatalf("decode %s: %v", filename, err)
+		}
+		if image.Bounds().Dx() != 30 || image.Bounds().Dy() != 30 {
+			t.Fatalf("%s size = %dx%d, want 30x30", filename, image.Bounds().Dx(), image.Bounds().Dy())
+		}
+		corners := [][2]int{{0, 0}, {29, 0}, {0, 29}, {29, 29}}
+		for _, corner := range corners {
+			_, _, _, alpha := image.At(corner[0], corner[1]).RGBA()
+			if alpha != 0 {
+				t.Fatalf("%s corner (%d, %d) is not transparent", filename, corner[0], corner[1])
+			}
 		}
 	}
 }

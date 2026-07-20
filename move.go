@@ -260,9 +260,13 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 	newPX := g.state.Player.X + dx
 	newPY := g.state.Player.Y + dy
 
-	for _, enemy := range g.state.Enemies {
+	for i, enemy := range g.state.Enemies {
 		if enemy.X == newPX && enemy.Y == newPY {
 			g.state.Player.Direction = determineDirection(dx, dy)
+			if g.revealEnemy(i) {
+				g.isActioned = true
+				return true
+			}
 			return false
 		}
 	}
@@ -368,6 +372,9 @@ func (g *Game) decrementStatusAilments() {
 		}
 		if g.state.Enemies[i].StatusAilments.Haste > 0 {
 			g.state.Enemies[i].StatusAilments.Haste--
+		}
+		if g.state.Enemies[i].StatusAilments.Slow > 0 {
+			g.state.Enemies[i].StatusAilments.Slow--
 		}
 		if g.state.Enemies[i].StatusAilments.Sleep > 0 {
 			g.state.Enemies[i].StatusAilments.Sleep--

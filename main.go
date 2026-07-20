@@ -138,6 +138,12 @@ type Game struct {
 	nigiriEbiImg              *ebiten.Image
 	noroiGaniImg              *ebiten.Image
 	ayatsuriKurageImg         *ebiten.Image
+	yureiEbiImg               *ebiten.Image
+	hayateShakoImg            *ebiten.Image
+	warpKurageImg             *ebiten.Image
+	irekaeDakoImg             *ebiten.Image
+	wanashiYadokariImg        *ebiten.Image
+	mimicGaiImg               *ebiten.Image
 	kaneImg                   *ebiten.Image
 	cardImg                   *ebiten.Image
 	mintiaImg                 *ebiten.Image
@@ -656,6 +662,12 @@ func NewGame() *Game {
 	nigiriEbiImg := loadImage("img/nigiri_ebi.png")
 	noroiGaniImg := loadImage("img/noroi_gani.png")
 	ayatsuriKurageImg := loadImage("img/ayatsuri_kurage.png")
+	yureiEbiImg := loadImage("img/yurei_ebi.png")
+	hayateShakoImg := loadImage("img/hayate_shako.png")
+	warpKurageImg := loadImage("img/warp_kurage.png")
+	irekaeDakoImg := loadImage("img/irekae_dako.png")
+	wanashiYadokariImg := loadImage("img/wanashi_yadokari.png")
+	mimicGaiImg := loadImage("img/mimic_gai.png")
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
@@ -718,6 +730,12 @@ func NewGame() *Game {
 		nigiriEbiImg:        nigiriEbiImg,
 		noroiGaniImg:        noroiGaniImg,
 		ayatsuriKurageImg:   ayatsuriKurageImg,
+		yureiEbiImg:         yureiEbiImg,
+		hayateShakoImg:      hayateShakoImg,
+		warpKurageImg:       warpKurageImg,
+		irekaeDakoImg:       irekaeDakoImg,
+		wanashiYadokariImg:  wanashiYadokariImg,
+		mimicGaiImg:         mimicGaiImg,
 		kaneImg:             kaneImg,
 		cardImg:             cardImg,
 		mintiaImg:           mintiaImg,

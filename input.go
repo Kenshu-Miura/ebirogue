@@ -429,11 +429,19 @@ func (g *Game) CheatHandleInput() (int, int) {
 // enemyThreatens は敵が接近している（同じ部屋にいる、または2マス以内にいる）かを判定する
 func (g *Game) enemyThreatens() bool {
 	px, py := g.state.Player.X, g.state.Player.Y
-	if enemyWithinDistance(px, py, 2, g.state.Enemies) {
+	visibleEnemies := make([]Enemy, 0, len(g.state.Enemies))
+	for i := range g.state.Enemies {
+		enemy := g.state.Enemies[i]
+		if isEnemyDisguised(enemy) {
+			continue
+		}
+		visibleEnemies = append(visibleEnemies, enemy)
+	}
+	if enemyWithinDistance(px, py, 2, visibleEnemies) {
 		return true
 	}
-	for i := range g.state.Enemies {
-		enemy := &g.state.Enemies[i]
+	for i := range visibleEnemies {
+		enemy := &visibleEnemies[i]
 		if isSameRoom(px, py, enemy.X, enemy.Y, g.rooms) {
 			return true
 		}

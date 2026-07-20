@@ -55,6 +55,7 @@ type SavedEnemy struct {
 	StatusAilments   StatusAilments
 	HeldItem         *SavedItem
 	Fleeing          bool
+	Revealed         bool
 }
 
 // SavedMapTrap はマップ上の罠のセーブ用表現

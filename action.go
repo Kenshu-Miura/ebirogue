@@ -623,6 +623,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == g.state.Player.X+x && enemy.Y == g.state.Player.Y+y {
 			g.isFrontEnemy = true
+			g.revealEnemy(i)
 			// Player's AttackPower is considered while dealing damage
 			netDamage := g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - enemy.DefensePower + rand.Intn(3) - 1
 			if netDamage < 0 { // Ensure damage does not go below 0

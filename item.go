@@ -322,6 +322,10 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 }
 
 func (g *Game) onTargetHit(target Character, item Item, index int) {
+	if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
+		g.revealEnemy(index)
+	}
+
 	// Check if the item is of type Cane
 	if cane, ok := item.(*Cane); ok {
 		// 封印の杖を投げた場合、直接当たった敵を封印状態にする

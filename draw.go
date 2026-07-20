@@ -532,8 +532,31 @@ func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
 		img = g.noroiGaniImg
 	case "PuppeteerJellyfish":
 		img = g.ayatsuriKurageImg
+	case "GhostShrimp":
+		img = g.yureiEbiImg
+	case "MantisShrimp":
+		img = g.hayateShakoImg
+	case "WarpJellyfish":
+		img = g.warpKurageImg
+	case "SwapOctopus":
+		img = g.irekaeDakoImg
+	case "TrapHermitCrab":
+		img = g.wanashiYadokariImg
+	case "MimicClam":
+		img = g.mimicGaiImg
 	}
 	return img
+}
+
+func (g *Game) getEnemyDisguiseImage(enemy Enemy) *ebiten.Image {
+	switch enemy.Disguise {
+	case EnemyDisguiseItem:
+		return g.potImg
+	case EnemyDisguiseStairs:
+		return g.tilesetImg.SubImage(image.Rect(4*tileSize, 0, 5*tileSize, tileSize)).(*ebiten.Image)
+	default:
+		return nil
+	}
 }
 
 func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
@@ -543,8 +566,10 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 		// Check if the tile at the enemy's position is fully bright
 		if g.state.Map[enemy.Y][enemy.X].Brightness == 1.0 {
 
-			// 敵のアニメーションを更新
-			g.UpdateEnemyAnimation(enemy)
+			// 擬態中は道具・階段として静止表示する。
+			if !isEnemyDisguised(*enemy) {
+				g.UpdateEnemyAnimation(enemy)
+			}
 
 			// 敵の描画オフセットを計算
 			enemyOffsetX, enemyOffsetY := g.CalculateEnemyOffset(enemy)
@@ -552,7 +577,7 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 			enemyOffsetY += int(enemy.OffsetY)
 
 			// 睡眠状態（通常・仮眠）と金縛り状態の敵は上下アニメーションを適用しない（封印状態は通常通りアニメーション）
-			if enemy.StatusAilments.Sleep == 0 && !enemy.StatusAilments.Paralysis {
+			if !isEnemyDisguised(*enemy) && enemy.StatusAilments.Sleep == 0 && !enemy.StatusAilments.Paralysis {
 				enemyOffsetY += g.enemyYOffset // Y座標オフセットの適用
 			}
 
@@ -560,6 +585,8 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 			// プレイヤーが目潰し状態の場合、全ての敵をebisan.pngで表示
 			if g.state.Player.StatusAilments.Blind > 0 {
 				img = g.playerImg // ebisan.png
+			} else if isEnemyDisguised(*enemy) {
+				img = g.getEnemyDisguiseImage(*enemy)
 			} else {
 				img = g.getEnemyImage(*enemy)
 			}

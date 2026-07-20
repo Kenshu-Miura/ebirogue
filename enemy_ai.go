@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 )
 
@@ -307,6 +308,150 @@ func (g *Game) tryMoveEnemy(enemyIndex, dx, dy int) bool {
 	return true
 }
 
+// tryMoveEnemyThroughWall は壁抜け能力用に地形の通行可否だけを無視して移動する。
+// マップ外、プレイヤー、ほかの敵がいるマスへは移動しない。
+func (g *Game) tryMoveEnemyThroughWall(enemyIndex, dx, dy int) bool {
+	if dx == 0 && dy == 0 {
+		return false
+	}
+	enemy := &g.state.Enemies[enemyIndex]
+	newX, newY := enemy.X+dx, enemy.Y+dy
+	if newY < 0 || newY >= len(g.state.Map) || newX < 0 || newX >= len(g.state.Map[newY]) {
+		return false
+	}
+	if g.state.Player.X == newX && g.state.Player.Y == newY {
+		return false
+	}
+	for i := range g.state.Enemies {
+		if i != enemyIndex && g.state.Enemies[i].X == newX && g.state.Enemies[i].Y == newY {
+			return false
+		}
+	}
+	enemy.X = newX
+	enemy.Y = newY
+	enemy.dx = dx
+	enemy.dy = dy
+	enemy.Direction = determineDirection(dx, dy)
+	enemy.Animating = true
+	return true
+}
+
+func (g *Game) moveEnemyTowardsPlayer(enemyIndex int) {
+	enemy := &g.state.Enemies[enemyIndex]
+	if enemy.SpecialMovement == SpecialMovementWallPass && !enemy.StatusAilments.Seal {
+		dx := sign(g.state.Player.X - enemy.X)
+		dy := sign(g.state.Player.Y - enemy.Y)
+		if g.tryMoveEnemyThroughWall(enemyIndex, dx, dy) {
+			return
+		}
+	}
+	g.MoveTowardsPlayer(enemyIndex)
+}
+
+func rollSpecialMovement(intn func(int) int, oneIn int) bool {
+	return oneIn > 0 && intn(oneIn) == 0
+}
+
+func (g *Game) tryWarpEnemy(enemyIndex int, intn func(int) int) bool {
+	enemy := &g.state.Enemies[enemyIndex]
+	if enemy.SpecialMovement != SpecialMovementWarp || enemy.StatusAilments.Seal || !rollSpecialMovement(intn, 4) {
+		return false
+	}
+
+	px, py := g.state.Player.X, g.state.Player.Y
+	destinations := make([]Coordinate, 0)
+	for y := range g.state.Map {
+		for x := range g.state.Map[y] {
+			tile := g.state.Map[y][x]
+			if (x == enemy.X && y == enemy.Y) || tile.Blocked || tile.Type == "stairs" || !isPositionFree(g, x, y, enemyIndex) {
+				continue
+			}
+			distance := max(abs(x-px), abs(y-py))
+			if distance >= 2 && distance <= 6 {
+				destinations = append(destinations, Coordinate{X: x, Y: y})
+			}
+		}
+	}
+	if len(destinations) == 0 {
+		return false
+	}
+
+	destination := destinations[intn(len(destinations))]
+	enemy.X = destination.X
+	enemy.Y = destination.Y
+	enemy.dx = 0
+	enemy.dy = 0
+	enemy.Animating = false
+	enemy.PlayerDiscovered = true
+	g.miniMapDirty = true
+	g.EnqueueMessage(fmt.Sprintf("%sはワープした", g.enemyDisplayName(enemy.Name)), 0.4)
+	return true
+}
+
+func (g *Game) trySwapEnemyWithPlayer(enemyIndex int, intn func(int) int) bool {
+	enemy := &g.state.Enemies[enemyIndex]
+	if enemy.SpecialMovement != SpecialMovementSwap || enemy.StatusAilments.Seal || !rollSpecialMovement(intn, 4) {
+		return false
+	}
+	distance := max(abs(enemy.X-g.state.Player.X), abs(enemy.Y-g.state.Player.Y))
+	if distance < 2 || distance > 5 || !isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms) {
+		return false
+	}
+
+	enemy.X, g.state.Player.X = g.state.Player.X, enemy.X
+	enemy.Y, g.state.Player.Y = g.state.Player.Y, enemy.Y
+	enemy.dx = 0
+	enemy.dy = 0
+	enemy.Animating = false
+	enemy.PlayerDiscovered = true
+	g.miniMapDirty = true
+	g.EnqueueMessage(fmt.Sprintf("%sと場所が入れ替わった", g.enemyDisplayName(enemy.Name)), 0.4)
+	g.checkForTrapAtPosition(g.state.Player.X, g.state.Player.Y)
+	return true
+}
+
+func (g *Game) createTrapAfterEnemyMove(enemyIndex, startX, startY int, intn func(int) int) bool {
+	if enemyIndex < 0 || enemyIndex >= len(g.state.Enemies) {
+		return false
+	}
+	enemy := &g.state.Enemies[enemyIndex]
+	if enemy.SpecialMovement != SpecialMovementCreateTrap || enemy.StatusAilments.Seal || (enemy.X == startX && enemy.Y == startY) {
+		return false
+	}
+	tile := g.state.Map[enemy.Y][enemy.X]
+	if tile.Blocked || tile.Type == "stairs" {
+		return false
+	}
+	for i := range g.state.MapTraps {
+		if g.state.MapTraps[i].X == enemy.X && g.state.MapTraps[i].Y == enemy.Y {
+			return false
+		}
+	}
+	trapID := intn(len(mapTrapTemplates))
+	g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(trapID, enemy.X, enemy.Y))
+	g.miniMapDirty = true
+	return true
+}
+
+func (g *Game) revealEnemy(enemyIndex int) bool {
+	if enemyIndex < 0 || enemyIndex >= len(g.state.Enemies) {
+		return false
+	}
+	enemy := &g.state.Enemies[enemyIndex]
+	if enemy.Disguise == EnemyDisguiseNone || enemy.Revealed {
+		return false
+	}
+	disguiseName := "道具"
+	if enemy.Disguise == EnemyDisguiseStairs {
+		disguiseName = "階段"
+	}
+	enemy.Revealed = true
+	enemy.PlayerDiscovered = true
+	g.miniMapDirty = true
+	g.EnqueueMessage(fmt.Sprintf("%sの正体は%sだった", disguiseName, enemy.Name), 0.5)
+	return true
+}
+
 // MoveTowardsPlayer は敵をプレイヤーへ1マス近づける。
 // まっすぐ近づけない場合は enemyMoveFallbacks の代替候補を優先順に試す。
 func (g *Game) MoveTowardsPlayer(enemyIndex int) {
@@ -489,9 +634,17 @@ func (g *Game) changeBlindEnemyDirection(i int) {
 
 func (g *Game) MoveEnemies() {
 	for i := range g.state.Enemies {
+		enemy := &g.state.Enemies[i]
+		hasExtraAction := enemy.StatusAilments.Haste > 0 ||
+			(enemy.SpecialMovement == SpecialMovementDoubleSpeed && !enemy.StatusAilments.Seal)
+		if enemy.StatusAilments.Slow > 0 && !hasExtraAction && g.moveCount%2 != 0 {
+			continue
+		}
 		g.actEnemy(i)
-		// 倍速状態の敵はもう一度行動する
-		if g.state.Enemies[i].StatusAilments.Haste > 0 {
+		// 倍速状態または固有の倍速能力を持つ敵はもう一度行動する。
+		// 封印は固有能力だけを止め、カードなどで付与された倍速状態は維持する。
+		// 鈍足中は倍速と相殺して通常の1回行動にする。
+		if hasExtraAction && enemy.StatusAilments.Slow == 0 {
 			g.actEnemy(i)
 		}
 	}
@@ -528,10 +681,20 @@ func (g *Game) actEnemy(i int) {
 		return
 	}
 
+	// 擬態中は自分から行動せず、攻撃・投擲・接触で正体を現す。
+	if isEnemyDisguised(enemy) {
+		return
+	}
+
 	// 盗品を持つ敵は、通常の追跡より逃走を優先する。
 	if enemy.Fleeing && enemy.HeldItem != nil {
 		g.moveFleeingEnemy(i)
 		return
+	}
+
+	startX, startY := enemy.X, enemy.Y
+	if enemy.SpecialMovement == SpecialMovementCreateTrap && !enemy.StatusAilments.Seal {
+		defer g.createTrapAfterEnemyMove(i, startX, startY, rand.Intn)
 	}
 
 	// Variables to store the difference in position
@@ -548,6 +711,13 @@ func (g *Game) actEnemy(i int) {
 		g.state.Enemies[i].PlayerDiscovered = false
 	} else if inSameRoom {
 		g.state.Enemies[i].PlayerDiscovered = true
+	}
+
+	// ワープと場所替えは共通状態処理後、かつ封印されていない場合だけ試みる。
+	if g.state.Enemies[i].PlayerDiscovered {
+		if g.tryWarpEnemy(i, rand.Intn) || g.trySwapEnemyWithPlayer(i, rand.Intn) {
+			return
+		}
 	}
 
 	// 射程・射線条件を満たす遠距離役は、接近する前に固有の攻撃を行う。
@@ -589,13 +759,13 @@ func (g *Game) actEnemy(i int) {
 		//log.Printf("preventAttack: %v\n", preventAttack)
 
 		if preventAttack {
-			g.MoveTowardsPlayer(i) // Call function to move enemy towards player
+			g.moveEnemyTowardsPlayer(i)
 		} else {
 			g.AttackFromEnemy(i) // Call function to attack player
 		}
 
 	} else if g.state.Enemies[i].PlayerDiscovered {
-		g.MoveTowardsPlayer(i) // Call function to move enemy towards player
+		g.moveEnemyTowardsPlayer(i)
 	} else {
 		moveRandomly(g, i) // Call function to move enemy randomly
 	}

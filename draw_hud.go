@@ -153,6 +153,13 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 
 	enemyTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
 	enemyTile.Fill(color.RGBA{255, 0, 0, 128}) // Red semi-transparent
+	stairsDisguiseTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+	for i := 0; i < tilePixelSize; i++ {
+		stairsDisguiseTile.Set(i, 0, color.White)
+		stairsDisguiseTile.Set(i, tilePixelSize-1, color.White)
+		stairsDisguiseTile.Set(0, i, color.White)
+		stairsDisguiseTile.Set(tilePixelSize-1, i, color.White)
+	}
 
 	//log.Printf("ShowOnMiniMap: %v", g.state.Enemies[0].GetShowOnMiniMap())
 
@@ -163,7 +170,14 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 				enemyX, enemyY := enemy.GetPosition()
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(enemyX*tilePixelSize), float64(enemyY*tilePixelSize))
-				g.miniMap.DrawImage(enemyTile, opts)
+				switch {
+				case isEnemyDisguised(enemy) && enemy.Disguise == EnemyDisguiseItem:
+					g.miniMap.DrawImage(itemTile, opts)
+				case isEnemyDisguised(enemy) && enemy.Disguise == EnemyDisguiseStairs:
+					g.miniMap.DrawImage(stairsDisguiseTile, opts)
+				default:
+					g.miniMap.DrawImage(enemyTile, opts)
+				}
 			}
 		}
 	}
