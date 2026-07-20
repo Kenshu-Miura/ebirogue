@@ -126,8 +126,21 @@ type MonsterDefinition struct {
 	Disguise                 EnemyDisguise
 }
 
-// モンスター定義テーブル
-var MonsterDefinitions = map[int]MonsterDefinition{
+// upperMonsterDefinition は基本種の固有能力を引き継ぎ、上位種の能力値と表示情報を設定する。
+func upperMonsterDefinition(base MonsterDefinition, id int, monsterType, name string, health, attack, defense, experience int) MonsterDefinition {
+	base.ID = id
+	base.Type = monsterType
+	base.Name = name
+	base.Health = health
+	base.MaxHealth = health
+	base.AttackPower = attack
+	base.DefensePower = defense
+	base.ExperiencePoints = experience
+	return base
+}
+
+// baseMonsterDefinitions は各系統の基本種を定義する。
+var baseMonsterDefinitions = map[int]MonsterDefinition{
 	0: {
 		ID:                       0,
 		Type:                     "Shrimp",
@@ -409,34 +422,65 @@ var MonsterDefinitions = map[int]MonsterDefinition{
 		ExperiencePoints: 36,
 		Disguise:         EnemyDisguiseStairs,
 	},
-	18: {
-		ID:               18,
-		Type:             "GreatShrimp",
-		Name:             "大エビ",
-		Char:             'E',
-		Health:           45,
-		MaxHealth:        45,
-		AttackPower:      11,
-		DefensePower:     6,
-		ExperiencePoints: 30,
-	},
-	19: {
-		ID:               19,
-		Type:             "CaveMamuru",
-		Name:             "あなぐらマムル",
-		Char:             'M',
-		Health:           24,
-		MaxHealth:        24,
-		AttackPower:      7,
-		DefensePower:     3,
-		ExperiencePoints: 12,
-	},
 }
+
+// buildMonsterDefinitions は基本種へ固有能力を継承した上位種を加える。
+func buildMonsterDefinitions() map[int]MonsterDefinition {
+	definitions := make(map[int]MonsterDefinition, 36)
+	for id, definition := range baseMonsterDefinitions {
+		definitions[id] = definition
+	}
+
+	definitions[18] = upperMonsterDefinition(definitions[0], 18, "GreatShrimp", "大エビ", 45, 11, 6, 30)
+	definitions[19] = upperMonsterDefinition(definitions[2], 19, "CaveMamuru", "あなぐらマムル", 24, 7, 3, 12)
+	definitions[20] = upperMonsterDefinition(definitions[1], 20, "VenomSnake", "猛毒ヘビ", 58, 13, 4, 32)
+	definitions[21] = upperMonsterDefinition(definitions[3], 21, "TwistHoney", "ぐねぐねハニー", 50, 10, 7, 36)
+	definitions[22] = upperMonsterDefinition(definitions[4], 22, "KingHarisenbow", "ハリセンオウ", 42, 11, 5, 30)
+	definitions[23] = upperMonsterDefinition(definitions[5], 23, "BoulderCrab", "ガンセキガニ", 60, 12, 9, 44)
+	definitions[24] = upperMonsterDefinition(definitions[6], 24, "DynamiteUrchin", "ダイナマイトウニ", 82, 17, 10, 72)
+	definitions[25] = upperMonsterDefinition(definitions[7], 25, "MasterThiefHermitCrab", "オオドロボウヤドカリ", 52, 10, 7, 40)
+	definitions[26] = upperMonsterDefinition(definitions[8], 26, "NigiriMasterShrimp", "にぎり親方エビ", 64, 12, 8, 48)
+	definitions[27] = upperMonsterDefinition(definitions[9], 27, "CurseLordCrab", "タタリガニ", 70, 14, 10, 58)
+	definitions[28] = upperMonsterDefinition(definitions[10], 28, "PuppetMasterJellyfish", "しはいクラゲ", 76, 15, 9, 66)
+	definitions[29] = upperMonsterDefinition(definitions[11], 29, "ReaperShrimp", "シニガミエビ", 54, 14, 5, 48)
+	definitions[30] = upperMonsterDefinition(definitions[12], 30, "LightningMantisShrimp", "イナズマシャコ", 46, 11, 6, 50)
+	definitions[31] = upperMonsterDefinition(definitions[13], 31, "TeleportJellyfish", "テレポクラゲ", 58, 14, 8, 56)
+	definitions[32] = upperMonsterDefinition(definitions[14], 32, "ExchangeOctopus", "トッカエダコ", 68, 15, 9, 64)
+	definitions[33] = upperMonsterDefinition(definitions[15], 33, "TrapMasterHermitCrab", "ワナマスターヤドカリ", 74, 14, 11, 68)
+	definitions[34] = upperMonsterDefinition(definitions[16], 34, "MimicConch", "化けホラ貝", 62, 16, 10, 58)
+	definitions[35] = upperMonsterDefinition(definitions[17], 35, "MimicConch", "化けホラ貝", 74, 18, 11, 70)
+
+	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24} {
+		definition := definitions[id]
+		definition.RangedAttack.AttackPower = attackPower
+		definitions[id] = definition
+	}
+	return definitions
+}
+
+// MonsterDefinitions は基本種と上位種を含む統一モンスター定義テーブル。
+var MonsterDefinitions = buildMonsterDefinitions()
 
 // MonsterLevelUpTable は敵がほかの敵を倒したときに変化する同系統の上位種を定義する。
 var MonsterLevelUpTable = map[int]int{
-	0: 18, // エビ -> 大エビ
-	2: 19, // マムル -> あなぐらマムル
+	0:  18, // エビ -> 大エビ
+	1:  20, // 毒ヘビ -> 猛毒ヘビ
+	2:  19, // マムル -> あなぐらマムル
+	3:  21, // くねくねハニー -> ぐねぐねハニー
+	4:  22, // ハリセンボウ -> ハリセンオウ
+	5:  23, // イシガニ -> ガンセキガニ
+	6:  24, // バクダンウニ -> ダイナマイトウニ
+	7:  25, // コソドロヤドカリ -> オオドロボウヤドカリ
+	8:  26, // にぎりエビ -> にぎり親方エビ
+	9:  27, // ノロイガニ -> タタリガニ
+	10: 28, // あやつりクラゲ -> しはいクラゲ
+	11: 29, // ユウレイエビ -> シニガミエビ
+	12: 30, // ハヤテシャコ -> イナズマシャコ
+	13: 31, // ワープクラゲ -> テレポクラゲ
+	14: 32, // イレカエダコ -> トッカエダコ
+	15: 33, // ワナシヤドカリ -> ワナマスターヤドカリ
+	16: 34, // 道具に擬態する化け貝 -> 化けホラ貝
+	17: 35, // 階段に擬態する化け貝 -> 化けホラ貝
 }
 
 // levelUpEnemy は敵を同系統の上位種へ変化させる。
@@ -471,7 +515,6 @@ func (g *Game) levelUpEnemy(index int) bool {
 	enemy.RangedAttack = definition.RangedAttack
 	enemy.SpecialMovement = definition.SpecialMovement
 	enemy.Disguise = definition.Disguise
-	enemy.Revealed = definition.Disguise == EnemyDisguiseNone
 	g.EnqueueMessage(fmt.Sprintf("%sは%sにレベルアップした。", oldName, enemy.Name), 0.5)
 	return true
 }

@@ -156,15 +156,60 @@ func TestSpecialMovementEnemyDefinitions(t *testing.T) {
 	if MonsterDefinitions[16].Disguise != EnemyDisguiseItem || MonsterDefinitions[17].Disguise != EnemyDisguiseStairs {
 		t.Fatal("item and stairs mimic definitions are missing")
 	}
-	if MonsterDefinitions[18].Name != "大エビ" || MonsterDefinitions[19].Name != "あなぐらマムル" {
-		t.Fatal("upper-species monster definitions are missing")
-	}
-	if MonsterLevelUpTable[0] != 18 || MonsterLevelUpTable[2] != 19 {
-		t.Fatalf("monster level-up table = %#v", MonsterLevelUpTable)
-	}
 	for id := 0; id < len(MonsterDefinitions); id++ {
 		if _, ok := MonsterDefinitions[id]; !ok {
 			t.Fatalf("monster definition IDs must stay contiguous; missing %d", id)
+		}
+	}
+}
+
+func TestEveryBaseMonsterHasUpperSpecies(t *testing.T) {
+	if len(MonsterLevelUpTable) != 18 {
+		t.Fatalf("level-up mappings = %d, want 18", len(MonsterLevelUpTable))
+	}
+	for baseID := 0; baseID < 18; baseID++ {
+		upperID, ok := MonsterLevelUpTable[baseID]
+		if !ok {
+			t.Fatalf("base monster %d has no upper species", baseID)
+		}
+		base := MonsterDefinitions[baseID]
+		upper, ok := MonsterDefinitions[upperID]
+		if !ok {
+			t.Fatalf("upper species %d for base monster %d is missing", upperID, baseID)
+		}
+		if upper.Name == base.Name || upper.Type == base.Type {
+			t.Fatalf("upper species %d did not change identity from base %d", upperID, baseID)
+		}
+		if upper.Health <= base.Health || upper.AttackPower <= base.AttackPower ||
+			upper.DefensePower <= base.DefensePower || upper.ExperiencePoints <= base.ExperiencePoints {
+			t.Fatalf("upper species %d stats = HP %d, attack %d, defense %d, exp %d; base %d stats = HP %d, attack %d, defense %d, exp %d",
+				upperID, upper.Health, upper.AttackPower, upper.DefensePower, upper.ExperiencePoints,
+				baseID, base.Health, base.AttackPower, base.DefensePower, base.ExperiencePoints)
+		}
+		if upper.Char != base.Char || (upper.SpecialAttack == nil) != (base.SpecialAttack == nil) ||
+			upper.SpecialAttackProbability != base.SpecialAttackProbability || upper.SpecialMovement != base.SpecialMovement ||
+			upper.Disguise != base.Disguise {
+			t.Fatalf("upper species %d did not inherit base monster %d abilities", upperID, baseID)
+		}
+		if upper.RangedAttack.Kind != base.RangedAttack.Kind || upper.RangedAttack.MinRange != base.RangedAttack.MinRange ||
+			upper.RangedAttack.MaxRange != base.RangedAttack.MaxRange || upper.RangedAttack.BlastRadius != base.RangedAttack.BlastRadius {
+			t.Fatalf("upper species %d did not inherit base monster %d ranged behavior", upperID, baseID)
+		}
+		if base.RangedAttack.Kind != RangedAttackNone && upper.RangedAttack.AttackPower <= base.RangedAttack.AttackPower {
+			t.Fatalf("upper species %d ranged power = %d, want above base %d", upperID, upper.RangedAttack.AttackPower, base.RangedAttack.AttackPower)
+		}
+		if _, chained := MonsterLevelUpTable[upperID]; chained {
+			t.Fatalf("upper species %d must not have another level in the current two-stage system", upperID)
+		}
+	}
+}
+
+func TestEveryUpperSpeciesHasImagePath(t *testing.T) {
+	for _, upperID := range MonsterLevelUpTable {
+		monsterType := MonsterDefinitions[upperID].Type
+		path, ok := upperEnemyImagePaths[monsterType]
+		if !ok || path == "" {
+			t.Fatalf("upper species %d type %q has no image path", upperID, monsterType)
 		}
 	}
 }
@@ -399,8 +444,9 @@ func TestEnemySprites(t *testing.T) {
 		"img/irekae_dako.png",
 		"img/wanashi_yadokari.png",
 		"img/mimic_gai.png",
-		"img/dai_ebi.png",
-		"img/anagura_mamuru.png",
+	}
+	for _, pair := range upperSpeciesSpritePairs() {
+		files = append(files, pair[1])
 	}
 	for _, filename := range files {
 		file, err := os.Open(filename)
@@ -425,12 +471,30 @@ func TestEnemySprites(t *testing.T) {
 	}
 }
 
-func TestUpperSpeciesSpritesOnlyRecolorOriginal(t *testing.T) {
-	pairs := [][2]string{
+func upperSpeciesSpritePairs() [][2]string {
+	return [][2]string{
 		{"img/ebi.png", "img/dai_ebi.png"},
 		{"img/mamuru.png", "img/anagura_mamuru.png"},
+		{"img/snake.png", "img/moudoku_hebi.png"},
+		{"img/honey.png", "img/gunegune_honey.png"},
+		{"img/harisenbow.png", "img/harisen_ou.png"},
+		{"img/ishigani.png", "img/ganseki_gani.png"},
+		{"img/bakudan_uni.png", "img/dynamite_uni.png"},
+		{"img/kosodoro_yadokari.png", "img/oodorobou_yadokari.png"},
+		{"img/nigiri_ebi.png", "img/nigiri_oyakata_ebi.png"},
+		{"img/noroi_gani.png", "img/tatari_gani.png"},
+		{"img/ayatsuri_kurage.png", "img/shihai_kurage.png"},
+		{"img/yurei_ebi.png", "img/shinigami_ebi.png"},
+		{"img/hayate_shako.png", "img/inazuma_shako.png"},
+		{"img/warp_kurage.png", "img/telepo_kurage.png"},
+		{"img/irekae_dako.png", "img/tokkae_dako.png"},
+		{"img/wanashi_yadokari.png", "img/wana_master_yadokari.png"},
+		{"img/mimic_gai.png", "img/bake_horagai.png"},
 	}
-	for _, pair := range pairs {
+}
+
+func TestUpperSpeciesSpritesOnlyRecolorOriginal(t *testing.T) {
+	for _, pair := range upperSpeciesSpritePairs() {
 		originalFile, err := os.Open(pair[0])
 		if err != nil {
 			t.Fatalf("open %s: %v", pair[0], err)
@@ -508,17 +572,31 @@ func TestEnemyDefeatsMonsterAndLevelsUp(t *testing.T) {
 }
 
 func TestEnemyWithoutUpperSpeciesDoesNotChange(t *testing.T) {
-	attacker := CreateEnemyByID(1, 2, 2)
+	attacker := CreateEnemyByID(20, 2, 2)
 	target := CreateEnemyByID(2, 3, 2)
 	g := &Game{state: GameState{Enemies: []Enemy{attacker, target}}}
 
 	g.defeatEnemyByEnemy(0, 1)
 
-	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 1 {
-		t.Fatalf("remaining enemy = %#v, want unchanged poison snake", g.state.Enemies)
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 20 {
+		t.Fatalf("remaining enemy = %#v, want unchanged upper species", g.state.Enemies)
 	}
 	if len(g.ActionQueue.Queue) != 0 {
 		t.Fatalf("unexpected level-up action = %#v", g.ActionQueue.Queue)
+	}
+}
+
+func TestDisguisedEnemyLevelUpPreservesRevealState(t *testing.T) {
+	enemy := CreateEnemyByID(16, 2, 2)
+	enemy.Revealed = true
+	g := &Game{state: GameState{Enemies: []Enemy{enemy}}}
+
+	if !g.levelUpEnemy(0) {
+		t.Fatal("revealed mimic should level up")
+	}
+	upgraded := g.state.Enemies[0]
+	if upgraded.ID != 34 || upgraded.Disguise != EnemyDisguiseItem || !upgraded.Revealed {
+		t.Fatalf("upgraded mimic state = ID %d, disguise %d, revealed %v", upgraded.ID, upgraded.Disguise, upgraded.Revealed)
 	}
 }
 
@@ -541,15 +619,22 @@ func TestExplosionKillLevelsUpAttacker(t *testing.T) {
 }
 
 func TestUpperSpeciesSaveRoundTrip(t *testing.T) {
-	enemy := CreateEnemyByID(19, 3, 4)
-	restored := savedToEnemy(enemyToSaved(&enemy))
-	if restored.ID != 19 || restored.Name != "あなぐらマムル" || restored.Type != "CaveMamuru" {
-		t.Fatalf("restored upper-species enemy = %#v", restored)
+	for _, upperID := range MonsterLevelUpTable {
+		enemy := CreateEnemyByID(upperID, 3, 4)
+		restored := savedToEnemy(enemyToSaved(&enemy))
+		if restored.ID != enemy.ID || restored.Name != enemy.Name || restored.Type != enemy.Type ||
+			restored.SpecialMovement != enemy.SpecialMovement || restored.Disguise != enemy.Disguise ||
+			restored.RangedAttack != enemy.RangedAttack || (restored.SpecialAttack == nil) != (enemy.SpecialAttack == nil) {
+			t.Fatalf("restored upper-species enemy %d = %#v", upperID, restored)
+		}
 	}
 }
 
 func TestUpperSpeciesAppearInFloorSpawnTables(t *testing.T) {
-	wantIDs := map[int]bool{18: false, 19: false}
+	wantIDs := make(map[int]bool, len(MonsterLevelUpTable))
+	for _, upperID := range MonsterLevelUpTable {
+		wantIDs[upperID] = false
+	}
 	for floor := 1; floor <= deepestSpawnFloor; floor++ {
 		for _, entry := range FloorSpawnTables[floor] {
 			if _, ok := wantIDs[entry.MonsterID]; ok {

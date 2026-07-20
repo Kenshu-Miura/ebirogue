@@ -128,10 +128,8 @@ type Game struct {
 	rooms                     []Room
 	playerImg                 *ebiten.Image
 	ebiImg                    *ebiten.Image
-	daiEbiImg                 *ebiten.Image
 	snakeImg                  *ebiten.Image
 	mamuruImg                 *ebiten.Image
-	anaguraMamuruImg          *ebiten.Image
 	honeyImg                  *ebiten.Image
 	harisenbowImg             *ebiten.Image
 	ishiganiImg               *ebiten.Image
@@ -146,6 +144,7 @@ type Game struct {
 	irekaeDakoImg             *ebiten.Image
 	wanashiYadokariImg        *ebiten.Image
 	mimicGaiImg               *ebiten.Image
+	upperEnemyImages          map[string]*ebiten.Image
 	kaneImg                   *ebiten.Image
 	cardImg                   *ebiten.Image
 	mintiaImg                 *ebiten.Image
@@ -648,16 +647,42 @@ func loadImage(filepath string) *ebiten.Image {
 	return img
 }
 
+var upperEnemyImagePaths = map[string]string{
+	"GreatShrimp":           "img/dai_ebi.png",
+	"CaveMamuru":            "img/anagura_mamuru.png",
+	"VenomSnake":            "img/moudoku_hebi.png",
+	"TwistHoney":            "img/gunegune_honey.png",
+	"KingHarisenbow":        "img/harisen_ou.png",
+	"BoulderCrab":           "img/ganseki_gani.png",
+	"DynamiteUrchin":        "img/dynamite_uni.png",
+	"MasterThiefHermitCrab": "img/oodorobou_yadokari.png",
+	"NigiriMasterShrimp":    "img/nigiri_oyakata_ebi.png",
+	"CurseLordCrab":         "img/tatari_gani.png",
+	"PuppetMasterJellyfish": "img/shihai_kurage.png",
+	"ReaperShrimp":          "img/shinigami_ebi.png",
+	"LightningMantisShrimp": "img/inazuma_shako.png",
+	"TeleportJellyfish":     "img/telepo_kurage.png",
+	"ExchangeOctopus":       "img/tokkae_dako.png",
+	"TrapMasterHermitCrab":  "img/wana_master_yadokari.png",
+	"MimicConch":            "img/bake_horagai.png",
+}
+
+func loadUpperEnemyImages() map[string]*ebiten.Image {
+	images := make(map[string]*ebiten.Image, len(upperEnemyImagePaths))
+	for monsterType, path := range upperEnemyImagePaths {
+		images[monsterType] = loadImage(path)
+	}
+	return images
+}
+
 // NewGame function initializes a new game and returns a pointer to a Game object.
 func NewGame() *Game {
 	img := loadImage("img/ebisan.png")
 	tilesetImg := loadImage("img/tileset.png")
 	ebiImg := loadImage("img/ebi.png")
-	daiEbiImg := loadImage("img/dai_ebi.png")
 	kaneImg := loadImage("img/kane.png")
 	snakeImg := loadImage("img/snake.png")
 	mamuruImg := loadImage("img/mamuru.png")
-	anaguraMamuruImg := loadImage("img/anagura_mamuru.png")
 	honeyImg := loadImage("img/honey.png")
 	harisenbowImg := loadImage("img/harisenbow.png")
 	ishiganiImg := loadImage("img/ishigani.png")
@@ -672,6 +697,7 @@ func NewGame() *Game {
 	irekaeDakoImg := loadImage("img/irekae_dako.png")
 	wanashiYadokariImg := loadImage("img/wanashi_yadokari.png")
 	mimicGaiImg := loadImage("img/mimic_gai.png")
+	upperEnemyImages := loadUpperEnemyImages()
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
@@ -724,10 +750,8 @@ func NewGame() *Game {
 		playerImg:           img,
 		tilesetImg:          tilesetImg,
 		ebiImg:              ebiImg,
-		daiEbiImg:           daiEbiImg,
 		snakeImg:            snakeImg,
 		mamuruImg:           mamuruImg,
-		anaguraMamuruImg:    anaguraMamuruImg,
 		honeyImg:            honeyImg,
 		harisenbowImg:       harisenbowImg,
 		ishiganiImg:         ishiganiImg,
@@ -742,6 +766,7 @@ func NewGame() *Game {
 		irekaeDakoImg:       irekaeDakoImg,
 		wanashiYadokariImg:  wanashiYadokariImg,
 		mimicGaiImg:         mimicGaiImg,
+		upperEnemyImages:    upperEnemyImages,
 		kaneImg:             kaneImg,
 		cardImg:             cardImg,
 		mintiaImg:           mintiaImg,

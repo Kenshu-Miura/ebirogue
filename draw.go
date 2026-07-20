@@ -508,18 +508,17 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 }
 
 func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
+	if img := g.upperEnemyImages[enemy.Type]; img != nil {
+		return img
+	}
 	var img *ebiten.Image
 	switch enemy.Type {
 	case "Snake":
 		img = g.snakeImg
 	case "Shrimp":
 		img = g.ebiImg
-	case "GreatShrimp":
-		img = g.daiEbiImg
 	case "Mamuru":
 		img = g.mamuruImg
-	case "CaveMamuru":
-		img = g.anaguraMamuruImg
 	case "Honey":
 		img = g.honeyImg
 	case "Harisenbow":
