@@ -35,52 +35,13 @@ func (g *Game) OpenDoor() {
 func (g *Game) processDKeyPress() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
-		g.dPressed = true
-		// Use equipped arrow from new system
 		equippedArrow := g.state.Player.EquippedArrow
-		if equippedArrow != nil {
-			// Decrement ShotCount
-			equippedArrow.ShotCount--
-
-			// Check if ShotCount becomes 0, and if so, unequip the arrow
-			if equippedArrow.ShotCount == 0 {
-				g.state.Player.EquippedArrow = nil
-			}
-		}
-
-		// If an Arrow item is equipped, set its ShotCount to 1 and call g.ThrowItem
-		if equippedArrow != nil {
-			// Create a new arrow item with ShotCount set to 1
-			newArrow := &Arrow{
-				BaseItem:    equippedArrow.BaseItem,
-				ShotCount:   1,
-				AttackPower: equippedArrow.AttackPower,
-				Cursed:      equippedArrow.Cursed,
-				Identified:  equippedArrow.Identified,
-			}
-			throwRange := 10
-			character := &g.state.Player
-			mapState := g.state.Map
-			enemies := g.state.Enemies
-			onWallHit := func(item Item, position Coordinate, itemIndex int) {
-				g.onWallHit(item, position, itemIndex)
-			}
-			onTargetHit := func(target Character, item Item, index int) {
-				g.onTargetHit(target, item, index)
-			}
-			g.ThrowItem(newArrow, throwRange, character, mapState, enemies, onWallHit, onTargetHit)
+		if g.shootArrow(equippedArrow, 10) {
 			// 矢を撃つことでもターン進行
 			g.AdvanceTurn()
 		} else {
-			action := Action{
-				Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-				Message:  "矢が装備されていません",
-				Execute: func(*Game) {
-
-				},
-			}
 			g.dPressed = false
-			g.Enqueue(action)
+			g.EnqueueMessage("矢が装備されていません", 0.5)
 		}
 	}
 }

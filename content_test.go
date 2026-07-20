@@ -6,8 +6,78 @@ import (
 	"fmt"
 	"image/png"
 	"os"
+	"strings"
 	"testing"
 )
+
+func TestInventoryShootUsesShootingState(t *testing.T) {
+	arrow := buildItemFromTemplate(6, 0, 0).(*Arrow)
+	arrow.ShotCount = 3
+	g := &Game{
+		state: GameState{
+			Map: makeTestFloorMap(20, 20),
+			Player: Player{
+				Entity:    Entity{X: 10, Y: 10},
+				Direction: Right,
+				Inventory: []Item{arrow},
+			},
+		},
+		selectedActionIndex: 1,
+	}
+
+	g.executeAction()
+
+	if !g.dPressed {
+		t.Fatal("inventory shoot should enable shooting state for rotation and damage")
+	}
+	if arrow.ShotCount != 2 {
+		t.Fatalf("remaining arrows = %d, want 2", arrow.ShotCount)
+	}
+	if len(g.ActionQueue.Queue) != 1 || !strings.HasSuffix(g.ActionQueue.Queue[0].Message, "を撃った") {
+		t.Fatalf("queued action = %#v, want shooting message", g.ActionQueue.Queue)
+	}
+
+	g.ActionQueue.Queue[0].Execute(g)
+	shotArrow, ok := g.ThrownItem.Item.(*Arrow)
+	if !ok {
+		t.Fatalf("thrown item = %T, want *Arrow", g.ThrownItem.Item)
+	}
+	if shotArrow.ShotCount != 1 {
+		t.Fatalf("shot arrow count = %d, want 1", shotArrow.ShotCount)
+	}
+	if g.ThrownItem.DX != 1 || g.ThrownItem.DY != 0 {
+		t.Fatalf("shot direction = (%d, %d), want (1, 0)", g.ThrownItem.DX, g.ThrownItem.DY)
+	}
+}
+
+func TestInventoryShootLastEquippedArrowUnequips(t *testing.T) {
+	arrow := buildItemFromTemplate(6, 0, 0).(*Arrow)
+	arrow.ShotCount = 1
+	g := &Game{
+		state: GameState{
+			Map: makeTestFloorMap(20, 20),
+			Player: Player{
+				Entity:        Entity{X: 10, Y: 10},
+				Direction:     Down,
+				Inventory:     []Item{arrow},
+				EquippedArrow: arrow,
+			},
+		},
+		selectedActionIndex: 1,
+	}
+
+	g.executeAction()
+
+	if len(g.state.Player.Inventory) != 0 {
+		t.Fatalf("inventory length = %d, want 0 after last arrow", len(g.state.Player.Inventory))
+	}
+	if g.state.Player.EquippedArrow != nil {
+		t.Fatal("last equipped arrow should be unequipped")
+	}
+	if !g.dPressed {
+		t.Fatal("last arrow should still be treated as a shot")
+	}
+}
 
 func TestAddedEquipmentTemplates(t *testing.T) {
 	weapons := map[int]int{20: 2, 21: 4, 22: 6}

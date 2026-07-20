@@ -82,6 +82,36 @@ func (g *Game) throwWithCallbacks(item Item, throwRange int) {
 		})
 }
 
+// shootArrow は矢を1本消費し、射撃として投射する。
+// Dキーとインベントリの「撃つ」で同じ処理を使い、回転・ダメージ判定を統一する。
+func (g *Game) shootArrow(arrow *Arrow, throwRange int) bool {
+	if arrow == nil || arrow.ShotCount <= 0 {
+		return false
+	}
+
+	arrow.ShotCount--
+	shotArrow := *arrow
+	shotArrow.ShotCount = 1
+
+	if arrow.ShotCount == 0 {
+		for i, inventoryItem := range g.state.Player.Inventory {
+			inventoryArrow, ok := inventoryItem.(*Arrow)
+			if ok && inventoryArrow == arrow {
+				g.state.Player.Inventory = append(g.state.Player.Inventory[:i], g.state.Player.Inventory[i+1:]...)
+				break
+			}
+		}
+		if g.state.Player.EquippedArrow == arrow {
+			g.state.Player.EquippedArrow = nil
+		}
+	}
+
+	// 描画の回転、射撃メッセージ、射撃ダメージの判定に使用される。
+	g.dPressed = true
+	g.throwWithCallbacks(&shotArrow, throwRange)
+	return true
+}
+
 // useCane は杖を1回振る。残り回数がない場合はメッセージのみ表示して false を返す。
 func (g *Game) useCane(caneItem *Cane) bool {
 	if caneItem.Uses <= 0 {

@@ -304,18 +304,10 @@ func (g *Game) executeAction() {
 	// 矢の「撃つ」アクション処理
 	item := g.state.Player.Inventory[g.selectedItemIndex]
 	if arrow, isArrow := item.(*Arrow); isArrow && g.selectedActionIndex == 1 {
-		// 矢を撃つ処理
-		arrow.ShotCount--
-
-		// Create arrow copy for throwing
-		arrowCopy := *arrow
-
-		// If ShotCount becomes 0, remove from inventory
-		if arrow.ShotCount == 0 {
-			g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+		if !g.shootArrow(arrow, 10) {
+			g.dPressed = false
+			g.EnqueueMessage("矢が残っていません", 0.5)
 		}
-
-		g.throwWithCallbacks(&arrowCopy, 10)
 
 		g.showItemActions = false
 		g.selectedItemIndex = 0
