@@ -241,6 +241,11 @@ type Game struct {
 	windWarning2Shown bool // 1300ターン警告表示済みフラグ
 	// フロア効果システム
 	pickupBanned bool // 拾得禁止のカードの効果中かどうか（フロア移動で解除）
+	// 特殊カードシステム
+	showBlankCardMenu   bool         // 白紙のカードの書き込み先選択ウィンドウの表示フラグ
+	blankCardIndex      int          // 書き込み先リストで選択中の位置
+	blankCardTarget     *Card        // 書き込み対象の白紙のカード
+	genocidedMonsterIDs map[int]bool // ジェノサイドのカードで封じられた敵ID（冒険中は出現しない）
 	// メニューシステム
 	showMenu                  bool // メニューウィンドウの表示フラグ
 	menuSelectedRow           int  // メニューで選択中の行（0=上, 1=下）
@@ -366,7 +371,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp {
+	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
 		// 睡眠状態の場合は自動的にターンを進行させる
 		if g.state.Player.StatusAilments.Sleep > 0 {
 			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
@@ -412,8 +417,8 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// 睡眠状態・メッセージ履歴/メニュー/設定/中断確認/ヘルプの表示中はDキーとF1キーも無効
-	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt && !g.showHelp {
+	// 睡眠状態・メッセージ履歴/メニュー/設定/中断確認/ヘルプ/カード書き込みの表示中はDキーとF1キーも無効
+	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
 		g.processDKeyPress()
 
 		// デバッグ用F1キー処理
@@ -472,6 +477,11 @@ func (g *Game) Update() error {
 	}
 
 	err = g.handleHelpInput()
+	if err != nil {
+		return err
+	}
+
+	err = g.handleBlankCardInput()
 	if err != nil {
 		return err
 	}
@@ -588,6 +598,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw the help window if the showHelp flag is set
 	if g.showHelp {
 		g.drawHelpWindow(screen)
+	}
+
+	// Draw the blank card selection window if the showBlankCardMenu flag is set
+	if g.showBlankCardMenu {
+		g.drawBlankCardMenu(screen)
 	}
 
 	g.UpdateAndDrawMiniMap(screen)

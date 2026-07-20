@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
 	"time"
@@ -250,6 +251,11 @@ func (g *Game) handleInventoryInput() error {
 	// 名前入力中は他のインベントリ操作を受け付けない
 	if g.showNameInput {
 		return g.handleNameInputWindow()
+	}
+
+	// 白紙のカードの書き込み先選択中は専用ハンドラに任せる
+	if g.showBlankCardMenu {
+		return nil
 	}
 
 	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
@@ -922,6 +928,7 @@ func (g *Game) handleMessageLogInput() error {
 		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
 		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
 		!g.showSettings && !g.showSuspendPrompt && !g.showHelp &&
+		!g.showBlankCardMenu &&
 		g.state.Player.StatusAilments.Sleep == 0 {
 		g.showMessageLog = true
 		g.messageLogScroll = 0
@@ -980,10 +987,47 @@ func (g *Game) handleHelpInput() error {
 		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
 		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
 		!g.showSettings && !g.showSuspendPrompt && !g.showMessageLog &&
+		!g.showBlankCardMenu &&
 		g.state.Player.StatusAilments.Sleep == 0 {
 		g.showHelp = true
 		g.helpPage = 0
 		g.helpScroll = 0
+	}
+
+	return nil
+}
+
+// 白紙のカードの書き込み先選択ウィンドウの入力処理
+func (g *Game) handleBlankCardInput() error {
+	if !g.showBlankCardMenu {
+		return nil
+	}
+
+	ids := blankCardOptionIDs()
+
+	// ↑↓でカーソル移動（押しっぱなしでリピート）
+	if logScrollKeyPressed(ebiten.KeyUp) && g.blankCardIndex > 0 {
+		g.blankCardIndex--
+	} else if logScrollKeyPressed(ebiten.KeyDown) && g.blankCardIndex < len(ids)-1 {
+		g.blankCardIndex++
+	}
+
+	// Zキーで選んだカード効果を書き込む
+	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		if g.blankCardTarget != nil && g.blankCardIndex >= 0 && g.blankCardIndex < len(ids) {
+			templateID := ids[g.blankCardIndex]
+			if writeCardEffect(g.blankCardTarget, templateID) {
+				g.EnqueueMessage(fmt.Sprintf("白紙のカードに「%s」を書き込んだ", itemTemplates[templateID].Name), 0.5)
+				g.isActioned = true
+			}
+		}
+		g.closeBlankCardMenu()
+		return nil
+	}
+
+	// XキーまたはCキーでキャンセル（書き込まずターンも消費しない）
+	if inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		g.closeBlankCardMenu()
 	}
 
 	return nil

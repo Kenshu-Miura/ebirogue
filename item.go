@@ -427,6 +427,23 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			}
 			g.Enqueue(action)
 		}
+	} else if card, ok := item.(*Card); ok && card.Name == genocideCardName {
+		// ジェノサイドのカードは投げ当てた敵と同系統の敵をこの世から封じる
+		if _, isEnemy := target.(*Enemy); isEnemy && index >= 0 && index < len(g.state.Enemies) {
+			targetID := g.state.Enemies[index].ID
+			targetName := g.state.Enemies[index].Name
+			action := Action{
+				Duration: 0.5,
+				Message:  fmt.Sprintf("%sの系統はこの世から封じられた", g.enemyDisplayName(targetName)),
+				Execute: func(g *Game) {
+					g.applyGenocide(targetID)
+					g.isActioned = true
+				},
+			}
+			g.Enqueue(action)
+		} else {
+			g.EnqueueMessage("しかし何も起こらなかった", 0.5)
+		}
 	} else {
 		damage := 0
 		critical := false
@@ -542,6 +559,18 @@ func (g *Game) executeItemSwap() {
 	for i, item := range g.state.Items {
 		itemX, itemY := item.GetPosition()
 		if itemX == playerX && itemY == playerY {
+			// 床に貼りついた聖域のカードは交換できない
+			if isStuckSanctuaryItem(item) {
+				g.ActionQueue.Enqueue(Action{
+					Duration: 0.4,
+					Message:  "聖域のカードは床に貼りついていて交換できない",
+					Execute: func(g *Game) {
+						g.selectedItemIndex = 0
+					},
+				})
+				break
+			}
+
 			// 拾得禁止のカードの効果中は交換でも足元のアイテムを入手できない
 			if g.pickupBanned {
 				g.ActionQueue.Enqueue(Action{
@@ -669,6 +698,20 @@ func (g *Game) PickupItem() {
 				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
 				if identified {
 					itemName = getItemNameWithSharpness(item)
+				}
+
+				// 床に貼りついた聖域のカードは拾わずに上へ乗るだけ
+				if isStuckSanctuaryItem(item) {
+					action := Action{
+						Duration:     0.5,
+						Message:      fmt.Sprintf("%sに乗った", itemName),
+						ItemName:     itemName,
+						Execute:      func(g *Game) {},
+						IsIdentified: identified,
+						NonBlocking:  !g.IsEnemyAdjacent(),
+					}
+					g.Enqueue(action)
+					break
 				}
 
 				// 拾得禁止のカードの効果中は拾わずに上へ乗るだけ

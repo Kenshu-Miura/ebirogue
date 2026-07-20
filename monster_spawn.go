@@ -73,8 +73,12 @@ func (g *Game) TrySpawnMonster() {
 		return
 	}
 
-	// モンスター生成
+	// モンスター生成（ジェノサイドで全系統が封じられている場合は湧かない）
 	monsterID := g.SelectMonsterForSpawn()
+	if monsterID < 0 {
+		g.SetNextSpawnInterval()
+		return
+	}
 	enemy := CreateEnemyByID(monsterID, spawnPos.X, spawnPos.Y)
 
 	// ゲーム状態に追加
@@ -171,14 +175,15 @@ func (g *Game) IsInPlayerVisibleRoom(x, y int) bool {
 	return false
 }
 
-// 階層に応じたモンスター選択
+// 階層に応じたモンスター選択。全系統が封じられている場合は-1を返す。
 func (g *Game) SelectMonsterForSpawn() int {
-	return selectMonsterForFloor(g.Floor, rand.Intn)
+	return selectMonsterForFloor(g.Floor, g.genocidedMonsterIDs, rand.Intn)
 }
 
 // selectMonsterForFloor は階層別テーブルから敵IDを重み付きで選ぶ。
+// banned（ジェノサイドで封じられた敵ID）は選択から除外し、候補がなければ-1を返す。
 // 乱数関数を注入できるため、マップ初期配置とテストでも同じ選択規則を使える。
-func selectMonsterForFloor(floor int, intn func(int) int) int {
+func selectMonsterForFloor(floor int, banned map[int]bool, intn func(int) int) int {
 
 	// 階層に応じたスポーンテーブル取得
 	spawnTable := FloorSpawnTables[floor]
@@ -187,16 +192,25 @@ func selectMonsterForFloor(floor int, intn func(int) int) int {
 		spawnTable = FloorSpawnTables[deepestSpawnFloor]
 	}
 
-	// 重み付き選択
+	// 重み付き選択（封じられた系統は除外）
 	totalWeight := 0
 	for _, entry := range spawnTable {
+		if banned[entry.MonsterID] {
+			continue
+		}
 		totalWeight += entry.Weight
+	}
+	if totalWeight == 0 {
+		return -1
 	}
 
 	randomValue := intn(totalWeight)
 	currentWeight := 0
 
 	for _, entry := range spawnTable {
+		if banned[entry.MonsterID] {
+			continue
+		}
 		currentWeight += entry.Weight
 		if randomValue < currentWeight {
 			return entry.MonsterID
@@ -204,7 +218,7 @@ func selectMonsterForFloor(floor int, intn func(int) int) int {
 	}
 
 	// フォールバック
-	return 0
+	return -1
 }
 
 // 次回湧き間隔を設定

@@ -53,6 +53,12 @@ func (g *Game) executeGroundItemAction() {
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 				itemName, identified := displayItemName(item)
 
+				// 床に貼りついた聖域のカードは拾えない
+				if isStuckSanctuaryItem(item) {
+					g.EnqueueMessage(fmt.Sprintf("%sは床に貼りついていて拾えない", itemName), 0.5)
+					break
+				}
+
 				// 拾得禁止のカードの効果中は拾えない
 				if g.pickupBanned {
 					action := Action{
@@ -293,7 +299,8 @@ func (g *Game) executeAction() {
 			g.enqueueCursedEquipReveal(equipableItem, itemName, identified)
 		}
 
-		if !g.useIdentifyItem {
+		// 識別・白紙の書き込みは選択ウィンドウで確定するまでターンを消費しない
+		if !g.useIdentifyItem && !g.showBlankCardMenu {
 			g.showInventory = false
 			g.isActioned = true
 		}
@@ -440,6 +447,12 @@ func (g *Game) executeAction() {
 					newItem := selectedItem
 					g.state.Items = append(g.state.Items, newItem)
 
+					// 聖域のカードは床に置くと貼りついて拾えなくなる
+					if card, ok := selectedItem.(*Card); ok && card.Name == sanctuaryCardName {
+						card.Stuck = true
+						g.EnqueueMessage(fmt.Sprintf("%sは床に貼りついた", card.Name), 0.5)
+					}
+
 					g.selectedItemIndex = 0
 					g.selectedActionIndex = 0
 					g.showItemActions = false
@@ -524,6 +537,10 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 }
 
 func (g *Game) AttackFromEnemyBlind(enemyIndex int) {
+	// 聖域のカードの上にいるプレイヤーは敵から攻撃されない
+	if g.playerOnSanctuary() {
+		return
+	}
 	// 目潰し状態の敵は特技を使用せず、通常攻撃のみ
 	g.enqueueEnemyNormalAttack(enemyIndex)
 }
@@ -560,6 +577,11 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 }
 
 func (g *Game) AttackFromEnemy(enemyIndex int) {
+	// 聖域のカードの上にいるプレイヤーは敵から攻撃されない
+	if g.playerOnSanctuary() {
+		return
+	}
+
 	enemy := &g.state.Enemies[enemyIndex]
 
 	if trap := g.state.Player.SetTrap; trap != nil && trap.GetName() == "炸裂装甲のカード" {

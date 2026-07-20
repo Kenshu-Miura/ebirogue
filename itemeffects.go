@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sort"
 )
 
 func determineItemSource(g *Game) (item Item, isInventoryItem bool) {
@@ -610,8 +611,12 @@ var summonMonsterHouse = func(g *Game) {
 			}
 			for i, cell := range cells {
 				if i < enemyCount {
-					// 階層に応じた敵を起きた状態で配置する
-					enemy := CreateEnemyByID(g.SelectMonsterForSpawn(), cell.X, cell.Y)
+					// 階層に応じた敵を起きた状態で配置する（封じられた系統しかいない場合は配置しない）
+					monsterID := g.SelectMonsterForSpawn()
+					if monsterID < 0 {
+						continue
+					}
+					enemy := CreateEnemyByID(monsterID, cell.X, cell.Y)
 					enemy.PlayerDiscovered = true
 					enemy.ShowOnMiniMap = true
 					g.state.Enemies = append(g.state.Enemies, enemy)
@@ -908,6 +913,211 @@ var fullHealCard = func(g *Game) {
 				player.StatusAilments.Poison = 0
 				g.EnqueueMessage("毒も治った", 0.4)
 			}
+			g.isActioned = true
+		},
+	})
+	removeUsedItem(g, isInventoryItem)
+}
+
+// --- 特殊な使用方法を持つカード ---
+
+// 特殊カードの名前定数。効果の判定に使う。
+const (
+	blankCardName     = "白紙のカード"
+	genocideCardName  = "ジェノサイドのカード"
+	sanctuaryCardName = "聖域のカード"
+)
+
+// blankCardOptionIDs は白紙のカードへ書き込めるカードテンプレートIDを昇順で返す。
+func blankCardOptionIDs() []int {
+	ids := []int{}
+	for id, template := range itemTemplates {
+		if template.ItemType == "Card" && template.Name != blankCardName {
+			ids = append(ids, id)
+		}
+	}
+	sort.Ints(ids)
+	return ids
+}
+
+// writeCardEffect は白紙のカードへ指定テンプレートのカード効果を書き込む。
+// カード以外のテンプレートや白紙自身は書き込めない。
+func writeCardEffect(card *Card, templateID int) bool {
+	template, ok := itemTemplates[templateID]
+	if !ok || template.ItemType != "Card" || template.Name == blankCardName {
+		return false
+	}
+	card.ID = template.ID
+	card.Type = template.Type
+	card.Name = template.Name
+	card.Description = template.Description
+	card.Char = template.Char
+	card.UseActions = template.UseActions
+	return true
+}
+
+// blankCardScrollTop は選択カーソルが見えるようにリストの先頭表示位置を返す。
+func blankCardScrollTop(index, count, visible int) int {
+	if count <= visible {
+		return 0
+	}
+	top := index - visible + 1
+	if top < 0 {
+		top = 0
+	}
+	if maxTop := count - visible; top > maxTop {
+		top = maxTop
+	}
+	return top
+}
+
+// 白紙のカードは使用すると書き込むカードの選択ウィンドウを開く。
+// 書き込むまで消費されず、キャンセルするとターンも消費しない。
+var blankCard = func(g *Game) {
+	item, _ := determineItemSource(g)
+	card, ok := item.(*Card)
+	if !ok {
+		return
+	}
+	g.blankCardTarget = card
+	g.blankCardIndex = 0
+	g.showBlankCardMenu = true
+	g.showInventory = false
+}
+
+// closeBlankCardMenu は白紙のカードの選択ウィンドウを閉じて状態をリセットする。
+func (g *Game) closeBlankCardMenu() {
+	g.showBlankCardMenu = false
+	g.blankCardTarget = nil
+	g.blankCardIndex = 0
+}
+
+// ジェノサイドのカードは投げて使うため、読んでも効果はない（消費もしない）。
+var genocideCardHint = func(g *Game) {
+	item, _ := determineItemSource(g)
+	g.EnqueueMessage(fmt.Sprintf("%sは敵に投げ当てると効果を発揮するようだ", item.GetName()), 0.5)
+}
+
+// 聖域のカードは床に置いて使うため、読んでも効果はない（消費もしない）。
+var sanctuaryCardHint = func(g *Game) {
+	item, _ := determineItemSource(g)
+	g.EnqueueMessage(fmt.Sprintf("%sは床に置くと効果を発揮するようだ", item.GetName()), 0.5)
+}
+
+// monsterFamilyIDs は指定した敵と同系統（基本種と上位種）の敵IDを昇順で返す。
+func monsterFamilyIDs(monsterID int) []int {
+	family := map[int]bool{monsterID: true}
+	for baseID, upperID := range MonsterLevelUpTable {
+		if baseID == monsterID || upperID == monsterID {
+			family[baseID] = true
+			family[upperID] = true
+		}
+	}
+	ids := make([]int, 0, len(family))
+	for id := range family {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	return ids
+}
+
+// applyGenocide は指定した敵と同系統の敵をフロアから消し去り、以後の出現を封じる。
+// 消し去った敵の数を返す。経験値は入らない。
+func (g *Game) applyGenocide(monsterID int) int {
+	if g.genocidedMonsterIDs == nil {
+		g.genocidedMonsterIDs = map[int]bool{}
+	}
+	for _, id := range monsterFamilyIDs(monsterID) {
+		g.genocidedMonsterIDs[id] = true
+	}
+	removed := 0
+	survivors := g.state.Enemies[:0]
+	for i := range g.state.Enemies {
+		if g.genocidedMonsterIDs[g.state.Enemies[i].ID] {
+			removed++
+			continue
+		}
+		survivors = append(survivors, g.state.Enemies[i])
+	}
+	g.state.Enemies = survivors
+	g.miniMapDirty = true
+	return removed
+}
+
+// removeGenocidedEnemies はジェノサイドで封じた系統の敵をフロア生成直後に取り除く。
+func (g *Game) removeGenocidedEnemies() {
+	if len(g.genocidedMonsterIDs) == 0 {
+		return
+	}
+	survivors := g.state.Enemies[:0]
+	for i := range g.state.Enemies {
+		if g.genocidedMonsterIDs[g.state.Enemies[i].ID] {
+			continue
+		}
+		survivors = append(survivors, g.state.Enemies[i])
+	}
+	g.state.Enemies = survivors
+}
+
+// isSanctuaryItem は床に効果を発揮する聖域のカードかどうかを返す。
+func isSanctuaryItem(item Item) bool {
+	card, ok := item.(*Card)
+	return ok && card.Name == sanctuaryCardName
+}
+
+// isStuckSanctuaryItem は床に貼りついて拾えない聖域のカードかどうかを返す。
+func isStuckSanctuaryItem(item Item) bool {
+	card, ok := item.(*Card)
+	return ok && card.Name == sanctuaryCardName && card.Stuck
+}
+
+// sanctuaryAt は指定座標の床に聖域のカードがあるかどうかを返す。
+func (g *Game) sanctuaryAt(x, y int) bool {
+	for _, item := range g.state.Items {
+		itemX, itemY := item.GetPosition()
+		if itemX == x && itemY == y && isSanctuaryItem(item) {
+			return true
+		}
+	}
+	return false
+}
+
+// playerOnSanctuary はプレイヤーが聖域のカードの上にいるかどうかを返す。
+func (g *Game) playerOnSanctuary() bool {
+	return g.sanctuaryAt(g.state.Player.X, g.state.Player.Y)
+}
+
+// splitEnemiesByRoomWideEffect は部屋全体効果（通路では周囲1マス）の対象と対象外の敵を分ける。
+func splitEnemiesByRoomWideEffect(playerX, playerY int, enemies []Enemy, rooms []Room) (survivors []Enemy, destroyed []string) {
+	for _, enemy := range enemies {
+		if isInRoomWideEffect(playerX, playerY, enemy.X, enemy.Y, rooms) {
+			destroyed = append(destroyed, enemy.Name)
+			continue
+		}
+		survivors = append(survivors, enemy)
+	}
+	return survivors, destroyed
+}
+
+// 全滅のカードは同じ部屋（通路では周囲1マス）の敵をすべて消し去る。
+// 消し去った敵の経験値は入らない。
+var annihilateEnemiesInRoom = func(g *Game) {
+	item, isInventoryItem := determineItemSource(g)
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを使用した。まばゆい光があたりを包んだ", item.GetName()),
+		Execute: func(g *Game) {
+			playerX, playerY := g.state.Player.GetPosition()
+			survivors, destroyed := splitEnemiesByRoomWideEffect(playerX, playerY, g.state.Enemies, g.rooms)
+			if len(destroyed) == 0 {
+				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
+				return
+			}
+			g.state.Enemies = survivors
+			for _, name := range destroyed {
+				g.EnqueueMessage(fmt.Sprintf("%sは光に包まれて消え去った", name), 0.4)
+			}
+			g.miniMapDirty = true
 			g.isActioned = true
 		},
 	})

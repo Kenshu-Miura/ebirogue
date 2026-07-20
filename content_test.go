@@ -1098,7 +1098,7 @@ func TestRangedEnemyFloorSpawnTables(t *testing.T) {
 	}
 
 	lastEntry := FloorSpawnTables[deepestSpawnFloor][len(FloorSpawnTables[deepestSpawnFloor])-1]
-	got := selectMonsterForFloor(99, func(n int) int { return n - 1 })
+	got := selectMonsterForFloor(99, nil, func(n int) int { return n - 1 })
 	if got != lastEntry.MonsterID {
 		t.Fatalf("deep floor fallback selected %d, want %d", got, lastEntry.MonsterID)
 	}
@@ -2176,5 +2176,334 @@ func TestFullHealCardAtFullHealth(t *testing.T) {
 
 	if g.state.Player.Health != 105 || g.state.Player.MaxHealth != 105 {
 		t.Fatalf("health = %d/%d, want 105/105", g.state.Player.Health, g.state.Player.MaxHealth)
+	}
+}
+
+// --- 特殊な使用方法を持つカード ---
+
+func TestSpecialUseCardTemplates(t *testing.T) {
+	cards := map[int]string{
+		53: "白紙のカード",
+		54: "ジェノサイドのカード",
+		55: "聖域のカード",
+		56: "全滅のカード",
+	}
+	for id, wantName := range cards {
+		card, ok := buildItemFromTemplate(id, 0, 0).(*Card)
+		if !ok || card.Name != wantName {
+			t.Fatalf("card %d = %#v, want %q", id, card, wantName)
+		}
+	}
+}
+
+func TestBlankCardOptionIDs(t *testing.T) {
+	ids := blankCardOptionIDs()
+	if len(ids) == 0 {
+		t.Fatal("白紙のカードへ書き込める候補がない")
+	}
+	prev := -1
+	for _, id := range ids {
+		if id <= prev {
+			t.Fatalf("option IDs are not sorted: %v", ids)
+		}
+		prev = id
+		template := itemTemplates[id]
+		if template.ItemType != "Card" {
+			t.Fatalf("option %d is not a card template", id)
+		}
+		if template.Name == blankCardName {
+			t.Fatal("白紙のカード自身は書き込み候補に含めない")
+		}
+	}
+}
+
+func TestWriteCardEffect(t *testing.T) {
+	blank := buildItemFromTemplate(53, 0, 0).(*Card)
+	if !writeCardEffect(blank, 30) {
+		t.Fatal("あかりのカードを書き込めるはず")
+	}
+	if blank.ID != 30 || blank.Name != "あかりのカード" {
+		t.Fatalf("written card = ID %d, name %q", blank.ID, blank.Name)
+	}
+	if _, ok := blank.UseActions["UseCard"]; !ok {
+		t.Fatal("書き込んだカードは使用できるはず")
+	}
+
+	if writeCardEffect(blank, 4) {
+		t.Fatal("武器テンプレートは書き込めないはず")
+	}
+	if writeCardEffect(blank, 53) {
+		t.Fatal("白紙のカード自身は書き込めないはず")
+	}
+}
+
+func TestBlankCardOpensSelectionWithoutConsuming(t *testing.T) {
+	card := buildItemFromTemplate(53, 0, 0)
+	g := &Game{state: GameState{Player: Player{Inventory: []Item{card}}}}
+
+	card.Use(g)
+
+	if !g.showBlankCardMenu || g.blankCardTarget == nil {
+		t.Fatal("白紙のカードを使うと選択ウィンドウが開くはず")
+	}
+	if len(g.state.Player.Inventory) != 1 {
+		t.Fatal("書き込むまで白紙のカードは消費されないはず")
+	}
+}
+
+func TestBlankCardScrollTop(t *testing.T) {
+	if got := blankCardScrollTop(0, 5, 10); got != 0 {
+		t.Fatalf("scroll top = %d, want 0 when everything fits", got)
+	}
+	if got := blankCardScrollTop(0, 20, 10); got != 0 {
+		t.Fatalf("scroll top = %d, want 0 at list head", got)
+	}
+	if got := blankCardScrollTop(15, 20, 10); got != 6 {
+		t.Fatalf("scroll top = %d, want 6 to keep cursor visible", got)
+	}
+	if got := blankCardScrollTop(19, 20, 10); got != 10 {
+		t.Fatalf("scroll top = %d, want 10 at list tail", got)
+	}
+}
+
+func TestThrowOnlyCardHintsDoNotConsume(t *testing.T) {
+	for _, id := range []int{54, 55} {
+		card := buildItemFromTemplate(id, 0, 0)
+		g := &Game{state: GameState{Player: Player{Inventory: []Item{card}}}}
+		card.Use(g)
+		if len(g.state.Player.Inventory) != 1 {
+			t.Fatalf("card %d should not be consumed by reading", id)
+		}
+		if len(g.ActionQueue.Queue) != 1 {
+			t.Fatalf("card %d should enqueue a hint message", id)
+		}
+	}
+}
+
+func TestMonsterFamilyIDs(t *testing.T) {
+	if got := monsterFamilyIDs(0); len(got) != 2 || got[0] != 0 || got[1] != 18 {
+		t.Fatalf("family of エビ = %v, want [0 18]", got)
+	}
+	if got := monsterFamilyIDs(18); len(got) != 2 || got[0] != 0 || got[1] != 18 {
+		t.Fatalf("family of 大エビ = %v, want [0 18]", got)
+	}
+}
+
+func TestGenocideCardSealsFamily(t *testing.T) {
+	card := buildItemFromTemplate(54, 0, 0)
+	base := CreateEnemyByID(0, 3, 2)
+	upper := CreateEnemyByID(18, 5, 5)
+	other := CreateEnemyByID(2, 6, 6)
+	g := &Game{state: GameState{
+		Player:  Player{Entity: Entity{X: 2, Y: 2}},
+		Enemies: []Enemy{base, upper, other},
+	}}
+
+	g.onTargetHit(&g.state.Enemies[0], card, 0)
+	for i := 0; i < len(g.ActionQueue.Queue); i++ {
+		g.ActionQueue.Queue[i].Execute(g)
+	}
+
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 2 {
+		t.Fatalf("remaining enemies = %#v, want only マムル", g.state.Enemies)
+	}
+	if !g.genocidedMonsterIDs[0] || !g.genocidedMonsterIDs[18] {
+		t.Fatalf("genocided IDs = %v, want 0 and 18", g.genocidedMonsterIDs)
+	}
+	if g.state.Player.ExperiencePoints != 0 {
+		t.Fatal("封じた敵の経験値は入らないはず")
+	}
+}
+
+func TestSelectMonsterForFloorSkipsGenocided(t *testing.T) {
+	// 1階のテーブルは {0, 2, 1}。エビ系統を封じると先頭候補はマムルになる。
+	banned := map[int]bool{0: true, 18: true}
+	if got := selectMonsterForFloor(1, banned, func(int) int { return 0 }); got != 2 {
+		t.Fatalf("selected monster = %d, want 2", got)
+	}
+
+	allBanned := map[int]bool{0: true, 1: true, 2: true}
+	if got := selectMonsterForFloor(1, allBanned, func(int) int { return 0 }); got != -1 {
+		t.Fatalf("selected monster = %d, want -1 when all are banned", got)
+	}
+}
+
+func TestRemoveGenocidedEnemies(t *testing.T) {
+	g := &Game{
+		state: GameState{
+			Enemies: []Enemy{CreateEnemyByID(0, 1, 1), CreateEnemyByID(2, 2, 2)},
+		},
+		genocidedMonsterIDs: map[int]bool{0: true},
+	}
+	g.removeGenocidedEnemies()
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 2 {
+		t.Fatalf("enemies after removal = %#v, want only マムル", g.state.Enemies)
+	}
+}
+
+func TestSplitEnemiesByRoomWideEffect(t *testing.T) {
+	rooms := []Room{{ID: 1, X: 0, Y: 0, Width: 5, Height: 5}}
+	enemies := []Enemy{
+		{Entity: Entity{X: 3, Y: 3}, Name: "同室"},
+		{Entity: Entity{X: 6, Y: 6}, Name: "室外"},
+	}
+	survivors, destroyed := splitEnemiesByRoomWideEffect(2, 2, enemies, rooms)
+	if len(survivors) != 1 || survivors[0].Name != "室外" {
+		t.Fatalf("survivors = %#v, want only 室外", survivors)
+	}
+	if len(destroyed) != 1 || destroyed[0] != "同室" {
+		t.Fatalf("destroyed = %#v, want only 同室", destroyed)
+	}
+}
+
+func TestAnnihilationCard(t *testing.T) {
+	card := buildItemFromTemplate(56, 0, 0)
+	g := &Game{
+		state: GameState{
+			Player: Player{Entity: Entity{X: 2, Y: 2}, Inventory: []Item{card}},
+			Enemies: []Enemy{
+				{Entity: Entity{X: 3, Y: 3}, Health: 100, ExperiencePoints: 10},
+				{Entity: Entity{X: 6, Y: 6}, Health: 100},
+			},
+		},
+		rooms: []Room{{ID: 1, X: 0, Y: 0, Width: 5, Height: 5}},
+	}
+
+	card.Use(g)
+	if len(g.state.Player.Inventory) != 0 {
+		t.Fatal("used card should be removed from inventory")
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].X != 6 {
+		t.Fatalf("enemies = %#v, want only the outside enemy", g.state.Enemies)
+	}
+	if g.state.Player.ExperiencePoints != 0 {
+		t.Fatal("消し去った敵の経験値は入らないはず")
+	}
+}
+
+func TestSanctuaryBlocksEnemyAttack(t *testing.T) {
+	sanctuary := buildItemFromTemplate(55, 2, 2)
+	melee := CreateEnemyByID(0, 3, 2)
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(10, 10),
+		Player:  Player{Entity: Entity{X: 2, Y: 2}, Health: 100},
+		Enemies: []Enemy{melee},
+		Items:   []Item{sanctuary},
+	}}
+
+	g.AttackFromEnemy(0)
+	g.AttackFromEnemyBlind(0)
+	if len(g.ActionQueue.Queue) != 0 {
+		t.Fatal("聖域の上にいるプレイヤーは攻撃されないはず")
+	}
+
+	ranged := CreateEnemyByID(4, 6, 2)
+	ranged.PlayerDiscovered = true
+	g.state.Enemies = append(g.state.Enemies, ranged)
+	if g.tryEnemyRangedAttack(1) {
+		t.Fatal("聖域の上にいるプレイヤーは遠距離攻撃も受けないはず")
+	}
+}
+
+func TestSanctuaryBlocksEnemyMovement(t *testing.T) {
+	sanctuary := buildItemFromTemplate(55, 3, 2)
+	enemy := CreateEnemyByID(0, 2, 2)
+	enemy.PlayerDiscovered = true
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(10, 10),
+		Player:  Player{Entity: Entity{X: 5, Y: 2}},
+		Enemies: []Enemy{enemy},
+		Items:   []Item{sanctuary},
+	}}
+
+	if isPositionFree(g, 3, 2, 0) {
+		t.Fatal("聖域のカードの上は敵の移動先にならないはず")
+	}
+	g.moveEnemyTowardsPlayer(0)
+	if g.state.Enemies[0].X == 3 && g.state.Enemies[0].Y == 2 {
+		t.Fatal("敵は聖域のカードの上へ移動できないはず")
+	}
+}
+
+func TestStuckSanctuaryCannotBePickedUp(t *testing.T) {
+	sanctuary := buildItemFromTemplate(55, 2, 2).(*Card)
+	sanctuary.Stuck = true
+	g := &Game{state: GameState{
+		Player: Player{Entity: Entity{X: 2, Y: 2}},
+		Items:  []Item{sanctuary},
+	}}
+
+	g.PickupItem()
+	if len(g.ActionQueue.Queue) != 1 {
+		t.Fatalf("queued actions = %d, want 1", len(g.ActionQueue.Queue))
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Player.Inventory) != 0 || len(g.state.Items) != 1 {
+		t.Fatal("貼りついた聖域のカードは拾えないはず")
+	}
+}
+
+func TestUnstuckSanctuaryCanBePickedUp(t *testing.T) {
+	sanctuary := buildItemFromTemplate(55, 2, 2)
+	g := &Game{state: GameState{
+		Player: Player{Entity: Entity{X: 2, Y: 2}},
+		Items:  []Item{sanctuary},
+	}}
+
+	g.PickupItem()
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Player.Inventory) != 1 || len(g.state.Items) != 0 {
+		t.Fatal("貼りついていない聖域のカードは拾えるはず")
+	}
+}
+
+func TestSpecialCardSaveRoundTrip(t *testing.T) {
+	// 貼りついた聖域のカード
+	sanctuary := buildItemFromTemplate(55, 1, 1).(*Card)
+	sanctuary.Stuck = true
+	restored, err := savedToItem(itemToSaved(sanctuary))
+	if err != nil {
+		t.Fatalf("restore sanctuary card: %v", err)
+	}
+	if restoredCard, ok := restored.(*Card); !ok || !restoredCard.Stuck {
+		t.Fatal("Stuck should survive a save round trip")
+	}
+
+	// 書き込み済みの白紙のカード
+	blank := buildItemFromTemplate(53, 0, 0).(*Card)
+	writeCardEffect(blank, 30)
+	restored, err = savedToItem(itemToSaved(blank))
+	if err != nil {
+		t.Fatalf("restore written blank card: %v", err)
+	}
+	if restoredCard, ok := restored.(*Card); !ok || restoredCard.Name != "あかりのカード" {
+		t.Fatalf("restored written card = %#v, want あかりのカード", restored)
+	}
+}
+
+func TestGenocideSurvivesSaveRoundTrip(t *testing.T) {
+	g := &Game{
+		state: GameState{
+			Map:    makeTestFloorMap(4, 4),
+			Player: Player{Entity: Entity{X: 1, Y: 1}},
+		},
+		genocidedMonsterIDs: map[int]bool{0: true, 18: true},
+	}
+
+	save := g.buildSaveData()
+	if len(save.GenocidedIDs) != 2 || save.GenocidedIDs[0] != 0 || save.GenocidedIDs[1] != 18 {
+		t.Fatalf("saved genocided IDs = %v, want [0 18]", save.GenocidedIDs)
+	}
+
+	restored := &Game{}
+	if err := restored.applySaveData(save); err != nil {
+		t.Fatalf("applySaveData failed: %v", err)
+	}
+	if !restored.genocidedMonsterIDs[0] || !restored.genocidedMonsterIDs[18] {
+		t.Fatalf("restored genocided IDs = %v, want 0 and 18", restored.genocidedMonsterIDs)
 	}
 }

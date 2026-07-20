@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 )
 
 // --- 設定の読み書き ---
@@ -59,7 +60,7 @@ func itemToSaved(item Item) SavedItem {
 	case *Potion:
 		return SavedItem{Kind: "Potion", ID: v.ID, X: v.X, Y: v.Y}
 	case *Card:
-		return SavedItem{Kind: "Card", ID: v.ID, X: v.X, Y: v.Y}
+		return SavedItem{Kind: "Card", ID: v.ID, X: v.X, Y: v.Y, Stuck: v.Stuck}
 	case *Money:
 		return SavedItem{Kind: "Money", ID: v.ID, X: v.X, Y: v.Y,
 			Amount: v.Amount, Identified: v.Identified}
@@ -123,9 +124,11 @@ func savedToItem(s SavedItem) (Item, error) {
 			return nil, fmt.Errorf("アイテムID %dはPotionではない", s.ID)
 		}
 	case "Card":
-		if _, ok := item.(*Card); !ok {
+		v, ok := item.(*Card)
+		if !ok {
 			return nil, fmt.Errorf("アイテムID %dはCardではない", s.ID)
 		}
+		v.Stuck = s.Stuck
 	case "Money":
 		v, ok := item.(*Money)
 		if !ok {
@@ -305,6 +308,12 @@ func (g *Game) buildSaveData() *SaveData {
 		CustomNames:       g.customNames,
 	}
 
+	// ジェノサイドで封じた敵IDを保存する（順序を安定させるためソート）
+	for id := range g.genocidedMonsterIDs {
+		save.GenocidedIDs = append(save.GenocidedIDs, id)
+	}
+	sort.Ints(save.GenocidedIDs)
+
 	for _, room := range g.rooms {
 		save.Rooms = append(save.Rooms, SavedRoom{
 			ID: room.ID, X: room.X, Y: room.Y,
@@ -460,6 +469,15 @@ func (g *Game) applySaveData(save *SaveData) error {
 	g.windWarning1Shown = save.WindWarning1Shown
 	g.windWarning2Shown = save.WindWarning2Shown
 	g.pickupBanned = save.PickupBanned
+
+	// ジェノサイドで封じた敵IDを復元する
+	g.genocidedMonsterIDs = nil
+	if len(save.GenocidedIDs) > 0 {
+		g.genocidedMonsterIDs = map[int]bool{}
+		for _, id := range save.GenocidedIDs {
+			g.genocidedMonsterIDs[id] = true
+		}
+	}
 
 	// メッセージ履歴を復元（上限を超える分は古いものから捨てる）
 	messages := save.Messages

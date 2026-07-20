@@ -61,6 +61,7 @@ type Potion struct {
 
 type Card struct {
 	BaseItem
+	Stuck bool // 聖域のカードを床に置いて貼りついた状態かどうか
 }
 
 type Money struct {
@@ -619,6 +620,42 @@ var itemTemplates = map[int]ItemTemplate{
 		UseActions:  map[string]UseAction{"WeaponEffect": func(g *Game) {}},
 		AttackPower: 4,
 		Abilities:   []EquipmentAbilityID{AbilityDrainerSlayer},
+	},
+	53: {
+		ID:          53,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "白紙のカード",
+		Description: "何も書かれていないカード。使うと好きなカードの効果を書き込める。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": blankCard},
+	},
+	54: {
+		ID:          54,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "ジェノサイドのカード",
+		Description: "敵に投げ当てると、その敵と同系統の敵をフロアから消し去り、以後出現しなくなる。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": genocideCardHint},
+	},
+	55: {
+		ID:          55,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "聖域のカード",
+		Description: "床に置くと貼りつき、その上にいる間は敵から攻撃されなくなる。貼りつくと拾えない。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": sanctuaryCardHint},
+	},
+	56: {
+		ID:          56,
+		ItemType:    "Card",
+		Type:        "Card",
+		Name:        "全滅のカード",
+		Description: "同じ部屋にいる敵をすべて消し去る。消し去った敵の経験値は入らない。",
+		Char:        'C',
+		UseActions:  map[string]UseAction{"UseCard": annihilateEnemiesInRoom},
 	},
 }
 

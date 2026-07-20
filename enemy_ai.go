@@ -17,7 +17,7 @@ func moveEnemy(g *Game, i int, dx, dy int) bool {
 	blockUp, blockDown, blockLeft, blockRight := isBlocked(g, enemy.X, enemy.Y)
 
 	if newX >= 0 && newX < len(g.state.Map[0]) && newY >= 0 && newY < len(g.state.Map) &&
-		!g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) && ((dx > 0 && dy > 0 && !(blockDown || blockRight)) ||
+		!g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) && !g.sanctuaryAt(newX, newY) && ((dx > 0 && dy > 0 && !(blockDown || blockRight)) ||
 		(dx > 0 && dy < 0 && !(blockUp || blockRight)) ||
 		(dx < 0 && dy > 0 && !(blockDown || blockLeft)) ||
 		(dx < 0 && dy < 0 && !(blockUp || blockLeft)) ||
@@ -275,6 +275,11 @@ func isPositionFree(g *Game, x, y, enemyIndex int) bool {
 		}
 	}
 
+	// 聖域のカードの上には敵は移動できない
+	if g.sanctuaryAt(x, y) {
+		return false
+	}
+
 	return true
 }
 
@@ -326,6 +331,10 @@ func (g *Game) tryMoveEnemyThroughWall(enemyIndex, dx, dy int) bool {
 		if i != enemyIndex && g.state.Enemies[i].X == newX && g.state.Enemies[i].Y == newY {
 			return false
 		}
+	}
+	// 壁抜けでも聖域のカードの上には移動できない
+	if g.sanctuaryAt(newX, newY) {
+		return false
 	}
 	enemy.X = newX
 	enemy.Y = newY
@@ -395,6 +404,10 @@ func (g *Game) trySwapEnemyWithPlayer(enemyIndex int, intn func(int) int) bool {
 	}
 	distance := max(abs(enemy.X-g.state.Player.X), abs(enemy.Y-g.state.Player.Y))
 	if distance < 2 || distance > 5 || !isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms) {
+		return false
+	}
+	// 聖域のカードの上にいるプレイヤーとは場所を入れ替えられない
+	if g.playerOnSanctuary() {
 		return false
 	}
 
@@ -555,8 +568,8 @@ func (g *Game) moveEnemyConfused(i int) {
 		return
 	}
 
-	// 移動先が通行可能で他の敵がいない場合、移動
-	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) {
+	// 移動先が通行可能で他の敵がいない場合、移動（聖域のカードの上には移動できない）
+	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) && !g.sanctuaryAt(newX, newY) {
 		enemy.X = newX
 		enemy.Y = newY
 		enemy.dx = direction.dx
@@ -586,8 +599,8 @@ func (g *Game) moveEnemyBlind(i int) {
 		return
 	}
 
-	// 壁にぶつかった場合、方向を変更
-	if g.state.Map[newY][newX].Blocked {
+	// 壁または聖域のカードにぶつかった場合、方向を変更
+	if g.state.Map[newY][newX].Blocked || g.sanctuaryAt(newX, newY) {
 		g.changeBlindEnemyDirection(i)
 		return
 	}

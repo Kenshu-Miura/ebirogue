@@ -580,6 +580,42 @@ func (g *Game) drawMessageLogWindow(screen *ebiten.Image) {
 	}
 }
 
+// 白紙のカードの書き込み先選択ウィンドウを描画する
+func (g *Game) drawBlankCardMenu(screen *ebiten.Image) {
+	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
+	windowWidth, windowHeight := 340, 420
+	windowX := (screenWidth - windowWidth) / 2
+	windowY := (screenHeight - windowHeight) / 2
+
+	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 220)
+
+	text.Draw(screen, "どのカードを書き込む？", mplusMediumFont, windowX+10, windowY+30, color.White)
+
+	ids := blankCardOptionIDs()
+	const visibleRows = 15
+	lineHeight := 22
+	top := blankCardScrollTop(g.blankCardIndex, len(ids), visibleRows)
+	for row := 0; row < visibleRows && top+row < len(ids); row++ {
+		id := ids[top+row]
+		y := windowY + 60 + row*lineHeight
+		if top+row == g.blankCardIndex {
+			text.Draw(screen, "→", mplusNormalFont, windowX+15, y, color.NRGBA{255, 255, 0, 255})
+		}
+		text.Draw(screen, itemTemplates[id].Name, mplusNormalFont, windowX+40, y, color.White)
+	}
+
+	// スクロールできる方向を示すインジケーター
+	if top > 0 {
+		text.Draw(screen, "↑", mplusNormalFont, windowX+windowWidth-25, windowY+60, color.NRGBA{255, 255, 0, 255})
+	}
+	if top+visibleRows < len(ids) {
+		text.Draw(screen, "↓", mplusNormalFont, windowX+windowWidth-25, windowY+60+(visibleRows-1)*lineHeight, color.NRGBA{255, 255, 0, 255})
+	}
+
+	// 操作説明
+	text.Draw(screen, "Z:書き込む  X:やめる", mplusNormalFont, windowX+15, windowY+windowHeight-15, color.NRGBA{200, 200, 200, 255})
+}
+
 // ヘルプウィンドウを描画する
 func (g *Game) drawHelpWindow(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()

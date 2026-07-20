@@ -74,7 +74,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜52 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜56 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
 | 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜37 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
 | 罠 | `mapTrapTemplates []mapTrapTemplate`（maptraps.go） | `createMapTrapByID` | 同ファイルの効果クロージャ |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
@@ -150,10 +150,8 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 ### Priority A: cards based on scrolls
 
-- 特殊な使用方法を持つカードを追加する。
-  - 任意のカード効果を書き込む白紙、投げ当てた敵系統を封じるジェノサイド
-  - 床に置いて攻撃を防ぐ聖域、部屋内の敵を消滅させる全滅
 - 新規カードは既存の `img/card.png` を共用し、あかり・真空斬りを含めて階層別出現テーブル導入時に出現率を調整する。
+  （白紙・ジェノサイド・聖域・全滅の特殊使用カードは実装済み。）
 
 ### Priority A: equipment abilities
 

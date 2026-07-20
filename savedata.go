@@ -38,6 +38,7 @@ type SavedItem struct {
 	Amount     int
 	Capacity   int         // 壺の容量
 	Contents   []SavedItem // 壺の中身
+	Stuck      bool        // 聖域のカードが床に貼りついているかどうか
 }
 
 // SavedEnemy は敵1体のセーブ用表現。
@@ -110,6 +111,7 @@ type SaveData struct {
 	PickupBanned      bool // 拾得禁止のカードの効果中かどうか
 	Messages          []string
 	CustomNames       map[int]string // 未識別アイテム種別に付けた任意名
+	GenocidedIDs      []int          // ジェノサイドのカードで封じられた敵ID
 }
 
 // decodeSaveData はJSONを解析し、検証済みのセーブデータを返す

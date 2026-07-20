@@ -158,6 +158,10 @@ func (g *Game) resetGame() {
 	// その他のゲーム状態をリセット
 	g.rooms = rooms // 部屋情報を更新
 	g.pickupBanned = false
+	g.genocidedMonsterIDs = nil
+	g.showBlankCardMenu = false
+	g.blankCardTarget = nil
+	g.blankCardIndex = 0
 	g.playerDead = false
 	g.deathMessageAdded = false
 	g.fadeOutProgress = 0.0

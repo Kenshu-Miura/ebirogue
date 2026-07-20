@@ -23,6 +23,11 @@ func (g *Game) canEnemyUseRangedAttack(enemyIndex int) bool {
 		return false
 	}
 
+	// 聖域のカードの上にいるプレイヤーは遠距離攻撃も受けない
+	if g.playerOnSanctuary() {
+		return false
+	}
+
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
 	if !withinRangedDistance(enemy.X, enemy.Y, playerX, playerY, attack.MinRange, attack.MaxRange) {
 		return false
