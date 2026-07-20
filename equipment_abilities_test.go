@@ -69,3 +69,69 @@ func TestSlayerMultiplier(t *testing.T) {
 		})
 	}
 }
+
+func TestPlayerAttackDeltas(t *testing.T) {
+	tests := []struct {
+		name      string
+		dx, dy    int
+		abilities []EquipmentAbilityID
+		want      []Coordinate
+	}{
+		{name: "normal attack", dx: 0, dy: -1, want: []Coordinate{{X: 0, Y: -1}}},
+		{name: "three way up", dx: 0, dy: -1, abilities: []EquipmentAbilityID{AbilityThreeWayAttack}, want: []Coordinate{{X: 0, Y: -1}, {X: -1, Y: -1}, {X: 1, Y: -1}}},
+		{name: "three way diagonal", dx: 1, dy: -1, abilities: []EquipmentAbilityID{AbilityThreeWayAttack}, want: []Coordinate{{X: 1, Y: -1}, {X: 0, Y: -1}, {X: 1, Y: 0}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := playerAttackDeltas(tt.dx, tt.dy, tt.abilities)
+			if len(got) != len(tt.want) {
+				t.Fatalf("playerAttackDeltas() length = %d, want %d", len(got), len(tt.want))
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("playerAttackDeltas()[%d] = %#v, want %#v", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestRollPlayerAttackHit(t *testing.T) {
+	if !rollPlayerAttackHit(nil, func(int) int { return 89 }) {
+		t.Fatal("roll 89 should hit with normal accuracy")
+	}
+	if rollPlayerAttackHit(nil, func(int) int { return 90 }) {
+		t.Fatal("roll 90 should miss with normal accuracy")
+	}
+	if !rollPlayerAttackHit([]EquipmentAbilityID{AbilitySureHit}, func(int) int { return 99 }) {
+		t.Fatal("sure-hit weapon should always hit")
+	}
+}
+
+func TestNextDisposableWeaponAttackPower(t *testing.T) {
+	if got, changed := nextDisposableWeaponAttackPower(12, nil); got != 12 || changed {
+		t.Fatalf("normal weapon = (%d, %t), want (12, false)", got, changed)
+	}
+	if got, changed := nextDisposableWeaponAttackPower(12, []EquipmentAbilityID{AbilityDisposable}); got != 11 || !changed {
+		t.Fatalf("disposable weapon = (%d, %t), want (11, true)", got, changed)
+	}
+	if got, changed := nextDisposableWeaponAttackPower(0, []EquipmentAbilityID{AbilityDisposable}); got != 0 || changed {
+		t.Fatalf("spent disposable weapon = (%d, %t), want (0, false)", got, changed)
+	}
+}
+
+func TestIsDiggableTile(t *testing.T) {
+	wall := Tile{Type: "wall", Blocked: true}
+	other := Tile{Type: "other", Blocked: true}
+	floor := Tile{Type: "floor", Blocked: false}
+	if !isDiggableTile(wall, 2, 2, 5, 5) || !isDiggableTile(other, 2, 2, 5, 5) {
+		t.Fatal("interior wall and other tiles should be diggable")
+	}
+	if isDiggableTile(floor, 2, 2, 5, 5) {
+		t.Fatal("floor should not be diggable")
+	}
+	if isDiggableTile(wall, 0, 2, 5, 5) || isDiggableTile(wall, 4, 2, 5, 5) {
+		t.Fatal("outer map edge should not be diggable")
+	}
+}

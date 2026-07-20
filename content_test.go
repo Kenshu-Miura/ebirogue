@@ -108,6 +108,22 @@ func TestAddedEquipmentTemplates(t *testing.T) {
 		}
 	}
 
+	specialAttackWeapons := map[int]struct {
+		power   int
+		ability EquipmentAbilityID
+	}{
+		57: {power: 4, ability: AbilityThreeWayAttack},
+		58: {power: 3, ability: AbilitySureHit},
+		59: {power: 2, ability: AbilityDigWall},
+		60: {power: 12, ability: AbilityDisposable},
+	}
+	for id, want := range specialAttackWeapons {
+		weapon, ok := buildItemFromTemplate(id, 0, 0).(*Weapon)
+		if !ok || weapon.AttackPower != want.power || !hasEquipmentAbility(weapon.Abilities, want.ability) {
+			t.Fatalf("special attack weapon %d = %#v, want power %d and ability %q", id, weapon, want.power, want.ability)
+		}
+	}
+
 	armors := map[int]int{23: 2, 24: 5, 25: 3}
 	for id, wantPower := range armors {
 		armor, ok := buildItemFromTemplate(id, 0, 0).(*Armor)
@@ -203,8 +219,13 @@ func TestEnemyTraitsForSlayerWeapons(t *testing.T) {
 func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
 	// 会心判定を必ず外し、乱数係数を最大(9/8)へ固定して決定的にする
 	restoreIntn := damageRandInt
+	restoreHitIntn := attackHitRandInt
 	damageRandInt = func(n int) int { return n - 1 }
-	defer func() { damageRandInt = restoreIntn }()
+	attackHitRandInt = func(int) int { return 0 }
+	defer func() {
+		damageRandInt = restoreIntn
+		attackHitRandInt = restoreHitIntn
+	}()
 
 	weapon := buildItemFromTemplate(49, 0, 0).(*Weapon)
 	enemy := CreateEnemyByID(36, 2, 1)
@@ -234,6 +255,132 @@ func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
 	// 総攻撃力29 × (15/16)^9 × 9/8 × 特効1.5 ≒ 27.38 → 27
 	if damage != 27 {
 		t.Fatalf("slayer attack damage = %d, want 27", damage)
+	}
+}
+
+func TestThreeWayWeaponAttacksFrontArc(t *testing.T) {
+	restoreHitIntn := attackHitRandInt
+	attackHitRandInt = func(int) int { return 0 }
+	defer func() { attackHitRandInt = restoreHitIntn }()
+
+	weapon := buildItemFromTemplate(57, 0, 0).(*Weapon)
+	enemies := []Enemy{
+		CreateEnemyByID(0, 2, 1),
+		CreateEnemyByID(0, 1, 1),
+		CreateEnemyByID(0, 3, 1),
+		CreateEnemyByID(0, 3, 2),
+	}
+	for i := range enemies {
+		enemies[i].Health = 1000
+		enemies[i].MaxHealth = 1000
+	}
+	g := &Game{state: GameState{
+		Map: makeTestFloorMap(5, 5),
+		Player: Player{
+			Entity:         Entity{X: 2, Y: 2},
+			Direction:      Up,
+			AttackPower:    10,
+			Power:          8,
+			Level:          1,
+			EquippedWeapon: weapon,
+		},
+		Enemies: enemies,
+	}}
+
+	g.CheckForEnemies(0, -1)
+	if len(g.ActionQueue.Queue) != 3 {
+		t.Fatalf("three-way actions = %d, want 3", len(g.ActionQueue.Queue))
+	}
+	for len(g.ActionQueue.Queue) > 0 {
+		action := g.ActionQueue.Queue[0]
+		g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
+		action.Execute(g)
+	}
+	for i := 0; i < 3; i++ {
+		if g.state.Enemies[i].Health >= 1000 {
+			t.Fatalf("front-arc enemy %d was not damaged", i)
+		}
+	}
+	if g.state.Enemies[3].Health != 1000 {
+		t.Fatal("enemy outside front arc should not be damaged")
+	}
+}
+
+func TestSureHitWeaponAndNormalAttackMiss(t *testing.T) {
+	restoreHitIntn := attackHitRandInt
+	attackHitRandInt = func(int) int { return 99 }
+	defer func() { attackHitRandInt = restoreHitIntn }()
+
+	newGame := func(weapon *Weapon) *Game {
+		enemy := CreateEnemyByID(0, 2, 1)
+		return &Game{state: GameState{
+			Map:     makeTestFloorMap(5, 5),
+			Player:  Player{Entity: Entity{X: 1, Y: 1}, AttackPower: 10, Power: 8, Level: 1, EquippedWeapon: weapon},
+			Enemies: []Enemy{enemy},
+		}}
+	}
+
+	normal := newGame(buildItemFromTemplate(20, 0, 0).(*Weapon))
+	normal.CheckForEnemies(1, 0)
+	if !strings.Contains(normal.ActionQueue.Queue[0].Message, "外れた") {
+		t.Fatalf("normal attack message = %q, want miss", normal.ActionQueue.Queue[0].Message)
+	}
+
+	sureHit := newGame(buildItemFromTemplate(58, 0, 0).(*Weapon))
+	before := sureHit.state.Enemies[0].Health
+	sureHit.CheckForEnemies(1, 0)
+	if strings.Contains(sureHit.ActionQueue.Queue[0].Message, "外れた") {
+		t.Fatalf("sure-hit attack message = %q", sureHit.ActionQueue.Queue[0].Message)
+	}
+	sureHit.ActionQueue.Queue[0].Execute(sureHit)
+	if sureHit.state.Enemies[0].Health >= before {
+		t.Fatal("sure-hit weapon should damage the enemy even at roll 99")
+	}
+}
+
+func TestPickaxeWeaponDigsWall(t *testing.T) {
+	weapon := buildItemFromTemplate(59, 0, 0).(*Weapon)
+	gameMap := makeTestFloorMap(5, 5)
+	gameMap[1][2] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+	g := &Game{state: GameState{
+		Map:    gameMap,
+		Player: Player{Entity: Entity{X: 2, Y: 2}, Direction: Up, EquippedWeapon: weapon},
+	}}
+
+	g.CheckForEnemies(0, -1)
+	if len(g.ActionQueue.Queue) != 1 || g.ActionQueue.Queue[0].Message != "壁を掘った。" {
+		t.Fatalf("dig action = %#v", g.ActionQueue.Queue)
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+	tile := g.state.Map[1][2]
+	if tile.Type != "corridor" || tile.Blocked || tile.BlockSight || !tile.Visited {
+		t.Fatalf("dug tile = %#v", tile)
+	}
+}
+
+func TestDisposableWeaponWeakensAndPersists(t *testing.T) {
+	weapon := buildItemFromTemplate(60, 0, 0).(*Weapon)
+	weapon.Sharpness = 0
+	g := &Game{state: GameState{
+		Map:    makeTestFloorMap(5, 5),
+		Player: Player{Entity: Entity{X: 2, Y: 2}, Direction: Up, AttackPower: 15, EquippedWeapon: weapon},
+	}}
+
+	g.CheckForEnemies(0, -1)
+	if len(g.ActionQueue.Queue) != 2 {
+		t.Fatalf("disposable attack actions = %d, want swing and wear", len(g.ActionQueue.Queue))
+	}
+	g.ActionQueue.Queue[1].Execute(g)
+	if weapon.AttackPower != 11 || g.state.Player.AttackPower != 14 {
+		t.Fatalf("after wear: weapon power %d, player attack %d", weapon.AttackPower, g.state.Player.AttackPower)
+	}
+
+	restored, err := savedToItem(itemToSaved(weapon))
+	if err != nil {
+		t.Fatalf("restore disposable weapon: %v", err)
+	}
+	if restored.(*Weapon).AttackPower != 11 {
+		t.Fatalf("restored disposable power = %d, want 11", restored.(*Weapon).AttackPower)
 	}
 }
 

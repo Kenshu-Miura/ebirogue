@@ -74,7 +74,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜56 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜60 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
 | 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜37 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
 | 罠 | `mapTrapTemplates []mapTrapTemplate`（maptraps.go） | `createMapTrapByID` | 同ファイルの効果クロージャ |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
@@ -144,7 +144,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 以下は [SFC シレンwiki](https://seesaawiki.jp/shiren1/) を参考にした実装予定です。原作の数値や挙動をそのまま複製せず、このゲームの既存バランス、海老さんの世界観、30x30ピクセルの表示に合わせて調整してください。
 
-現在実装済みの追加要素は、こん棒・長巻・どうたぬき、木甲・鉄甲・皮甲の盾、マムル・くねくねハニー、睡眠ガス・毒矢・鈍足・地雷・サビ、毒・鈍足です。以下ではこれらを重複して追加せず、特殊能力や相互作用を拡張します。
+現在実装済みの追加要素は、こん棒・長巻・どうたぬき・海老薙刀・必中の剣・海老つるはし・使い捨ての大剣、木甲・鉄甲・皮甲の盾、マムル・くねくねハニー、睡眠ガス・毒矢・鈍足・地雷・サビ、毒・鈍足です。以下ではこれらを重複して追加せず、特殊能力や相互作用を拡張します。
 
 実装した内容はAGENTS.mdから削除してください。画像が必要な場合は生成が望ましいですが、無理の場合はAGENTS.mdに残タスクとして記載してください。修正はコミット、プッシュしてください。
 
@@ -155,11 +155,6 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 ### Priority A: equipment abilities
 
-- 攻撃方法が変わる武器を追加する。
-  - 正面3方向を攻撃する武器
-  - 命中率を上げる武器
-  - 壁を掘れるつるはし系武器
-  - 高攻撃力だが使用ごとに弱くなる使い捨て武器
 - 特殊防御を持つ盾を追加する。
   - 爆発、炎、魔法、盗難、状態異常への耐性
   - 回避率上昇、反射、カウンター

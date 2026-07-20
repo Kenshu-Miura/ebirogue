@@ -26,19 +26,20 @@ type SavedRoom struct {
 // SavedItem はアイテム1個のセーブ用表現。
 // テンプレートID(ID)から再生成し、可変フィールドだけを上書きする。
 type SavedItem struct {
-	Kind       string // 具体型名（"Weapon", "Food" など）
-	ID         int    // itemTemplatesのID
-	X, Y       int
-	Sharpness  int
-	Cursed     bool
-	Identified bool
-	RustProof  bool
-	ShotCount  int
-	Uses       int
-	Amount     int
-	Capacity   int         // 壺の容量
-	Contents   []SavedItem // 壺の中身
-	Stuck      bool        // 聖域のカードが床に貼りついているかどうか
+	Kind        string // 具体型名（"Weapon", "Food" など）
+	ID          int    // itemTemplatesのID
+	X, Y        int
+	Sharpness   int
+	AttackPower *int // 使用で変化する武器攻撃力。旧セーブではnilとなりテンプレート値を使う
+	Cursed      bool
+	Identified  bool
+	RustProof   bool
+	ShotCount   int
+	Uses        int
+	Amount      int
+	Capacity    int         // 壺の容量
+	Contents    []SavedItem // 壺の中身
+	Stuck       bool        // 聖域のカードが床に貼りついているかどうか
 }
 
 // SavedEnemy は敵1体のセーブ用表現。

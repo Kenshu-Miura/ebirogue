@@ -686,10 +686,14 @@ var upperEnemyImagePaths = map[string]string{
 }
 
 var specialWeaponImagePaths = map[string]string{
-	"DragonKiller":   "img/dragon_killer.png",
-	"ExorcismSickle": "img/exorcism_sickle.png",
-	"OneEyeKiller":   "img/one_eye_killer.png",
-	"DrainBuster":    "img/drain_buster.png",
+	"DragonKiller":     "img/dragon_killer.png",
+	"ExorcismSickle":   "img/exorcism_sickle.png",
+	"OneEyeKiller":     "img/one_eye_killer.png",
+	"DrainBuster":      "img/drain_buster.png",
+	"SweepingNaginata": "img/sweeping_naginata.png",
+	"SureHitSword":     "img/sure_hit_sword.png",
+	"ShrimpPickaxe":    "img/shrimp_pickaxe.png",
+	"DisposableSword":  "img/disposable_sword.png",
 }
 
 func loadUpperEnemyImages() map[string]*ebiten.Image {

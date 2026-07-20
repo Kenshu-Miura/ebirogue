@@ -47,8 +47,9 @@ func saveSettings(settings GameSettings) {
 func itemToSaved(item Item) SavedItem {
 	switch v := item.(type) {
 	case *Weapon:
+		attackPower := v.AttackPower
 		return SavedItem{Kind: "Weapon", ID: v.ID, X: v.X, Y: v.Y,
-			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
+			Sharpness: v.Sharpness, AttackPower: &attackPower, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
 	case *Armor:
 		return SavedItem{Kind: "Armor", ID: v.ID, X: v.X, Y: v.Y,
 			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
@@ -95,6 +96,9 @@ func savedToItem(s SavedItem) (Item, error) {
 			return nil, fmt.Errorf("アイテムID %dはWeaponではない", s.ID)
 		}
 		v.Sharpness = s.Sharpness
+		if s.AttackPower != nil {
+			v.AttackPower = *s.AttackPower
+		}
 		v.Cursed = s.Cursed
 		v.Identified = s.Identified
 		v.RustProof = s.RustProof

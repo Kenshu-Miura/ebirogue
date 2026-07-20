@@ -623,78 +623,136 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 }
 
 func (g *Game) CheckForEnemies(x, y int) bool {
-
 	g.isFrontEnemy = false
-
-	for i, enemy := range g.state.Enemies {
-		if enemy.X == g.state.Player.X+x && enemy.Y == g.state.Player.Y+y {
-			g.isFrontEnemy = true
-			g.revealEnemy(i)
-			// ちから・レベル補正込みの総攻撃力と特効倍率からダメージを算出する
-			weaponAbilities := []EquipmentAbilityID(nil)
-			if g.state.Player.EquippedWeapon != nil {
-				weaponAbilities = g.state.Player.EquippedWeapon.Abilities
-			}
-			multiplier, slayerEffective := slayerMultiplier(weaponAbilities, enemy.Traits)
-			attack := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level)
-			result := rollPlayerAttackDamage(attack, enemy.DefensePower, multiplier, damageRandInt)
-			netDamage := result.Damage
-
-			dx, dy := enemy.X-g.state.Player.X, enemy.Y-g.state.Player.Y
-
-			// Determine the direction based on the change in position
-			g.state.Player.Direction = determineDirection(dx, dy)
-
-			g.attackTimer = 0.5 // set timer for 0.5 seconds
-			enemyIndex := i     // capture the index here
-
-			message := fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(g.state.Enemies[enemyIndex].Name), netDamage)
-			if slayerEffective {
-				message = "特効！" + message
-			}
-			if result.Critical {
-				message = "会心の一撃！" + message
-			}
-			action := Action{
-				Duration: 0.5,
-				Message:  message,
-				Execute: func(g *Game) {
-					// 攻撃を受けた敵の仮眠状態を解除
-					g.WakeUpSleepingEnemyByAttack(enemyIndex)
-					// ダメージ適用・金縛り解除・撃破処理
-					g.applyDamageToEnemy(enemyIndex, netDamage)
-					g.isActioned = true
-				},
-			}
-
-			g.Enqueue(action)
-
-			// 敵への攻撃時にも前方の罠を発見する
-			g.checkTrapInFront()
-
-			return true
-		}
+	weapon := g.state.Player.EquippedWeapon
+	weaponAbilities := []EquipmentAbilityID(nil)
+	if weapon != nil {
+		weaponAbilities = weapon.Abilities
 	}
-	if !g.isFrontEnemy {
-		g.attackTimer = 0.5 // set timer for 0.5 seconds
-		action := Action{
+
+	g.state.Player.Direction = determineDirection(x, y)
+	g.attackTimer = 0.5
+
+	for _, delta := range playerAttackDeltas(x, y, weaponAbilities) {
+		targetX := g.state.Player.X + delta.X
+		targetY := g.state.Player.Y + delta.Y
+		enemyIndex := g.enemyIndexAt(targetX, targetY)
+		if enemyIndex < 0 {
+			continue
+		}
+		g.isFrontEnemy = true
+		g.revealEnemy(enemyIndex)
+		g.enqueuePlayerAttack(enemyIndex, weaponAbilities)
+	}
+
+	if !g.isFrontEnemy && !g.enqueueWallDig(x, y, weaponAbilities) {
+		g.Enqueue(Action{
 			Duration: 0.5,
-			Message:  "",
 			Execute: func(g *Game) {
 				g.isActioned = true
 			},
-		}
-
-		g.Enqueue(action)
-
-		g.isFrontEnemy = false
-
-		// 攻撃時に前方の罠を発見する
-		g.checkTrapInFront()
-
-		return true
+		})
 	}
-	return false
+
+	g.enqueueDisposableWeaponWear(weapon)
+	// 攻撃時に前方の罠を発見する
+	g.checkTrapInFront()
+	return true
+}
+
+// enqueuePlayerAttack は対象1体への命中判定とダメージをキューへ追加する。
+// 実行時に座標から敵を引き直し、三方向攻撃で先の敵を倒してもスライスのずれを起こさない。
+func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAbilityID) {
+	enemy := g.state.Enemies[enemyIndex]
+	targetX, targetY := enemy.X, enemy.Y
+	hit := rollPlayerAttackHit(weaponAbilities, attackHitRandInt)
+	if !hit {
+		g.Enqueue(Action{
+			Duration: 0.5,
+			Message:  fmt.Sprintf("%sへの攻撃は外れた。", g.enemyDisplayName(enemy.Name)),
+			Execute: func(g *Game) {
+				g.isActioned = true
+			},
+		})
+		return
+	}
+
+	multiplier, slayerEffective := slayerMultiplier(weaponAbilities, enemy.Traits)
+	attack := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level)
+	result := rollPlayerAttackDamage(attack, enemy.DefensePower, multiplier, damageRandInt)
+	netDamage := result.Damage
+	message := fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(enemy.Name), netDamage)
+	if slayerEffective {
+		message = "特効！" + message
+	}
+	if result.Critical {
+		message = "会心の一撃！" + message
+	}
+
+	g.Enqueue(Action{
+		Duration: 0.5,
+		Message:  message,
+		Execute: func(g *Game) {
+			currentIndex := g.enemyIndexAt(targetX, targetY)
+			if currentIndex < 0 {
+				return
+			}
+			g.WakeUpSleepingEnemyByAttack(currentIndex)
+			g.applyDamageToEnemy(currentIndex, netDamage)
+			g.isActioned = true
+		},
+	})
+}
+
+// enqueueWallDig はつるはし能力で正面の壁を通路へ変える。
+func (g *Game) enqueueWallDig(dx, dy int, weaponAbilities []EquipmentAbilityID) bool {
+	if !hasEquipmentAbility(weaponAbilities, AbilityDigWall) || len(g.state.Map) == 0 || len(g.state.Map[0]) == 0 {
+		return false
+	}
+	x := g.state.Player.X + dx
+	y := g.state.Player.Y + dy
+	width, height := len(g.state.Map[0]), len(g.state.Map)
+	if x < 0 || y < 0 || x >= width || y >= height || !isDiggableTile(g.state.Map[y][x], x, y, width, height) {
+		return false
+	}
+
+	g.Enqueue(Action{
+		Duration: 0.5,
+		Message:  "壁を掘った。",
+		Execute: func(g *Game) {
+			tile := &g.state.Map[y][x]
+			tile.Type = "corridor"
+			tile.Blocked = false
+			tile.BlockSight = false
+			tile.Visited = true
+			tile.Brightness = 1.0
+			g.miniMapDirty = true
+			g.isActioned = true
+		},
+	})
+	return true
+}
+
+// enqueueDisposableWeaponWear は使い捨て武器の基礎攻撃力を攻撃1回につき1下げる。
+func (g *Game) enqueueDisposableWeaponWear(weapon *Weapon) {
+	if weapon == nil {
+		return
+	}
+	nextPower, changed := nextDisposableWeaponAttackPower(weapon.AttackPower, weapon.Abilities)
+	if !changed {
+		return
+	}
+	g.Enqueue(Action{
+		Duration: 0.3,
+		Message:  fmt.Sprintf("%sの攻撃力が1下がった。", weapon.Name),
+		Execute: func(g *Game) {
+			if g.state.Player.EquippedWeapon != weapon {
+				return
+			}
+			weapon.AttackPower = nextPower
+			g.state.Player.AttackPower--
+		},
+	})
 }
 
 // プレイヤーが混乱状態の時のランダム攻撃処理
