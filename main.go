@@ -145,6 +145,8 @@ type Game struct {
 	wanashiYadokariImg        *ebiten.Image
 	mimicGaiImg               *ebiten.Image
 	seaDragonImg              *ebiten.Image
+	fireSquidImg              *ebiten.Image
+	magicJellyfishImg         *ebiten.Image
 	upperEnemyImages          map[string]*ebiten.Image
 	kaneImg                   *ebiten.Image
 	cardImg                   *ebiten.Image
@@ -154,6 +156,7 @@ type Game struct {
 	weaponImg                 *ebiten.Image
 	specialWeaponImages       map[string]*ebiten.Image
 	armorImg                  *ebiten.Image
+	specialArmorImages        map[string]*ebiten.Image
 	arrowImg                  *ebiten.Image
 	caneImg                   *ebiten.Image
 	effectImg                 *ebiten.Image
@@ -683,6 +686,8 @@ var upperEnemyImagePaths = map[string]string{
 	"TrapMasterHermitCrab":  "img/wana_master_yadokari.png",
 	"MimicConch":            "img/bake_horagai.png",
 	"AzureSeaDragon":        "img/azure_sea_dragon.png",
+	"InfernoSquid":          "img/inferno_squid.png",
+	"ArcaneJellyfish":       "img/arcane_jellyfish.png",
 }
 
 var specialWeaponImagePaths = map[string]string{
@@ -694,6 +699,19 @@ var specialWeaponImagePaths = map[string]string{
 	"SureHitSword":     "img/sure_hit_sword.png",
 	"ShrimpPickaxe":    "img/shrimp_pickaxe.png",
 	"DisposableSword":  "img/disposable_sword.png",
+}
+
+var specialArmorImagePaths = map[string]string{
+	"BlastGuardShield":  "img/blast_guard_shield.png",
+	"FlameGuardShield":  "img/flame_guard_shield.png",
+	"MagicGuardShield":  "img/magic_guard_shield.png",
+	"TheftGuardShield":  "img/theft_guard_shield.png",
+	"StatusGuardShield": "img/status_guard_shield.png",
+	"EvasionShield":     "img/evasion_shield.png",
+	"ReflectionShield":  "img/reflection_shield.png",
+	"CounterShield":     "img/counter_shield.png",
+	"HeavyShield":       "img/heavy_shield.png",
+	"DisposableShield":  "img/disposable_shield.png",
 }
 
 func loadUpperEnemyImages() map[string]*ebiten.Image {
@@ -708,6 +726,14 @@ func loadSpecialWeaponImages() map[string]*ebiten.Image {
 	images := make(map[string]*ebiten.Image, len(specialWeaponImagePaths))
 	for weaponType, path := range specialWeaponImagePaths {
 		images[weaponType] = loadImage(path)
+	}
+	return images
+}
+
+func loadSpecialArmorImages() map[string]*ebiten.Image {
+	images := make(map[string]*ebiten.Image, len(specialArmorImagePaths))
+	for armorType, path := range specialArmorImagePaths {
+		images[armorType] = loadImage(path)
 	}
 	return images
 }
@@ -735,6 +761,8 @@ func NewGame() *Game {
 	wanashiYadokariImg := loadImage("img/wanashi_yadokari.png")
 	mimicGaiImg := loadImage("img/mimic_gai.png")
 	seaDragonImg := loadImage("img/sea_dragon.png")
+	fireSquidImg := loadImage("img/fire_squid.png")
+	magicJellyfishImg := loadImage("img/magic_jellyfish.png")
 	upperEnemyImages := loadUpperEnemyImages()
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
@@ -742,6 +770,7 @@ func NewGame() *Game {
 	weaponImg := loadImage("img/weapon.png")
 	specialWeaponImages := loadSpecialWeaponImages()
 	armorImg := loadImage("img/armor.png")
+	specialArmorImages := loadSpecialArmorImages()
 	arrowImg := loadImage("img/arrow.png")
 	caneImg := loadImage("img/cane.png")
 	effectImg := loadImage("img/effect.png")
@@ -806,6 +835,8 @@ func NewGame() *Game {
 		wanashiYadokariImg:  wanashiYadokariImg,
 		mimicGaiImg:         mimicGaiImg,
 		seaDragonImg:        seaDragonImg,
+		fireSquidImg:        fireSquidImg,
+		magicJellyfishImg:   magicJellyfishImg,
 		upperEnemyImages:    upperEnemyImages,
 		kaneImg:             kaneImg,
 		cardImg:             cardImg,
@@ -814,6 +845,7 @@ func NewGame() *Game {
 		weaponImg:           weaponImg,
 		specialWeaponImages: specialWeaponImages,
 		armorImg:            armorImg,
+		specialArmorImages:  specialArmorImages,
 		arrowImg:            arrowImg,
 		caneImg:             caneImg,
 		effectImg:           effectImg,

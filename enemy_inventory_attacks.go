@@ -38,6 +38,10 @@ func inventoryItemIndex(player *Player, item Item) (int, bool) {
 }
 
 func enqueueStealAttack(enemy *Enemy, g *Game, intn func(int) int) {
+	if g.playerBlocksTheft() {
+		g.EnqueueMessage(fmt.Sprintf("%sは盗もうとしたが、%sが守った。", g.enemyDisplayName(enemy.Name), g.state.Player.EquippedArmor.Name), 0.5)
+		return
+	}
 	index, ok := chooseInventoryIndex(&g.state.Player, func(item Item) bool {
 		return !isEquippedByPlayer(&g.state.Player, item)
 	}, intn)

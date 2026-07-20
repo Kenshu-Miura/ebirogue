@@ -805,13 +805,17 @@ var selfDestruct = func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
 			survivors, destroyed := splitEnemiesByExplosion(playerX, playerY, g.state.Enemies)
 			damage := mineTrapDamage(g.state.Player.Health)
+			defense := g.resolvePlayerShieldDefense(damage, EnemyDamageExplosion, EnemyAttackEnvironment)
+			message := fmt.Sprintf("大爆発が起こり、%dダメージを受けた！", defense.Damage)
+			if defense.Resisted {
+				message = fmt.Sprintf("大爆発が起こったが、%sが威力を抑えて%dダメージを受けた！", g.state.Player.EquippedArmor.Name, defense.Damage)
+			}
 			g.Enqueue(Action{
 				Duration: 0.5,
-				Message:  "大爆発が起こった！",
+				Message:  message,
 				Execute: func(g *Game) {
 					g.state.Enemies = survivors
-					g.state.Player.Health -= damage
-					g.state.Player.checkDeath(g)
+					g.applyPlayerShieldDefense(defense, -1, -1, -1)
 				},
 			})
 			for _, name := range destroyed {

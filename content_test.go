@@ -134,6 +134,35 @@ func TestAddedEquipmentTemplates(t *testing.T) {
 			t.Fatal("皮甲の盾に満腹度消費軽減能力がありません")
 		}
 	}
+
+	specialArmors := map[int]struct {
+		power   int
+		ability EquipmentAbilityID
+	}{
+		61: {power: 4, ability: AbilityExplosionResistance},
+		62: {power: 4, ability: AbilityFireResistance},
+		63: {power: 4, ability: AbilityMagicResistance},
+		64: {power: 3, ability: AbilityTheftResistance},
+		65: {power: 3, ability: AbilityStatusResistance},
+		66: {power: 2, ability: AbilityEvasion},
+		67: {power: 3, ability: AbilityReflection},
+		68: {power: 5, ability: AbilityCounter},
+		69: {power: 12, ability: AbilitySatietyHunger},
+		70: {power: 15, ability: AbilityDisposableArmor},
+	}
+	for id, want := range specialArmors {
+		armor, ok := buildItemFromTemplate(id, 0, 0).(*Armor)
+		if !ok || armor.DefensePower != want.power || !hasEquipmentAbility(armor.Abilities, want.ability) {
+			t.Fatalf("special armor %d = %#v, want power %d and ability %q", id, armor, want.power, want.ability)
+		}
+		restored, err := savedToItem(itemToSaved(armor))
+		if err != nil {
+			t.Fatalf("restore special armor %d: %v", id, err)
+		}
+		if !hasEquipmentAbility(restored.(*Armor).Abilities, want.ability) {
+			t.Fatalf("restored special armor %d lost ability %q", id, want.ability)
+		}
+	}
 }
 
 func TestAddedContentDefinitions(t *testing.T) {
@@ -144,9 +173,11 @@ func TestAddedContentDefinitions(t *testing.T) {
 		name string
 		kind RangedAttackKind
 	}{
-		4: {name: "ハリセンボウ", kind: RangedAttackArrow},
-		5: {name: "イシガニ", kind: RangedAttackRock},
-		6: {name: "バクダンウニ", kind: RangedAttackExplosion},
+		4:  {name: "ハリセンボウ", kind: RangedAttackArrow},
+		5:  {name: "イシガニ", kind: RangedAttackRock},
+		6:  {name: "バクダンウニ", kind: RangedAttackExplosion},
+		38: {name: "火吹きイカ", kind: RangedAttackFire},
+		39: {name: "マホウクラゲ", kind: RangedAttackMagic},
 	}
 	for id, want := range rangedEnemies {
 		definition := MonsterDefinitions[id]
@@ -698,8 +729,13 @@ func TestEnemySprites(t *testing.T) {
 		"img/wanashi_yadokari.png",
 		"img/mimic_gai.png",
 		"img/sea_dragon.png",
+		"img/fire_squid.png",
+		"img/magic_jellyfish.png",
 	}
 	for _, path := range specialWeaponImagePaths {
+		files = append(files, path)
+	}
+	for _, path := range specialArmorImagePaths {
 		files = append(files, path)
 	}
 	for _, pair := range upperSpeciesSpritePairs() {
@@ -748,6 +784,8 @@ func upperSpeciesSpritePairs() [][2]string {
 		{"img/wanashi_yadokari.png", "img/wana_master_yadokari.png"},
 		{"img/mimic_gai.png", "img/bake_horagai.png"},
 		{"img/sea_dragon.png", "img/azure_sea_dragon.png"},
+		{"img/fire_squid.png", "img/inferno_squid.png"},
+		{"img/magic_jellyfish.png", "img/arcane_jellyfish.png"},
 	}
 }
 
@@ -1157,6 +1195,152 @@ func TestSealedRangedEnemyCannotUseAbility(t *testing.T) {
 	}
 }
 
+func TestDefensiveShieldCombatEffects(t *testing.T) {
+	restoreDamage := damageRandInt
+	restoreDefense := shieldDefenseRandInt
+	damageRandInt = func(n int) int { return n - 1 }
+	defer func() {
+		damageRandInt = restoreDamage
+		shieldDefenseRandInt = restoreDefense
+	}()
+
+	t.Run("evasion", func(t *testing.T) {
+		shieldDefenseRandInt = func(int) int { return 0 }
+		armor := buildItemFromTemplate(66, 0, 0).(*Armor)
+		g := &Game{state: GameState{
+			Player:  Player{Entity: Entity{X: 2, Y: 2}, Health: 100, DefensePower: 3, EquippedArmor: armor},
+			Enemies: []Enemy{CreateEnemyByID(0, 3, 2)},
+		}}
+		g.enqueueEnemyNormalAttack(0)
+		g.ActionQueue.Queue[0].Execute(g)
+		if g.state.Player.Health != 100 || !strings.Contains(g.ActionQueue.Queue[0].Message, "かわした") {
+			t.Fatalf("evasion result: HP %d, message %q", g.state.Player.Health, g.ActionQueue.Queue[0].Message)
+		}
+	})
+
+	t.Run("counter", func(t *testing.T) {
+		shieldDefenseRandInt = func(int) int { return 99 }
+		armor := buildItemFromTemplate(68, 0, 0).(*Armor)
+		enemy := CreateEnemyByID(0, 3, 2)
+		enemy.Health = 100
+		g := &Game{state: GameState{
+			Player:  Player{Entity: Entity{X: 2, Y: 2}, Health: 100, DefensePower: 3, EquippedArmor: armor},
+			Enemies: []Enemy{enemy},
+		}}
+		g.enqueueEnemyNormalAttack(0)
+		g.ActionQueue.Queue[0].Execute(g)
+		if g.state.Player.Health >= 100 || g.state.Enemies[0].Health >= 100 {
+			t.Fatalf("counter result: player HP %d, enemy HP %d", g.state.Player.Health, g.state.Enemies[0].Health)
+		}
+	})
+
+	t.Run("ranged reflection", func(t *testing.T) {
+		armor := buildItemFromTemplate(67, 0, 0).(*Armor)
+		enemy := CreateEnemyByID(4, 1, 4)
+		enemy.PlayerDiscovered = true
+		enemy.Health = 100
+		g := &Game{state: GameState{
+			Map:     makeTestFloorMap(10, 10),
+			Player:  Player{Entity: Entity{X: 7, Y: 4}, Health: 100, DefensePower: 3, EquippedArmor: armor},
+			Enemies: []Enemy{enemy},
+		}}
+		if !g.tryEnemyRangedAttack(0) {
+			t.Fatal("arrow attack should be available")
+		}
+		g.ActionQueue.Queue[0].Execute(g)
+		if g.state.Player.Health != 100 || g.state.Enemies[0].Health >= 100 {
+			t.Fatalf("reflection result: player HP %d, enemy HP %d", g.state.Player.Health, g.state.Enemies[0].Health)
+		}
+	})
+
+	t.Run("elemental resistance", func(t *testing.T) {
+		for _, tt := range []struct {
+			enemyID int
+			armorID int
+		}{
+			{enemyID: 6, armorID: 61},
+			{enemyID: 38, armorID: 62},
+			{enemyID: 39, armorID: 63},
+		} {
+			armor := buildItemFromTemplate(tt.armorID, 0, 0).(*Armor)
+			enemy := CreateEnemyByID(tt.enemyID, 1, 4)
+			enemy.PlayerDiscovered = true
+			g := &Game{state: GameState{
+				Map:     makeTestFloorMap(10, 10),
+				Player:  Player{Entity: Entity{X: 5, Y: 4}, Health: 100, EquippedArmor: armor},
+				Enemies: []Enemy{enemy},
+			}}
+			if !g.tryEnemyRangedAttack(0) {
+				t.Fatalf("enemy %d attack should be available", tt.enemyID)
+			}
+			if !strings.Contains(g.ActionQueue.Queue[0].Message, "威力を抑え") {
+				t.Fatalf("enemy %d resistance message = %q", tt.enemyID, g.ActionQueue.Queue[0].Message)
+			}
+		}
+	})
+}
+
+func TestInventoryAndStatusResistanceShields(t *testing.T) {
+	t.Run("theft", func(t *testing.T) {
+		item := buildItemFromTemplate(1, 0, 0)
+		armor := buildItemFromTemplate(64, 0, 0).(*Armor)
+		enemy := CreateEnemyByID(7, 2, 2)
+		g := &Game{state: GameState{
+			Player:  Player{Inventory: []Item{item, armor}, EquippedArmor: armor},
+			Enemies: []Enemy{enemy},
+		}}
+		enqueueStealAttack(&g.state.Enemies[0], g, func(int) int { return 0 })
+		g.ActionQueue.Queue[0].Execute(g)
+		if len(g.state.Player.Inventory) != 2 || g.state.Enemies[0].HeldItem != nil {
+			t.Fatal("theft resistance shield should preserve inventory")
+		}
+	})
+
+	t.Run("status", func(t *testing.T) {
+		restore := statusResistanceRandInt
+		statusResistanceRandInt = func(int) int { return 0 }
+		defer func() { statusResistanceRandInt = restore }()
+		armor := buildItemFromTemplate(65, 0, 0).(*Armor)
+		enemy := CreateEnemyByID(3, 2, 2)
+		g := &Game{state: GameState{Player: Player{EquippedArmor: armor}, Enemies: []Enemy{enemy}}}
+		g.state.Enemies[0].SpecialAttack(&g.state.Enemies[0], g)
+		g.ActionQueue.Queue[0].Execute(g)
+		if g.state.Player.StatusAilments.Slow != 0 {
+			t.Fatal("status resistance shield should block a successful resistance roll")
+		}
+	})
+}
+
+func TestDisposableShieldWeakensAndPersists(t *testing.T) {
+	restoreDamage := damageRandInt
+	restoreDefense := shieldDefenseRandInt
+	damageRandInt = func(n int) int { return n - 1 }
+	shieldDefenseRandInt = func(int) int { return 99 }
+	defer func() {
+		damageRandInt = restoreDamage
+		shieldDefenseRandInt = restoreDefense
+	}()
+
+	armor := buildItemFromTemplate(70, 0, 0).(*Armor)
+	armor.Sharpness = 0
+	g := &Game{state: GameState{
+		Player:  Player{Entity: Entity{X: 2, Y: 2}, Health: 100, DefensePower: 18, EquippedArmor: armor},
+		Enemies: []Enemy{CreateEnemyByID(0, 3, 2)},
+	}}
+	g.enqueueEnemyNormalAttack(0)
+	g.ActionQueue.Queue[0].Execute(g)
+	if armor.Sharpness != -1 || g.state.Player.DefensePower != 17 {
+		t.Fatalf("after wear: sharpness %d, player defense %d", armor.Sharpness, g.state.Player.DefensePower)
+	}
+	restored, err := savedToItem(itemToSaved(armor))
+	if err != nil {
+		t.Fatalf("restore disposable shield: %v", err)
+	}
+	if restored.(*Armor).Sharpness != -1 {
+		t.Fatalf("restored disposable sharpness = %d, want -1", restored.(*Armor).Sharpness)
+	}
+}
+
 func TestRangedEnemyRespectsCommonActionBlockingStatuses(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -1230,7 +1414,7 @@ func TestRangedEnemyFloorSpawnTables(t *testing.T) {
 			t.Fatalf("ranged enemy %d should not appear on floor 1", entry.MonsterID)
 		}
 	}
-	wantIDs := map[int]bool{4: false, 5: false, 6: false}
+	wantIDs := map[int]bool{4: false, 5: false, 6: false, 38: false, 39: false, 40: false, 41: false}
 	for floor := 2; floor <= deepestSpawnFloor; floor++ {
 		for _, entry := range FloorSpawnTables[floor] {
 			if _, ok := wantIDs[entry.MonsterID]; ok {

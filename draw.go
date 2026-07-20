@@ -214,6 +214,9 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 	if img := g.specialWeaponImages[item.GetType()]; img != nil {
 		return img
 	}
+	if img := g.specialArmorImages[item.GetType()]; img != nil {
+		return img
+	}
 	var img *ebiten.Image
 	switch item.GetType() {
 	case "Kane":
@@ -289,7 +292,7 @@ func (g *Game) DrawThrownItem(screen *ebiten.Image, offsetX, offsetY int) {
 	}
 }
 
-var rangedRockEffectImg, rangedBlastEffectImg *ebiten.Image
+var rangedRockEffectImg, rangedBlastEffectImg, rangedFireEffectImg, rangedMagicEffectImg *ebiten.Image
 
 // DrawRangedAttackEffect は敵の矢・投石・爆発弾を短時間表示する。
 func (g *Game) DrawRangedAttackEffect(screen *ebiten.Image, offsetX, offsetY int) {
@@ -358,6 +361,22 @@ func (g *Game) DrawRangedAttackEffect(screen *ebiten.Image, offsetX, offsetY int
 				screen.DrawImage(rangedBlastEffectImg, opts)
 			}
 		}
+	case RangedAttackFire:
+		if rangedFireEffectImg == nil {
+			rangedFireEffectImg = ebiten.NewImage(10, 10)
+			rangedFireEffectImg.Fill(color.RGBA{255, 90, 20, 230})
+		}
+		x := originX + (targetX-originX)*progress
+		y := originY + (targetY-originY)*progress
+		drawProjectile(rangedFireEffectImg, x, y, progress*math.Pi)
+	case RangedAttackMagic:
+		if rangedMagicEffectImg == nil {
+			rangedMagicEffectImg = ebiten.NewImage(10, 10)
+			rangedMagicEffectImg.Fill(color.RGBA{120, 70, 255, 230})
+		}
+		x := originX + (targetX-originX)*progress
+		y := originY + (targetY-originY)*progress
+		drawProjectile(rangedMagicEffectImg, x, y, progress*math.Pi*2)
 	}
 }
 
@@ -552,6 +571,10 @@ func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
 		img = g.mimicGaiImg
 	case "SeaDragon":
 		img = g.seaDragonImg
+	case "FlameSquid":
+		img = g.fireSquidImg
+	case "MagicJellyfish":
+		img = g.magicJellyfishImg
 	}
 	return img
 }

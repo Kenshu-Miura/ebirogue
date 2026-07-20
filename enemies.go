@@ -17,6 +17,8 @@ const (
 	RangedAttackArrow
 	RangedAttackRock
 	RangedAttackExplosion
+	RangedAttackFire
+	RangedAttackMagic
 )
 
 type RangedAttackDefinition struct {
@@ -226,11 +228,16 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 			if g.state.Player.StatusAilments.Blind > 0 {
 				enemyName = "何者"
 			}
+			resisted := g.playerResistsStatus()
+			message := fmt.Sprintf("%sのくねくね踊り。海老さんは鈍足になった。", enemyName)
+			if resisted {
+				message = fmt.Sprintf("%sのくねくね踊り。しかし%sが鈍足を防いだ。", enemyName, g.state.Player.EquippedArmor.Name)
+			}
 			g.Enqueue(Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sのくねくね踊り。海老さんは鈍足になった。", enemyName),
+				Message:  message,
 				Execute: func(g *Game) {
-					if g.state.Player.StatusAilments.Slow < 8 {
+					if !resisted && g.state.Player.StatusAilments.Slow < 8 {
 						g.state.Player.StatusAilments.Slow = 8
 					}
 				},
@@ -439,11 +446,45 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		ExperiencePoints: 55,
 		Traits:           []EnemyTrait{EnemyTraitDragon},
 	},
+	38: {
+		ID:               38,
+		Type:             "FlameSquid",
+		Name:             "火吹きイカ",
+		Char:             'I',
+		Health:           48,
+		MaxHealth:        48,
+		AttackPower:      10,
+		DefensePower:     5,
+		ExperiencePoints: 30,
+		RangedAttack: RangedAttackDefinition{
+			Kind:        RangedAttackFire,
+			MinRange:    2,
+			MaxRange:    5,
+			AttackPower: 14,
+		},
+	},
+	39: {
+		ID:               39,
+		Type:             "MagicJellyfish",
+		Name:             "マホウクラゲ",
+		Char:             'J',
+		Health:           52,
+		MaxHealth:        52,
+		AttackPower:      11,
+		DefensePower:     6,
+		ExperiencePoints: 36,
+		RangedAttack: RangedAttackDefinition{
+			Kind:        RangedAttackMagic,
+			MinRange:    2,
+			MaxRange:    6,
+			AttackPower: 15,
+		},
+	},
 }
 
 // buildMonsterDefinitions は基本種へ固有能力を継承した上位種を加える。
 func buildMonsterDefinitions() map[int]MonsterDefinition {
-	definitions := make(map[int]MonsterDefinition, 38)
+	definitions := make(map[int]MonsterDefinition, 42)
 	for id, definition := range baseMonsterDefinitions {
 		definitions[id] = definition
 	}
@@ -467,8 +508,10 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 	definitions[34] = upperMonsterDefinition(definitions[16], 34, "MimicConch", "化けホラ貝", 62, 16, 10, 58)
 	definitions[35] = upperMonsterDefinition(definitions[17], 35, "MimicConch", "化けホラ貝", 74, 18, 11, 70)
 	definitions[37] = upperMonsterDefinition(definitions[36], 37, "AzureSeaDragon", "蒼海竜", 108, 22, 14, 110)
+	definitions[40] = upperMonsterDefinition(definitions[38], 40, "InfernoSquid", "業火イカ", 88, 17, 9, 70)
+	definitions[41] = upperMonsterDefinition(definitions[39], 41, "ArcaneJellyfish", "ゲンソウクラゲ", 94, 18, 10, 82)
 
-	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24} {
+	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24, 40: 22, 41: 24} {
 		definition := definitions[id]
 		definition.RangedAttack.AttackPower = attackPower
 		definitions[id] = definition
@@ -500,6 +543,8 @@ var MonsterLevelUpTable = map[int]int{
 	16: 34, // 道具に擬態する化け貝 -> 化けホラ貝
 	17: 35, // 階段に擬態する化け貝 -> 化けホラ貝
 	36: 37, // 海竜 -> 蒼海竜
+	38: 40, // 火吹きイカ -> 業火イカ
+	39: 41, // マホウクラゲ -> ゲンソウクラゲ
 }
 
 // levelUpEnemy は敵を同系統の上位種へ変化させる。

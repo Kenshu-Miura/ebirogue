@@ -74,8 +74,8 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜60 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
-| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜37 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜70 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
+| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜41 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
 | 罠 | `mapTrapTemplates []mapTrapTemplate`（maptraps.go） | `createMapTrapByID` | 同ファイルの効果クロージャ |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
@@ -106,7 +106,8 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 - 初期ステータス: HP 100 / 満腹度 100 / パワー 8 / 攻撃 3 / 防御 3 / インベントリ上限 20。経験値テーブルは `levelExpRequirements`（main.go, レベル10まで）。
 - ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + レベル。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。
-- 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は毎ターン HP-2。
+- 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は毎ターン HP-2。
+- 特殊盾は爆発・炎・魔法の半減、盗難無効、状態異常50%無効、敵攻撃25%回避、爆発以外の遠距離攻撃反射、通常攻撃への半分カウンターを提供する。使い捨ての盾は被弾ごとに強化値と防御力が1低下する。
 - 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）。
 - モンスター湧き: 上限 19 体、20〜30 ターン間隔、プレイヤーから 8 マス以内には湧かない（monster_spawn.go の定数）。
 - フロア滞在 1200/1300 ターンで風の警告（`checkFloorTimeWarnings`）。
@@ -144,7 +145,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 以下は [SFC シレンwiki](https://seesaawiki.jp/shiren1/) を参考にした実装予定です。原作の数値や挙動をそのまま複製せず、このゲームの既存バランス、海老さんの世界観、30x30ピクセルの表示に合わせて調整してください。
 
-現在実装済みの追加要素は、こん棒・長巻・どうたぬき・海老薙刀・必中の剣・海老つるはし・使い捨ての大剣、木甲・鉄甲・皮甲の盾、マムル・くねくねハニー、睡眠ガス・毒矢・鈍足・地雷・サビ、毒・鈍足です。以下ではこれらを重複して追加せず、特殊能力や相互作用を拡張します。
+現在実装済みの追加要素は、こん棒・長巻・どうたぬき・海老薙刀・必中の剣・海老つるはし・使い捨ての大剣、木甲・鉄甲・皮甲・爆風よけ・火喰い・魔封じ・守銭・清め・見切り・跳ね返し・海老返し・重甲・使い捨ての盾、マムル・くねくねハニー・火吹きイカ・マホウクラゲ、睡眠ガス・毒矢・鈍足・地雷・サビ、毒・鈍足です。以下ではこれらを重複して追加せず、特殊能力や相互作用を拡張します。
 
 実装した内容はAGENTS.mdから削除してください。画像が必要な場合は生成が望ましいですが、無理の場合はAGENTS.mdに残タスクとして記載してください。修正はコミット、プッシュしてください。
 
@@ -152,14 +153,6 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 - 新規カードは既存の `img/card.png` を共用し、あかり・真空斬りを含めて階層別出現テーブル導入時に出現率を調整する。
   （白紙・ジェノサイド・聖域・全滅の特殊使用カードは実装済み。）
-
-### Priority A: equipment abilities
-
-- 特殊防御を持つ盾を追加する。
-  - 爆発、炎、魔法、盗難、状態異常への耐性
-  - 回避率上昇、反射、カウンター
-  - 高防御と引き換えに満腹度消費が増える盾
-  - 高防御だが被弾ごとに弱くなる使い捨ての盾
 
 ### Priority A: enemies and monster behavior
 

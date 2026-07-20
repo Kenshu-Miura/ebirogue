@@ -516,20 +516,19 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 
 	netDamage := rollEnemyAttackDamage(enemy.AttackPower, g.state.Player.DefensePower, damageRandInt)
+	defense := g.resolvePlayerShieldDefense(netDamage, EnemyDamageNormal, EnemyAttackMelee)
+	enemyName := g.enemyDisplayName(enemy.Name)
+	enemyID, enemyX, enemyY := enemy.ID, enemy.X, enemy.Y
 
 	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
 
 	action := Action{
 		Duration: 0.5,
-		Message:  fmt.Sprintf("%sから%dダメージを受けた", g.enemyDisplayName(enemy.Name), netDamage),
+		Message:  g.shieldDefenseMessage(enemyName, defense),
 		Execute: func(g *Game) {
 			enemy.AttackTimer = 0.5                            // AttackTimerを設定することで敵の攻撃アニメーションが実行される
 			enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
-			g.state.Player.Health -= netDamage
-			if g.state.Player.Health < 0 {
-				g.state.Player.Health = 0
-			}
-			g.state.Player.checkDeath(g) // 死亡チェック
+			g.applyPlayerShieldDefense(defense, enemyID, enemyX, enemyY)
 		},
 	}
 

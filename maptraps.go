@@ -19,44 +19,69 @@ type MapTrap struct {
 
 // 罠の効果関数
 var sleepGasTrapEffect = func(g *Game) {
+	resisted := g.playerResistsStatus()
+	message := "海老さんは眠った"
+	if resisted {
+		message = fmt.Sprintf("%sが睡眠ガスを防いだ", g.state.Player.EquippedArmor.Name)
+	}
 	g.Enqueue(Action{
 		Duration: 0.5,
-		Message:  "海老さんは眠った",
+		Message:  message,
 		Execute: func(g *Game) {
-			g.state.Player.StatusAilments.Sleep = 10 // 10ターン睡眠
+			if !resisted {
+				g.state.Player.StatusAilments.Sleep = 10 // 10ターン睡眠
+			}
 		},
 	})
 }
 
 var poisonArrowTrapEffect = func(g *Game) {
+	resisted := g.playerResistsStatus()
+	defense := g.resolvePlayerShieldDefense(5, EnemyDamageNormal, EnemyAttackEnvironment)
+	message := "毒矢が刺さり、5ダメージを受けて毒状態になった"
+	if resisted {
+		message = fmt.Sprintf("毒矢で5ダメージを受けたが、%sが毒を防いだ", g.state.Player.EquippedArmor.Name)
+	}
 	g.Enqueue(Action{
 		Duration: 0.5,
-		Message:  "毒矢が刺さり、毒状態になった",
+		Message:  message,
 		Execute: func(g *Game) {
-			g.state.Player.Health = max(0, g.state.Player.Health-5)
-			g.state.Player.StatusAilments.Poison = 8
-			g.state.Player.checkDeath(g)
+			g.applyPlayerShieldDefense(defense, -1, -1, -1)
+			if !resisted {
+				g.state.Player.StatusAilments.Poison = 8
+			}
 		},
 	})
 }
 
 var slowTrapEffect = func(g *Game) {
+	resisted := g.playerResistsStatus()
+	message := "体が重くなり、鈍足状態になった"
+	if resisted {
+		message = fmt.Sprintf("%sが鈍足を防いだ", g.state.Player.EquippedArmor.Name)
+	}
 	g.Enqueue(Action{
 		Duration: 0.5,
-		Message:  "体が重くなり、鈍足状態になった",
+		Message:  message,
 		Execute: func(g *Game) {
-			g.state.Player.StatusAilments.Slow = 10
+			if !resisted {
+				g.state.Player.StatusAilments.Slow = 10
+			}
 		},
 	})
 }
 
 var mineTrapEffect = func(g *Game) {
+	defense := g.resolvePlayerShieldDefense(mineTrapDamage(g.state.Player.Health), EnemyDamageExplosion, EnemyAttackEnvironment)
+	message := fmt.Sprintf("地雷が爆発し、%dダメージを受けた", defense.Damage)
+	if defense.Resisted {
+		message = fmt.Sprintf("地雷が爆発したが、%sが威力を抑えて%dダメージを受けた", g.state.Player.EquippedArmor.Name, defense.Damage)
+	}
 	g.Enqueue(Action{
 		Duration: 0.5,
-		Message:  "地雷が爆発した",
+		Message:  message,
 		Execute: func(g *Game) {
-			g.state.Player.Health -= mineTrapDamage(g.state.Player.Health)
-			g.state.Player.checkDeath(g)
+			g.applyPlayerShieldDefense(defense, -1, -1, -1)
 		},
 	})
 }

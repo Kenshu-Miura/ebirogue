@@ -34,13 +34,26 @@ func (g *Game) canEnemyUseRangedAttack(enemyIndex int) bool {
 	}
 
 	switch attack.Kind {
-	case RangedAttackArrow, RangedAttackExplosion:
+	case RangedAttackArrow, RangedAttackExplosion, RangedAttackFire, RangedAttackMagic:
 		return hasClearStraightLine(g.state.Map, g.state.Enemies, enemyIndex, enemy.X, enemy.Y, playerX, playerY, attack.MaxRange)
 	case RangedAttackRock:
 		// 石は山なりに投げるため、壁・扉・ほかの敵を越えられる。
 		return true
 	}
 	return false
+}
+
+func enemyDamageKindForRangedAttack(kind RangedAttackKind) EnemyDamageKind {
+	switch kind {
+	case RangedAttackExplosion:
+		return EnemyDamageExplosion
+	case RangedAttackFire:
+		return EnemyDamageFire
+	case RangedAttackMagic:
+		return EnemyDamageMagic
+	default:
+		return EnemyDamageNormal
+	}
 }
 
 // tryEnemyRangedAttack は遠距離攻撃が可能ならアクションを積み、行動済みとして true を返す。
@@ -54,18 +67,25 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 	targetX, targetY := g.state.Player.X, g.state.Player.Y
 	dx, dy := sign(targetX-enemy.X), sign(targetY-enemy.Y)
 	damage := rollEnemyAttackDamage(attack.AttackPower, g.state.Player.DefensePower, damageRandInt)
+	defense := g.resolvePlayerShieldDefense(damage, enemyDamageKindForRangedAttack(attack.Kind), EnemyAttackRanged)
+	enemyName := g.enemyDisplayName(enemy.Name)
 
-	var message string
+	var attackMessage string
 	switch attack.Kind {
 	case RangedAttackArrow:
-		message = fmt.Sprintf("%sが矢を放った。海老さんは%dダメージを受けた", g.enemyDisplayName(enemy.Name), damage)
+		attackMessage = fmt.Sprintf("%sが矢を放った。", enemyName)
 	case RangedAttackRock:
-		message = fmt.Sprintf("%sが障害物越しに石を投げた。海老さんは%dダメージを受けた", g.enemyDisplayName(enemy.Name), damage)
+		attackMessage = fmt.Sprintf("%sが障害物越しに石を投げた。", enemyName)
 	case RangedAttackExplosion:
-		message = fmt.Sprintf("%sの爆発弾。周囲が爆風に包まれ、海老さんは%dダメージを受けた", g.enemyDisplayName(enemy.Name), damage)
+		attackMessage = fmt.Sprintf("%sの爆発弾が炸裂した。", enemyName)
+	case RangedAttackFire:
+		attackMessage = fmt.Sprintf("%sが灼熱の炎を吐いた。", enemyName)
+	case RangedAttackMagic:
+		attackMessage = fmt.Sprintf("%sが魔法弾を放った。", enemyName)
 	}
+	message := attackMessage + g.shieldDefenseMessage(enemyName, defense)
 
-	originX, originY := enemy.X, enemy.Y
+	originX, originY, attackerID := enemy.X, enemy.Y, enemy.ID
 	g.Enqueue(Action{
 		Duration: rangedAttackEffectDuration,
 		Message:  message,
@@ -86,11 +106,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 			// 爆発弾は着弾点の周囲1マスを攻撃範囲とする。
 			// 現在の敵AIは海老さんのいるマスを狙うため、移動していなければ必ず巻き込まれる。
 			if attack.Kind != RangedAttackExplosion || withinBlastRadius(targetX, targetY, g.state.Player.X, g.state.Player.Y, attack.BlastRadius) {
-				g.state.Player.Health -= damage
-				if g.state.Player.Health < 0 {
-					g.state.Player.Health = 0
-				}
-				g.state.Player.checkDeath(g)
+				g.applyPlayerShieldDefense(defense, attackerID, originX, originY)
 			}
 			if attack.Kind == RangedAttackExplosion {
 				g.enqueueExplosionCollateral(enemy.ID, originX, originY, targetX, targetY, attack)
