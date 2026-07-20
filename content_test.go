@@ -156,6 +156,12 @@ func TestSpecialMovementEnemyDefinitions(t *testing.T) {
 	if MonsterDefinitions[16].Disguise != EnemyDisguiseItem || MonsterDefinitions[17].Disguise != EnemyDisguiseStairs {
 		t.Fatal("item and stairs mimic definitions are missing")
 	}
+	if MonsterDefinitions[18].Name != "大エビ" || MonsterDefinitions[19].Name != "あなぐらマムル" {
+		t.Fatal("upper-species monster definitions are missing")
+	}
+	if MonsterLevelUpTable[0] != 18 || MonsterLevelUpTable[2] != 19 {
+		t.Fatalf("monster level-up table = %#v", MonsterLevelUpTable)
+	}
 	for id := 0; id < len(MonsterDefinitions); id++ {
 		if _, ok := MonsterDefinitions[id]; !ok {
 			t.Fatalf("monster definition IDs must stay contiguous; missing %d", id)
@@ -385,7 +391,7 @@ func TestSpecialMovementEnemiesAppearInFloorSpawnTables(t *testing.T) {
 	}
 }
 
-func TestSpecialMovementEnemySprites(t *testing.T) {
+func TestEnemySprites(t *testing.T) {
 	files := []string{
 		"img/yurei_ebi.png",
 		"img/hayate_shako.png",
@@ -393,6 +399,8 @@ func TestSpecialMovementEnemySprites(t *testing.T) {
 		"img/irekae_dako.png",
 		"img/wanashi_yadokari.png",
 		"img/mimic_gai.png",
+		"img/dai_ebi.png",
+		"img/anagura_mamuru.png",
 	}
 	for _, filename := range files {
 		file, err := os.Open(filename)
@@ -413,6 +421,145 @@ func TestSpecialMovementEnemySprites(t *testing.T) {
 			if alpha != 0 {
 				t.Fatalf("%s corner (%d, %d) is not transparent", filename, corner[0], corner[1])
 			}
+		}
+	}
+}
+
+func TestUpperSpeciesSpritesOnlyRecolorOriginal(t *testing.T) {
+	pairs := [][2]string{
+		{"img/ebi.png", "img/dai_ebi.png"},
+		{"img/mamuru.png", "img/anagura_mamuru.png"},
+	}
+	for _, pair := range pairs {
+		originalFile, err := os.Open(pair[0])
+		if err != nil {
+			t.Fatalf("open %s: %v", pair[0], err)
+		}
+		original, err := png.Decode(originalFile)
+		originalFile.Close()
+		if err != nil {
+			t.Fatalf("decode %s: %v", pair[0], err)
+		}
+
+		variantFile, err := os.Open(pair[1])
+		if err != nil {
+			t.Fatalf("open %s: %v", pair[1], err)
+		}
+		variant, err := png.Decode(variantFile)
+		variantFile.Close()
+		if err != nil {
+			t.Fatalf("decode %s: %v", pair[1], err)
+		}
+
+		changedPixels := 0
+		for y := 0; y < 30; y++ {
+			for x := 0; x < 30; x++ {
+				originalRed, originalGreen, originalBlue, originalAlpha := original.At(x, y).RGBA()
+				variantRed, variantGreen, variantBlue, variantAlpha := variant.At(x, y).RGBA()
+				if originalAlpha != variantAlpha {
+					t.Fatalf("%s alpha at (%d, %d) = %d, want %d", pair[1], x, y, variantAlpha, originalAlpha)
+				}
+				if originalAlpha > 0 && (originalRed != variantRed || originalGreen != variantGreen || originalBlue != variantBlue) {
+					changedPixels++
+				}
+			}
+		}
+		if changedPixels == 0 {
+			t.Fatalf("%s does not recolor %s", pair[1], pair[0])
+		}
+	}
+}
+
+func TestEnemyDefeatsMonsterAndLevelsUp(t *testing.T) {
+	target := CreateEnemyByID(2, 3, 2)
+	target.Health = 1
+	attacker := CreateEnemyByID(0, 2, 2)
+	attacker.Health = 2
+	attacker.StatusAilments.Blind = 4
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(8, 8),
+		Player:  Player{Entity: Entity{X: 6, Y: 6}},
+		Enemies: []Enemy{target, attacker},
+	}}
+
+	g.AttackEnemyFromBlindEnemy(1, 0)
+	if len(g.ActionQueue.Queue) != 1 {
+		t.Fatalf("queued actions = %d, want 1", len(g.ActionQueue.Queue))
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Enemies) != 1 {
+		t.Fatalf("remaining enemies = %d, want 1", len(g.state.Enemies))
+	}
+	upgraded := g.state.Enemies[0]
+	definition := MonsterDefinitions[18]
+	if upgraded.ID != 18 || upgraded.Name != definition.Name || upgraded.Type != definition.Type {
+		t.Fatalf("upgraded enemy = ID %d, name %q, type %q", upgraded.ID, upgraded.Name, upgraded.Type)
+	}
+	if upgraded.Health != definition.MaxHealth || upgraded.MaxHealth != definition.MaxHealth {
+		t.Fatalf("upgraded health = %d/%d, want %d/%d", upgraded.Health, upgraded.MaxHealth, definition.MaxHealth, definition.MaxHealth)
+	}
+	if upgraded.StatusAilments.Blind != 4 || upgraded.X != 2 || upgraded.Y != 2 {
+		t.Fatalf("upgraded mutable state was not preserved: %#v", upgraded)
+	}
+	if len(g.ActionQueue.Queue) != 2 || !strings.Contains(g.ActionQueue.Queue[1].Message, "大エビにレベルアップ") {
+		t.Fatalf("level-up message queue = %#v", g.ActionQueue.Queue)
+	}
+}
+
+func TestEnemyWithoutUpperSpeciesDoesNotChange(t *testing.T) {
+	attacker := CreateEnemyByID(1, 2, 2)
+	target := CreateEnemyByID(2, 3, 2)
+	g := &Game{state: GameState{Enemies: []Enemy{attacker, target}}}
+
+	g.defeatEnemyByEnemy(0, 1)
+
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 1 {
+		t.Fatalf("remaining enemy = %#v, want unchanged poison snake", g.state.Enemies)
+	}
+	if len(g.ActionQueue.Queue) != 0 {
+		t.Fatalf("unexpected level-up action = %#v", g.ActionQueue.Queue)
+	}
+}
+
+func TestExplosionKillLevelsUpAttacker(t *testing.T) {
+	attacker := CreateEnemyByID(0, 2, 2)
+	target := CreateEnemyByID(2, 4, 4)
+	target.Health = 1
+	g := &Game{state: GameState{Enemies: []Enemy{attacker, target}}}
+	attack := RangedAttackDefinition{Kind: RangedAttackExplosion, AttackPower: 100, BlastRadius: 1}
+
+	g.enqueueExplosionCollateral(attacker.ID, attacker.X, attacker.Y, 4, 4, attack)
+	if len(g.ActionQueue.Queue) != 1 {
+		t.Fatalf("queued actions = %d, want 1", len(g.ActionQueue.Queue))
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 18 {
+		t.Fatalf("enemies after explosion = %#v, want upgraded attacker", g.state.Enemies)
+	}
+}
+
+func TestUpperSpeciesSaveRoundTrip(t *testing.T) {
+	enemy := CreateEnemyByID(19, 3, 4)
+	restored := savedToEnemy(enemyToSaved(&enemy))
+	if restored.ID != 19 || restored.Name != "あなぐらマムル" || restored.Type != "CaveMamuru" {
+		t.Fatalf("restored upper-species enemy = %#v", restored)
+	}
+}
+
+func TestUpperSpeciesAppearInFloorSpawnTables(t *testing.T) {
+	wantIDs := map[int]bool{18: false, 19: false}
+	for floor := 1; floor <= deepestSpawnFloor; floor++ {
+		for _, entry := range FloorSpawnTables[floor] {
+			if _, ok := wantIDs[entry.MonsterID]; ok {
+				wantIDs[entry.MonsterID] = true
+			}
+		}
+	}
+	for id, found := range wantIDs {
+		if !found {
+			t.Fatalf("upper-species enemy %d is missing from floor spawn tables", id)
 		}
 	}
 }

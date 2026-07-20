@@ -514,8 +514,12 @@ func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
 		img = g.snakeImg
 	case "Shrimp":
 		img = g.ebiImg
+	case "GreatShrimp":
+		img = g.daiEbiImg
 	case "Mamuru":
 		img = g.mamuruImg
+	case "CaveMamuru":
+		img = g.anaguraMamuruImg
 	case "Honey":
 		img = g.honeyImg
 	case "Harisenbow":

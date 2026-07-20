@@ -117,6 +117,7 @@ func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targ
 		Duration: 0.3,
 		Message:  "爆風が周囲のモンスターを巻き込んだ",
 		Execute: func(g *Game) {
+			defeatedCount := 0
 			for i := len(g.state.Enemies) - 1; i >= 0; i-- {
 				target := &g.state.Enemies[i]
 				if target.ID == attackerID && target.X == attackerX && target.Y == attackerY {
@@ -131,6 +132,14 @@ func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targ
 				if target.Health <= 0 {
 					g.dropEnemyHeldItem(i)
 					g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
+					defeatedCount++
+				}
+			}
+			if attackerIndex := g.enemyIndexAt(attackerX, attackerY); attackerIndex >= 0 {
+				for range defeatedCount {
+					if !g.levelUpEnemy(attackerIndex) {
+						break
+					}
 				}
 			}
 			g.miniMapDirty = true

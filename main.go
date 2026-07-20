@@ -128,8 +128,10 @@ type Game struct {
 	rooms                     []Room
 	playerImg                 *ebiten.Image
 	ebiImg                    *ebiten.Image
+	daiEbiImg                 *ebiten.Image
 	snakeImg                  *ebiten.Image
 	mamuruImg                 *ebiten.Image
+	anaguraMamuruImg          *ebiten.Image
 	honeyImg                  *ebiten.Image
 	harisenbowImg             *ebiten.Image
 	ishiganiImg               *ebiten.Image
@@ -651,9 +653,11 @@ func NewGame() *Game {
 	img := loadImage("img/ebisan.png")
 	tilesetImg := loadImage("img/tileset.png")
 	ebiImg := loadImage("img/ebi.png")
+	daiEbiImg := loadImage("img/dai_ebi.png")
 	kaneImg := loadImage("img/kane.png")
 	snakeImg := loadImage("img/snake.png")
 	mamuruImg := loadImage("img/mamuru.png")
+	anaguraMamuruImg := loadImage("img/anagura_mamuru.png")
 	honeyImg := loadImage("img/honey.png")
 	harisenbowImg := loadImage("img/harisenbow.png")
 	ishiganiImg := loadImage("img/ishigani.png")
@@ -720,8 +724,10 @@ func NewGame() *Game {
 		playerImg:           img,
 		tilesetImg:          tilesetImg,
 		ebiImg:              ebiImg,
+		daiEbiImg:           daiEbiImg,
 		snakeImg:            snakeImg,
 		mamuruImg:           mamuruImg,
+		anaguraMamuruImg:    anaguraMamuruImg,
 		honeyImg:            honeyImg,
 		harisenbowImg:       harisenbowImg,
 		ishiganiImg:         ishiganiImg,

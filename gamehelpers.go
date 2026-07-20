@@ -179,6 +179,32 @@ func (g *Game) applyDamageToEnemy(index, damage int) {
 	}
 }
 
+// defeatEnemyByEnemy は敵に倒された敵を取り除き、撃破した敵を上位種へ変化させる。
+func (g *Game) defeatEnemyByEnemy(attackerIndex, targetIndex int) {
+	if attackerIndex < 0 || attackerIndex >= len(g.state.Enemies) ||
+		targetIndex < 0 || targetIndex >= len(g.state.Enemies) || attackerIndex == targetIndex {
+		return
+	}
+
+	g.dropEnemyHeldItem(targetIndex)
+	g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
+	if targetIndex < attackerIndex {
+		attackerIndex--
+	}
+	g.levelUpEnemy(attackerIndex)
+	g.miniMapDirty = true
+}
+
+// enemyIndexAt は指定座標にいる敵のインデックスを返す。
+func (g *Game) enemyIndexAt(x, y int) int {
+	for i := range g.state.Enemies {
+		if g.state.Enemies[i].X == x && g.state.Enemies[i].Y == y {
+			return i
+		}
+	}
+	return -1
+}
+
 // closeGroundItemMenu は足元メニューの表示状態と選択をリセットする。
 func (g *Game) closeGroundItemMenu() {
 	g.ShowGroundItem = false

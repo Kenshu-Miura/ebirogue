@@ -557,9 +557,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 			}
 
 			if target.Health <= 0 {
-				// 敵を倒した場合、配列から削除
-				g.dropEnemyHeldItem(targetIndex)
-				g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
+				g.defeatEnemyByEnemy(attackerIndex, targetIndex)
 			}
 		},
 	}

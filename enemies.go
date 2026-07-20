@@ -409,6 +409,71 @@ var MonsterDefinitions = map[int]MonsterDefinition{
 		ExperiencePoints: 36,
 		Disguise:         EnemyDisguiseStairs,
 	},
+	18: {
+		ID:               18,
+		Type:             "GreatShrimp",
+		Name:             "大エビ",
+		Char:             'E',
+		Health:           45,
+		MaxHealth:        45,
+		AttackPower:      11,
+		DefensePower:     6,
+		ExperiencePoints: 30,
+	},
+	19: {
+		ID:               19,
+		Type:             "CaveMamuru",
+		Name:             "あなぐらマムル",
+		Char:             'M',
+		Health:           24,
+		MaxHealth:        24,
+		AttackPower:      7,
+		DefensePower:     3,
+		ExperiencePoints: 12,
+	},
+}
+
+// MonsterLevelUpTable は敵がほかの敵を倒したときに変化する同系統の上位種を定義する。
+var MonsterLevelUpTable = map[int]int{
+	0: 18, // エビ -> 大エビ
+	2: 19, // マムル -> あなぐらマムル
+}
+
+// levelUpEnemy は敵を同系統の上位種へ変化させる。
+// 位置・状態異常・発見状態・盗品などの可変状態は維持し、能力値と固有能力だけを上位種へ更新する。
+func (g *Game) levelUpEnemy(index int) bool {
+	if index < 0 || index >= len(g.state.Enemies) {
+		return false
+	}
+
+	enemy := &g.state.Enemies[index]
+	nextID, ok := MonsterLevelUpTable[enemy.ID]
+	if !ok {
+		return false
+	}
+	definition, ok := MonsterDefinitions[nextID]
+	if !ok {
+		return false
+	}
+
+	oldName := enemy.Name
+	enemy.ID = definition.ID
+	enemy.Char = definition.Char
+	enemy.Name = definition.Name
+	enemy.Health = definition.MaxHealth
+	enemy.MaxHealth = definition.MaxHealth
+	enemy.AttackPower = definition.AttackPower
+	enemy.DefensePower = definition.DefensePower
+	enemy.Type = definition.Type
+	enemy.ExperiencePoints = definition.ExperiencePoints
+	enemy.SpecialAttack = definition.SpecialAttack
+	enemy.SpecialAttackProbability = definition.SpecialAttackProbability
+	enemy.RangedAttack = definition.RangedAttack
+	enemy.SpecialMovement = definition.SpecialMovement
+	enemy.Disguise = definition.Disguise
+	enemy.Revealed = definition.Disguise == EnemyDisguiseNone
+	g.EnqueueMessage(fmt.Sprintf("%sは%sにレベルアップした。", oldName, enemy.Name), 0.5)
+	return true
 }
 
 // 統一されたモンスター生成関数
