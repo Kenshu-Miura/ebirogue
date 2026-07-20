@@ -12,13 +12,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-type Room struct {
-	ID            int
-	X, Y          int
-	Width, Height int
-	Center        Coordinate
-}
-
 func (g *Game) handleFadingOut() {
 	g.fadeAlpha += 1.0 / 60 // 1秒かけて暗くする
 	if g.fadeAlpha >= 1.0 {
@@ -100,16 +93,6 @@ func (g *Game) updateTileBrightness() {
 			}
 		}
 	}
-}
-
-func isInsideRoom(x, y int, rooms []Room) bool {
-	for _, room := range rooms {
-		if x > room.X && x < room.X+room.Width-1 &&
-			y > room.Y && y < room.Y+room.Height-1 {
-			return true
-		}
-	}
-	return false
 }
 
 func (g *Game) MarkVisitedTiles(playerX, playerY int) {
@@ -219,152 +202,6 @@ func (g *Game) checkForStairs() {
 	}
 }
 
-func isInsideRoomOrOnBoundary(x, y int, rooms []Room) bool {
-	for _, room := range rooms {
-		if x >= room.X && x <= room.X+room.Width-1 &&
-			y >= room.Y && y <= room.Y+room.Height-1 {
-			return true
-		}
-	}
-	return false
-}
-
-func placeDoor(mapGrid [][]Tile, x, y int) {
-	mapGrid[y][x] = Tile{Type: "door", Blocked: false, BlockSight: true}
-}
-
-func drawCorridor(mapGrid [][]Tile, room1, room2 Room, rooms []Room) {
-	// Get the center coordinates of the rooms
-	x1, y1 := room1.Center.X, room1.Center.Y
-	x2, y2 := room2.Center.X, room2.Center.Y
-
-	// Determine the turning point
-	turnX, turnY := x1, y2
-
-	_, _, vertexDetected := detectVertex(mapGrid, x1, y1, turnX, turnY, rooms)
-	if vertexDetected {
-		turnX, turnY = x2, y1
-	}
-
-	_, _, vertexDetected = detectVertex(mapGrid, turnX, turnY, x2, y2, rooms)
-
-	if vertexDetected {
-		turnX, turnY = x2, y1
-	}
-
-	// Draw vertical corridor from the center of room1 to the turning point
-	drawSegment(mapGrid, x1, y1, x1, turnY, rooms)
-
-	// Draw horizontal corridor from the turning point to the center of room2
-	drawSegment(mapGrid, turnX, turnY, x2, turnY, rooms)
-}
-
-func detectVertex(mapGrid [][]Tile, startX, startY, endX, endY int, rooms []Room) (int, int, bool) {
-	// Determine the direction of the scan based on the start and end coordinates
-	deltaX := 0
-	deltaY := 0
-	if startX != endX {
-		deltaX = increment(startX, endX)
-	} else {
-		deltaY = increment(startY, endY)
-	}
-
-	// Initialize current position to the start coordinates
-	currentX := startX
-	currentY := startY
-
-	// Continue the scan until the end point is reached or an edge is detected
-	for currentX != endX || currentY != endY {
-		// Update the current position
-		currentX += deltaX
-		currentY += deltaY
-		for _, room := range rooms {
-			// Calculate the vertices of the room
-			topLeftX, topLeftY := room.X, room.Y
-			topRightX, topRightY := room.X+room.Width-1, room.Y
-			bottomLeftX, bottomLeftY := room.X, room.Y+room.Height-1
-			bottomRightX, bottomRightY := room.X+room.Width-1, room.Y+room.Height-1
-
-			// Check if the current position is near any of the vertices of the room
-			if (currentX == topLeftX && currentY == topLeftY) ||
-				(currentX == topRightX && currentY == topRightY) ||
-				(currentX == bottomLeftX && currentY == bottomLeftY) ||
-				(currentX == bottomRightX && currentY == bottomRightY) {
-				// Vertex detected, stop the scan and return the current position
-				return currentX, currentY, true
-			}
-		}
-	}
-
-	// No vertex detected, return the original turnY value and false
-	return currentX, currentY, false
-}
-
-func increment(start, end int) int {
-	if start < end {
-		return 1 // Increment positively
-	}
-	return -1 // Increment negatively
-}
-
-func drawSegment(mapGrid [][]Tile, startX, startY, endX, endY int, rooms []Room) {
-	for x := min(startX, endX); x <= max(startX, endX); x++ {
-		for y := min(startY, endY); y <= max(startY, endY); y++ {
-			isBoundary := false
-			for _, room := range rooms {
-				if isOnBoundary(x, y, room) {
-					isBoundary = true
-					//placeDoor(mapGrid, x, y)
-					mapGrid[y][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-					break
-				}
-			}
-			if !isBoundary && !isInsideRoomOrOnBoundary(x, y, rooms) {
-				mapGrid[y][x] = Tile{Type: "corridor", Blocked: false, BlockSight: false}
-			}
-		}
-	}
-}
-
-func isOnBoundary(x, y int, room Room) bool {
-	left := room.X
-	right := room.X + room.Width - 1
-	top := room.Y
-	bottom := room.Y + room.Height - 1
-
-	// Check if (x, y) is on the left, right, top, or bottom edge of the room
-	isOnLeftEdge := x == left && y >= top && y <= bottom
-	isOnRightEdge := x == right && y >= top && y <= bottom
-	isOnTopEdge := y == top && x >= left && x <= right
-	isOnBottomEdge := y == bottom && x >= left && x <= right
-
-	return isOnLeftEdge || isOnRightEdge || isOnTopEdge || isOnBottomEdge
-}
-
-func connectRooms(rooms []Room, mapGrid [][]Tile) {
-	if len(rooms) == 0 {
-		fmt.Println("No rooms to connect")
-		return
-	}
-
-	// Step 2: Connect each room to its nearest neighbor
-	for _, room := range rooms {
-		nearestNeighbor := findNearestNeighbor(room, rooms)
-		// Assuming drawCorridor is updated to take Room structs or center coordinates as arguments
-		drawCorridor(mapGrid, room, nearestNeighbor, rooms)
-	}
-
-	// Step 3: Connect all rooms in a circular manner
-	for i := 0; i < len(rooms); i++ {
-		// Get the next room index, wrapping back to 0 if at the end of the rooms slice
-		nextRoomIndex := (i + 1) % len(rooms)
-		// Again, assuming drawCorridor is updated to take Room structs or center coordinates as arguments
-		drawCorridor(mapGrid, rooms[i], rooms[nextRoomIndex], rooms)
-	}
-
-	fmt.Println("All rooms are connected")
-}
-
 func logCurrentRoom(player Player, rooms []Room) string {
 	for _, room := range rooms {
 		// Check if the player is within the bounds of the current room
@@ -381,45 +218,6 @@ func logRooms(rooms []Room) {
 		fmt.Printf("Room ID: %d\n", room.ID)
 		fmt.Printf("  Center: X=%d, Y=%d\n", room.Center.X, room.Center.Y)
 	}
-}
-
-// Updated calculateDistance function to accept Room structures as arguments
-func calculateDistance(room1, room2 Room) float64 {
-	deltaX := float64(room2.Center.X - room1.Center.X)
-	deltaY := float64(room2.Center.Y - room1.Center.Y)
-	return math.Sqrt(deltaX*deltaX + deltaY*deltaY)
-}
-
-func findNearestNeighbor(room Room, rooms []Room) Room {
-	minDistance := math.MaxFloat64
-	var nearestRoom Room
-
-	for _, neighbor := range rooms {
-		// Skip if it's the same room
-		if room.ID == neighbor.ID {
-			continue
-		}
-
-		distance := calculateDistance(room, neighbor) // Updated to pass Room structures
-		if distance < minDistance {
-			minDistance = distance
-			nearestRoom = neighbor
-		}
-	}
-
-	return nearestRoom
-}
-
-func (r *Room) IsSeparatedBy(other Room, tiles int) bool {
-	// Horizontal separation
-	if r.X+r.Width+tiles <= other.X || other.X+other.Width+tiles <= r.X {
-		return true
-	}
-	// Vertical separation
-	if r.Y+r.Height+tiles <= other.Y || other.Y+other.Height+tiles <= r.Y {
-		return true
-	}
-	return false
 }
 
 // Helper function to calculate the distance between two points
@@ -481,6 +279,9 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 				Width:  roomWidth,
 				Height: roomHeight,
 			}
+			// 中心座標は距離判定に使うため先に確定させる
+			setRoomCenter(&newRoom)
+
 			valid := true
 			for _, room := range rooms {
 				if !newRoom.IsSeparatedBy(room, 5) {
@@ -494,40 +295,14 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 				if !isWithinDistanceRange(newRoom, rooms, 10, 100) { // Assume min distance is 10 and max distance is 50 for now
 					continue // Skip the rest of the loop and try again if the room is too far or too close
 				}
-				setRoomCenter(&newRoom)
 				rooms = append(rooms, newRoom)
-				for y := roomY; y < roomY+roomHeight; y++ {
-					for x := roomX; x < roomX+roomWidth; x++ {
-						if x == roomX || x == roomX+roomWidth-1 || y == roomY || y == roomY+roomHeight-1 {
-							mapGrid[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
-						} else {
-							mapGrid[y][x] = Tile{Type: "floor", Blocked: false, BlockSight: false}
-						}
-					}
-				}
+				carveRoom(mapGrid, newRoom)
 				break // Exit the inner loop as soon as a room is successfully created
 			}
 		}
 	}
 
 	return rooms
-}
-
-func setRoomCenter(room *Room) {
-	// Calculate the center coordinates
-	centerX := room.X + room.Width/2
-	centerY := room.Y + room.Height/2
-
-	// If the calculated center coordinates are even, increment them by 1 to make them odd
-	if centerX%2 == 0 {
-		centerX++
-	}
-	if centerY%2 == 0 {
-		centerY++
-	}
-
-	// Set the center coordinates
-	room.Center = Coordinate{X: centerX, Y: centerY}
 }
 
 func generateEnemies(rooms []Room, playerRoom Room, floor int) []Enemy {
@@ -611,28 +386,36 @@ func generateItems(rooms []Room) []Item {
 	return items
 }
 
+// maxMapGenAttempts はマップ生成のリトライ上限。
+// 全部屋が連結になるまで作り直す（通常は1回目で成功する）。
+const maxMapGenAttempts = 30
+
 func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Item, int, []Room, []MapTrap) {
-	// Step 1: Initialize all tiles to "other" type
-	mapGrid := make([][]Tile, height)
-	for y := range mapGrid {
-		mapGrid[y] = make([]Tile, width)
-		for x := range mapGrid[y] {
-			mapGrid[y][x] = Tile{Type: "other", Blocked: true, BlockSight: true}
+	var mapGrid [][]Tile
+	var rooms []Room
+
+	for attempt := 0; attempt < maxMapGenAttempts; attempt++ {
+		// Step 1: Initialize all tiles to "other" type
+		mapGrid = make([][]Tile, height)
+		for y := range mapGrid {
+			mapGrid[y] = make([]Tile, width)
+			for x := range mapGrid[y] {
+				mapGrid[y][x] = Tile{Type: "other", Blocked: true, BlockSight: true}
+			}
+		}
+
+		rooms = generateRooms(mapGrid, width, height, 6) // Step 2: Generate rooms
+		if len(rooms) < 2 {
+			continue
+		}
+
+		connectRooms(rooms, mapGrid)
+
+		// 全部屋が通路でつながっていて、壁が通路に破壊されていないフロアだけを採用する
+		if floorConnected(mapGrid, rooms) && roomWallsIntact(mapGrid, rooms) {
+			break
 		}
 	}
-
-	// Generate a random float between 0 and 1
-	//randomFloat := rand.Float64()
-
-	// Apply exponential decay
-	//decayFactor := 0.5 // Adjust this value to control the rate of decay
-	//prob := math.Pow(randomFloat, decayFactor)
-
-	// Scale and transform to get the number of rooms between 4 and 10
-	//numRooms := int(prob*7) + 4                              // This will give a value between 4 and 10 with a decreasing probability as the number of rooms increases
-	rooms := generateRooms(mapGrid, width, height, 6) // Step 2: Generate rooms
-
-	connectRooms(rooms, mapGrid)
 
 	// プレイヤーの新しい位置を設定
 	playerRoom := rooms[rand.Intn(len(rooms))]
