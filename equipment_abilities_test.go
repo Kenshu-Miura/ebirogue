@@ -45,29 +45,26 @@ func TestShouldReduceSatiety(t *testing.T) {
 	}
 }
 
-func TestApplySlayerBonus(t *testing.T) {
+func TestSlayerMultiplier(t *testing.T) {
 	tests := []struct {
-		name        string
-		damage      int
-		abilities   []EquipmentAbilityID
-		traits      []EnemyTrait
-		wantDamage  int
-		wantMatched bool
+		name           string
+		abilities      []EquipmentAbilityID
+		traits         []EnemyTrait
+		wantMultiplier float64
+		wantMatched    bool
 	}{
-		{name: "dragon match", damage: 10, abilities: []EquipmentAbilityID{AbilityDragonSlayer}, traits: []EnemyTrait{EnemyTraitDragon}, wantDamage: 15, wantMatched: true},
-		{name: "ghost match rounds up", damage: 9, abilities: []EquipmentAbilityID{AbilityGhostSlayer}, traits: []EnemyTrait{EnemyTraitGhost}, wantDamage: 14, wantMatched: true},
-		{name: "different trait", damage: 10, abilities: []EquipmentAbilityID{AbilityDragonSlayer}, traits: []EnemyTrait{EnemyTraitGhost}, wantDamage: 10},
-		{name: "no weapon ability", damage: 10, traits: []EnemyTrait{EnemyTraitDragon}, wantDamage: 10},
-		{name: "multiple matches do not stack", damage: 10, abilities: []EquipmentAbilityID{AbilityOneEyeSlayer, AbilityDrainerSlayer}, traits: []EnemyTrait{EnemyTraitOneEye, EnemyTraitDrainer}, wantDamage: 15, wantMatched: true},
-		{name: "zero damage stays zero", damage: 0, abilities: []EquipmentAbilityID{AbilityDragonSlayer}, traits: []EnemyTrait{EnemyTraitDragon}, wantDamage: 0},
-		{name: "negative boundary stays unchanged", damage: -1, abilities: []EquipmentAbilityID{AbilityDragonSlayer}, traits: []EnemyTrait{EnemyTraitDragon}, wantDamage: -1},
+		{name: "dragon match", abilities: []EquipmentAbilityID{AbilityDragonSlayer}, traits: []EnemyTrait{EnemyTraitDragon}, wantMultiplier: slayerDamageMultiplier, wantMatched: true},
+		{name: "ghost match", abilities: []EquipmentAbilityID{AbilityGhostSlayer}, traits: []EnemyTrait{EnemyTraitGhost}, wantMultiplier: slayerDamageMultiplier, wantMatched: true},
+		{name: "different trait", abilities: []EquipmentAbilityID{AbilityDragonSlayer}, traits: []EnemyTrait{EnemyTraitGhost}, wantMultiplier: 1.0},
+		{name: "no weapon ability", traits: []EnemyTrait{EnemyTraitDragon}, wantMultiplier: 1.0},
+		{name: "multiple matches do not stack", abilities: []EquipmentAbilityID{AbilityOneEyeSlayer, AbilityDrainerSlayer}, traits: []EnemyTrait{EnemyTraitOneEye, EnemyTraitDrainer}, wantMultiplier: slayerDamageMultiplier, wantMatched: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotDamage, gotMatched := applySlayerBonus(tt.damage, tt.abilities, tt.traits)
-			if gotDamage != tt.wantDamage || gotMatched != tt.wantMatched {
-				t.Fatalf("applySlayerBonus() = (%d, %t), want (%d, %t)", gotDamage, gotMatched, tt.wantDamage, tt.wantMatched)
+			gotMultiplier, gotMatched := slayerMultiplier(tt.abilities, tt.traits)
+			if gotMultiplier != tt.wantMultiplier || gotMatched != tt.wantMatched {
+				t.Fatalf("slayerMultiplier() = (%f, %t), want (%f, %t)", gotMultiplier, gotMatched, tt.wantMultiplier, tt.wantMatched)
 			}
 		})
 	}

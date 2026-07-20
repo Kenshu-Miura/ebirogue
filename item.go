@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"math/rand"
 )
 
 func (g *Game) updateItemVisibility() {
@@ -430,17 +429,18 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		}
 	} else {
 		damage := 0
+		critical := false
 		if g.dPressed {
-			// Base damage calculation
-			damage = g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - target.GetDefensePower() + rand.Intn(3) - 1
-
-			// Check if item is of type Arrow
+			// 射撃はプレイヤーの総攻撃力に矢の攻撃力を加えて計算する
+			attack := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level)
 			if arrow, ok := item.(*Arrow); ok {
-				// Add the AttackPower of the Arrow to the damage
-				damage += arrow.AttackPower
+				attack += arrow.AttackPower
 			}
+			result := rollPlayerAttackDamage(attack, target.GetDefensePower(), 1.0, damageRandInt)
+			damage = result.Damage
+			critical = result.Critical
 		} else {
-			damage = rand.Intn(3) + 1
+			damage = rollThrownItemDamage(damageRandInt)
 		}
 		// 目潰し状態の場合は敵の名前を「何者」に変更（targetがEnemyの場合のみ）
 		targetDisplayName := target.GetName()
@@ -448,9 +448,14 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			targetDisplayName = g.enemyDisplayName(targetDisplayName)
 		}
 
+		hitMessage := fmt.Sprintf("%sに%dのダメージを与えた。", targetDisplayName, damage)
+		if critical {
+			hitMessage = "会心の一撃！" + hitMessage
+		}
+
 		action := Action{
 			Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
-			Message:  fmt.Sprintf("%sに%dのダメージを与えた。", targetDisplayName, damage),
+			Message:  hitMessage,
 			Execute: func(g *Game) {
 				// Type assertion to check if target is of type *Player or *Enemy
 				if _, ok := target.(*Player); ok {

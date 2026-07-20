@@ -43,21 +43,17 @@ func hasEnemyTrait(traits []EnemyTrait, target EnemyTrait) bool {
 	return false
 }
 
-// applySlayerBonus は、武器能力と敵の分類が一致したときだけダメージを1.5倍（端数切り上げ）にする。
-// 複数の特効条件が一致しても倍率は重複させない。
-func applySlayerBonus(damage int, abilities []EquipmentAbilityID, traits []EnemyTrait) (int, bool) {
-	if damage <= 0 {
-		return damage, false
-	}
-
+// slayerMultiplier は、武器能力と敵の分類が一致したときのダメージ倍率を返す。
+// 複数の特効条件が一致しても倍率は重複させず、rollDamage の Multiplier へ乗算で渡す。
+func slayerMultiplier(abilities []EquipmentAbilityID, traits []EnemyTrait) (float64, bool) {
 	matched := (hasEquipmentAbility(abilities, AbilityDragonSlayer) && hasEnemyTrait(traits, EnemyTraitDragon)) ||
 		(hasEquipmentAbility(abilities, AbilityGhostSlayer) && hasEnemyTrait(traits, EnemyTraitGhost)) ||
 		(hasEquipmentAbility(abilities, AbilityOneEyeSlayer) && hasEnemyTrait(traits, EnemyTraitOneEye)) ||
 		(hasEquipmentAbility(abilities, AbilityDrainerSlayer) && hasEnemyTrait(traits, EnemyTraitDrainer))
 	if !matched {
-		return damage, false
+		return 1.0, false
 	}
-	return damage + (damage+1)/2, true
+	return slayerDamageMultiplier, true
 }
 
 func satietyLossInterval(armorAbilities []EquipmentAbilityID) int {

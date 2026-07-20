@@ -48,12 +48,3 @@ func withinRangedDistance(fromX, fromY, toX, toY, minRange, maxRange int) bool {
 func withinBlastRadius(centerX, centerY, targetX, targetY, radius int) bool {
 	return max(abs(targetX-centerX), abs(targetY-centerY)) <= radius
 }
-
-// rollEnemyRangedDamage は既存の通常攻撃と同じ±1の揺らぎを適用する。
-func rollEnemyRangedDamage(attackPower, defensePower int, intn func(int) int) int {
-	damage := attackPower - defensePower + intn(3) - 1
-	if damage < 0 {
-		return 0
-	}
-	return damage
-}

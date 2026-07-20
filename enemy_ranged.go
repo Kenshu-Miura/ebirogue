@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 )
 
 const rangedAttackEffectDuration = 0.45
@@ -49,7 +48,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 	attack := enemy.RangedAttack
 	targetX, targetY := g.state.Player.X, g.state.Player.Y
 	dx, dy := sign(targetX-enemy.X), sign(targetY-enemy.Y)
-	damage := rollEnemyRangedDamage(attack.AttackPower, g.state.Player.DefensePower, rand.Intn)
+	damage := rollEnemyAttackDamage(attack.AttackPower, g.state.Player.DefensePower, damageRandInt)
 
 	var message string
 	switch attack.Kind {
@@ -126,7 +125,7 @@ func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targ
 				if !withinBlastRadius(targetX, targetY, target.X, target.Y, attack.BlastRadius) {
 					continue
 				}
-				target.Health -= rollEnemyRangedDamage(attack.AttackPower, target.DefensePower, rand.Intn)
+				target.Health -= rollEnemyAttackDamage(attack.AttackPower, target.DefensePower, damageRandInt)
 				target.StatusAilments.Sleep = 0
 				target.StatusAilments.Paralysis = false
 				if target.Health <= 0 {

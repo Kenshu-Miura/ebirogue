@@ -46,7 +46,7 @@ func TestHasClearStraightLine(t *testing.T) {
 	}
 }
 
-func TestRangedAreaAndDamageBoundaries(t *testing.T) {
+func TestRangedAreaBoundaries(t *testing.T) {
 	if !withinRangedDistance(1, 1, 6, 4, 2, 5) {
 		t.Fatal("stone throw should use Chebyshev distance and reach over an offset target")
 	}
@@ -55,14 +55,5 @@ func TestRangedAreaAndDamageBoundaries(t *testing.T) {
 	}
 	if !withinBlastRadius(5, 5, 6, 4, 1) || withinBlastRadius(5, 5, 7, 5, 1) {
 		t.Fatal("blast radius boundary is incorrect")
-	}
-	if got := rollEnemyRangedDamage(10, 4, func(int) int { return 0 }); got != 5 {
-		t.Fatalf("minimum ranged damage = %d, want 5", got)
-	}
-	if got := rollEnemyRangedDamage(10, 4, func(n int) int { return n - 1 }); got != 7 {
-		t.Fatalf("maximum ranged damage = %d, want 7", got)
-	}
-	if got := rollEnemyRangedDamage(2, 10, func(int) int { return 0 }); got != 0 {
-		t.Fatalf("damage should not become negative: %d", got)
 	}
 }

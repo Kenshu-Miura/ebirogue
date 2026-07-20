@@ -33,7 +33,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go` |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `savedata.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go` |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
 - 新機能のロジックはなるべく「純粋関数をタグなしファイルへ切り出し + 単体テスト」の形にする（`autostop.go` + `autostop_test.go` が手本）。
@@ -44,6 +44,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 - `draw.go`: マップ・キャラ・アイテム・投擲・射線などワールド描画とアニメーション。HUD・ミニマップは `draw_hud.go`、インベントリ・メニュー・説明・設定などのウィンドウ描画は `draw_ui.go`。
 - `direction.go`: `Direction` ⇔ 移動量 (dx, dy) の変換ヘルパー（`determineDirection`/`directionToDelta`/`getDirections` 等）。方向変換の switch を手書きしない。
 - `gamehelpers.go`: 頻出パターンの共通ヘルパー。メッセージだけの Action は `g.EnqueueMessage(msg, duration)`、敵へのダメージ＋撃破処理は `g.applyDamageToEnemy(index, damage)`、投擲は `g.throwWithCallbacks(item, range)`、呪い判定は `isCursedEquipment` 等。**新規コードは同じ処理を手書きせずこれらを使う。**
+- `damage.go`（タグなし・純粋）: ダメージ計算式の一元管理。SFC シレン式の「ダメージ = 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率」。プレイヤー攻撃は `rollPlayerAttackDamage`（会心1/20＝防御無視×1.5、最低1ダメージ）、敵攻撃は `rollEnemyAttackDamage`、総攻撃力は `playerAttackTotal(攻撃力, パワー, レベル)`。特効などの補正は `DamageParams.Multiplier` へ乗算で合成する（`slayerMultiplier` 参照）。バランス調整は同ファイル冒頭の定数（軽減率・乱数幅・会心率など）を変更する。乱数源はパッケージ変数 `damageRandInt` で、テストでは差し替えて決定的にする。**新しいダメージ処理は式を手書きせず必ず `rollDamage` 系を経由する。**
 
 ## コアゲームループとターン進行
 
@@ -104,6 +105,7 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 ## ゲーム仕様早見表
 
 - 初期ステータス: HP 100 / 満腹度 100 / パワー 8 / 攻撃 3 / 防御 3 / インベントリ上限 20。経験値テーブルは `levelExpRequirements`（main.go, レベル10まで）。
+- ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + レベル。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。
 - 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は毎ターン HP-2。
 - 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）。
 - モンスター湧き: 上限 19 体、20〜30 ターン間隔、プレイヤーから 8 マス以内には湧かない（monster_spawn.go の定数）。

@@ -502,10 +502,7 @@ func (aq *ActionQueue) Enqueue(action Action) {
 func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 
-	netDamage := enemy.AttackPower - g.state.Player.DefensePower + rand.Intn(3) - 1
-	if netDamage < 0 {
-		netDamage = 0
-	}
+	netDamage := rollEnemyAttackDamage(enemy.AttackPower, g.state.Player.DefensePower, damageRandInt)
 
 	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
 
@@ -536,10 +533,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 	target := &g.state.Enemies[targetIndex]
 
 	// 敵同士の攻撃（目潰し状態の敵が他の敵を攻撃）
-	netDamage := attacker.AttackPower - target.DefensePower + rand.Intn(3) - 1
-	if netDamage < 0 {
-		netDamage = 0
-	}
+	netDamage := rollEnemyAttackDamage(attacker.AttackPower, target.DefensePower, damageRandInt)
 
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
 
@@ -614,16 +608,15 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 		if enemy.X == g.state.Player.X+x && enemy.Y == g.state.Player.Y+y {
 			g.isFrontEnemy = true
 			g.revealEnemy(i)
-			// Player's AttackPower is considered while dealing damage
-			netDamage := g.state.Player.AttackPower + g.state.Player.Power + g.state.Player.Level - enemy.DefensePower + rand.Intn(3) - 1
-			if netDamage < 0 { // Ensure damage does not go below 0
-				netDamage = 0
-			}
+			// ちから・レベル補正込みの総攻撃力と特効倍率からダメージを算出する
 			weaponAbilities := []EquipmentAbilityID(nil)
 			if g.state.Player.EquippedWeapon != nil {
 				weaponAbilities = g.state.Player.EquippedWeapon.Abilities
 			}
-			netDamage, slayerEffective := applySlayerBonus(netDamage, weaponAbilities, enemy.Traits)
+			multiplier, slayerEffective := slayerMultiplier(weaponAbilities, enemy.Traits)
+			attack := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level)
+			result := rollPlayerAttackDamage(attack, enemy.DefensePower, multiplier, damageRandInt)
+			netDamage := result.Damage
 
 			dx, dy := enemy.X-g.state.Player.X, enemy.Y-g.state.Player.Y
 
@@ -636,6 +629,9 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			message := fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(g.state.Enemies[enemyIndex].Name), netDamage)
 			if slayerEffective {
 				message = "特効！" + message
+			}
+			if result.Critical {
+				message = "会心の一撃！" + message
 			}
 			action := Action{
 				Duration: 0.5,

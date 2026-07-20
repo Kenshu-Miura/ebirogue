@@ -201,6 +201,11 @@ func TestEnemyTraitsForSlayerWeapons(t *testing.T) {
 }
 
 func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
+	// 会心判定を必ず外し、乱数係数を最大(9/8)へ固定して決定的にする
+	restoreIntn := damageRandInt
+	damageRandInt = func(n int) int { return n - 1 }
+	defer func() { damageRandInt = restoreIntn }()
+
 	weapon := buildItemFromTemplate(49, 0, 0).(*Weapon)
 	enemy := CreateEnemyByID(36, 2, 1)
 	g := &Game{
@@ -226,8 +231,9 @@ func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
 	before := g.state.Enemies[0].Health
 	g.ActionQueue.Queue[0].Execute(g)
 	damage := before - g.state.Enemies[0].Health
-	if damage < 29 || damage > 32 {
-		t.Fatalf("slayer attack damage = %d, want 29..32", damage)
+	// 総攻撃力29 × (15/16)^9 × 9/8 × 特効1.5 ≒ 27.38 → 27
+	if damage != 27 {
+		t.Fatalf("slayer attack damage = %d, want 27", damage)
 	}
 }
 
