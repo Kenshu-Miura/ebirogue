@@ -172,11 +172,6 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 ### Priority A: enemies and monster behavior
 
-- 所持品へ干渉する敵を追加する。
-  - アイテムを盗んで逃げる敵
-  - 所持品を食料へ変える敵
-  - 装備や道具を呪う敵
-  - プレイヤーへ道具の使用や移動を強制する敵
 - 特殊移動を行う敵を追加する。
   - 壁抜け、倍速、ワープ、場所替え
   - 移動先へ罠を作る敵

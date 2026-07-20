@@ -528,6 +528,12 @@ func (g *Game) actEnemy(i int) {
 		return
 	}
 
+	// 盗品を持つ敵は、通常の追跡より逃走を優先する。
+	if enemy.Fleeing && enemy.HeldItem != nil {
+		g.moveFleeingEnemy(i)
+		return
+	}
+
 	// Variables to store the difference in position
 	dx := enemy.X - g.state.Player.X
 	dy := enemy.Y - g.state.Player.Y

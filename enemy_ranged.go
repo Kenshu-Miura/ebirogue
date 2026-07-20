@@ -129,6 +129,7 @@ func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targ
 				target.StatusAilments.Sleep = 0
 				target.StatusAilments.Paralysis = false
 				if target.Health <= 0 {
+					g.dropEnemyHeldItem(i)
 					g.state.Enemies = append(g.state.Enemies[:i], g.state.Enemies[i+1:]...)
 				}
 			}

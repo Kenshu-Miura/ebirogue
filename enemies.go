@@ -50,6 +50,8 @@ type Enemy struct {
 	RangedAttack             RangedAttackDefinition
 	ShowOnMiniMap            bool
 	StatusAilments           StatusAilments // 状態異常
+	HeldItem                 Item           // 盗賊系の敵が持ち去ったアイテム
+	Fleeing                  bool           // 盗品を持ってプレイヤーから逃走中かどうか
 }
 
 func (g *Game) updateEnemyVisibility() {
@@ -239,6 +241,58 @@ var MonsterDefinitions = map[int]MonsterDefinition{
 			AttackPower: 16,
 			BlastRadius: 1,
 		},
+	},
+	7: {
+		ID:                       7,
+		Type:                     "ThiefHermitCrab",
+		Name:                     "コソドロヤドカリ",
+		Char:                     'T',
+		Health:                   26,
+		MaxHealth:                26,
+		AttackPower:              5,
+		DefensePower:             4,
+		ExperiencePoints:         14,
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueStealAttack(e, g, rand.Intn) },
+		SpecialAttackProbability: 0.45,
+	},
+	8: {
+		ID:                       8,
+		Type:                     "NigiriShrimp",
+		Name:                     "にぎりエビ",
+		Char:                     'N',
+		Health:                   34,
+		MaxHealth:                34,
+		AttackPower:              7,
+		DefensePower:             4,
+		ExperiencePoints:         18,
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueFoodTransformationAttack(e, g, rand.Intn) },
+		SpecialAttackProbability: 0.35,
+	},
+	9: {
+		ID:                       9,
+		Type:                     "CurseCrab",
+		Name:                     "ノロイガニ",
+		Char:                     'C',
+		Health:                   38,
+		MaxHealth:                38,
+		AttackPower:              8,
+		DefensePower:             6,
+		ExperiencePoints:         22,
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueCurseAttack(e, g, rand.Intn) },
+		SpecialAttackProbability: 0.35,
+	},
+	10: {
+		ID:                       10,
+		Type:                     "PuppeteerJellyfish",
+		Name:                     "あやつりクラゲ",
+		Char:                     'J',
+		Health:                   42,
+		MaxHealth:                42,
+		AttackPower:              9,
+		DefensePower:             5,
+		ExperiencePoints:         28,
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueManipulationAttack(e, g, rand.Intn) },
+		SpecialAttackProbability: 0.3,
 	},
 }
 

@@ -46,11 +46,206 @@ func TestAddedContentDefinitions(t *testing.T) {
 			t.Fatalf("ranged monster %d = %#v, want %q with kind %d", id, definition, want.name, want.kind)
 		}
 	}
+	inventoryEnemies := map[int]string{
+		7:  "コソドロヤドカリ",
+		8:  "にぎりエビ",
+		9:  "ノロイガニ",
+		10: "あやつりクラゲ",
+	}
+	for id, wantName := range inventoryEnemies {
+		definition := MonsterDefinitions[id]
+		if definition.Name != wantName || definition.SpecialAttack == nil || definition.SpecialAttackProbability <= 0 {
+			t.Fatalf("inventory monster %d = %#v, want %q with a special attack", id, definition, wantName)
+		}
+	}
 
 	wantTraps := []string{"睡眠ガスの罠", "毒矢の罠", "鈍足の罠", "地雷", "サビの罠"}
 	for id, wantName := range wantTraps {
 		if got := createMapTrapByID(id, 1, 2); got.Name != wantName {
 			t.Fatalf("trap %d = %q, want %q", id, got.Name, wantName)
+		}
+	}
+}
+
+func TestThiefStealsFleesAndDropsItem(t *testing.T) {
+	stolen := buildItemFromTemplate(1, 0, 0)
+	equipped := buildItemFromTemplate(20, 0, 0).(*Weapon)
+	player := Player{Inventory: []Item{equipped, stolen}, Level: 1}
+	player.EquippedWeapon = equipped
+	enemy := CreateEnemyByID(7, 3, 3)
+	g := &Game{state: GameState{Player: player, Enemies: []Enemy{enemy}}}
+
+	enqueueStealAttack(&g.state.Enemies[0], g, func(n int) int { return n - 1 })
+	if len(g.ActionQueue.Queue) != 1 {
+		t.Fatalf("queued actions = %d, want 1", len(g.ActionQueue.Queue))
+	}
+	g.ActionQueue.Queue[0].Execute(g)
+	if len(g.state.Player.Inventory) != 1 || g.state.Player.Inventory[0] != equipped {
+		t.Fatal("thief should steal only the unequipped item")
+	}
+	if g.state.Enemies[0].HeldItem != stolen || !g.state.Enemies[0].Fleeing {
+		t.Fatal("thief should carry the stolen item and start fleeing")
+	}
+
+	g.defeatEnemy(0)
+	if len(g.state.Items) != 1 || g.state.Items[0] != stolen {
+		t.Fatal("defeated thief should drop the stolen item")
+	}
+	x, y := stolen.GetPosition()
+	if x != 3 || y != 3 {
+		t.Fatalf("dropped item position = (%d, %d), want (3, 3)", x, y)
+	}
+}
+
+func TestThiefMovesAwayAfterStealing(t *testing.T) {
+	enemy := CreateEnemyByID(7, 4, 4)
+	enemy.HeldItem = buildItemFromTemplate(1, 0, 0)
+	enemy.Fleeing = true
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(10, 10),
+		Player:  Player{Entity: Entity{X: 3, Y: 4}},
+		Enemies: []Enemy{enemy},
+	}}
+	before := abs(g.state.Enemies[0].X-g.state.Player.X) + abs(g.state.Enemies[0].Y-g.state.Player.Y)
+	if !g.moveEnemyAwayFromPlayer(0, func(n int) int { return 0 }) {
+		t.Fatal("fleeing enemy should find a move")
+	}
+	after := abs(g.state.Enemies[0].X-g.state.Player.X) + abs(g.state.Enemies[0].Y-g.state.Player.Y)
+	if after <= before {
+		t.Fatalf("distance after fleeing = %d, want greater than %d", after, before)
+	}
+}
+
+func TestFoodTransformationProtectsEquippedItem(t *testing.T) {
+	equipped := buildItemFromTemplate(20, 0, 0).(*Weapon)
+	target := buildItemFromTemplate(2, 0, 0)
+	player := Player{Inventory: []Item{equipped, target}, EquippedWeapon: equipped}
+	enemy := CreateEnemyByID(8, 1, 1)
+	g := &Game{state: GameState{Player: player, Enemies: []Enemy{enemy}}}
+
+	enqueueFoodTransformationAttack(&g.state.Enemies[0], g, func(n int) int { return 0 })
+	g.ActionQueue.Queue[0].Execute(g)
+	if g.state.Player.Inventory[0] != equipped {
+		t.Fatal("equipped item should not be transformed")
+	}
+	food, ok := g.state.Player.Inventory[1].(*Food)
+	if !ok || food.ID != 1 || food.Name != "ウインナー" {
+		t.Fatalf("transformed item = %#v, want basic sausage", g.state.Player.Inventory[1])
+	}
+}
+
+func TestCurseAttackHandlesEquippedAccessory(t *testing.T) {
+	accessory := buildItemFromTemplate(10, 0, 0).(*Accessory)
+	player := Player{Inventory: []Item{accessory}, Power: 11, MaxPower: 11}
+	player.EquippedAccessories[0] = accessory
+	enemy := CreateEnemyByID(9, 1, 1)
+	g := &Game{state: GameState{Player: player, Enemies: []Enemy{enemy}}}
+
+	enqueueCurseAttack(&g.state.Enemies[0], g, func(n int) int { return 0 })
+	g.ActionQueue.Queue[0].Execute(g)
+	if !accessory.Cursed {
+		t.Fatal("curse attack should curse an equipped accessory")
+	}
+	if g.state.Player.Power != 5 || g.state.Player.MaxPower != 5 {
+		t.Fatalf("cursed accessory stats = (%d, %d), want (5, 5)", g.state.Player.Power, g.state.Player.MaxPower)
+	}
+}
+
+func TestCurseAttackMarksArrowAsCursedEquipment(t *testing.T) {
+	arrow := buildItemFromTemplate(6, 0, 0).(*Arrow)
+	player := Player{Inventory: []Item{arrow}, EquippedArrow: arrow}
+	enemy := CreateEnemyByID(9, 1, 1)
+	g := &Game{state: GameState{Player: player, Enemies: []Enemy{enemy}}}
+
+	enqueueCurseAttack(&g.state.Enemies[0], g, func(n int) int { return 0 })
+	g.ActionQueue.Queue[0].Execute(g)
+	if !arrow.Cursed || !isCursedEquipment(arrow) {
+		t.Fatal("curse attack should make an equipped arrow count as cursed equipment")
+	}
+}
+
+func TestManipulationForcesItemUse(t *testing.T) {
+	food := buildItemFromTemplate(1, 0, 0)
+	enemy := CreateEnemyByID(10, 2, 2)
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(6, 6),
+		Player:  Player{Entity: Entity{X: 3, Y: 2}, Inventory: []Item{food}, Satiety: 10, MaxSatiety: 100},
+		Enemies: []Enemy{enemy},
+	}}
+
+	enqueueManipulationAttack(&g.state.Enemies[0], g, func(n int) int { return 0 })
+	g.ActionQueue.Queue[0].Execute(g)
+	if len(g.state.Player.Inventory) != 0 {
+		t.Fatal("manipulation should force the selected food to be consumed")
+	}
+	if len(g.ActionQueue.Queue) < 2 {
+		t.Fatal("forced item use should enqueue the item's normal effects")
+	}
+}
+
+func TestManipulationForcesSafeMove(t *testing.T) {
+	enemy := CreateEnemyByID(10, 2, 2)
+	g := &Game{state: GameState{
+		Map:     makeTestFloorMap(6, 6),
+		Player:  Player{Entity: Entity{X: 3, Y: 2}},
+		Enemies: []Enemy{enemy},
+	}}
+	startX, startY := g.state.Player.X, g.state.Player.Y
+	intn := func(n int) int {
+		if n == 2 {
+			return 1
+		}
+		return 0
+	}
+	enqueueManipulationAttack(&g.state.Enemies[0], g, intn)
+	g.ActionQueue.Queue[0].Execute(g)
+	if g.state.Player.X == startX && g.state.Player.Y == startY {
+		t.Fatal("manipulation should force the player to move")
+	}
+	if g.state.Map[g.state.Player.Y][g.state.Player.X].Blocked {
+		t.Fatal("forced movement must not enter a blocked tile")
+	}
+}
+
+func TestSealedInventoryEnemyCannotUseSpecialAttack(t *testing.T) {
+	item := buildItemFromTemplate(1, 0, 0)
+	enemy := CreateEnemyByID(7, 2, 2)
+	enemy.StatusAilments.Seal = true
+	enemy.SpecialAttackProbability = 1
+	g := &Game{state: GameState{
+		Player:  Player{Entity: Entity{X: 3, Y: 2}, Health: 100, Inventory: []Item{item}},
+		Enemies: []Enemy{enemy},
+	}}
+
+	g.AttackFromEnemy(0)
+	g.ActionQueue.Queue[0].Execute(g)
+	if len(g.state.Player.Inventory) != 1 || g.state.Enemies[0].HeldItem != nil {
+		t.Fatal("sealed inventory enemy should use a normal attack instead of stealing")
+	}
+}
+
+func TestInventoryEnemySaveRoundTrip(t *testing.T) {
+	enemy := CreateEnemyByID(7, 3, 4)
+	enemy.HeldItem = buildItemFromTemplate(1, 0, 0)
+	enemy.Fleeing = true
+	restored := savedToEnemy(enemyToSaved(&enemy))
+	if !restored.Fleeing || restored.HeldItem == nil || restored.HeldItem.GetID() != 1 {
+		t.Fatalf("restored thief state = %#v", restored)
+	}
+}
+
+func TestInventoryEnemiesAppearInFloorSpawnTables(t *testing.T) {
+	wantIDs := map[int]bool{7: false, 8: false, 9: false, 10: false}
+	for floor := 1; floor <= deepestSpawnFloor; floor++ {
+		for _, entry := range FloorSpawnTables[floor] {
+			if _, ok := wantIDs[entry.MonsterID]; ok {
+				wantIDs[entry.MonsterID] = true
+			}
+		}
+	}
+	for id, found := range wantIDs {
+		if !found {
+			t.Fatalf("inventory enemy %d is missing from floor spawn tables", id)
 		}
 	}
 }

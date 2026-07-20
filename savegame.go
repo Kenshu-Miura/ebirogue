@@ -174,7 +174,7 @@ func savedToItem(s SavedItem) (Item, error) {
 
 // enemyToSaved は敵をセーブ用表現へ変換する
 func enemyToSaved(enemy *Enemy) SavedEnemy {
-	return SavedEnemy{
+	saved := SavedEnemy{
 		ID:               enemy.ID,
 		X:                enemy.X,
 		Y:                enemy.Y,
@@ -186,7 +186,13 @@ func enemyToSaved(enemy *Enemy) SavedEnemy {
 		Direction:        int(enemy.Direction),
 		PlayerDiscovered: enemy.PlayerDiscovered,
 		StatusAilments:   enemy.StatusAilments,
+		Fleeing:          enemy.Fleeing,
 	}
+	if enemy.HeldItem != nil {
+		heldItem := itemToSaved(enemy.HeldItem)
+		saved.HeldItem = &heldItem
+	}
+	return saved
 }
 
 // savedToEnemy はセーブ用表現から敵を再構築する。
@@ -201,6 +207,14 @@ func savedToEnemy(s SavedEnemy) Enemy {
 	enemy.Direction = Direction(s.Direction)
 	enemy.PlayerDiscovered = s.PlayerDiscovered
 	enemy.StatusAilments = s.StatusAilments
+	enemy.Fleeing = s.Fleeing
+	if s.HeldItem != nil {
+		if heldItem, err := savedToItem(*s.HeldItem); err == nil {
+			enemy.HeldItem = heldItem
+		} else {
+			enemy.Fleeing = false
+		}
+	}
 	return enemy
 }
 

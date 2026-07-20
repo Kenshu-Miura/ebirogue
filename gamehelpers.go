@@ -34,12 +34,14 @@ func displayItemName(item Item) (name string, identified bool) {
 	return getItemNameWithSharpness(item), identified
 }
 
-// isCursedEquipment は装備品（武器・防具・アクセサリ）が呪われているかどうかを返す。
+// isCursedEquipment は装備品（武器・防具・矢・アクセサリ）が呪われているかどうかを返す。
 func isCursedEquipment(item Equipable) bool {
 	switch v := item.(type) {
 	case *Weapon:
 		return v.Cursed
 	case *Armor:
+		return v.Cursed
+	case *Arrow:
 		return v.Cursed
 	case *Accessory:
 		return v.Cursed
@@ -117,9 +119,25 @@ func (g *Game) useConsumable(item Item) bool {
 func (g *Game) defeatEnemy(index int) {
 	enemy := g.state.Enemies[index]
 	g.EnqueueMessage(fmt.Sprintf("%sを倒した。", enemy.Name), 0.5)
+	g.dropEnemyHeldItem(index)
 	g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
 	g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 	g.state.Player.checkLevelUp(g)
+}
+
+// dropEnemyHeldItem は盗賊系の敵が持つアイテムを撃破地点へ戻す。
+func (g *Game) dropEnemyHeldItem(index int) {
+	enemy := &g.state.Enemies[index]
+	if enemy.HeldItem == nil {
+		return
+	}
+	enemy.HeldItem.SetPosition(enemy.X, enemy.Y)
+	enemy.HeldItem.SetShowOnMiniMap(true)
+	enemy.HeldItem.SetPlayerDiscovered(true)
+	g.state.Items = append(g.state.Items, enemy.HeldItem)
+	g.miniMapDirty = true
+	enemy.HeldItem = nil
+	enemy.Fleeing = false
 }
 
 // applyDamageToEnemy は敵へダメージを与えて金縛りを解除し、倒した場合は撃破処理を行う。

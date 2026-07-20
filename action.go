@@ -566,6 +566,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 
 			if target.Health <= 0 {
 				// 敵を倒した場合、配列から削除
+				g.dropEnemyHeldItem(targetIndex)
 				g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
 			}
 		},
@@ -586,6 +587,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 			Duration: 0.5,
 			Message:  fmt.Sprintf("%sを倒した。", enemy.Name),
 			Execute: func(g *Game) {
+				g.dropEnemyHeldItem(enemyIndex)
 				g.state.Enemies = append(g.state.Enemies[:enemyIndex], g.state.Enemies[enemyIndex+1:]...)
 
 				// 敵の経験値をプレイヤーの所持経験値に加える

@@ -134,6 +134,10 @@ type Game struct {
 	harisenbowImg             *ebiten.Image
 	ishiganiImg               *ebiten.Image
 	bakudanUniImg             *ebiten.Image
+	kosodoroYadokariImg       *ebiten.Image
+	nigiriEbiImg              *ebiten.Image
+	noroiGaniImg              *ebiten.Image
+	ayatsuriKurageImg         *ebiten.Image
 	kaneImg                   *ebiten.Image
 	cardImg                   *ebiten.Image
 	mintiaImg                 *ebiten.Image
@@ -648,6 +652,10 @@ func NewGame() *Game {
 	harisenbowImg := loadImage("img/harisenbow.png")
 	ishiganiImg := loadImage("img/ishigani.png")
 	bakudanUniImg := loadImage("img/bakudan_uni.png")
+	kosodoroYadokariImg := loadImage("img/kosodoro_yadokari.png")
+	nigiriEbiImg := loadImage("img/nigiri_ebi.png")
+	noroiGaniImg := loadImage("img/noroi_gani.png")
+	ayatsuriKurageImg := loadImage("img/ayatsuri_kurage.png")
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
@@ -696,39 +704,43 @@ func NewGame() *Game {
 			Items:    items,
 			MapTraps: traps,
 		},
-		rooms:              newRoom,
-		playerImg:          img,
-		tilesetImg:         tilesetImg,
-		ebiImg:             ebiImg,
-		snakeImg:           snakeImg,
-		mamuruImg:          mamuruImg,
-		honeyImg:           honeyImg,
-		harisenbowImg:      harisenbowImg,
-		ishiganiImg:        ishiganiImg,
-		bakudanUniImg:      bakudanUniImg,
-		kaneImg:            kaneImg,
-		cardImg:            cardImg,
-		mintiaImg:          mintiaImg,
-		sausageImg:         sausageImg,
-		weaponImg:          weaponImg,
-		armorImg:           armorImg,
-		arrowImg:           arrowImg,
-		caneImg:            caneImg,
-		effectImg:          effectImg,
-		accessoryImg:       accessoryImg,
-		hatenaImg:          hatenaImg,
-		sleepTrapImg:       sleepTrapImg,
-		poisonArrowTrapImg: poisonArrowTrapImg,
-		slowTrapImg:        slowTrapImg,
-		mineTrapImg:        mineTrapImg,
-		rustTrapImg:        rustTrapImg,
-		potImg:             potImg,
-		offsetX:            0,
-		offsetY:            0,
-		Floor:              newFloor,
-		frameCount:         0,
-		tmpPlayerOffsetX:   0,
-		tmpPlayerOffsetY:   0,
+		rooms:               newRoom,
+		playerImg:           img,
+		tilesetImg:          tilesetImg,
+		ebiImg:              ebiImg,
+		snakeImg:            snakeImg,
+		mamuruImg:           mamuruImg,
+		honeyImg:            honeyImg,
+		harisenbowImg:       harisenbowImg,
+		ishiganiImg:         ishiganiImg,
+		bakudanUniImg:       bakudanUniImg,
+		kosodoroYadokariImg: kosodoroYadokariImg,
+		nigiriEbiImg:        nigiriEbiImg,
+		noroiGaniImg:        noroiGaniImg,
+		ayatsuriKurageImg:   ayatsuriKurageImg,
+		kaneImg:             kaneImg,
+		cardImg:             cardImg,
+		mintiaImg:           mintiaImg,
+		sausageImg:          sausageImg,
+		weaponImg:           weaponImg,
+		armorImg:            armorImg,
+		arrowImg:            arrowImg,
+		caneImg:             caneImg,
+		effectImg:           effectImg,
+		accessoryImg:        accessoryImg,
+		hatenaImg:           hatenaImg,
+		sleepTrapImg:        sleepTrapImg,
+		poisonArrowTrapImg:  poisonArrowTrapImg,
+		slowTrapImg:         slowTrapImg,
+		mineTrapImg:         mineTrapImg,
+		rustTrapImg:         rustTrapImg,
+		potImg:              potImg,
+		offsetX:             0,
+		offsetY:             0,
+		Floor:               newFloor,
+		frameCount:          0,
+		tmpPlayerOffsetX:    0,
+		tmpPlayerOffsetY:    0,
 		ActionQueue: ActionQueue{
 			Queue: make([]Action, 0),
 		},

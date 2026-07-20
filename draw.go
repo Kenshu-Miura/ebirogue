@@ -524,6 +524,14 @@ func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
 		img = g.ishiganiImg
 	case "BombUrchin":
 		img = g.bakudanUniImg
+	case "ThiefHermitCrab":
+		img = g.kosodoroYadokariImg
+	case "NigiriShrimp":
+		img = g.nigiriEbiImg
+	case "CurseCrab":
+		img = g.noroiGaniImg
+	case "PuppeteerJellyfish":
+		img = g.ayatsuriKurageImg
 	}
 	return img
 }
