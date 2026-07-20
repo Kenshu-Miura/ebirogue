@@ -619,6 +619,11 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			if netDamage < 0 { // Ensure damage does not go below 0
 				netDamage = 0
 			}
+			weaponAbilities := []EquipmentAbilityID(nil)
+			if g.state.Player.EquippedWeapon != nil {
+				weaponAbilities = g.state.Player.EquippedWeapon.Abilities
+			}
+			netDamage, slayerEffective := applySlayerBonus(netDamage, weaponAbilities, enemy.Traits)
 
 			dx, dy := enemy.X-g.state.Player.X, enemy.Y-g.state.Player.Y
 
@@ -628,9 +633,13 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 			g.attackTimer = 0.5 // set timer for 0.5 seconds
 			enemyIndex := i     // capture the index here
 
+			message := fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(g.state.Enemies[enemyIndex].Name), netDamage)
+			if slayerEffective {
+				message = "特効！" + message
+			}
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(g.state.Enemies[enemyIndex].Name), netDamage),
+				Message:  message,
 				Execute: func(g *Game) {
 					// 攻撃を受けた敵の仮眠状態を解除
 					g.WakeUpSleepingEnemyByAttack(enemyIndex)

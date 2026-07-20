@@ -211,6 +211,9 @@ func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 }
 
 func (g *Game) getItemImage(item Item) *ebiten.Image {
+	if img := g.specialWeaponImages[item.GetType()]; img != nil {
+		return img
+	}
 	var img *ebiten.Image
 	switch item.GetType() {
 	case "Kane":
@@ -547,6 +550,8 @@ func (g *Game) getEnemyImage(enemy Enemy) *ebiten.Image {
 		img = g.wanashiYadokariImg
 	case "MimicClam":
 		img = g.mimicGaiImg
+	case "SeaDragon":
+		img = g.seaDragonImg
 	}
 	return img
 }

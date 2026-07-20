@@ -144,6 +144,7 @@ type Game struct {
 	irekaeDakoImg             *ebiten.Image
 	wanashiYadokariImg        *ebiten.Image
 	mimicGaiImg               *ebiten.Image
+	seaDragonImg              *ebiten.Image
 	upperEnemyImages          map[string]*ebiten.Image
 	kaneImg                   *ebiten.Image
 	cardImg                   *ebiten.Image
@@ -151,6 +152,7 @@ type Game struct {
 	sausageImg                *ebiten.Image
 	tilesetImg                *ebiten.Image
 	weaponImg                 *ebiten.Image
+	specialWeaponImages       map[string]*ebiten.Image
 	armorImg                  *ebiten.Image
 	arrowImg                  *ebiten.Image
 	caneImg                   *ebiten.Image
@@ -665,12 +667,28 @@ var upperEnemyImagePaths = map[string]string{
 	"ExchangeOctopus":       "img/tokkae_dako.png",
 	"TrapMasterHermitCrab":  "img/wana_master_yadokari.png",
 	"MimicConch":            "img/bake_horagai.png",
+	"AzureSeaDragon":        "img/azure_sea_dragon.png",
+}
+
+var specialWeaponImagePaths = map[string]string{
+	"DragonKiller":   "img/dragon_killer.png",
+	"ExorcismSickle": "img/exorcism_sickle.png",
+	"OneEyeKiller":   "img/one_eye_killer.png",
+	"DrainBuster":    "img/drain_buster.png",
 }
 
 func loadUpperEnemyImages() map[string]*ebiten.Image {
 	images := make(map[string]*ebiten.Image, len(upperEnemyImagePaths))
 	for monsterType, path := range upperEnemyImagePaths {
 		images[monsterType] = loadImage(path)
+	}
+	return images
+}
+
+func loadSpecialWeaponImages() map[string]*ebiten.Image {
+	images := make(map[string]*ebiten.Image, len(specialWeaponImagePaths))
+	for weaponType, path := range specialWeaponImagePaths {
+		images[weaponType] = loadImage(path)
 	}
 	return images
 }
@@ -697,11 +715,13 @@ func NewGame() *Game {
 	irekaeDakoImg := loadImage("img/irekae_dako.png")
 	wanashiYadokariImg := loadImage("img/wanashi_yadokari.png")
 	mimicGaiImg := loadImage("img/mimic_gai.png")
+	seaDragonImg := loadImage("img/sea_dragon.png")
 	upperEnemyImages := loadUpperEnemyImages()
 	cardImg := loadImage("img/card.png")
 	sausageImg := loadImage("img/sausage.png")
 	mintiaImg := loadImage("img/mintia.png")
 	weaponImg := loadImage("img/weapon.png")
+	specialWeaponImages := loadSpecialWeaponImages()
 	armorImg := loadImage("img/armor.png")
 	arrowImg := loadImage("img/arrow.png")
 	caneImg := loadImage("img/cane.png")
@@ -766,12 +786,14 @@ func NewGame() *Game {
 		irekaeDakoImg:       irekaeDakoImg,
 		wanashiYadokariImg:  wanashiYadokariImg,
 		mimicGaiImg:         mimicGaiImg,
+		seaDragonImg:        seaDragonImg,
 		upperEnemyImages:    upperEnemyImages,
 		kaneImg:             kaneImg,
 		cardImg:             cardImg,
 		mintiaImg:           mintiaImg,
 		sausageImg:          sausageImg,
 		weaponImg:           weaponImg,
+		specialWeaponImages: specialWeaponImages,
 		armorImg:            armorImg,
 		arrowImg:            arrowImg,
 		caneImg:             caneImg,

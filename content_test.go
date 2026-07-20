@@ -88,6 +88,26 @@ func TestAddedEquipmentTemplates(t *testing.T) {
 		}
 	}
 
+	slayerWeapons := map[int]EquipmentAbilityID{
+		49: AbilityDragonSlayer,
+		50: AbilityGhostSlayer,
+		51: AbilityOneEyeSlayer,
+		52: AbilityDrainerSlayer,
+	}
+	for id, wantAbility := range slayerWeapons {
+		weapon, ok := buildItemFromTemplate(id, 0, 0).(*Weapon)
+		if !ok || !hasEquipmentAbility(weapon.Abilities, wantAbility) {
+			t.Fatalf("slayer weapon %d = %#v, want ability %q", id, weapon, wantAbility)
+		}
+		restored, err := savedToItem(itemToSaved(weapon))
+		if err != nil {
+			t.Fatalf("restore slayer weapon %d: %v", id, err)
+		}
+		if !hasEquipmentAbility(restored.(*Weapon).Abilities, wantAbility) {
+			t.Fatalf("restored slayer weapon %d lost ability %q", id, wantAbility)
+		}
+	}
+
 	armors := map[int]int{23: 2, 24: 5, 25: 3}
 	for id, wantPower := range armors {
 		armor, ok := buildItemFromTemplate(id, 0, 0).(*Armor)
@@ -139,6 +159,78 @@ func TestAddedContentDefinitions(t *testing.T) {
 	}
 }
 
+func TestEnemyTraitsForSlayerWeapons(t *testing.T) {
+	wantTraits := map[int][]EnemyTrait{
+		1:  {EnemyTraitDrainer},
+		3:  {EnemyTraitOneEye, EnemyTraitDrainer},
+		11: {EnemyTraitGhost},
+		36: {EnemyTraitDragon},
+		37: {EnemyTraitDragon},
+	}
+	for id, traits := range wantTraits {
+		definition, ok := MonsterDefinitions[id]
+		if !ok {
+			t.Fatalf("monster %d is missing", id)
+		}
+		for _, trait := range traits {
+			if !hasEnemyTrait(definition.Traits, trait) {
+				t.Fatalf("monster %d (%s) is missing trait %q", id, definition.Name, trait)
+			}
+		}
+	}
+
+	enemy := CreateEnemyByID(36, 2, 3)
+	restored := savedToEnemy(enemyToSaved(&enemy))
+	if !hasEnemyTrait(restored.Traits, EnemyTraitDragon) {
+		t.Fatal("restored sea dragon lost its dragon trait")
+	}
+
+	foundDragon := map[int]bool{36: false, 37: false}
+	for floor := 1; floor <= deepestSpawnFloor; floor++ {
+		for _, entry := range FloorSpawnTables[floor] {
+			if _, ok := foundDragon[entry.MonsterID]; ok {
+				foundDragon[entry.MonsterID] = true
+			}
+		}
+	}
+	for id, found := range foundDragon {
+		if !found {
+			t.Fatalf("dragon monster %d is missing from floor spawn tables", id)
+		}
+	}
+}
+
+func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
+	weapon := buildItemFromTemplate(49, 0, 0).(*Weapon)
+	enemy := CreateEnemyByID(36, 2, 1)
+	g := &Game{
+		state: GameState{
+			Map: makeTestFloorMap(5, 5),
+			Player: Player{
+				Entity:         Entity{X: 1, Y: 1},
+				AttackPower:    20,
+				Power:          8,
+				Level:          1,
+				EquippedWeapon: weapon,
+			},
+			Enemies: []Enemy{enemy},
+		},
+	}
+
+	if !g.CheckForEnemies(1, 0) || len(g.ActionQueue.Queue) != 1 {
+		t.Fatal("normal attack was not queued")
+	}
+	if !strings.HasPrefix(g.ActionQueue.Queue[0].Message, "特効！") {
+		t.Fatalf("attack message = %q, want slayer indication", g.ActionQueue.Queue[0].Message)
+	}
+	before := g.state.Enemies[0].Health
+	g.ActionQueue.Queue[0].Execute(g)
+	damage := before - g.state.Enemies[0].Health
+	if damage < 29 || damage > 32 {
+		t.Fatalf("slayer attack damage = %d, want 29..32", damage)
+	}
+}
+
 func TestSpecialMovementEnemyDefinitions(t *testing.T) {
 	wantMovement := map[int]SpecialMovement{
 		11: SpecialMovementWallPass,
@@ -164,10 +256,10 @@ func TestSpecialMovementEnemyDefinitions(t *testing.T) {
 }
 
 func TestEveryBaseMonsterHasUpperSpecies(t *testing.T) {
-	if len(MonsterLevelUpTable) != 18 {
-		t.Fatalf("level-up mappings = %d, want 18", len(MonsterLevelUpTable))
+	if len(MonsterLevelUpTable) != len(baseMonsterDefinitions) {
+		t.Fatalf("level-up mappings = %d, want one for each of %d base monsters", len(MonsterLevelUpTable), len(baseMonsterDefinitions))
 	}
-	for baseID := 0; baseID < 18; baseID++ {
+	for baseID := range baseMonsterDefinitions {
 		upperID, ok := MonsterLevelUpTable[baseID]
 		if !ok {
 			t.Fatalf("base monster %d has no upper species", baseID)
@@ -190,6 +282,14 @@ func TestEveryBaseMonsterHasUpperSpecies(t *testing.T) {
 			upper.SpecialAttackProbability != base.SpecialAttackProbability || upper.SpecialMovement != base.SpecialMovement ||
 			upper.Disguise != base.Disguise {
 			t.Fatalf("upper species %d did not inherit base monster %d abilities", upperID, baseID)
+		}
+		if len(upper.Traits) != len(base.Traits) {
+			t.Fatalf("upper species %d did not inherit base monster %d traits", upperID, baseID)
+		}
+		for _, trait := range base.Traits {
+			if !hasEnemyTrait(upper.Traits, trait) {
+				t.Fatalf("upper species %d is missing inherited trait %q", upperID, trait)
+			}
 		}
 		if upper.RangedAttack.Kind != base.RangedAttack.Kind || upper.RangedAttack.MinRange != base.RangedAttack.MinRange ||
 			upper.RangedAttack.MaxRange != base.RangedAttack.MaxRange || upper.RangedAttack.BlastRadius != base.RangedAttack.BlastRadius {
@@ -444,6 +544,10 @@ func TestEnemySprites(t *testing.T) {
 		"img/irekae_dako.png",
 		"img/wanashi_yadokari.png",
 		"img/mimic_gai.png",
+		"img/sea_dragon.png",
+	}
+	for _, path := range specialWeaponImagePaths {
+		files = append(files, path)
 	}
 	for _, pair := range upperSpeciesSpritePairs() {
 		files = append(files, pair[1])
@@ -490,6 +594,7 @@ func upperSpeciesSpritePairs() [][2]string {
 		{"img/irekae_dako.png", "img/tokkae_dako.png"},
 		{"img/wanashi_yadokari.png", "img/wana_master_yadokari.png"},
 		{"img/mimic_gai.png", "img/bake_horagai.png"},
+		{"img/sea_dragon.png", "img/azure_sea_dragon.png"},
 	}
 }
 

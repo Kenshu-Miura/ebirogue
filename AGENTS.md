@@ -73,8 +73,8 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜44 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
-| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜35 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜52 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
+| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜37 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
 | 罠 | `mapTrapTemplates []mapTrapTemplate`（maptraps.go） | `createMapTrapByID` | 同ファイルの効果クロージャ |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
@@ -155,11 +155,6 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 
 ### Priority A: equipment abilities
 
-- 特効武器を追加する。
-  - ドラゴン系に強い武器
-  - ゴースト系に強い武器
-  - 一ツ目系に強い武器
-  - 能力低下系の敵に強い武器
 - 攻撃方法が変わる武器を追加する。
   - 正面3方向を攻撃する武器
   - 命中率を上げる武器

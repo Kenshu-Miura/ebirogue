@@ -69,6 +69,7 @@ type Enemy struct {
 	RangedAttack             RangedAttackDefinition
 	SpecialMovement          SpecialMovement
 	Disguise                 EnemyDisguise
+	Traits                   []EnemyTrait
 	Revealed                 bool
 	ShowOnMiniMap            bool
 	StatusAilments           StatusAilments // 状態異常
@@ -124,6 +125,7 @@ type MonsterDefinition struct {
 	RangedAttack             RangedAttackDefinition
 	SpecialMovement          SpecialMovement
 	Disguise                 EnemyDisguise
+	Traits                   []EnemyTrait
 }
 
 // upperMonsterDefinition は基本種の固有能力を引き継ぎ、上位種の能力値と表示情報を設定する。
@@ -164,6 +166,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		AttackPower:      7,
 		DefensePower:     1,
 		ExperiencePoints: 10,
+		Traits:           []EnemyTrait{EnemyTraitDrainer},
 		SpecialAttack: func(e *Enemy, g *Game) {
 			var message string
 			if g.state.Player.Power > 0 {
@@ -217,6 +220,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		AttackPower:      5,
 		DefensePower:     3,
 		ExperiencePoints: 12,
+		Traits:           []EnemyTrait{EnemyTraitOneEye, EnemyTraitDrainer},
 		SpecialAttack: func(e *Enemy, g *Game) {
 			enemyName := e.Name
 			if g.state.Player.StatusAilments.Blind > 0 {
@@ -348,6 +352,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		AttackPower:      8,
 		DefensePower:     2,
 		ExperiencePoints: 18,
+		Traits:           []EnemyTrait{EnemyTraitGhost},
 		SpecialMovement:  SpecialMovementWallPass,
 	},
 	12: {
@@ -422,11 +427,23 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		ExperiencePoints: 36,
 		Disguise:         EnemyDisguiseStairs,
 	},
+	36: {
+		ID:               36,
+		Type:             "SeaDragon",
+		Name:             "海竜",
+		Char:             'D',
+		Health:           68,
+		MaxHealth:        68,
+		AttackPower:      15,
+		DefensePower:     9,
+		ExperiencePoints: 55,
+		Traits:           []EnemyTrait{EnemyTraitDragon},
+	},
 }
 
 // buildMonsterDefinitions は基本種へ固有能力を継承した上位種を加える。
 func buildMonsterDefinitions() map[int]MonsterDefinition {
-	definitions := make(map[int]MonsterDefinition, 36)
+	definitions := make(map[int]MonsterDefinition, 38)
 	for id, definition := range baseMonsterDefinitions {
 		definitions[id] = definition
 	}
@@ -449,6 +466,7 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 	definitions[33] = upperMonsterDefinition(definitions[15], 33, "TrapMasterHermitCrab", "ワナマスターヤドカリ", 74, 14, 11, 68)
 	definitions[34] = upperMonsterDefinition(definitions[16], 34, "MimicConch", "化けホラ貝", 62, 16, 10, 58)
 	definitions[35] = upperMonsterDefinition(definitions[17], 35, "MimicConch", "化けホラ貝", 74, 18, 11, 70)
+	definitions[37] = upperMonsterDefinition(definitions[36], 37, "AzureSeaDragon", "蒼海竜", 108, 22, 14, 110)
 
 	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24} {
 		definition := definitions[id]
@@ -481,6 +499,7 @@ var MonsterLevelUpTable = map[int]int{
 	15: 33, // ワナシヤドカリ -> ワナマスターヤドカリ
 	16: 34, // 道具に擬態する化け貝 -> 化けホラ貝
 	17: 35, // 階段に擬態する化け貝 -> 化けホラ貝
+	36: 37, // 海竜 -> 蒼海竜
 }
 
 // levelUpEnemy は敵を同系統の上位種へ変化させる。
@@ -515,6 +534,7 @@ func (g *Game) levelUpEnemy(index int) bool {
 	enemy.RangedAttack = definition.RangedAttack
 	enemy.SpecialMovement = definition.SpecialMovement
 	enemy.Disguise = definition.Disguise
+	enemy.Traits = append([]EnemyTrait(nil), definition.Traits...)
 	g.EnqueueMessage(fmt.Sprintf("%sは%sにレベルアップした。", oldName, enemy.Name), 0.5)
 	return true
 }
@@ -544,6 +564,7 @@ func CreateEnemyByID(id, x, y int) Enemy {
 		RangedAttack:             def.RangedAttack,
 		SpecialMovement:          def.SpecialMovement,
 		Disguise:                 def.Disguise,
+		Traits:                   append([]EnemyTrait(nil), def.Traits...),
 		Revealed:                 def.Disguise == EnemyDisguiseNone,
 		ShowOnMiniMap:            true,
 	}
