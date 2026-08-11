@@ -9,6 +9,7 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 - 全ソースはリポジトリ直下の単一 `main` パッケージにフラットに配置（サブパッケージは `ebitenstub/` のみ）。
 - コメント・メッセージ・アイテム名などは日本語が基本。
 - 画面は論理解像度 640x480（`Layout`）、タイルは 30x30 ピクセル（`tileSize`）。マップは 70x70 タイル。
+- プレイヤー向け機能とシステムの実装状況は `IMPLEMENTED_FEATURES.md` を正本とする。**機能・コンテンツを追加、変更、削除する変更では、同じ変更内で同文書の該当項目も追加・修正・削除し、現在のコードと一致させること。** 未実装の予定は同文書へ混ぜず、このファイルの Implementation roadmap で管理する。
 
 ## ビルド・実行・テスト
 
