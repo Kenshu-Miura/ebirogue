@@ -19,6 +19,10 @@
 /ebirogue
 /ebirogue.exe
 
+# Web (WASM) build artifacts
+/ebirogue.wasm
+/public/
+
 # Save and settings files generated at runtime
 ebirogue_save.json
 ebirogue_settings.json

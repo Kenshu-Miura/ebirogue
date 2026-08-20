@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 )
 
@@ -14,9 +13,9 @@ import (
 
 // loadSettings は設定ファイルを読み込む。存在しない・壊れている場合は初期値を返す
 func loadSettings() GameSettings {
-	data, err := os.ReadFile(settingsFileName)
+	data, err := storageRead(settingsFileName)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !storageIsNotExist(err) {
 			log.Printf("設定ファイルの読み込みに失敗: %v", err)
 		}
 		return defaultSettings()
@@ -36,7 +35,7 @@ func saveSettings(settings GameSettings) {
 		log.Printf("設定のシリアライズに失敗: %v", err)
 		return
 	}
-	if err := os.WriteFile(settingsFileName, data, 0644); err != nil {
+	if err := storageWrite(settingsFileName, data); err != nil {
 		log.Printf("設定ファイルの保存に失敗: %v", err)
 	}
 }
@@ -515,7 +514,7 @@ func (g *Game) saveSuspendData() error {
 	if err != nil {
 		return fmt.Errorf("中断データのシリアライズに失敗: %w", err)
 	}
-	if err := os.WriteFile(saveFileName, data, 0644); err != nil {
+	if err := storageWrite(saveFileName, data); err != nil {
 		return fmt.Errorf("中断データの保存に失敗: %w", err)
 	}
 	return nil
@@ -530,7 +529,7 @@ func (g *Game) autoSave() {
 
 // deleteSaveFile は中断データを削除する
 func deleteSaveFile() {
-	if err := os.Remove(saveFileName); err != nil && !os.IsNotExist(err) {
+	if err := storageRemove(saveFileName); err != nil && !storageIsNotExist(err) {
 		log.Printf("中断データの削除に失敗: %v", err)
 	}
 }
@@ -538,9 +537,9 @@ func deleteSaveFile() {
 // tryResumeFromSave は中断データがあれば復元する。
 // データが壊れている場合は削除して新しい冒険を開始する（安全なフォールバック）。
 func (g *Game) tryResumeFromSave() bool {
-	data, err := os.ReadFile(saveFileName)
+	data, err := storageRead(saveFileName)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !storageIsNotExist(err) {
 			log.Printf("中断データの読み込みに失敗: %v", err)
 		}
 		return false

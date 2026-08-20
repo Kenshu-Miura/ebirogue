@@ -28,6 +28,24 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 - `go test -tags test ./...`: Ebiten 依存ファイルを除外し、`*_stub.go` と `ebitenstub/` で代替した軽量ビルド。`autostop_test.go` や `inventory_view_test.go` など純粋ロジックのテストが対象。
 - **変更時は両方実行すること。**
 
+### ブラウザ配布とデプロイ（WASM / Netlify）
+
+```bash
+bash ./build_web.sh                        # public/ に index.html + ebirogue.wasm + wasm_exec.js を生成
+python -m http.server 8080 --directory public   # ローカル配信（http://localhost:8080）
+```
+
+- `build_web.sh`: WASM をビルドし、`wasm_exec.js`（`$(go env GOROOT)/lib/wasm/`）と `web/index.html` を `public/` へまとめる。
+- `web/index.html`: WASM ローダー。`wasm_exec.js` を読み込み `ebirogue.wasm` を起動する。読み込み・エラー表示、`instantiateStreaming` 失敗時の `arrayBuffer` フォールバック付き。
+- `netlify.toml`: Netlify のビルド設定。`bash ./build_web.sh` でビルドし `public/` を公開、`GO_VERSION` を `go.mod` と揃え、`.wasm` に `Content-Type: application/wasm` を付ける。リポジトリを Netlify に接続すればプッシュのたびに自動ビルド・公開される。
+- 画像は `main.go` の `//go:embed img/*.png`（`imgFS`）でバイナリへ埋め込むため、ファイルシステムの無い WASM でも `loadImage` が動く。**新しい画像を追加したら `img/*.png` に置くだけで自動的に埋め込まれる。**
+- `public/` と `ebirogue.wasm` はビルド成果物なのでコミットしない（`.gitignore` 済み）。
+
+### ブラウザでの動作テスト（Claude Code / Codex）
+
+- `.claude/launch.json` に `public/` を配信する `web` 設定がある。`build_web.sh` を実行してからブラウザ MCP の `preview_start`（name: `web`）で起動し、`read_console_messages` / `read_network_requests` で起動を確認できる。
+- **注意**: ブラウザのタブが非表示（ペイン非表示）の間は `requestAnimationFrame` が止まり、Ebiten のゲームループが進まないためキーボード入力を伴う操作テストはできない。ゲーム進行を伴うテストはペインを表示した状態で行うこと。起動・画像読み込み・`localStorage` の確認は非表示でも可能。
+
 ### ビルドタグの仕組み（重要）
 
 | 種別 | タグ | 例 |
@@ -100,8 +118,9 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 ## セーブ・設定システム
 
 - `savedata.go`（タグなし・純粋）: `SaveData`/`SavedPlayer` 等の構造体、`decodeSaveData`、破損検出の `validateSaveData`、`GameSettings`。`saveDataVersion = 1`（構造を壊す変更をしたらインクリメント。旧セーブは破棄され新規冒険になる）。
-- `savegame.go`（`!test`）: `os.ReadFile`/`WriteFile` による I/O、`buildSaveData`/`applySaveData`、メニューの「中断」→ `saveSuspendData`、フロア移動時の `autoSave`、起動時の `tryResumeFromSave`、死亡時の `deleteSaveFile`。
-- ファイルはカレントディレクトリの `ebirogue_save.json` / `ebirogue_settings.json`。**WASM ではファイル保存が失敗する**（ロードマップに localStorage 対応の残タスクあり）。
+- `savegame.go`（`!test`）: セーブ/設定の I/O、`buildSaveData`/`applySaveData`、メニューの「中断」→ `saveSuspendData`、フロア移動時の `autoSave`、起動時の `tryResumeFromSave`、死亡時の `deleteSaveFile`。
+- 保存先は `storage.go`（`!js`, `os` ファイル）と `storage_js.go`（`js`, ブラウザ `localStorage`）が `storageRead`/`storageWrite`/`storageRemove`/`storageIsNotExist` として抽象化する。`savegame.go` は `os` を直接呼ばずこれらを使う。**新しい保存 I/O もこの4関数経由にすること。**
+- キーは `ebirogue_save.json` / `ebirogue_settings.json`。ネイティブ版はカレントディレクトリのファイル、WASM 版は同名キーの `localStorage` 項目。**WASM でも中断・オートセーブが機能する。**
 
 ## ゲーム仕様早見表
 
@@ -181,7 +200,6 @@ GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
 - 設定メニューを拡張する（フルスクリーン・ミニマップ表示は実装済み）。
   - BGM・効果音の音量設定（音声システム自体が未実装のため、その導入後に追加する）
   - キー設定（キーの割り当て変更）
-- WASMビルド向けの中断セーブ保存先（ローカルストレージ等）を用意する。現在はOSのファイルシステムに保存するため、WASMでは中断セーブが失敗しメッセージを表示する。
 
 ### Priority B: dungeon systems
 

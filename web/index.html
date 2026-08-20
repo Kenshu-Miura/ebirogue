@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>エビローグ - ebirogue</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #101014;
+    color: #e6e6e6;
+    font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    overflow: hidden;
+  }
+  #game-container {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Ebiten が生成する canvas を中央・アスペクト比維持で配置する */
+  canvas {
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+    outline: none;
+    background: #000;
+  }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: #101014;
+    transition: opacity 0.4s ease;
+    z-index: 10;
+    text-align: center;
+    padding: 24px;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #title { font-size: 28px; font-weight: 700; letter-spacing: 0.08em; }
+  #subtitle { font-size: 14px; color: #9aa0a6; }
+  #status { font-size: 13px; color: #7dd3fc; min-height: 1.2em; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 4px solid #2a2a33;
+    border-top-color: #7dd3fc;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #error {
+    display: none;
+    max-width: 560px;
+    color: #fca5a5;
+    font-size: 13px;
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+  #controls {
+    position: fixed;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #5a606a;
+    z-index: 5;
+    pointer-events: none;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <div id="overlay">
+    <div id="title">エビローグ</div>
+    <div id="subtitle">海老さんのターン制ローグライク</div>
+    <div class="spinner" id="spinner"></div>
+    <div id="status">ゲームを読み込んでいます…</div>
+    <div id="error"></div>
+  </div>
+
+  <div id="controls">方向キー:移動 / Z:攻撃・決定 / X:ダッシュ・戻る / C:メニュー / L:履歴 / D:矢を撃つ</div>
+
+  <script src="wasm_exec.js"></script>
+  <script>
+    const overlay = document.getElementById("overlay");
+    const statusEl = document.getElementById("status");
+    const spinnerEl = document.getElementById("spinner");
+    const errorEl = document.getElementById("error");
+
+    function showError(msg) {
+      spinnerEl.style.display = "none";
+      statusEl.style.display = "none";
+      errorEl.style.display = "block";
+      errorEl.textContent = msg;
+    }
+
+    if (typeof Go === "undefined") {
+      showError("wasm_exec.js の読み込みに失敗しました。ビルド手順（build_web.sh）を確認してください。");
+    } else if (!("instantiateStreaming" in WebAssembly)) {
+      // 古いブラウザ向けフォールバックを用意する
+      WebAssembly.instantiateStreaming = async (resp, importObject) => {
+        const source = await (await resp).arrayBuffer();
+        return await WebAssembly.instantiate(source, importObject);
+      };
+    }
+
+    async function boot() {
+      try {
+        const go = new Go();
+        statusEl.textContent = "WASM をダウンロード中…";
+        let result;
+        try {
+          result = await WebAssembly.instantiateStreaming(fetch("ebirogue.wasm"), go.importObject);
+        } catch (streamErr) {
+          // MIME タイプが application/wasm でない場合はストリーミングが失敗するためフォールバック
+          console.warn("instantiateStreaming に失敗、arrayBuffer で再試行します", streamErr);
+          const resp = await fetch("ebirogue.wasm");
+          const bytes = await resp.arrayBuffer();
+          result = await WebAssembly.instantiate(bytes, go.importObject);
+        }
+        statusEl.textContent = "起動中…";
+        // Ebiten の canvas 生成後にオーバーレイを消す
+        setTimeout(() => {
+          overlay.classList.add("hidden");
+          const canvas = document.querySelector("canvas");
+          if (canvas) canvas.focus();
+        }, 400);
+        await go.run(result.instance); // ゲームが終了（中断）するまでここで待機する
+        // ゲームループ終了後（中断セーブ後）に再読込を案内する
+        overlay.classList.remove("hidden");
+        spinnerEl.style.display = "none";
+        statusEl.textContent = "冒険を中断しました。ページを再読み込みすると続きから再開できます。";
+      } catch (err) {
+        console.error(err);
+        showError("ゲームの起動に失敗しました:\n" + (err && err.message ? err.message : err));
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Netlify 設定: Go WASM をビルドしてブラウザで遊べるように公開する。
+[build]
+  command = "bash ./build_web.sh"
+  publish = "public"
+
+[build.environment]
+  # go.mod と揃えた Go バージョンを使う
+  GO_VERSION = "1.24.5"
+
+# .wasm を正しい MIME タイプで配信し（instantiateStreaming を有効にする）、
+# 毎ビルドで再生成される本体はキャッシュしない
+[[headers]]
+  for = "/ebirogue.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "no-cache"

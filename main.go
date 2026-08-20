@@ -3,6 +3,7 @@
 package main
 
 import (
+	"embed"
 	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
@@ -12,6 +13,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
+
+// imgFS は img/ 配下の画像をバイナリへ埋め込む。
+// これにより OS のファイルシステムが無い WASM でも画像を読み込める。
+//
+//go:embed img/*.png
+var imgFS embed.FS
 
 const (
 	tileSize      = 30 // タイルのサイズを30x30ピクセルに設定
@@ -658,9 +665,15 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return 640, 480
 }
 
-// loadImage is a helper function to load an image from a file.
+// loadImage is a helper function to load an image from the embedded filesystem.
+// 埋め込み FS から読み込むため、ネイティブでも WASM でも同じコードで動く。
 func loadImage(filepath string) *ebiten.Image {
-	img, _, err := ebitenutil.NewImageFromFile(filepath)
+	f, err := imgFS.Open(filepath)
+	if err != nil {
+		log.Fatalf("failed to open image %s: %v", filepath, err)
+	}
+	defer f.Close()
+	img, _, err := ebitenutil.NewImageFromReader(f)
 	if err != nil {
 		log.Fatalf("failed to load image from %s: %v", filepath, err)
 	}
