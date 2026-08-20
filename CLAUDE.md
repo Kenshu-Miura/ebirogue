@@ -1,55 +1,18 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**このプロジェクトのガイドラインは `AGENTS.md` に一本化されています。**
 
-## Common Development Commands
+Claude Code はセッション開始時にこの `CLAUDE.md` を自動で読み込みますが、`AGENTS.md`
+は自動では読み込みません。そのため、以下を必ず守ってください。
 
-### Running the Game
-- `go run .` - Run the game locally
-- `GOOS=js GOARCH=wasm go build -o ebirogue.wasm` - Build for web (WASM)
+## セッション開始時の必須アクション
 
-### Testing
-- `go test` - Run all tests
-- `go test -v` - Run tests with verbose output
-- `go test ./...` - Run tests in all subdirectories
+1. **作業を始める前に、必ずリポジトリ直下の `AGENTS.md` を最初から最後まで読むこと。**
+2. 開発方針・ビルド/テストコマンド・ファイル分担・コンテンツ追加手順・コーディング
+   スタイル・実装ロードマップなど、このプロジェクトのすべての指示は `AGENTS.md` を
+   正本とする。本ファイル `CLAUDE.md` には固有の指示を書かない（重複・不整合を防ぐため）。
+3. `AGENTS.md` の内容が本ファイルと矛盾する場合は、常に `AGENTS.md` を優先する。
 
-### Building
-- `go build` - Build the executable
-- `go mod tidy` - Clean up module dependencies
-
-## Architecture Overview
-
-This is a roguelike game written in Go using the Ebiten game engine. The codebase is organized into focused files handling different game aspects:
-
-### Core Game Loop
-- `main.go` - Entry point, initializes Game struct and runs with `ebiten.RunGame`
-- `Game` struct holds all game state (player, enemies, items, map, etc.)
-- `ActionQueue` system manages turn-based actions and animations via `HandleActionQueue`
-
-### Key Components
-- **Map Generation** (`map.go`) - Room generation, connections, lighting, stairs, minimap
-- **Input Handling** (`input.go`) - Keyboard input for movement, inventory, item usage
-- **Player Movement** (`move.go`) - Player movement, level up/death, game reset
-- **Enemy AI** (`enemy_ai.go`) - Enemy movement, chasing, status-ailment behavior
-- **Rendering** (`draw.go` world/animation, `draw_hud.go` HUD/minimap, `draw_ui.go` menus/windows)
-- **Item System** (`item.go`, `items.go`, `itemeffects.go`) - Item definitions, effects, throwing mechanics
-- **Enemy System** (`enemies.go`) - Enemy definitions and spawning
-- **Shared Helpers** (`direction.go`, `gamehelpers.go`) - Direction/delta conversion, message actions, damage/defeat, cursed-equipment checks
-
-### Interface System
-- `interfaces.go` defines core interfaces: `Item`, `Equipable`, `Identifiable`
-- Equipment items implement `Equipable` to modify player stats when equipped
-- Items have various effect functions in `itemeffects.go`
-
-### Special Systems
-- **Lighting System** - `updateTileBrightness` shows only current room and adjacent tiles
-- **Stub System** - `*_stub.go` files provide build stubs for testing without Ebiten dependencies
-- **WASM Support** - Can be built for web deployment with appropriate build tags
-
-## Development Notes
-
-- Game uses Japanese comments throughout the codebase
-- Turn-based action system queues actions for sequential execution
-- Map generation uses room-based algorithm with connecting corridors
-- Inventory and equipment system with stat modifications
-- Tile-based visibility and exploration tracking
+> なぜこの構成か: Claude Code は `CLAUDE.md` を、Codex は `AGENTS.md` を起点に読むため、
+> 指示を二重管理するとズレる。`AGENTS.md` を単一の正本とし、`CLAUDE.md` はそこへの
+> ポインタに徹することで、どちらのツールでも同じガイドラインに従えるようにしている。
