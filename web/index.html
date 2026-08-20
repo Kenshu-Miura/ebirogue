@@ -10,25 +10,18 @@
     margin: 0;
     padding: 0;
     height: 100%;
-    background: #101014;
+    background: #000;
     color: #e6e6e6;
     font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
     overflow: hidden;
   }
-  #game-container {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  /* Ebiten が生成する canvas を中央・アスペクト比維持で配置する */
+  /* Ebiten が body 直下に生成・サイズ調整する canvas。
+     余計な要素で覆うと canvas がフォーカスを失いキーボード入力が届かなくなるため、
+     ラッパーは置かず、オーバーレイ類は非表示時 pointer-events:none にする。 */
   canvas {
-    max-width: 100%;
-    max-height: 100%;
-    image-rendering: pixelated;
+    display: block;
     outline: none;
-    background: #000;
+    image-rendering: pixelated;
   }
   #overlay {
     position: fixed;
@@ -44,6 +37,7 @@
     text-align: center;
     padding: 24px;
   }
+  /* 非表示のオーバーレイは canvas のクリック・フォーカスを絶対に奪わない */
   #overlay.hidden { opacity: 0; pointer-events: none; }
   #title { font-size: 28px; font-weight: 700; letter-spacing: 0.08em; }
   #subtitle { font-size: 14px; color: #9aa0a6; }
@@ -72,14 +66,12 @@
     font-size: 11px;
     color: #5a606a;
     z-index: 5;
-    pointer-events: none;
+    pointer-events: none; /* canvas の入力を妨げない */
     text-align: center;
   }
 </style>
 </head>
 <body>
-  <div id="game-container"></div>
-
   <div id="overlay">
     <div id="title">エビローグ</div>
     <div id="subtitle">海老さんのターン制ローグライク</div>
@@ -103,6 +95,15 @@
       errorEl.style.display = "block";
       errorEl.textContent = msg;
     }
+
+    // canvas を確実にフォーカスする。Ebiten のキーボード入力は
+    // canvas がフォーカスされていることを前提にしている。
+    function focusCanvas() {
+      const canvas = document.querySelector("canvas");
+      if (canvas) canvas.focus();
+    }
+    // ページ内どこをクリック・タップしても canvas にフォーカスを戻す（保険）
+    window.addEventListener("pointerdown", focusCanvas);
 
     if (typeof Go === "undefined") {
       showError("wasm_exec.js の読み込みに失敗しました。ビルド手順（build_web.sh）を確認してください。");
@@ -129,11 +130,10 @@
           result = await WebAssembly.instantiate(bytes, go.importObject);
         }
         statusEl.textContent = "起動中…";
-        // Ebiten の canvas 生成後にオーバーレイを消す
+        // Ebiten の canvas 生成後にオーバーレイを消し、canvas へフォーカスする
         setTimeout(() => {
           overlay.classList.add("hidden");
-          const canvas = document.querySelector("canvas");
-          if (canvas) canvas.focus();
+          focusCanvas();
         }, 400);
         await go.run(result.instance); // ゲームが終了（中断）するまでここで待機する
         // ゲームループ終了後（中断セーブ後）に再読込を案内する
