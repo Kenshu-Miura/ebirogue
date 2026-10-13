@@ -1,7 +1,7 @@
 # wave1-C: ボス3体とボス階（Codex 用）
 
 ブランチ: `agent/wave1-C-bosses`
-前提: フェーズ0（特に P0-6「クリア条件と難易度の骨格」）が main にマージ済みであること。
+前提: フェーズ0（特に P0-6「クリア条件と難易度の骨格」）が master にマージ済みであること。
 最初に `AGENTS.md` と `docs/agents/README.md` を読み、並列作業のルールに従うこと（`AGENTS.md` と `IMPLEMENTED_FEATURES.md` は編集しない）。
 
 ## 作るもの
@@ -34,4 +34,4 @@ P0-6 で入れた仮のボスを、本物のボスに置き換える。
 - `gofmt -w`、`go test -tags test ./...`、`go test ./...`、`go test -run TestSimSmoke -count=1 .` がすべて成功する。
 - テスト: ボスが10・20・30階にだけ出現する、ランダム出現しない、各特殊行動、耐性、撃破後の階段の解放、目標階でのクリア判定。
 - `docs/agents/done/wave1-C.md` に次を書く: ボスの仕様、シミュレーション結果の要点、IMPLEMENTED_FEATURES.md への追記案、AGENTS.md から削除するロードマップ項目、仮画像の一覧。
-- ブランチにコミットしてプッシュする（main へは直接プッシュしない）。
+- ブランチにコミットしてプッシュする（master へは直接プッシュしない）。

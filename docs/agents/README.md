@@ -46,7 +46,7 @@ ebirogue を Claude Code（Pro）と Codex（Plus）で並列開発し、BOT に
 
 ## 並列作業のルール（AGENTS.md の一部規則を並列時のみ上書き）
 
-1. **ブランチで作業する。** 各担当は `agent/<タスクID>` ブランチを作り、main へ直接コミット・プッシュしない。
+1. **ブランチで作業する。** 各担当は `agent/<タスクID>` ブランチを作り、master へ直接コミット・プッシュしない。
 2. **ドキュメントは統合時にまとめて更新する。** 担当エージェントは `AGENTS.md` と `IMPLEMENTED_FEATURES.md` を編集しない。
    代わりに PR の説明、またはブランチ内の `docs/agents/done/<タスクID>.md` に「IMPLEMENTED_FEATURES.md への追記案」と「AGENTS.md から削除するロードマップ項目」を書く。
    統合担当（Claude Code）がマージ時に1回で反映する。
@@ -56,7 +56,7 @@ ebirogue を Claude Code（Pro）と Codex（Plus）で並列開発し、BOT に
    - `gofmt -w` 済み
    - `go test -tags test ./...` と `go test ./...` が成功
    - フェーズ0完了後は `go test -run TestSimSmoke -count=1 .` で不変条件違反ゼロ
-   - 新しい乱数処理は `g.rng` 経由で、同じシードで結果が再現する
+   - 新しい乱数処理は `g.randIntn()` などの Game の乱数源経由で、同じシードで結果が再現する
 
 ### ID 割り当て表
 

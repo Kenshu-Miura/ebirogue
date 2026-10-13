@@ -1,6 +1,6 @@
 # フェーズ0: テスト基盤（Claude Code 用作業指示書）
 
-担当: Claude Code（main ブランチで直列に進める）
+担当: Claude Code（master ブランチで直列に進める）
 前提: `AGENTS.md` と `docs/agents/README.md` を読んでから始める。
 進め方: 下の P0-1〜P0-8 を順番に、1ステップ1コミットで進める。各ステップの完了条件を満たしてから次へ進む。
 共通の完了条件: `gofmt -w`、`go test -tags test ./...`、`go test ./...` が成功すること。
