@@ -196,3 +196,12 @@ func decodeRunHistory(data []byte) ([]RunResult, error) {
 	err := json.Unmarshal(data, &history)
 	return history, err
 }
+
+// newestRunHistory は保存の追加順を逆転し、元の配列を変更しない。
+func newestRunHistory(history []RunResult) []RunResult {
+	results := make([]RunResult, len(history))
+	for i, result := range history {
+		results[len(history)-1-i] = result
+	}
+	return results
+}

@@ -104,7 +104,7 @@ func (b *bot) windowOpen() bool {
 	g := b.g
 	return g.showInventory || g.ShowGroundItem || g.showMenu || g.showEmptyInventoryMessage ||
 		g.showMessageLog || g.showSettings || g.showSuspendPrompt || g.showHelp || g.showBlankCardMenu ||
-		g.showNameInput || g.showItemActions || g.showItemDescription || g.useIdentifyItem || g.usePotInsert
+		g.showDifficultySelect || g.showClearScreen || g.showRunHistory || g.showNameInput || g.showItemActions || g.showItemDescription || g.useIdentifyItem || g.usePotInsert
 }
 
 // closeWindows は開いているウィンドウを閉じる（C で全て閉じ、閉じない種類は X で戻る）。
@@ -113,6 +113,9 @@ func (b *bot) closeWindows() error {
 		key := KeyC
 		if b.g.showNameInput || b.g.showMessageLog || b.g.showHelp || b.g.showSettings || b.g.showSuspendPrompt || b.g.showBlankCardMenu || i%2 == 1 {
 			key = KeyX
+		}
+		if b.g.showDifficultySelect || b.g.showClearScreen {
+			key = KeyZ
 		}
 		if err := b.tap(key); err != nil {
 			return err

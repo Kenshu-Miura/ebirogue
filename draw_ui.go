@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"strings"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -408,6 +409,7 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 		{"道具", "足元"},
 		{"設定", "中断"},
 		{"ヘルプ", "再挑戦"},
+		{"記録"},
 	}
 
 	// テキストの描画位置
@@ -654,4 +656,60 @@ func (g *Game) drawHelpWindow(screen *ebiten.Image) {
 	if g.helpScroll < helpMaxScroll(len(page.Lines), helpPageSize) {
 		text.Draw(screen, "↓", mplusNormalFont, windowX+windowWidth-25, windowY+60+(len(lines)-1)*lineHeight, color.NRGBA{255, 255, 0, 255})
 	}
+}
+
+func drawRunPanel(screen *ebiten.Image, title string) {
+	screen.Fill(color.NRGBA{20, 25, 40, 255})
+	text.Draw(screen, title, mplusMediumFont, 40, 50, color.White)
+}
+func (g *Game) drawDifficultyWindow(screen *ebiten.Image) {
+	drawRunPanel(screen, "海老さんの冒険 ― 難易度選択")
+	for i, d := range allDifficulties {
+		label := fmt.Sprintf("%s：%d階のボスを倒す", d, goalFloor(d))
+		if i == g.difficultyCursor {
+			label = "→ " + label
+		}
+		text.Draw(screen, label, mplusMediumFont, 60, 140+i*70, color.White)
+	}
+	text.Draw(screen, "矢印キー：選択    Z：冒険を始める", mplusNormalFont, 40, 420, color.White)
+}
+func (g *Game) drawClearWindow(screen *ebiten.Image) {
+	drawRunPanel(screen, "冒険クリア！")
+	result := g.lastRunResult
+	if result == nil {
+		return
+	}
+	lines := []string{fmt.Sprintf("難易度：%s（%d階）", result.Difficulty, result.Floor), fmt.Sprintf("ターン数：%d", result.Turns), fmt.Sprintf("レベル：%d", result.Level), fmt.Sprintf("シード：%d", result.Seed), "Z：次の冒険の難易度を選ぶ"}
+	for i, line := range lines {
+		text.Draw(screen, line, mplusNormalFont, 60, 140+i*55, color.White)
+	}
+}
+func (g *Game) drawRunHistoryWindow(screen *ebiten.Image) {
+	drawRunPanel(screen, fmt.Sprintf("冒険の記録（%d件）", len(g.runHistory)))
+	if g.runHistoryError != "" {
+		text.Draw(screen, g.runHistoryError, mplusNormalFont, 40, 100, color.White)
+	} else if len(g.runHistory) == 0 {
+		text.Draw(screen, "冒険の記録はまだありません", mplusNormalFont, 40, 100, color.White)
+	}
+	for i := g.runHistoryScroll; i < min(len(g.runHistory), g.runHistoryScroll+5); i++ {
+		r := g.runHistory[i]
+		date := r.EndedAt
+		if t, err := time.Parse(time.RFC3339, date); err == nil {
+			date = t.Local().Format("2006/01/02 15:04")
+		}
+		if date == "" {
+			date = "日時不明"
+		}
+		outcome := "死亡"
+		cause := r.DeathMessage
+		if r.Cleared {
+			outcome = "クリア"
+			cause = "目標階のボスを撃破"
+		}
+		y := 95 + (i-g.runHistoryScroll)*62
+		text.Draw(screen, fmt.Sprintf("%s  %s  %s  %d階", date, r.Difficulty, outcome, r.Floor), mplusNormalFont, 30, y, color.White)
+		// 長い死因も画面幅内に収まるよう小さいフォントで表示する。
+		text.Draw(screen, cause, mplusSmallFont, 40, y+23, color.White)
+	}
+	text.Draw(screen, "↑↓：スクロール    X：メニュー    C：閉じる", mplusNormalFont, 30, 440, color.White)
 }
