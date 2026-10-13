@@ -105,7 +105,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `GameState`（main.go）: `Map [][]Tile`, `Player`, `Enemies []Enemy`, `Items []Item`, `MapTraps []MapTrap`。
 - `Player`（main.go）: HP/満腹度/パワー/レベル/経験値/所持金、`Inventory []Item`（最大20）、装備スロット（武器・防具・矢 各1、アクセサリ2）、`StatusAilments`。
 - `Enemy`（enemies.go）: ステータス + `SpecialAttack SpecialAttackFunc` + `SpecialAttackProbability` + `StatusAilments`。
-- `StatusAilments`（main.go / game_stub.go 両方に定義）: 混乱・睡眠・目潰し・毒・鈍足・倍速・口封じ（残りターン int）、金縛り・封印（bool）、`HasteOnWake`。
+- `StatusAilments`（main.go / game_stub.go 両方に定義）: トラバサミ・混乱・睡眠・目潰し・毒・鈍足・倍速・口封じ（残りターン int）、金縛り・封印（bool）、`HasteOnWake`。
 - `Tile`（main.go / game_stub.go）: `Type`（"floor", "wall", "corridor", "door" 等の文字列）, `Blocked`, `BlockSight`, `Visited`, `Brightness`。
 - `Room`（map.go）: `ID, X, Y, Width, Height, Center`。
 - `MapTrap`（maptraps.go）: 座標・名前・発見済みフラグ・効果関数・不発率。
@@ -118,7 +118,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|---|
 | アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜70） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
 | 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜44。42〜44 はボス〔`IsBoss`〕） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
-| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜4） | `createMapTrapByID` | 同ファイルの効果クロージャ |
+| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜11）。床生成・ワナのカードの重み付き抽選一覧は `floorTrapIDs` | `createMapTrapByID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`） |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
 
@@ -152,7 +152,8 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + レベル。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。
 - 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は毎ターン HP-2。
 - 特殊盾は爆発・炎・魔法の半減、盗難無効、状態異常50%無効、敵攻撃25%回避、爆発以外の遠距離攻撃反射、通常攻撃への半分カウンターを提供する。使い捨ての盾は被弾ごとに強化値と防御力が1低下する。
-- 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）。
+- 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）、大型地雷は 3/4 切り上げ（`largeMineTrapDamage`, trap_damage.go）。
+- 罠の効果関数は `stepOnTrap` が設定する `g.steppedTrapSource` を死因に使う（罠 ID・名前を手書きしない）。落とし穴は `availableTrapIDs` でボス階・30階の抽選から除き、落下は階段と同じ `beginFloorDescent`（map.go）を通す。
 - モンスター湧き: 上限 19 体、20〜30 ターン間隔、プレイヤーから 8 マス以内には湧かない（monster_spawn.go の定数）。
 - フロア滞在 1200/1300 ターンで風の警告（`checkFloorTimeWarnings`）。
 - 視界: 部屋単位。`updateTileBrightness`（map.go）が現在の部屋+隣接タイルのみ明るくする。敵・アイテムのミニマップ表示は同部屋・隣接・発見済みで決まる（`updateEnemyVisibility` / `updateItemVisibility`）。目潰し中は敵非表示。
@@ -216,12 +217,8 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority A: traps and status ailments
 
-- 移動へ干渉する罠を追加する。
-  - フロア内ワープ、次階層への落下、一定ターンの移動不能
 - 装備・所持品へ干渉する罠を追加する。
   - 装備解除、食料腐敗、所持品散乱（武器や盾の強化値低下＝サビの罠は実装済み）
-- ダメージ罠を追加する。
-  - 木の矢、鉄の矢、落石、大型地雷
 - プレイヤーだけでなく敵も罠を踏むようにする。
 - 矢、投擲アイテム、爆発で罠を起動できるようにし、罠を攻略へ利用可能にする。
 - 追加予定の状態異常・一時効果:
@@ -229,6 +226,10 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 攻撃力・防御力の上昇と低下、レベル低下、回復不能（口封じは実装済み）
 - 状態異常は残りターン、重複時の規則、解除手段、耐性を共通処理へまとめる。可能な状態はプレイヤーと敵の双方へ適用できるようにする。
 - 新しい罠には `img/` 配下へ30x30の透過PNGを用意し、発見済み表示とミニマップ表示を確認する。
+- 仮画像を正式な画像へ差し替える（wave1 でスクリプトにより仮作成した 30x30 透過 PNG）。
+  - 移動罠: `img/warp_trap.png`（青い渦）、`img/pitfall_trap.png`（穴）、`img/bear_trap.png`（トラバサミ）
+  - ダメージ罠: `img/wood_arrow_trap.png`、`img/iron_arrow_trap.png`、`img/falling_rock_trap.png`、`img/large_mine_trap.png`（`go run tools/damage_trap_images.go` で再生成できる単純図形）
+  - いずれもゲーム画面上での視認性は未確認。
 
 ### Priority A: usability
 
