@@ -114,7 +114,7 @@ func (p *Player) checkDeath(g *Game) {
 		g.gameResetTimer = 6.0 // 6秒後にリセット（攻撃処理待ち+メッセージ1秒+フェードアウト1秒+待機2秒）
 
 		// 死亡したら中断データを削除する（復活による再開を防ぐ）
-		deleteSaveFile()
+		g.deleteSave()
 
 		// 死亡メッセージは後でActionQueueが空になってから追加する
 	}
@@ -150,7 +150,7 @@ func (g *Game) resetGame() {
 // retrySameSeed は現在の冒険を破棄し、同じシードで1階からやり直す。
 func (g *Game) retrySameSeed() {
 	seed := g.seed
-	deleteSaveFile() // 破棄した冒険の中断データから再開しないようにする
+	g.deleteSave() // 破棄した冒険の中断データから再開しないようにする
 	g.startNewRun(seed)
 	g.fadeInProgress = 0.0
 	g.EnqueueMessage(fmt.Sprintf("シード %d で1階から再挑戦した", seed), 1.0)

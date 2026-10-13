@@ -420,7 +420,7 @@ func (g *Game) trajectoryPreviewSpec() (throwRange int, stopOnWallTile bool, act
 	if g.keys().Pressed(KeyA) && g.state.Player.EquippedArrow != nil &&
 		!g.showInventory && !g.showMenu && !g.showSettings && !g.showSuspendPrompt &&
 		!g.showMessageLog && !g.showHelp && !g.showStairsPrompt &&
-		!g.isCombatActive && g.ThrownItem.Image == nil &&
+		!g.isCombatActive && g.ThrownItem.Item == nil &&
 		g.state.Player.StatusAilments.Sleep == 0 {
 		return 10, false, true
 	}

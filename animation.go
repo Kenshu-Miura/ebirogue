@@ -4,7 +4,6 @@ package main
 
 import (
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 	"math"
 )
 
@@ -46,6 +45,11 @@ func (g *Game) UpdateAttackTimer() {
 }
 
 func (g *Game) HandleAnimationProgress() {
+	if g.Animating && g.fastForward {
+		g.Animating = false
+		g.AnimationProgressInt = 0
+		return
+	}
 	if g.Animating {
 		g.AnimationProgressInt += 1
 		if g.AnimationProgressInt >= 10 {
@@ -98,9 +102,12 @@ func (g *Game) HandleActionQueue() {
 		if g.ActionDurationCounter <= 0 {
 			action := g.ActionQueue.Queue[0]
 			if g.playerDead {
-				log.Printf("DEBUG: Processing action while dead: Message='%s', Duration=%f", action.Message, action.Duration)
+				g.debugf("DEBUG: Processing action while dead: Message='%s', Duration=%f", action.Message, action.Duration)
 			}
 			g.processAction(action)
+			if g.fastForward {
+				g.ActionDurationCounter = 0 // 演出スキップ: メッセージの表示時間を待たない
+			}
 		}
 	}
 
@@ -110,7 +117,7 @@ func (g *Game) HandleActionQueue() {
 
 	if len(g.ActionQueue.Queue) > 0 && g.ActionDurationCounter <= 0 {
 		if g.playerDead {
-			log.Printf("DEBUG: Removing action from queue, remaining: %d", len(g.ActionQueue.Queue)-1)
+			g.debugf("DEBUG: Removing action from queue, remaining: %d", len(g.ActionQueue.Queue)-1)
 		}
 		g.ActionDurationCounter = 0
 		g.ActionQueue.Queue = g.ActionQueue.Queue[1:]

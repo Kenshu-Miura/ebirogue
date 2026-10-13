@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"log"
 )
 
 // isMouthItem は口封じ状態で使えないアイテム（口にする・読み上げるもの）かどうかを返す。
@@ -496,7 +495,7 @@ func (g *Game) Enqueue(action Action) {
 
 func (g *Game) processAction(action Action) {
 	if g.playerDead && action.Message != "" {
-		log.Printf("DEBUG: processAction called for dead player: Message='%s'", action.Message)
+		g.debugf("DEBUG: processAction called for dead player: Message='%s'", action.Message)
 	}
 	// 表示されるメッセージを履歴へ記録する
 	g.messageLog.Add(action.Message)

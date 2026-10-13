@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 )
 
 // マップ上に配置される罠の構造体
@@ -179,7 +178,7 @@ func (g *Game) stepOnTrap(trapIndex int) {
 	trap := g.state.MapTraps[trapIndex]
 
 	// デバッグログを追加
-	log.Printf("プレイヤーが罠を踏みました: %s 座標(%d, %d)", trap.Name, trap.X, trap.Y)
+	g.debugf("プレイヤーが罠を踏みました: %s 座標(%d, %d)", trap.Name, trap.X, trap.Y)
 
 	// まず罠を踏んだメッセージを表示
 	action := Action{
@@ -231,7 +230,7 @@ func (g *Game) checkTrapInFront() bool {
 	for i := range g.state.MapTraps {
 		if g.state.MapTraps[i].X == frontX && g.state.MapTraps[i].Y == frontY && !g.state.MapTraps[i].Discovered {
 			g.state.MapTraps[i].Discovered = true
-			log.Printf("前方の罠を発見しました: %s 座標(%d, %d)", g.state.MapTraps[i].Name, frontX, frontY)
+			g.debugf("前方の罠を発見しました: %s 座標(%d, %d)", g.state.MapTraps[i].Name, frontX, frontY)
 			g.Enqueue(Action{
 				Duration: 0.4,
 				Message:  g.state.MapTraps[i].Name + "を見つけた",
@@ -273,7 +272,6 @@ func generateMapTraps(rooms []Room, rng *gameRNG) []MapTrap {
 			trapIDs := []int{0, 0, 1, 2, 3, 4}
 			trap := createMapTrapByID(trapIDs[rng.Intn(len(trapIDs))], x, y)
 			traps = append(traps, trap)
-			log.Printf("罠を生成しました: %s 座標(%d, %d)", trap.Name, x, y)
 		} else {
 			// 重複していた場合は再試行
 			i--

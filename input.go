@@ -20,7 +20,7 @@ const (
 
 // framesSince は指定フレームからの経過フレーム数を返す。0（未実行）なら十分大きい値を返す。
 func (g *Game) framesSince(frame int) int {
-	if frame == 0 {
+	if frame == 0 || g.fastForward { // 演出スキップ中はキーリピートの待ちも無くす
 		return 1 << 30
 	}
 	return g.inputFrame - frame
@@ -31,6 +31,7 @@ func (g *Game) framesSince(frame int) int {
 func (g *Game) isInputReady() bool {
 	return g.CanAcceptInput() && len(g.ActionQueue.Queue) == 0 && !g.Animating &&
 		!g.fadingOut && !g.fadingIn && g.fadeInProgress >= 1.0 && !g.playerDead &&
+		g.ThrownItem.Item == nil && !g.isActioned && !g.isCombatActive &&
 		g.framesSince(g.lastArrowPressFrame) >= moveRepeatFrames
 }
 
@@ -610,7 +611,7 @@ func (g *Game) HandleInput() (int, int) {
 			// 敵の接近・アイテム・発見済みの罠などの危険条件で自動停止する
 			if dx != 0 || dy != 0 {
 				if reason := g.dashDangerReason(dx, dy); reason != "" {
-					log.Printf("Dash stopped (%s): (%d,%d)", reason, g.state.Player.X+dx, g.state.Player.Y+dy)
+					g.debugf("Dash stopped (%s): (%d,%d)", reason, g.state.Player.X+dx, g.state.Player.Y+dy)
 					g.dashStopped = true
 					g.lastDashStopFrame = g.inputFrame
 					return 0, 0
@@ -619,7 +620,7 @@ func (g *Game) HandleInput() (int, int) {
 
 			for _, room := range g.rooms {
 				if isOnBoundary(g.state.Player.X+dx, g.state.Player.Y+dy, room) {
-					log.Printf("Dash stopped at entrance: (%d,%d)", g.state.Player.X+dx, g.state.Player.Y+dy)
+					g.debugf("Dash stopped at entrance: (%d,%d)", g.state.Player.X+dx, g.state.Player.Y+dy)
 					g.dashStopped = true
 					g.lastDashStopFrame = g.inputFrame
 					return 0, 0
@@ -629,7 +630,7 @@ func (g *Game) HandleInput() (int, int) {
 			// 通路の分岐・曲がり角で自動停止する
 			nowX, nowY := g.state.Player.X, g.state.Player.Y
 			if corridorBranch(g.state.Map, nowX, nowY, dx, dy) {
-				log.Printf("Dash stopped at corner: (%d,%d)", nowX, nowY)
+				g.debugf("Dash stopped at corner: (%d,%d)", nowX, nowY)
 				g.dashStopped = true
 				g.lastDashStopFrame = g.inputFrame
 				return 0, 0
@@ -868,14 +869,14 @@ func (g *Game) handleSettingsInput() error {
 	// Xキーで設定を保存してメニューに戻る
 	if g.keys().JustPressed(KeyX) {
 		g.showSettings = false
-		saveSettings(g.settings)
+		g.saveSettings()
 		g.showMenu = true
 	}
 
 	// Cキーで設定を保存して全て閉じる
 	if g.keys().JustPressed(KeyC) {
 		g.showSettings = false
-		saveSettings(g.settings)
+		g.saveSettings()
 	}
 
 	return nil

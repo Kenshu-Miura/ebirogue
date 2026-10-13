@@ -181,6 +181,10 @@ type Game struct {
 	moveCount                 int
 	Floor                     int
 	input                     InputSource // キー入力の取得元（keys() 経由で使う）
+	headless                  bool        // 描画・セーブファイル無しで動かす（BOT・テスト用）
+	fastForward               bool        // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
+	runEnded                  bool        // ヘッドレスで冒険が終了した（死亡・クリア）
+	difficulty                Difficulty  // 冒険の難易度（開始時に決め、途中で変えない）
 	inputFrame                int         // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
 	lastIncrementFrame        int         // 最後に足踏みしたフレーム（0 は未実行）
 	lastArrowPressFrame       int         // 方向キーで最後に移動したフレーム（0 は未実行）
@@ -326,6 +330,11 @@ func (g *Game) Update() error {
 		return ebiten.Termination
 	}
 
+	// ヘッドレスでは冒険が終わったら（死亡・クリア）それ以上進めない
+	if g.runEnded {
+		return nil
+	}
+
 	// プレイヤーが死亡している場合の処理
 	if g.playerDead {
 		// log.Printf("DEBUG: Player is dead, queue length: %d, deathMessageAdded: %v", len(g.ActionQueue.Queue), g.deathMessageAdded)
@@ -340,20 +349,20 @@ func (g *Game) Update() error {
 
 		// ActionQueueが空になったら死亡メッセージを追加
 		if !g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 {
-			log.Printf("DEBUG: Adding death message to ActionQueue, isCombatActive: %v", g.isCombatActive)
+			g.debugf("DEBUG: Adding death message to ActionQueue, isCombatActive: %v", g.isCombatActive)
 			deathMessage := "海老さんは倒れた"
 			deathAction := Action{
 				Duration: 1.0, // 1秒間表示
 				Message:  deathMessage,
 				Execute: func(g *Game) {
-					log.Printf("DEBUG: Death message Execute function called")
+					g.debugf("DEBUG: Death message Execute function called")
 				},
 			}
 			g.ActionQueue.Queue = append(g.ActionQueue.Queue, deathAction)
 			g.deathMessageAdded = true
 			// 戦闘状態を強制的にアクティブにして、メッセージが正常に表示されるようにする
 			g.isCombatActive = true
-			log.Printf("DEBUG: Death message added, queue length: %d, set isCombatActive to true", len(g.ActionQueue.Queue))
+			g.debugf("DEBUG: Death message added, queue length: %d, set isCombatActive to true", len(g.ActionQueue.Queue))
 		}
 
 		// ActionQueueが再び空になったら（死亡メッセージ表示完了後）フェードアウト開始
@@ -362,6 +371,14 @@ func (g *Game) Update() error {
 			if g.fadeOutProgress > 1.0 {
 				g.fadeOutProgress = 1.0
 			}
+		}
+
+		// ヘッドレスでは自動リスタートせず、メッセージを出し切ったら冒険終了とする
+		if g.headless {
+			if g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 {
+				g.runEnded = true
+			}
+			return nil
 		}
 
 		// リセットタイマーを減らす
@@ -374,6 +391,9 @@ func (g *Game) Update() error {
 	}
 
 	// フェードイン処理
+	if g.fadeInProgress < 1.0 && g.fastForward {
+		g.fadeInProgress = 1.0
+	}
 	if g.fadeInProgress < 1.0 {
 		g.fadeInProgress += 1.0 / 60.0 // 1秒でフェードイン完了
 		if g.fadeInProgress > 1.0 {

@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"sort"
 )
 
@@ -1358,9 +1357,9 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 			}
 
 			if enemiesParalyzed > 0 {
-				log.Printf("周囲の敵%d体を金縛り状態にした", enemiesParalyzed)
+				g.debugf("周囲の敵%d体を金縛り状態にした", enemiesParalyzed)
 			} else {
-				log.Printf("周囲に敵がいない")
+				g.debugf("周囲に敵がいない")
 			}
 		},
 	}

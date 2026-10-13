@@ -42,7 +42,8 @@ func (g *Game) updateItemVisibility() {
 }
 
 func (g *Game) UpdateThrownItem() {
-	if g.ThrownItem.Image != nil {
+	// 画像の有無ではなくアイテムの有無で判定する（ヘッドレスでは画像が無い）
+	if g.ThrownItem.Item != nil {
 		g.ThrownItem.X += g.ThrownItem.DX
 		g.ThrownItem.Y += g.ThrownItem.DY
 		// Check if the item has reached its destination

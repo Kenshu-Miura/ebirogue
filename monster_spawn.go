@@ -2,9 +2,7 @@
 
 package main
 
-import (
-	"fmt"
-)
+import ()
 
 // モンスター湧きシステムの定数
 const (
@@ -84,7 +82,7 @@ func (g *Game) TrySpawnMonster() {
 	g.state.Enemies = append(g.state.Enemies, enemy)
 
 	// ログ出力
-	fmt.Printf("モンスターが湧きました: %s 座標(%d, %d)\n", enemy.Name, spawnPos.X, spawnPos.Y)
+	g.debugf("モンスターが湧きました: %s 座標(%d, %d)\n", enemy.Name, spawnPos.X, spawnPos.Y)
 
 	// 次回湧き時間設定
 	g.lastSpawnTurn = g.turnCount
@@ -317,7 +315,7 @@ func (g *Game) checkFloorTimeWarnings() {
 		g.playerDead = true
 		g.gameResetTimer = 2.0 // 2秒後にリセット
 		// 死亡したら中断データを削除する（復活による再開を防ぐ）
-		deleteSaveFile()
+		g.deleteSave()
 		windDeathAction := Action{
 			Duration: 2.0, // 2秒間表示
 			Message:  "突風だ！海老さんは風に飛ばされた",

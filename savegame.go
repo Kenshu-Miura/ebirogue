@@ -29,6 +29,14 @@ func loadSettings() GameSettings {
 }
 
 // saveSettings は設定をファイルへ保存する
+// saveSettings は現在の設定を保存する（ヘッドレスでは何もしない）。
+func (g *Game) saveSettings() {
+	if g.headless {
+		return
+	}
+	saveSettings(g.settings)
+}
+
 func saveSettings(settings GameSettings) {
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
@@ -528,6 +536,9 @@ func (g *Game) applySaveData(save *SaveData) error {
 
 // saveSuspendData は中断データをファイルへ保存する
 func (g *Game) saveSuspendData() error {
+	if g.headless {
+		return nil // ヘッドレス（BOT・テスト）ではセーブファイルを書き換えない
+	}
 	data, err := json.Marshal(g.buildSaveData())
 	if err != nil {
 		return fmt.Errorf("中断データのシリアライズに失敗: %w", err)
@@ -546,6 +557,14 @@ func (g *Game) autoSave() {
 }
 
 // deleteSaveFile は中断データを削除する
+// deleteSave は冒険の中断データを削除する（ヘッドレスでは何もしない）。
+func (g *Game) deleteSave() {
+	if g.headless {
+		return
+	}
+	deleteSaveFile()
+}
+
 func deleteSaveFile() {
 	if err := storageRemove(saveFileName); err != nil && !storageIsNotExist(err) {
 		log.Printf("中断データの削除に失敗: %v", err)

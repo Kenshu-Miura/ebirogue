@@ -10,6 +10,9 @@ import (
 
 func (g *Game) handleFadingOut() {
 	g.fadeAlpha += 1.0 / 60 // 1秒かけて暗くする
+	if g.fastForward {
+		g.fadeAlpha = 1.0
+	}
 	if g.fadeAlpha >= 1.0 {
 		g.fadeAlpha = 1.0
 		if g.frameCounter == 0 {
@@ -34,7 +37,7 @@ func (g *Game) handleFadingOut() {
 			g.autoSave()
 		}
 		g.frameCounter++
-		if g.frameCounter >= 60 { // 1秒経過した後
+		if g.frameCounter >= 60 || g.fastForward { // 1秒経過した後
 			g.fadingOut = false
 			g.fadingIn = true
 			g.frameCounter = 0 // フレームカウンターをリセット
@@ -44,7 +47,7 @@ func (g *Game) handleFadingOut() {
 
 func (g *Game) handleFadingIn() {
 	g.fadeAlpha -= 1.0 / 60 // 1秒かけて明るくする
-	if g.fadeAlpha <= 0.0 {
+	if g.fadeAlpha <= 0.0 || g.fastForward {
 		g.fadeAlpha = 0.0
 		g.fadingIn = false
 		g.showStairsPrompt = false
