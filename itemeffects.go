@@ -1012,11 +1012,15 @@ var sanctuaryCardHint = func(g *Game) {
 
 // monsterFamilyIDs は指定した敵と同系統（基本種と上位種）の敵IDを昇順で返す。
 func monsterFamilyIDs(monsterID int) []int {
+	// 上位種化の対応を両方向にたどり、基本種〜第3段階まで同じ系統として集める
 	family := map[int]bool{monsterID: true}
-	for baseID, upperID := range MonsterLevelUpTable {
-		if baseID == monsterID || upperID == monsterID {
-			family[baseID] = true
-			family[upperID] = true
+	for changed := true; changed; {
+		changed = false
+		for baseID, upperID := range MonsterLevelUpTable {
+			if family[baseID] != family[upperID] {
+				family[baseID], family[upperID] = true, true
+				changed = true
+			}
 		}
 	}
 	ids := make([]int, 0, len(family))

@@ -772,6 +772,27 @@ var upperEnemyImagePaths = map[string]string{
 	"AzureSeaDragon":        "img/azure_sea_dragon.png",
 	"InfernoSquid":          "img/inferno_squid.png",
 	"ArcaneJellyfish":       "img/arcane_jellyfish.png",
+	// 第3段階
+	"KingShrimp":             "img/ousama_ebi.png",
+	"DeadlySnake":            "img/gekidoku_hebi.png",
+	"RockMamuru":             "img/iwaya_mamuru.png",
+	"WaveHoney":              "img/uneune_honey.png",
+	"EmperorHarisenbow":      "img/harisen_koutei.png",
+	"MountainCrab":           "img/iwayama_gani.png",
+	"MegatonUrchin":          "img/megaton_uni.png",
+	"PhantomThiefHermitCrab": "img/kaitou_yadokari.png",
+	"NigiriMeijinShrimp":     "img/nigiri_meijin_ebi.png",
+	"VengefulCrab":           "img/onryou_gani.png",
+	"EmperorJellyfish":       "img/teiou_kurage.png",
+	"UnderworldShrimp":       "img/meifu_ebi.png",
+	"ThunderGodMantisShrimp": "img/raijin_shako.png",
+	"SpacetimeJellyfish":     "img/jikuu_kurage.png",
+	"SwitchOctopus":          "img/surikae_dako.png",
+	"TrapKingHermitCrab":     "img/wana_ou_yadokari.png",
+	"MimicNautilus":          "img/bake_oumugai.png",
+	"AbyssSeaDragon":         "img/shinen_kairyu.png",
+	"PurgatorySquid":         "img/rengoku_ika.png",
+	"SageJellyfish":          "img/kenja_kurage.png",
 }
 
 var specialWeaponImagePaths = map[string]string{

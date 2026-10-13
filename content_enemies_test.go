@@ -33,52 +33,66 @@ func TestSpecialMovementEnemyDefinitions(t *testing.T) {
 // テーブルのキーと各テンプレートの ID が一致し、全テンプレートを生成できることを確認する。
 // ID は map のキーなので重複しない。欠番があってもランダム抽選は ID 一覧から行う。
 
+// 各系統は 基本種 → 第2段階 → 第3段階 の3段階で、上位ほど能力値が高く、固有能力を引き継ぐ。
 func TestEveryBaseMonsterHasUpperSpecies(t *testing.T) {
-	if len(MonsterLevelUpTable) != len(baseMonsterDefinitions) {
-		t.Fatalf("level-up mappings = %d, want one for each of %d base monsters", len(MonsterLevelUpTable), len(baseMonsterDefinitions))
+	if len(MonsterLevelUpTable) != 2*len(baseMonsterDefinitions) {
+		t.Fatalf("level-up mappings = %d, want two for each of %d base monsters", len(MonsterLevelUpTable), len(baseMonsterDefinitions))
 	}
 	for baseID := range baseMonsterDefinitions {
-		upperID, ok := MonsterLevelUpTable[baseID]
+		secondID, ok := MonsterLevelUpTable[baseID]
 		if !ok {
 			t.Fatalf("base monster %d has no upper species", baseID)
 		}
-		base := MonsterDefinitions[baseID]
-		upper, ok := MonsterDefinitions[upperID]
+		thirdID, ok := MonsterLevelUpTable[secondID]
 		if !ok {
-			t.Fatalf("upper species %d for base monster %d is missing", upperID, baseID)
+			t.Fatalf("second-stage monster %d has no third stage", secondID)
 		}
-		if upper.Name == base.Name || upper.Type == base.Type {
-			t.Fatalf("upper species %d did not change identity from base %d", upperID, baseID)
+		checkUpperSpecies(t, baseID, secondID)
+		checkUpperSpecies(t, secondID, thirdID)
+		if _, chained := MonsterLevelUpTable[thirdID]; chained {
+			t.Fatalf("third-stage monster %d must not level up further", thirdID)
 		}
-		if upper.Health <= base.Health || upper.AttackPower <= base.AttackPower ||
-			upper.DefensePower <= base.DefensePower || upper.ExperiencePoints <= base.ExperiencePoints {
-			t.Fatalf("upper species %d stats = HP %d, attack %d, defense %d, exp %d; base %d stats = HP %d, attack %d, defense %d, exp %d",
-				upperID, upper.Health, upper.AttackPower, upper.DefensePower, upper.ExperiencePoints,
-				baseID, base.Health, base.AttackPower, base.DefensePower, base.ExperiencePoints)
+	}
+}
+
+func checkUpperSpecies(t *testing.T, lowerID, upperID int) {
+	t.Helper()
+	base, ok := MonsterDefinitions[lowerID]
+	if !ok {
+		t.Fatalf("monster %d is missing", lowerID)
+	}
+	upper, ok := MonsterDefinitions[upperID]
+	if !ok {
+		t.Fatalf("upper species %d for monster %d is missing", upperID, lowerID)
+	}
+	if upper.Name == base.Name || upper.Type == base.Type {
+		t.Fatalf("upper species %d did not change identity from %d", upperID, lowerID)
+	}
+	if upper.Health <= base.Health || upper.AttackPower <= base.AttackPower ||
+		upper.DefensePower <= base.DefensePower || upper.ExperiencePoints <= base.ExperiencePoints {
+		t.Fatalf("upper species %d stats = HP %d, attack %d, defense %d, exp %d; lower %d stats = HP %d, attack %d, defense %d, exp %d",
+			upperID, upper.Health, upper.AttackPower, upper.DefensePower, upper.ExperiencePoints,
+			lowerID, base.Health, base.AttackPower, base.DefensePower, base.ExperiencePoints)
+	}
+	if upper.Char != base.Char || (upper.SpecialAttack == nil) != (base.SpecialAttack == nil) ||
+		upper.SpecialAttackProbability != base.SpecialAttackProbability || upper.SpecialMovement != base.SpecialMovement ||
+		upper.Disguise != base.Disguise || upper.IsBoss {
+		t.Fatalf("upper species %d did not inherit monster %d abilities", upperID, lowerID)
+	}
+	if len(upper.Traits) != len(base.Traits) {
+		t.Fatalf("upper species %d did not inherit monster %d traits", upperID, lowerID)
+	}
+	for _, trait := range base.Traits {
+		if !hasEnemyTrait(upper.Traits, trait) {
+			t.Fatalf("upper species %d is missing inherited trait %q", upperID, trait)
 		}
-		if upper.Char != base.Char || (upper.SpecialAttack == nil) != (base.SpecialAttack == nil) ||
-			upper.SpecialAttackProbability != base.SpecialAttackProbability || upper.SpecialMovement != base.SpecialMovement ||
-			upper.Disguise != base.Disguise {
-			t.Fatalf("upper species %d did not inherit base monster %d abilities", upperID, baseID)
-		}
-		if len(upper.Traits) != len(base.Traits) {
-			t.Fatalf("upper species %d did not inherit base monster %d traits", upperID, baseID)
-		}
-		for _, trait := range base.Traits {
-			if !hasEnemyTrait(upper.Traits, trait) {
-				t.Fatalf("upper species %d is missing inherited trait %q", upperID, trait)
-			}
-		}
-		if upper.RangedAttack.Kind != base.RangedAttack.Kind || upper.RangedAttack.MinRange != base.RangedAttack.MinRange ||
-			upper.RangedAttack.MaxRange != base.RangedAttack.MaxRange || upper.RangedAttack.BlastRadius != base.RangedAttack.BlastRadius {
-			t.Fatalf("upper species %d did not inherit base monster %d ranged behavior", upperID, baseID)
-		}
-		if base.RangedAttack.Kind != RangedAttackNone && upper.RangedAttack.AttackPower <= base.RangedAttack.AttackPower {
-			t.Fatalf("upper species %d ranged power = %d, want above base %d", upperID, upper.RangedAttack.AttackPower, base.RangedAttack.AttackPower)
-		}
-		if _, chained := MonsterLevelUpTable[upperID]; chained {
-			t.Fatalf("upper species %d must not have another level in the current two-stage system", upperID)
-		}
+	}
+	if upper.RangedAttack.Kind != base.RangedAttack.Kind || upper.RangedAttack.MinRange != base.RangedAttack.MinRange ||
+		upper.RangedAttack.MaxRange != base.RangedAttack.MaxRange || upper.RangedAttack.BlastRadius != base.RangedAttack.BlastRadius {
+		t.Fatalf("upper species %d did not inherit monster %d ranged behavior", upperID, lowerID)
+	}
+	if base.RangedAttack.Kind != RangedAttackNone && upper.RangedAttack.AttackPower <= base.RangedAttack.AttackPower {
+		t.Fatalf("upper species %d ranged power = %d, want above %d", upperID, upper.RangedAttack.AttackPower, base.RangedAttack.AttackPower)
 	}
 }
 
@@ -462,13 +476,13 @@ func TestEnemyDefeatsMonsterAndLevelsUp(t *testing.T) {
 }
 
 func TestEnemyWithoutUpperSpeciesDoesNotChange(t *testing.T) {
-	attacker := CreateEnemyByID(20, 2, 2)
+	attacker := CreateEnemyByID(46, 2, 2) // 第3段階はこれ以上レベルアップしない
 	target := CreateEnemyByID(2, 3, 2)
 	g := &Game{state: GameState{Enemies: []Enemy{attacker, target}}}
 
 	g.defeatEnemyByEnemy(0, 1)
 
-	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 20 {
+	if len(g.state.Enemies) != 1 || g.state.Enemies[0].ID != 46 {
 		t.Fatalf("remaining enemy = %#v, want unchanged upper species", g.state.Enemies)
 	}
 	if len(g.ActionQueue.Queue) != 0 {
@@ -880,5 +894,42 @@ func TestRangedEnemyFloorSpawnTables(t *testing.T) {
 	got := selectMonsterForFloor(99, nil, func(n int) int { return n - 1 })
 	if got != lastEntry.MonsterID {
 		t.Fatalf("deep floor fallback selected %d, want %d", got, lastEntry.MonsterID)
+	}
+}
+
+// 9〜30階のテーブル: 全階に定義があり、第3段階は9階から出現し8階以前には出ない。
+func TestDeepFloorSpawnTables(t *testing.T) {
+	thirdStage := map[int]bool{}
+	for baseID := range baseMonsterDefinitions {
+		thirdStage[MonsterLevelUpTable[MonsterLevelUpTable[baseID]]] = true
+	}
+	seen := map[int]bool{}
+	for floor := 1; floor <= deepestSpawnFloor; floor++ {
+		entries := FloorSpawnTables[floor]
+		if len(entries) == 0 {
+			t.Fatalf("floor %d has no spawn table", floor)
+		}
+		hasThird := false
+		for _, entry := range entries {
+			definition, ok := MonsterDefinitions[entry.MonsterID]
+			if !ok || definition.IsBoss || entry.Weight <= 0 {
+				t.Fatalf("floor %d has invalid entry %+v", floor, entry)
+			}
+			if thirdStage[entry.MonsterID] {
+				hasThird = true
+				seen[entry.MonsterID] = true
+			}
+		}
+		if floor <= 8 && hasThird {
+			t.Fatalf("third-stage monster appears on floor %d", floor)
+		}
+		if floor >= 9 && !hasThird {
+			t.Fatalf("floor %d has no third-stage monster", floor)
+		}
+	}
+	for id := range thirdStage {
+		if !seen[id] {
+			t.Fatalf("third-stage monster %d is missing from floor spawn tables", id)
+		}
 	}
 }

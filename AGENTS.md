@@ -117,9 +117,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
 | アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜70） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
-| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜44。42〜44 はボス〔`IsBoss`〕） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
+| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜65。42〜44 はボス〔`IsBoss`〕、45〜65 は第3段階） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
 | 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜11）。床生成・ワナのカードの重み付き抽選一覧は `floorTrapIDs` | `createMapTrapByID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`） |
-| 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
+| 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go。1〜8階は個別、9〜30階は `deepFloorSpawnBands` の帯） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
 
 - アイテム効果関数（`UseAction = func(g *Game)`）は `determineItemSource(g)` で「インベントリから使ったか足元か」を判定し、最後に `removeUsedItem(g, isInventoryItem)` で消費する、というパターンが基本（itemeffects.go 冒頭参照）。
@@ -130,7 +130,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 新しいアイテム・敵・罠を 1 つ追加するときに触る場所:
 
 1. **テーブル**: 上記の該当テーブルへ追加（ID は `docs/agents/README.md` の割り当て表に従う）。
-   - **敵を追加する場合は基本種だけで終わらせず、元画像の色相と能力値を変化させた同系統の上位種も同時に追加する。** 上位種は基本種の特殊能力を継承し、`MonsterLevelUpTable` に基本種→上位種の対応を登録する。
+   - **敵を追加する場合は基本種だけで終わらせず、元画像の色相と能力値を変化させた同系統の上位種（第2段階・第3段階）も同時に追加する。** 上位種は基本種の特殊能力を継承し、`MonsterLevelUpTable` に基本種→第2段階→第3段階の対応を登録する。階層で敵の能力値を補正せず、深い階の強さは上位種の出現で表す（開発者の方針）。第3段階の画像は `go run tools/third_stage_enemy_images.go` と同じ色相回転で作れる。
 2. **効果**: `itemeffects.go`（アイテム）/ 定義内クロージャ（敵・罠）。
 3. **画像**: `img/` に 30x30 透過 PNG。敵の上位種画像は基本種の輪郭・アルファ・明暗を保ち、色相だけを変更した色違いにする。`NewGame()`（main.go）で読み込み、`getItemImage` / `getEnemyImage` / `DrawMapTraps`（draw.go）の分岐に追加。画像は `BaseItem.Type` や `Enemy.Type` の文字列で選ばれる（例: `"Mintia"` → mintiaImg, `"Card"` → cardImg）。
 4. **セーブ対応**: アイテムはテンプレート ID から再生成される（`SavedItem`, savegame.go の `itemToSaved`/`savedToItem`）ので、**新しい可変フィールドを追加した場合は `SavedItem` と両変換関数に追記**する。敵は `SavedEnemy`（ID + 可変ステータス）。罠は `MapTrap.TemplateID` の明示 ID で保存されるので、**一度使った罠 ID は変更・再利用しない**。
@@ -231,6 +231,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 移動罠: `img/warp_trap.png`（青い渦）、`img/pitfall_trap.png`（穴）、`img/bear_trap.png`（トラバサミ）
   - ダメージ罠: `img/wood_arrow_trap.png`、`img/iron_arrow_trap.png`、`img/falling_rock_trap.png`、`img/large_mine_trap.png`（`go run tools/damage_trap_images.go` で再生成できる単純図形）
   - いずれもゲーム画面上での視認性は未確認。
+  - 第3段階の敵（ID 45〜65）: 第2段階の画像の色相を150度回したもの（`tools/third_stage_enemy_images.go`）。基本種や他系統と色が似ていないか、暗い床での視認性を確認して必要なら描き直す。
 
 ### Priority A: usability
 
@@ -240,7 +241,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority B: dungeon systems
 
-- 4階以降を含む階層別の敵・アイテム・罠出現テーブルを作る。
+- 階層別のアイテム・罠出現テーブルを作る（敵は1〜30階で実装済み）。
 - モンスターハウスを追加する。
 - 店、商品の購入・売却、店主、泥棒状態を追加する。
 - 武器・盾・杖の合成を追加する（保存の壺・壺拡大/吸い出しのカードは実装済み。合成の壺など壺の種類追加は未実装）。

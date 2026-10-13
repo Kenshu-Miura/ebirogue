@@ -4,7 +4,10 @@ package main
 
 // カード・回復アイテムなど使用アイテムのコンテンツテスト。
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestRecoveryItemTemplates(t *testing.T) {
 	foods := map[int]struct {
@@ -895,11 +898,14 @@ func TestThrowOnlyCardHintsDoNotConsume(t *testing.T) {
 }
 
 func TestMonsterFamilyIDs(t *testing.T) {
-	if got := monsterFamilyIDs(0); len(got) != 2 || got[0] != 0 || got[1] != 18 {
-		t.Fatalf("family of エビ = %v, want [0 18]", got)
+	for _, id := range []int{0, 18, 45} {
+		if got := monsterFamilyIDs(id); fmt.Sprint(got) != "[0 18 45]" {
+			t.Fatalf("family of %d = %v, want [0 18 45]", id, got)
+		}
 	}
-	if got := monsterFamilyIDs(18); len(got) != 2 || got[0] != 0 || got[1] != 18 {
-		t.Fatalf("family of 大エビ = %v, want [0 18]", got)
+	// 化け貝は道具と階段の擬態で別系統
+	if got := monsterFamilyIDs(16); fmt.Sprint(got) != "[16 34 61]" {
+		t.Fatalf("family of 16 = %v, want [16 34 61]", got)
 	}
 }
 

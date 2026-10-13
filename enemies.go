@@ -491,7 +491,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 
 // buildMonsterDefinitions は基本種へ固有能力を継承した上位種を加える。
 func buildMonsterDefinitions() map[int]MonsterDefinition {
-	definitions := make(map[int]MonsterDefinition, 42)
+	definitions := make(map[int]MonsterDefinition, 66)
 	for id, definition := range baseMonsterDefinitions {
 		definitions[id] = definition
 	}
@@ -518,12 +518,36 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 	definitions[40] = upperMonsterDefinition(definitions[38], 40, "InfernoSquid", "業火イカ", 88, 17, 9, 70)
 	definitions[41] = upperMonsterDefinition(definitions[39], 41, "ArcaneJellyfish", "ゲンソウクラゲ", 94, 18, 10, 82)
 
+	// 第3段階（9階以降に出現する。docs/agents/balance-level99.md）。
+	// 能力値は第2段階の HP×1.7・攻撃×2・防御+2・経験値×2.5 を基準にシミュレーションで調整する。
+	definitions[45] = upperMonsterDefinition(definitions[18], 45, "KingShrimp", "オウサマエビ", 76, 22, 8, 75)
+	definitions[46] = upperMonsterDefinition(definitions[20], 46, "DeadlySnake", "ゲキドクヘビ", 99, 26, 6, 80)
+	definitions[47] = upperMonsterDefinition(definitions[19], 47, "RockMamuru", "イワヤマムル", 41, 14, 5, 30)
+	definitions[48] = upperMonsterDefinition(definitions[21], 48, "WaveHoney", "うねうねハニー", 85, 20, 9, 90)
+	definitions[49] = upperMonsterDefinition(definitions[22], 49, "EmperorHarisenbow", "ハリセンコウテイ", 71, 22, 7, 75)
+	definitions[50] = upperMonsterDefinition(definitions[23], 50, "MountainCrab", "イワヤマガニ", 102, 24, 11, 110)
+	definitions[51] = upperMonsterDefinition(definitions[24], 51, "MegatonUrchin", "メガトンウニ", 139, 34, 12, 180)
+	definitions[52] = upperMonsterDefinition(definitions[25], 52, "PhantomThiefHermitCrab", "カイトウヤドカリ", 88, 20, 9, 100)
+	definitions[53] = upperMonsterDefinition(definitions[26], 53, "NigiriMeijinShrimp", "にぎり名人エビ", 109, 24, 10, 120)
+	definitions[54] = upperMonsterDefinition(definitions[27], 54, "VengefulCrab", "オンリョウガニ", 119, 28, 12, 145)
+	definitions[55] = upperMonsterDefinition(definitions[28], 55, "EmperorJellyfish", "ていおうクラゲ", 129, 30, 11, 165)
+	definitions[56] = upperMonsterDefinition(definitions[29], 56, "UnderworldShrimp", "メイフエビ", 92, 28, 7, 120)
+	definitions[57] = upperMonsterDefinition(definitions[30], 57, "ThunderGodMantisShrimp", "ライジンシャコ", 78, 22, 8, 125)
+	definitions[58] = upperMonsterDefinition(definitions[31], 58, "SpacetimeJellyfish", "ジクウクラゲ", 99, 28, 10, 140)
+	definitions[59] = upperMonsterDefinition(definitions[32], 59, "SwitchOctopus", "スリカエダコ", 116, 30, 11, 160)
+	definitions[60] = upperMonsterDefinition(definitions[33], 60, "TrapKingHermitCrab", "ワナオウヤドカリ", 126, 28, 13, 170)
+	definitions[61] = upperMonsterDefinition(definitions[34], 61, "MimicNautilus", "化けオウム貝", 105, 32, 12, 145)
+	definitions[62] = upperMonsterDefinition(definitions[35], 62, "MimicNautilus", "化けオウム貝", 126, 36, 13, 175)
+	definitions[63] = upperMonsterDefinition(definitions[37], 63, "AbyssSeaDragon", "深淵海竜", 184, 44, 16, 275)
+	definitions[64] = upperMonsterDefinition(definitions[40], 64, "PurgatorySquid", "レンゴクイカ", 150, 34, 11, 175)
+	definitions[65] = upperMonsterDefinition(definitions[41], 65, "SageJellyfish", "ケンジャクラゲ", 160, 36, 12, 205)
+
 	// 仮のボス（wave1-C で本物のボスに置き換える）。既存の強い敵を基に能力値を上げたもの。
 	definitions[42] = provisionalBossDefinition(definitions[23], 42, "ヌシガンセキガニ", 160, 20, 13, 300)
 	definitions[43] = provisionalBossDefinition(definitions[32], 43, "ヌシトッカエダコ", 240, 25, 15, 500)
 	definitions[44] = provisionalBossDefinition(definitions[37], 44, "ヌシ蒼海竜", 340, 30, 17, 800)
 
-	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24, 40: 22, 41: 24} {
+	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24, 40: 22, 41: 24, 49: 20, 50: 26, 51: 34, 64: 32, 65: 34} {
 		definition := definitions[id]
 		definition.RangedAttack.AttackPower = attackPower
 		definitions[id] = definition
@@ -557,6 +581,28 @@ var MonsterLevelUpTable = map[int]int{
 	36: 37, // 海竜 -> 蒼海竜
 	38: 40, // 火吹きイカ -> 業火イカ
 	39: 41, // マホウクラゲ -> ゲンソウクラゲ
+	// 第2段階 -> 第3段階
+	18: 45, // 大エビ -> オウサマエビ
+	20: 46, // 猛毒ヘビ -> ゲキドクヘビ
+	19: 47, // あなぐらマムル -> イワヤマムル
+	21: 48, // ぐねぐねハニー -> うねうねハニー
+	22: 49, // ハリセンオウ -> ハリセンコウテイ
+	23: 50, // ガンセキガニ -> イワヤマガニ
+	24: 51, // ダイナマイトウニ -> メガトンウニ
+	25: 52, // オオドロボウヤドカリ -> カイトウヤドカリ
+	26: 53, // にぎり親方エビ -> にぎり名人エビ
+	27: 54, // タタリガニ -> オンリョウガニ
+	28: 55, // しはいクラゲ -> ていおうクラゲ
+	29: 56, // シニガミエビ -> メイフエビ
+	30: 57, // イナズマシャコ -> ライジンシャコ
+	31: 58, // テレポクラゲ -> ジクウクラゲ
+	32: 59, // トッカエダコ -> スリカエダコ
+	33: 60, // ワナマスターヤドカリ -> ワナオウヤドカリ
+	34: 61, // 化けホラ貝（道具） -> 化けオウム貝
+	35: 62, // 化けホラ貝（階段） -> 化けオウム貝
+	37: 63, // 蒼海竜 -> 深淵海竜
+	40: 64, // 業火イカ -> レンゴクイカ
+	41: 65, // ゲンソウクラゲ -> ケンジャクラゲ
 }
 
 // levelUpEnemy は敵を同系統の上位種へ変化させる。
