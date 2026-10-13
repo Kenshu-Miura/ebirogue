@@ -29,9 +29,9 @@ func loadSettings() GameSettings {
 }
 
 // saveSettings は設定をファイルへ保存する
-// saveSettings は現在の設定を保存する（ヘッドレスでは何もしない）。
+// saveSettings は現在の設定を保存する（通常のゲーム以外では何もしない）。
 func (g *Game) saveSettings() {
-	if g.headless {
+	if !g.persistent {
 		return
 	}
 	saveSettings(g.settings)
@@ -536,8 +536,8 @@ func (g *Game) applySaveData(save *SaveData) error {
 
 // saveSuspendData は中断データをファイルへ保存する
 func (g *Game) saveSuspendData() error {
-	if g.headless {
-		return nil // ヘッドレス（BOT・テスト）ではセーブファイルを書き換えない
+	if !g.persistent {
+		return nil // ヘッドレス（BOT）やテストではセーブファイルを書き換えない
 	}
 	data, err := json.Marshal(g.buildSaveData())
 	if err != nil {
@@ -557,9 +557,9 @@ func (g *Game) autoSave() {
 }
 
 // deleteSaveFile は中断データを削除する
-// deleteSave は冒険の中断データを削除する（ヘッドレスでは何もしない）。
+// deleteSave は冒険の中断データを削除する（通常のゲーム以外では何もしない）。
 func (g *Game) deleteSave() {
-	if g.headless {
+	if !g.persistent {
 		return
 	}
 	deleteSaveFile()
@@ -601,4 +601,23 @@ func (g *Game) tryResumeFromSave() bool {
 		NonBlocking: true,
 	})
 	return true
+}
+
+// saveRunResult は冒険の結果を記録一覧へ追加して保存する（通常のゲーム以外では何もしない）。
+func (g *Game) saveRunResult(result RunResult) {
+	if !g.persistent {
+		return
+	}
+	data, err := storageRead(runHistoryFileName)
+	if err != nil && !storageIsNotExist(err) {
+		log.Printf("冒険の記録の読み込みに失敗: %v", err)
+	}
+	updated, err := appendRunHistory(data, result, runHistoryLimit)
+	if err != nil {
+		log.Printf("冒険の記録の作成に失敗: %v", err)
+		return
+	}
+	if err := storageWrite(runHistoryFileName, updated); err != nil {
+		log.Printf("冒険の記録の保存に失敗: %v", err)
+	}
 }

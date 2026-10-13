@@ -55,9 +55,10 @@ func (g *Game) findEnemyForDefense(id, x, y int) int {
 }
 
 // applyPlayerShieldDefense は遅延Actionの実行時にダメージ、反射・カウンター、盾劣化を適用する。
-func (g *Game) applyPlayerShieldDefense(result ShieldDefenseResult, attackerID, attackerX, attackerY int) {
+// source は死因の記録に使うダメージの原因。
+func (g *Game) applyPlayerShieldDefense(result ShieldDefenseResult, source DamageSource, attackerID, attackerX, attackerY int) {
 	if result.Damage > 0 {
-		g.state.Player.Health = max(0, g.state.Player.Health-result.Damage)
+		g.damagePlayer(result.Damage, source)
 	}
 
 	if result.WearArmor {

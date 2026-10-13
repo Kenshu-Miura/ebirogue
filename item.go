@@ -478,10 +478,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				// Type assertion to check if target is of type *Player or *Enemy
 				if _, ok := target.(*Player); ok {
 					// If target is of type *Player
-					g.state.Player.Health -= damage
-					if g.state.Player.Health < 0 {
-						g.state.Player.Health = 0
-					}
+					g.damagePlayer(damage, DamageSource{Kind: DamageSourceOther, Detail: item.GetName()})
 				} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 					// ダメージ適用・金縛り解除・撃破処理
 					g.applyDamageToEnemy(index, damage)

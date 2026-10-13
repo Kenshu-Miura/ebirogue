@@ -517,6 +517,7 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	defense := g.resolvePlayerShieldDefense(netDamage, EnemyDamageNormal, EnemyAttackMelee)
 	enemyName := g.enemyDisplayName(enemy.Name)
 	enemyID, enemyX, enemyY := enemy.ID, enemy.X, enemy.Y
+	source := enemyAttackSource(enemy.ID, enemy.Name)
 
 	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
 
@@ -526,7 +527,7 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 		Execute: func(g *Game) {
 			enemy.AttackTimer = 0.5                            // AttackTimerを設定することで敵の攻撃アニメーションが実行される
 			enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
-			g.applyPlayerShieldDefense(defense, enemyID, enemyX, enemyY)
+			g.applyPlayerShieldDefense(defense, source, enemyID, enemyX, enemyY)
 		},
 	}
 

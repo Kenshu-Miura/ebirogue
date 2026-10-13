@@ -35,6 +35,7 @@ var sleepGasTrapEffect = func(g *Game) {
 }
 
 var poisonArrowTrapEffect = func(g *Game) {
+	source := g.steppedTrapSource
 	resisted := g.playerResistsStatus()
 	defense := g.resolvePlayerShieldDefense(5, EnemyDamageNormal, EnemyAttackEnvironment)
 	message := "毒矢が刺さり、5ダメージを受けて毒状態になった"
@@ -45,7 +46,7 @@ var poisonArrowTrapEffect = func(g *Game) {
 		Duration: 0.5,
 		Message:  message,
 		Execute: func(g *Game) {
-			g.applyPlayerShieldDefense(defense, -1, -1, -1)
+			g.applyPlayerShieldDefense(defense, source, -1, -1, -1)
 			if !resisted {
 				g.state.Player.StatusAilments.Poison = 8
 			}
@@ -71,6 +72,7 @@ var slowTrapEffect = func(g *Game) {
 }
 
 var mineTrapEffect = func(g *Game) {
+	source := g.steppedTrapSource
 	defense := g.resolvePlayerShieldDefense(mineTrapDamage(g.state.Player.Health), EnemyDamageExplosion, EnemyAttackEnvironment)
 	message := fmt.Sprintf("地雷が爆発し、%dダメージを受けた", defense.Damage)
 	if defense.Resisted {
@@ -80,7 +82,7 @@ var mineTrapEffect = func(g *Game) {
 		Duration: 0.5,
 		Message:  message,
 		Execute: func(g *Game) {
-			g.applyPlayerShieldDefense(defense, -1, -1, -1)
+			g.applyPlayerShieldDefense(defense, source, -1, -1, -1)
 		},
 	})
 }
@@ -195,6 +197,8 @@ func (g *Game) stepOnTrap(trapIndex int) {
 			Execute:  func(g *Game) {},
 		})
 	} else {
+		// 罠の効果関数は死因の記録にこの罠を使う
+		g.steppedTrapSource = trapSource(trap.TemplateID, trap.Name)
 		trap.Effect(g)
 	}
 

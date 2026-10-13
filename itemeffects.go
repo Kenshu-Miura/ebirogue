@@ -813,7 +813,7 @@ var selfDestruct = func(g *Game) {
 				Message:  message,
 				Execute: func(g *Game) {
 					g.state.Enemies = survivors
-					g.applyPlayerShieldDefense(defense, -1, -1, -1)
+					g.applyPlayerShieldDefense(defense, DamageSource{Kind: DamageSourceSelfDestruct, Detail: item.GetName()}, -1, -1, -1)
 				},
 			})
 			for _, name := range destroyed {

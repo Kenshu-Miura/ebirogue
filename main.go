@@ -180,16 +180,20 @@ type Game struct {
 	offsetY                   int
 	moveCount                 int
 	Floor                     int
-	input                     InputSource // キー入力の取得元（keys() 経由で使う）
-	headless                  bool        // 描画・セーブファイル無しで動かす（BOT・テスト用）
-	fastForward               bool        // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
-	runEnded                  bool        // ヘッドレスで冒険が終了した（死亡・クリア）
-	difficulty                Difficulty  // 冒険の難易度（開始時に決め、途中で変えない）
-	inputFrame                int         // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
-	lastIncrementFrame        int         // 最後に足踏みしたフレーム（0 は未実行）
-	lastArrowPressFrame       int         // 方向キーで最後に移動したフレーム（0 は未実行）
-	lastDashStopFrame         int         // 最後にダッシュが停止したフレーム（0 は未実行）
-	showInventory             bool        // true when the inventory window should be displayed
+	input                     InputSource  // キー入力の取得元（keys() 経由で使う）
+	headless                  bool         // 描画なしで動かす（BOT・テスト用）。死亡時に自動リスタートしない
+	persistent                bool         // セーブ・設定・冒険の記録をストレージへ書き込む（通常のゲームのみ true）
+	lastDamageSource          DamageSource // 最後にプレイヤーへダメージを与えた原因（死因）
+	lastRunResult             *RunResult   // 直近に終了した冒険の結果
+	steppedTrapSource         DamageSource // 効果を処理中の罠（罠の効果関数が死因の記録に使う）
+	fastForward               bool         // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
+	runEnded                  bool         // ヘッドレスで冒険が終了した（死亡・クリア）
+	difficulty                Difficulty   // 冒険の難易度（開始時に決め、途中で変えない）
+	inputFrame                int          // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
+	lastIncrementFrame        int          // 最後に足踏みしたフレーム（0 は未実行）
+	lastArrowPressFrame       int          // 方向キーで最後に移動したフレーム（0 は未実行）
+	lastDashStopFrame         int          // 最後にダッシュが停止したフレーム（0 は未実行）
+	showInventory             bool         // true when the inventory window should be displayed
 	selectedItemIndex         int
 	showItemActions           bool
 	selectedActionIndex       int
@@ -359,6 +363,14 @@ func (g *Game) Update() error {
 				},
 			}
 			g.ActionQueue.Queue = append(g.ActionQueue.Queue, deathAction)
+			// 死因（例: 「10階で 火吹きイカ の炎にやられた」）を続けて表示し、フェードアウト中も残す
+			if g.lastRunResult != nil && g.lastRunResult.DeathMessage != "" {
+				g.ActionQueue.Queue = append(g.ActionQueue.Queue, Action{
+					Duration: 1.5,
+					Message:  g.lastRunResult.DeathMessage,
+					Execute:  func(*Game) {},
+				})
+			}
 			g.deathMessageAdded = true
 			// 戦闘状態を強制的にアクティブにして、メッセージが正常に表示されるようにする
 			g.isCombatActive = true
@@ -826,6 +838,7 @@ func NewGame() *Game {
 
 	game := &Game{
 		input:               NewInputRecorder(ebitenInput{}),
+		persistent:          true,
 		playerImg:           img,
 		tilesetImg:          tilesetImg,
 		ebiImg:              ebiImg,

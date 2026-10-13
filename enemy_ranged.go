@@ -43,6 +43,24 @@ func (g *Game) canEnemyUseRangedAttack(enemyIndex int) bool {
 	return false
 }
 
+// rangedAttackName は死因の表示に使う遠距離攻撃の名前を返す。
+func rangedAttackName(kind RangedAttackKind) string {
+	switch kind {
+	case RangedAttackArrow:
+		return "矢"
+	case RangedAttackRock:
+		return "投石"
+	case RangedAttackExplosion:
+		return "爆発弾"
+	case RangedAttackFire:
+		return "炎"
+	case RangedAttackMagic:
+		return "魔法弾"
+	default:
+		return ""
+	}
+}
+
 func enemyDamageKindForRangedAttack(kind RangedAttackKind) EnemyDamageKind {
 	switch kind {
 	case RangedAttackExplosion:
@@ -86,6 +104,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 	message := attackMessage + g.shieldDefenseMessage(enemyName, defense)
 
 	originX, originY, attackerID := enemy.X, enemy.Y, enemy.ID
+	source := enemyRangedSource(enemy.ID, enemy.Name, rangedAttackName(attack.Kind))
 	g.Enqueue(Action{
 		Duration: rangedAttackEffectDuration,
 		Message:  message,
@@ -106,7 +125,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 			// 爆発弾は着弾点の周囲1マスを攻撃範囲とする。
 			// 現在の敵AIは海老さんのいるマスを狙うため、移動していなければ必ず巻き込まれる。
 			if attack.Kind != RangedAttackExplosion || withinBlastRadius(targetX, targetY, g.state.Player.X, g.state.Player.Y, attack.BlastRadius) {
-				g.applyPlayerShieldDefense(defense, attackerID, originX, originY)
+				g.applyPlayerShieldDefense(defense, source, attackerID, originX, originY)
 			}
 			if attack.Kind == RangedAttackExplosion {
 				g.enqueueExplosionCollateral(enemy.ID, originX, originY, targetX, targetY, attack)

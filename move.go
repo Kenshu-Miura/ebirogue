@@ -10,7 +10,7 @@ import (
 func (g *Game) IncrementMoveCount() {
 	g.moveCount++
 	if g.state.Player.StatusAilments.Poison > 0 {
-		g.state.Player.Health = max(0, g.state.Player.Health-2)
+		g.damagePlayer(2, DamageSource{Kind: DamageSourcePoison})
 		g.state.Player.checkDeath(g)
 	}
 	// 状態異常のターン数を減らす
@@ -19,10 +19,7 @@ func (g *Game) IncrementMoveCount() {
 	// 満腹度が0の場合の処理
 	if g.state.Player.Satiety == 0 {
 		// 満腹度0の場合、毎ターンHPが1減る
-		g.state.Player.Health -= 1
-		if g.state.Player.Health < 0 {
-			g.state.Player.Health = 0
-		}
+		g.damagePlayer(1, DamageSource{Kind: DamageSourceStarvation})
 		// 死亡チェック
 		g.state.Player.checkDeath(g)
 	} else {
@@ -113,8 +110,8 @@ func (p *Player) checkDeath(g *Game) {
 		g.fadeOutProgress = 0.0
 		g.gameResetTimer = 6.0 // 6秒後にリセット（攻撃処理待ち+メッセージ1秒+フェードアウト1秒+待機2秒）
 
-		// 死亡したら中断データを削除する（復活による再開を防ぐ）
-		g.deleteSave()
+		// 冒険の結果を記録し、中断データを削除する（復活による再開を防ぐ）
+		g.finishRun(false)
 
 		// 死亡メッセージは後でActionQueueが空になってから追加する
 	}
@@ -166,6 +163,9 @@ func (g *Game) startNewRun(seed int64) {
 		recorder.Reset()
 	}
 	g.lastIncrementFrame, g.lastArrowPressFrame, g.lastDashStopFrame = 0, 0, 0
+	g.lastDamageSource = DamageSource{}
+	g.lastRunResult = nil
+	g.runEnded = false
 	player := newInitialPlayer()
 
 	// 新しいマップを生成（プレイヤーの座標も部屋の中に設定される）
