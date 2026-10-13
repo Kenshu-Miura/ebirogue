@@ -169,6 +169,18 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 実装した内容はAGENTS.mdから削除してください。画像が必要な場合は生成が望ましいですが、無理の場合はAGENTS.mdに残タスクとして記載してください。修正はコミット、プッシュしてください。
 
+**並列開発時の例外**: `docs/agents/` の指示書に沿ってブランチで作業する場合は、`docs/agents/README.md` の「並列作業のルール」が、この段落とプロジェクト概要にあるドキュメント同時更新のルールより優先する（ドキュメントは統合担当がマージ時にまとめて更新する）。BOT テスト基盤の実装手順は `docs/agents/phase0-foundation.md` を参照。
+
+### Priority S: clear condition, difficulty and bosses
+
+- クリア条件を「目標階のボスを倒す」とし、難易度で目標階を選べるようにする。
+  - 初級: 10階のボス、中級: 20階のボス、上級（標準）: 30階のボス。
+  - 難易度は冒険開始時に選び、冒険データに保存する（冒険の途中で変更不可）。
+- 10・20・30階をボス階とし、各階に固有のボスを1体配置する。ボスを倒すまで階段は使えない。30階より下には進めない。
+- ボスはランダム出現と上位種化の対象外とし、「敵を追加するときは上位種も同時に追加する」規則の例外とする。
+- 難易度選択画面、クリア画面、HUD の難易度・目標階表示、冒険の記録一覧を追加する。
+- 実装手順は `docs/agents/phase0-foundation.md`（P0-6 骨格）、`docs/agents/wave1-C-bosses.md`、`docs/agents/wave1-D-difficulty-ui.md`。
+
 ### Priority A: cards based on scrolls
 
 - 新規カードは既存の `img/card.png` を共用し、あかり・真空斬りを含めて階層別出現テーブル導入時に出現率を調整する。
