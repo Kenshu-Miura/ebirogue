@@ -6,11 +6,33 @@ import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
+
+// キーリピートの間隔（60FPS 前提のフレーム数）。実時間ではなくフレームで数えるため、
+// 同じ入力列を再生すれば同じ結果になる。
+const (
+	stepRepeatFrames  = 6  // 足踏みの連続間隔（約100ms）
+	moveRepeatFrames  = 11 // 押しっぱなし移動の間隔（約180ms）
+	dashRestartFrames = 24 // ダッシュ停止後に再開できるまで（約400ms）
+)
+
+// framesSince は指定フレームからの経過フレーム数を返す。0（未実行）なら十分大きい値を返す。
+func (g *Game) framesSince(frame int) int {
+	if frame == 0 {
+		return 1 << 30
+	}
+	return g.inputFrame - frame
+}
+
+// isInputReady は次のキー入力が行動としてそのまま受け付けられる状態かどうかを返す
+// （行動・アニメーション・フェードの処理中や、方向キーのリピート待ちでないこと）。
+func (g *Game) isInputReady() bool {
+	return g.CanAcceptInput() && len(g.ActionQueue.Queue) == 0 && !g.Animating &&
+		!g.fadingOut && !g.fadingIn && g.fadeInProgress >= 1.0 && !g.playerDead &&
+		g.framesSince(g.lastArrowPressFrame) >= moveRepeatFrames
+}
 
 func (g *Game) OpenDoor() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
@@ -35,7 +57,7 @@ func (g *Game) OpenDoor() {
 
 func (g *Game) processDKeyPress() {
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
+	if g.keys().JustPressed(KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
 		equippedArrow := g.state.Player.EquippedArrow
 		if g.shootArrow(equippedArrow, 10) {
 			// 矢を撃つことでもターン進行
@@ -50,7 +72,7 @@ func (g *Game) processDKeyPress() {
 func (g *Game) HandleGroundItemInput() {
 	// Sキーによる直接的な足元チェックは削除（メニューシステムに統合）
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) && g.ShowGroundItem {
+	if g.keys().JustPressed(KeyX) && g.ShowGroundItem {
 		g.ShowGroundItem = false
 		g.selectedGroundActionIndex = 0
 		g.GroundItemActioned = false
@@ -65,7 +87,7 @@ func (g *Game) HandleGroundItemInput() {
 	}
 
 	// Cキーで全てのメニューを閉じる処理
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) && g.ShowGroundItem {
+	if g.keys().JustPressed(KeyC) && g.ShowGroundItem {
 		g.ShowGroundItem = false
 		g.selectedGroundActionIndex = 0
 		g.GroundItemActioned = false
@@ -81,18 +103,18 @@ func (g *Game) HandleGroundItemInput() {
 		if g.groundMenuJustOpened {
 			g.groundMenuJustOpened = false // フラグをリセット
 			// Zキー以外の入力は受け付ける
-			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundActionIndex > 0 {
+			if g.keys().JustPressed(KeyUp) && g.selectedGroundActionIndex > 0 {
 				g.selectedGroundActionIndex--
-			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundActionIndex < 4 {
+			} else if g.keys().JustPressed(KeyDown) && g.selectedGroundActionIndex < 4 {
 				g.selectedGroundActionIndex++
 			}
 		} else {
 			// 通常の足元メニュー選択状態での操作
-			if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedGroundActionIndex > 0 {
+			if g.keys().JustPressed(KeyUp) && g.selectedGroundActionIndex > 0 {
 				g.selectedGroundActionIndex--
-			} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedGroundActionIndex < 4 {
+			} else if g.keys().JustPressed(KeyDown) && g.selectedGroundActionIndex < 4 {
 				g.selectedGroundActionIndex++
-			} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			} else if g.keys().JustPressed(KeyZ) {
 				g.GroundItemActioned = true // アクション実行状態に移行
 			}
 		}
@@ -100,9 +122,9 @@ func (g *Game) HandleGroundItemInput() {
 
 	if g.ShowGroundItem && g.currentGroundItem != nil && g.GroundItemActioned {
 		// アクション実行状態での操作
-		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		if g.keys().JustPressed(KeyZ) {
 			g.executeGroundItemAction()
-		} else if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		} else if g.keys().JustPressed(KeyX) {
 			// Xキーで説明ウィンドウを閉じる、または前の状態に戻る
 			if g.showGroundItemDescription {
 				g.showGroundItemDescription = false
@@ -116,18 +138,18 @@ func (g *Game) HandleGroundItemInput() {
 
 func (g *Game) handleItemActionsInput() error {
 	maxActionIndex := len(g.currentItemActions()) - 1
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) && g.selectedActionIndex > 0 {
+	if g.keys().JustPressed(KeyUp) && g.selectedActionIndex > 0 {
 		g.selectedActionIndex--
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) && g.selectedActionIndex < maxActionIndex {
+	} else if g.keys().JustPressed(KeyDown) && g.selectedActionIndex < maxActionIndex {
 		g.selectedActionIndex++
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+	if g.keys().JustPressed(KeyZ) {
 		g.executeAction()
 		return nil
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	if g.keys().JustPressed(KeyX) {
 		g.showItemActions = false // Toggle the item actions menu
 		g.selectedActionIndex = 0
 		return nil
@@ -140,15 +162,15 @@ func (g *Game) handleInventoryNavigationInput() error {
 	// 絞り込み後の表示リストを取得し、選択位置を表示リスト内へ合わせる
 	indices := g.normalizeInventoryView()
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+	if g.keys().JustPressed(KeyUp) {
 		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, -1)
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+	} else if g.keys().JustPressed(KeyDown) {
 		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, 1)
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+	} else if g.keys().JustPressed(KeyLeft) {
 		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, -10)
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+	} else if g.keys().JustPressed(KeyRight) {
 		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, 10)
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyZ) && len(g.state.Player.Inventory) > 0 {
+	} else if g.keys().JustPressed(KeyZ) && len(g.state.Player.Inventory) > 0 {
 		if g.selectedGroundActionIndex == 1 && g.showInventory {
 			if len(g.state.Player.Inventory) > 0 {
 				g.executeItemSwap() // execute your item swapping function here
@@ -162,7 +184,7 @@ func (g *Game) handleInventoryNavigationInput() error {
 		} else if !g.useIdentifyItem && !g.usePotInsert {
 			g.showItemActions = true // Toggle the item actions menu
 		}
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyX) && (g.useIdentifyItem || g.usePotInsert) {
+	} else if g.keys().JustPressed(KeyX) && (g.useIdentifyItem || g.usePotInsert) {
 		g.selectedItemIndex = 0
 		g.selectedActionIndex = 0
 		g.tmpSelectedItemIndex = -1
@@ -171,7 +193,7 @@ func (g *Game) handleInventoryNavigationInput() error {
 	}
 
 	// Fキー: カテゴリ絞り込みの切り替え（所持しているカテゴリだけを巡回）
-	if inpututil.IsKeyJustPressed(ebiten.KeyF) && !g.useIdentifyItem && !g.usePotInsert {
+	if g.keys().JustPressed(KeyF) && !g.useIdentifyItem && !g.usePotInsert {
 		g.inventoryFilter = nextFilter(g.inventoryFilter, g.presentCategories())
 		if indices := g.normalizeInventoryView(); len(indices) > 0 {
 			g.selectedItemIndex = indices[0]
@@ -179,13 +201,13 @@ func (g *Game) handleInventoryNavigationInput() error {
 	}
 
 	// Sキー: カテゴリ別ソート（整頓）。同じ矢は1つへ統合される
-	if inpututil.IsKeyJustPressed(ebiten.KeyS) && !g.useIdentifyItem && !g.usePotInsert {
+	if g.keys().JustPressed(KeyS) && !g.useIdentifyItem && !g.usePotInsert {
 		g.sortInventory()
 		g.normalizeInventoryView()
 	}
 
 	// Nキー: 未識別アイテムへ任意の名前を付ける
-	if inpututil.IsKeyJustPressed(ebiten.KeyN) && !g.useIdentifyItem && !g.usePotInsert &&
+	if g.keys().JustPressed(KeyN) && !g.useIdentifyItem && !g.usePotInsert &&
 		g.selectedItemIndex < len(g.state.Player.Inventory) {
 		item := g.state.Player.Inventory[g.selectedItemIndex]
 		if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
@@ -202,30 +224,30 @@ func (g *Game) handleInventoryNavigationInput() error {
 // 未識別アイテムの名前入力ウィンドウの入力処理
 func (g *Game) handleNameInputWindow() error {
 	// 五十音グリッドのカーソル移動
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+	if g.keys().JustPressed(KeyUp) {
 		g.nameInputCursor = moveGridCursor(g.nameInputCursor, -kanaGridColumns, len(kanaChars))
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+	} else if g.keys().JustPressed(KeyDown) {
 		g.nameInputCursor = moveGridCursor(g.nameInputCursor, kanaGridColumns, len(kanaChars))
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+	} else if g.keys().JustPressed(KeyLeft) {
 		g.nameInputCursor = moveGridCursor(g.nameInputCursor, -1, len(kanaChars))
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+	} else if g.keys().JustPressed(KeyRight) {
 		g.nameInputCursor = moveGridCursor(g.nameInputCursor, 1, len(kanaChars))
 	}
 
 	// Zキーで選択中の文字を入力
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+	if g.keys().JustPressed(KeyZ) {
 		g.nameInput.Append(kanaChars[g.nameInputCursor])
 	}
 
 	// Xキーで1文字削除。空の状態ならキャンセルして閉じる
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	if g.keys().JustPressed(KeyX) {
 		if !g.nameInput.Backspace() {
 			g.showNameInput = false
 		}
 	}
 
 	// Enterキーで決定。空の名前で決定すると設定を消去する
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if g.keys().JustPressed(KeyEnter) {
 		name := g.nameInput.String()
 		if name == "" {
 			delete(g.customNames, g.nameInputTargetID)
@@ -239,7 +261,7 @@ func (g *Game) handleNameInputWindow() error {
 }
 
 func (g *Game) handleItemDescriptionInput() error {
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	if g.keys().JustPressed(KeyX) {
 		g.showItemDescription = false // Toggle the item description
 		return nil
 	}
@@ -258,7 +280,7 @@ func (g *Game) handleInventoryInput() error {
 		return nil
 	}
 
-	cPressed := inpututil.IsKeyJustPressed(ebiten.KeyC)
+	cPressed := g.keys().JustPressed(KeyC)
 
 	// Cキーが押された場合の処理
 	if cPressed {
@@ -295,7 +317,7 @@ func (g *Game) handleInventoryInput() error {
 		}
 	}
 
-	xPressed := inpututil.IsKeyJustPressed(ebiten.KeyX)
+	xPressed := g.keys().JustPressed(KeyX)
 
 	if xPressed && g.showInventory && !g.showItemActions && !g.useIdentifyItem && !g.usePotInsert {
 		g.selectedItemIndex = 0
@@ -330,24 +352,24 @@ func (g *Game) CheatHandleInput() (int, int) {
 	var dx, dy int
 
 	// キーの押下状態を取得
-	upPressed := ebiten.IsKeyPressed(ebiten.KeyUp)
-	downPressed := ebiten.IsKeyPressed(ebiten.KeyDown)
-	leftPressed := ebiten.IsKeyPressed(ebiten.KeyLeft)
-	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight)
-	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
-	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
+	upPressed := g.keys().Pressed(KeyUp)
+	downPressed := g.keys().Pressed(KeyDown)
+	leftPressed := g.keys().Pressed(KeyLeft)
+	rightPressed := g.keys().Pressed(KeyRight)
+	shiftPressed := g.keys().Pressed(KeyShift) // Shiftキーが押されているかどうかをチェック
+	aPressed := g.keys().Pressed(KeyA)         // Aキーが押されているかどうかをチェック
 
 	// 足踏みロジック
-	if aPressed && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
+	if aPressed && g.framesSince(g.lastIncrementFrame) >= stepRepeatFrames &&
 		!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
 		g.isActioned = true
-		g.lastIncrement = time.Now() // lastIncrementの更新
+		g.lastIncrementFrame = g.inputFrame // lastIncrementの更新
 	}
 
 	arrowPressed := upPressed || downPressed || leftPressed || rightPressed
 
 	// 矢印キーの押下ロジック
-	if arrowPressed && time.Since(g.lastArrowPress) >= 180*time.Millisecond {
+	if arrowPressed && g.framesSince(g.lastArrowPressFrame) >= moveRepeatFrames {
 
 		if shiftPressed { // 斜め移動のロジック
 
@@ -387,7 +409,7 @@ func (g *Game) CheatHandleInput() (int, int) {
 				dy, dx = 1, 1
 			}
 		}
-		g.lastArrowPress = time.Now() // lastArrowPressの更新
+		g.lastArrowPressFrame = g.inputFrame // lastArrowPressの更新
 	}
 
 	return dx, dy
@@ -452,13 +474,13 @@ func (g *Game) HandleInput() (int, int) {
 	}
 
 	// キーの押下状態を取得
-	upPressed := ebiten.IsKeyPressed(ebiten.KeyUp)
-	downPressed := ebiten.IsKeyPressed(ebiten.KeyDown)
-	leftPressed := ebiten.IsKeyPressed(ebiten.KeyLeft)
-	rightPressed := ebiten.IsKeyPressed(ebiten.KeyRight)
-	shiftPressed := ebiten.IsKeyPressed(ebiten.KeyShift) // Shiftキーが押されているかどうかをチェック
-	aPressed := ebiten.IsKeyPressed(ebiten.KeyA)         // Aキーが押されているかどうかをチェック
-	xPressed := ebiten.IsKeyPressed(ebiten.KeyX)         // Xキーが押されているかどうかをチェック
+	upPressed := g.keys().Pressed(KeyUp)
+	downPressed := g.keys().Pressed(KeyDown)
+	leftPressed := g.keys().Pressed(KeyLeft)
+	rightPressed := g.keys().Pressed(KeyRight)
+	shiftPressed := g.keys().Pressed(KeyShift) // Shiftキーが押されているかどうかをチェック
+	aPressed := g.keys().Pressed(KeyA)         // Aキーが押されているかどうかをチェック
+	xPressed := g.keys().Pressed(KeyX)         // Xキーが押されているかどうかをチェック
 
 	if aPressed && !g.zPressed {
 		if shiftPressed {
@@ -493,7 +515,7 @@ func (g *Game) HandleInput() (int, int) {
 		return dx, dy
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) && !aPressed && !xPressed {
+	if g.keys().JustPressed(KeyZ) && !aPressed && !xPressed {
 		g.zPressed = true
 		switch g.state.Player.Direction {
 		case Up:
@@ -530,21 +552,21 @@ func (g *Game) HandleInput() (int, int) {
 
 	if xPressed && !arrowPressed {
 		// 足踏みロジック
-		if ebiten.IsKeyPressed(ebiten.KeyZ) && time.Since(g.lastIncrement) >= 100*time.Millisecond &&
+		if g.keys().Pressed(KeyZ) && g.framesSince(g.lastIncrementFrame) >= stepRepeatFrames &&
 			!upPressed && !downPressed && !leftPressed && !rightPressed && !g.isCombatActive {
 			// 敵接近時は押しっぱなしでの連続足踏みを自動停止する（Zの押し直しで1回ずつは可能）
-			if !g.enemyThreatens() || inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			if !g.enemyThreatens() || g.keys().JustPressed(KeyZ) {
 				g.isActioned = true
-				g.lastIncrement = time.Now() // lastIncrementの更新
+				g.lastIncrementFrame = g.inputFrame // lastIncrementの更新
 			}
 		}
 	}
 
-	if arrowPressed && xPressed && !ebiten.IsKeyPressed(ebiten.KeyZ) {
+	if arrowPressed && xPressed && !g.keys().Pressed(KeyZ) {
 		g.xPressed = true
 
 		if g.dashStopped {
-			if time.Since(g.lastDashStop) < 400*time.Millisecond {
+			if g.framesSince(g.lastDashStopFrame) < dashRestartFrames {
 				return 0, 0
 			}
 			g.dashStopped = false // ダッシュ再開
@@ -590,7 +612,7 @@ func (g *Game) HandleInput() (int, int) {
 				if reason := g.dashDangerReason(dx, dy); reason != "" {
 					log.Printf("Dash stopped (%s): (%d,%d)", reason, g.state.Player.X+dx, g.state.Player.Y+dy)
 					g.dashStopped = true
-					g.lastDashStop = time.Now()
+					g.lastDashStopFrame = g.inputFrame
 					return 0, 0
 				}
 			}
@@ -599,7 +621,7 @@ func (g *Game) HandleInput() (int, int) {
 				if isOnBoundary(g.state.Player.X+dx, g.state.Player.Y+dy, room) {
 					log.Printf("Dash stopped at entrance: (%d,%d)", g.state.Player.X+dx, g.state.Player.Y+dy)
 					g.dashStopped = true
-					g.lastDashStop = time.Now()
+					g.lastDashStopFrame = g.inputFrame
 					return 0, 0
 				}
 			}
@@ -609,14 +631,14 @@ func (g *Game) HandleInput() (int, int) {
 			if corridorBranch(g.state.Map, nowX, nowY, dx, dy) {
 				log.Printf("Dash stopped at corner: (%d,%d)", nowX, nowY)
 				g.dashStopped = true
-				g.lastDashStop = time.Now()
+				g.lastDashStopFrame = g.inputFrame
 				return 0, 0
 			}
 		}
 	}
 
 	// 矢印キーの押下ロジック
-	if arrowPressed && time.Since(g.lastArrowPress) >= 180*time.Millisecond {
+	if arrowPressed && g.framesSince(g.lastArrowPressFrame) >= moveRepeatFrames {
 
 		if shiftPressed { // 斜め移動のロジック
 
@@ -681,7 +703,7 @@ func (g *Game) HandleInput() (int, int) {
 				dy, dx = 1, 1
 			}
 		}
-		g.lastArrowPress = time.Now() // lastArrowPressの更新
+		g.lastArrowPressFrame = g.inputFrame // lastArrowPressの更新
 	}
 
 	return dx, dy
@@ -689,7 +711,7 @@ func (g *Game) HandleInput() (int, int) {
 
 // デバッグ用F1キー処理：混乱薬をインベントリに追加
 func (g *Game) processF1KeyPress() {
-	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
+	if g.keys().JustPressed(KeyF1) {
 		// インベントリに空きがあるかチェック
 		if len(g.state.Player.Inventory) < g.state.Player.MaxInventory {
 			addItem := g.createItemByID(19, 0, 0) // 座標は仮の値
@@ -722,18 +744,18 @@ func (g *Game) handleMenuInput() error {
 
 	// 矢印キーでメニュー項目を移動（3行2列）
 	const menuRowCount = 3
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+	if g.keys().JustPressed(KeyUp) {
 		g.menuSelectedRow = (g.menuSelectedRow - 1 + menuRowCount) % menuRowCount
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+	} else if g.keys().JustPressed(KeyDown) {
 		g.menuSelectedRow = (g.menuSelectedRow + 1) % menuRowCount
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+	} else if g.keys().JustPressed(KeyLeft) {
 		g.menuSelectedCol = (g.menuSelectedCol - 1 + 2) % 2
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+	} else if g.keys().JustPressed(KeyRight) {
 		g.menuSelectedCol = (g.menuSelectedCol + 1) % 2
 	}
 
 	// Zキーで決定
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+	if g.keys().JustPressed(KeyZ) {
 		if g.menuSelectedRow == 0 && g.menuSelectedCol == 0 {
 			// 道具（インベントリ）
 			g.showMenu = false
@@ -810,7 +832,7 @@ func (g *Game) handleMenuInput() error {
 	}
 
 	// Xキーでメニューを閉じる
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	if g.keys().JustPressed(KeyX) {
 		g.showMenu = false
 	}
 
@@ -826,14 +848,14 @@ func (g *Game) handleSettingsInput() error {
 	const settingsItemCount = 2
 
 	// ↑↓で項目を移動
-	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+	if g.keys().JustPressed(KeyUp) {
 		g.settingsSelectedIndex = (g.settingsSelectedIndex - 1 + settingsItemCount) % settingsItemCount
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+	} else if g.keys().JustPressed(KeyDown) {
 		g.settingsSelectedIndex = (g.settingsSelectedIndex + 1) % settingsItemCount
 	}
 
 	// ←→で設定値を切り替え（即時反映）
-	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+	if g.keys().JustPressed(KeyLeft) || g.keys().JustPressed(KeyRight) {
 		switch g.settingsSelectedIndex {
 		case 0:
 			g.settings.Fullscreen = !g.settings.Fullscreen
@@ -844,14 +866,14 @@ func (g *Game) handleSettingsInput() error {
 	}
 
 	// Xキーで設定を保存してメニューに戻る
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	if g.keys().JustPressed(KeyX) {
 		g.showSettings = false
 		saveSettings(g.settings)
 		g.showMenu = true
 	}
 
 	// Cキーで設定を保存して全て閉じる
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+	if g.keys().JustPressed(KeyC) {
 		g.showSettings = false
 		saveSettings(g.settings)
 	}
@@ -871,11 +893,11 @@ func (g *Game) handleSuspendPromptInput() error {
 		return nil
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) || inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+	if g.keys().JustPressed(KeyLeft) || g.keys().JustPressed(KeyRight) {
 		g.suspendSelectedOption = (g.suspendSelectedOption + 1) % 2
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+	if g.keys().JustPressed(KeyZ) {
 		if g.suspendSelectedOption == 0 && g.promptRetry { // 同じシードで再挑戦
 			g.showSuspendPrompt = false
 			g.retrySameSeed()
@@ -899,14 +921,14 @@ func (g *Game) handleSuspendPromptInput() error {
 	}
 
 	// Xキーでメニューに戻る
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	if g.keys().JustPressed(KeyX) {
 		g.showSuspendPrompt = false
 		g.suspendSelectedOption = 0
 		g.showMenu = true
 	}
 
 	// Cキーで全て閉じる
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+	if g.keys().JustPressed(KeyC) {
 		g.showSuspendPrompt = false
 		g.suspendSelectedOption = 0
 	}
@@ -918,18 +940,18 @@ func (g *Game) handleSuspendPromptInput() error {
 func (g *Game) handleMessageLogInput() error {
 	if g.showMessageLog {
 		// ↑↓でスクロール（押しっぱなしでリピート）
-		if logScrollKeyPressed(ebiten.KeyUp) {
+		if g.logScrollKeyPressed(KeyUp) {
 			if g.messageLogScroll < g.messageLog.MaxScroll(messageLogPageSize) {
 				g.messageLogScroll++
 			}
-		} else if logScrollKeyPressed(ebiten.KeyDown) {
+		} else if g.logScrollKeyPressed(KeyDown) {
 			if g.messageLogScroll > 0 {
 				g.messageLogScroll--
 			}
 		}
 
 		// XキーまたはLキーで閉じる
-		if inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeyL) {
+		if g.keys().JustPressed(KeyX) || g.keys().JustPressed(KeyL) {
 			g.showMessageLog = false
 			g.messageLogScroll = 0
 		}
@@ -937,7 +959,7 @@ func (g *Game) handleMessageLogInput() error {
 	}
 
 	// 他のウィンドウが開いていない時だけLキーで履歴を開く
-	if inpututil.IsKeyJustPressed(ebiten.KeyL) &&
+	if g.keys().JustPressed(KeyL) &&
 		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
 		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
 		!g.showSettings && !g.showSuspendPrompt && !g.showHelp &&
@@ -956,27 +978,27 @@ func (g *Game) handleHelpInput() error {
 		pages := helpPages()
 
 		// ←→でページを切り替え
-		if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		if g.keys().JustPressed(KeyLeft) {
 			g.helpPage = (g.helpPage - 1 + len(pages)) % len(pages)
 			g.helpScroll = 0
-		} else if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		} else if g.keys().JustPressed(KeyRight) {
 			g.helpPage = (g.helpPage + 1) % len(pages)
 			g.helpScroll = 0
 		}
 
 		// ↑↓でスクロール（押しっぱなしでリピート）
-		if logScrollKeyPressed(ebiten.KeyDown) {
+		if g.logScrollKeyPressed(KeyDown) {
 			if g.helpScroll < helpMaxScroll(len(pages[g.helpPage].Lines), helpPageSize) {
 				g.helpScroll++
 			}
-		} else if logScrollKeyPressed(ebiten.KeyUp) {
+		} else if g.logScrollKeyPressed(KeyUp) {
 			if g.helpScroll > 0 {
 				g.helpScroll--
 			}
 		}
 
 		// XキーまたはHキーで閉じる（メニューから開いた場合はメニューへ戻る）
-		if inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeyH) {
+		if g.keys().JustPressed(KeyX) || g.keys().JustPressed(KeyH) {
 			g.showHelp = false
 			g.helpScroll = 0
 			if g.returnToMenuFromHelp {
@@ -986,7 +1008,7 @@ func (g *Game) handleHelpInput() error {
 		}
 
 		// Cキーで全て閉じる
-		if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		if g.keys().JustPressed(KeyC) {
 			g.showHelp = false
 			g.showMenu = false
 			g.helpScroll = 0
@@ -996,7 +1018,7 @@ func (g *Game) handleHelpInput() error {
 	}
 
 	// 他のウィンドウが開いていない時だけHキーでヘルプを開く
-	if inpututil.IsKeyJustPressed(ebiten.KeyH) &&
+	if g.keys().JustPressed(KeyH) &&
 		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
 		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
 		!g.showSettings && !g.showSuspendPrompt && !g.showMessageLog &&
@@ -1019,14 +1041,14 @@ func (g *Game) handleBlankCardInput() error {
 	ids := blankCardOptionIDs()
 
 	// ↑↓でカーソル移動（押しっぱなしでリピート）
-	if logScrollKeyPressed(ebiten.KeyUp) && g.blankCardIndex > 0 {
+	if g.logScrollKeyPressed(KeyUp) && g.blankCardIndex > 0 {
 		g.blankCardIndex--
-	} else if logScrollKeyPressed(ebiten.KeyDown) && g.blankCardIndex < len(ids)-1 {
+	} else if g.logScrollKeyPressed(KeyDown) && g.blankCardIndex < len(ids)-1 {
 		g.blankCardIndex++
 	}
 
 	// Zキーで選んだカード効果を書き込む
-	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+	if g.keys().JustPressed(KeyZ) {
 		if g.blankCardTarget != nil && g.blankCardIndex >= 0 && g.blankCardIndex < len(ids) {
 			templateID := ids[g.blankCardIndex]
 			if writeCardEffect(g.blankCardTarget, templateID) {
@@ -1039,7 +1061,7 @@ func (g *Game) handleBlankCardInput() error {
 	}
 
 	// XキーまたはCキーでキャンセル（書き込まずターンも消費しない）
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) || inpututil.IsKeyJustPressed(ebiten.KeyC) {
+	if g.keys().JustPressed(KeyX) || g.keys().JustPressed(KeyC) {
 		g.closeBlankCardMenu()
 	}
 
@@ -1047,8 +1069,8 @@ func (g *Game) handleBlankCardInput() error {
 }
 
 // スクロールキーの押下判定（押した瞬間と長押しリピート）
-func logScrollKeyPressed(key ebiten.Key) bool {
-	d := inpututil.KeyPressDuration(key)
+func (g *Game) logScrollKeyPressed(key Key) bool {
+	d := g.keys().PressDuration(key)
 	return d == 1 || (d >= 20 && d%5 == 0)
 }
 
@@ -1059,14 +1081,14 @@ func (g *Game) handleEmptyInventoryMessage() error {
 	}
 
 	// Xキーでメニューに戻る
-	if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+	if g.keys().JustPressed(KeyX) {
 		g.showEmptyInventoryMessage = false
 		g.showMenu = true
 		g.returnToMenuFromInventory = false
 	}
 
 	// Cキーで全メニューを閉じてゲームに戻る
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+	if g.keys().JustPressed(KeyC) {
 		g.showEmptyInventoryMessage = false
 		g.showMenu = false
 		g.returnToMenuFromInventory = false

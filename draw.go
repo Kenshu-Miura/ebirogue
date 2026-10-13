@@ -417,7 +417,7 @@ func (g *Game) trajectoryPreviewSpec() (throwRange int, stopOnWallTile bool, act
 	}
 
 	// Aキーで向きを変えている間、装備中の矢の射線を表示する
-	if ebiten.IsKeyPressed(ebiten.KeyA) && g.state.Player.EquippedArrow != nil &&
+	if g.keys().Pressed(KeyA) && g.state.Player.EquippedArrow != nil &&
 		!g.showInventory && !g.showMenu && !g.showSettings && !g.showSuspendPrompt &&
 		!g.showMessageLog && !g.showHelp && !g.showStairsPrompt &&
 		!g.isCombatActive && g.ThrownItem.Image == nil &&

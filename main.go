@@ -7,11 +7,9 @@ import (
 	"image/color"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 // imgFS は img/ 配下の画像をバイナリへ埋め込む。
@@ -182,10 +180,12 @@ type Game struct {
 	offsetY                   int
 	moveCount                 int
 	Floor                     int
-	lastIncrement             time.Time
-	lastArrowPress            time.Time // 矢印キーが最後に押された時間を追跡
-	lastDashStop              time.Time // 最後にダッシュが停止した時間
-	showInventory             bool      // true when the inventory window should be displayed
+	input                     InputSource // キー入力の取得元（keys() 経由で使う）
+	inputFrame                int         // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
+	lastIncrementFrame        int         // 最後に足踏みしたフレーム（0 は未実行）
+	lastArrowPressFrame       int         // 方向キーで最後に移動したフレーム（0 は未実行）
+	lastDashStopFrame         int         // 最後にダッシュが停止したフレーム（0 は未実行）
+	showInventory             bool        // true when the inventory window should be displayed
 	selectedItemIndex         int
 	showItemActions           bool
 	selectedActionIndex       int
@@ -317,6 +317,10 @@ func (g *Game) IsEnemyAdjacent() bool {
 }
 
 func (g *Game) Update() error {
+	// フレームの区切り（入力状態の更新）
+	g.keys().Update()
+	g.inputFrame++
+
 	// 中断セーブ完了後はゲームを終了する
 	if g.suspendRequested {
 		return ebiten.Termination
@@ -425,7 +429,7 @@ func (g *Game) Update() error {
 		}
 
 		// 扉を開く処理の追加
-		spacePressed := inpututil.IsKeyJustPressed(ebiten.KeySpace) // Spaceキーをチェック
+		spacePressed := g.keys().JustPressed(KeySpace) // Spaceキーをチェック
 		if spacePressed {
 			g.OpenDoor()
 		}
@@ -801,6 +805,7 @@ func NewGame() *Game {
 	potImg := loadImage("img/pot.png")
 
 	game := &Game{
+		input:               NewInputRecorder(ebitenInput{}),
 		playerImg:           img,
 		tilesetImg:          tilesetImg,
 		ebiImg:              ebiImg,

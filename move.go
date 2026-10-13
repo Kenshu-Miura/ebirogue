@@ -161,6 +161,11 @@ func (g *Game) retrySameSeed() {
 func (g *Game) startNewRun(seed int64) {
 	g.seed = seed
 	g.rng = newTurnRNG(seed)
+	// 入力の記録は冒険ごとに取り直す（同じシード＋記録した入力でこの冒険を再生できる）
+	if recorder, ok := g.input.(*InputRecorder); ok {
+		recorder.Reset()
+	}
+	g.lastIncrementFrame, g.lastArrowPressFrame, g.lastDashStopFrame = 0, 0, 0
 	player := newInitialPlayer()
 
 	// 新しいマップを生成（プレイヤーの座標も部屋の中に設定される）

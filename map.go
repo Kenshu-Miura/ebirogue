@@ -6,9 +6,6 @@ import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math"
-
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 func (g *Game) handleFadingOut() {
@@ -151,13 +148,13 @@ func (g *Game) CheckPlayerMovement() {
 // handleStairsPrompt handles user input for the stairs prompt.
 func (g *Game) handleStairsPrompt() {
 	if g.showStairsPrompt {
-		if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		if g.keys().JustPressed(KeyRight) {
 			g.selectedOption = (g.selectedOption + 1) % 2
 		}
-		if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		if g.keys().JustPressed(KeyLeft) {
 			g.selectedOption = (g.selectedOption + 1) % 2
 		}
-		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+		if g.keys().JustPressed(KeyZ) {
 			if g.selectedOption == 0 { // "Proceed" is selected
 				g.fadingOut = true // 暗転開始
 				g.fadeAlpha = 0.0
@@ -168,7 +165,7 @@ func (g *Game) handleStairsPrompt() {
 			g.showStairsPrompt = false // Close the prompt window
 			g.selectedOption = 0
 		}
-		if inpututil.IsKeyJustPressed(ebiten.KeyX) {
+		if g.keys().JustPressed(KeyX) {
 			g.selectedOption = 0
 			g.ignoreStairs = true
 			g.showStairsPrompt = false // Close the prompt window
@@ -190,7 +187,7 @@ func (g *Game) checkForStairs() {
 	playerTile := g.state.Map[player.Y][player.X]
 
 	// インベントリ表示中はSキーが整頓操作のため階段プロンプトを開かない
-	if inpututil.IsKeyJustPressed(ebiten.KeyS) && g.ignoreStairs && playerTile.Type == "stairs" && !g.showInventory {
+	if g.keys().JustPressed(KeyS) && g.ignoreStairs && playerTile.Type == "stairs" && !g.showInventory {
 		g.showStairsPrompt = true
 		g.ignoreStairs = false // Optionally reset ignoreStairs flag
 		return
