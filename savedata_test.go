@@ -49,6 +49,14 @@ func TestValidateSaveDataRejectsBrokenRNGState(t *testing.T) {
 	}
 }
 
+func TestValidateSaveDataRejectsUnknownDifficulty(t *testing.T) {
+	save := makeValidSaveData()
+	save.Difficulty = Difficulty(7)
+	if err := validateSaveData(save); err == nil {
+		t.Error("不正な難易度が検証を通過した")
+	}
+}
+
 func TestValidateSaveDataVersionMismatch(t *testing.T) {
 	save := makeValidSaveData()
 	save.Version = saveDataVersion + 1

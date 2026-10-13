@@ -189,6 +189,8 @@ type Game struct {
 	fastForward               bool         // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
 	runEnded                  bool         // ヘッドレスで冒険が終了した（死亡・クリア）
 	difficulty                Difficulty   // 冒険の難易度（開始時に決め、途中で変えない）
+	bossDefeated              bool         // 現在のボス階のボスを倒したか（フロア移動でリセット）
+	cleared                   bool         // 目標階のボスを倒して冒険をクリアした
 	inputFrame                int          // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
 	lastIncrementFrame        int          // 最後に足踏みしたフレーム（0 は未実行）
 	lastArrowPressFrame       int          // 方向キーで最後に移動したフレーム（0 は未実行）
@@ -336,6 +338,27 @@ func (g *Game) Update() error {
 
 	// ヘッドレスでは冒険が終わったら（死亡・クリア）それ以上進めない
 	if g.runEnded {
+		return nil
+	}
+
+	// 冒険クリア後はメッセージを出し切ってから終了する（通常のゲームでは新しい冒険を始める）
+	if g.cleared {
+		g.ManageDescriptions()
+		g.HandleActionQueue()
+		if len(g.ActionQueue.Queue) == 0 {
+			if g.headless {
+				g.runEnded = true
+				return nil
+			}
+			if g.fadeOutProgress < 1.0 {
+				g.fadeOutProgress += 1.0 / 60.0
+			}
+			g.gameResetTimer -= 1.0 / 60.0
+			if g.gameResetTimer <= 0 {
+				g.resetGame()
+				g.fadeInProgress = 0.0
+			}
+		}
 		return nil
 	}
 
@@ -554,6 +577,8 @@ func (g *Game) Update() error {
 
 	g.HandleActionQueue()
 
+	g.checkBossDefeated()
+
 	g.CheckCombatState()
 
 	g.updateTileBrightness()
@@ -662,7 +687,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// 死亡時のフェードアウト処理（メッセージ表示後）
-	if g.playerDead && g.deathMessageAdded && len(g.ActionQueue.Queue) == 0 && g.fadeOutProgress > 0 {
+	if (g.playerDead && g.deathMessageAdded || g.cleared) && len(g.ActionQueue.Queue) == 0 && g.fadeOutProgress > 0 {
 		g.drawDeathFade(screen)
 	}
 
@@ -839,6 +864,7 @@ func NewGame() *Game {
 	game := &Game{
 		input:               NewInputRecorder(ebitenInput{}),
 		persistent:          true,
+		difficulty:          DifficultyAdvanced, // 難易度選択画面（wave1-D）までは上級（標準）で始める
 		playerImg:           img,
 		tilesetImg:          tilesetImg,
 		ebiImg:              ebiImg,

@@ -130,6 +130,13 @@ type MonsterDefinition struct {
 	IsBoss                   bool // ボスはランダム出現と上位種化の対象外
 }
 
+// provisionalBossDefinition は基にした敵の固有能力と画像（Type）を引き継いだボスを作る。
+func provisionalBossDefinition(base MonsterDefinition, id int, name string, health, attack, defense, experience int) MonsterDefinition {
+	boss := upperMonsterDefinition(base, id, base.Type, name, health, attack, defense, experience)
+	boss.IsBoss = true
+	return boss
+}
+
 // upperMonsterDefinition は基本種の固有能力を引き継ぎ、上位種の能力値と表示情報を設定する。
 func upperMonsterDefinition(base MonsterDefinition, id int, monsterType, name string, health, attack, defense, experience int) MonsterDefinition {
 	base.ID = id
@@ -511,6 +518,11 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 	definitions[40] = upperMonsterDefinition(definitions[38], 40, "InfernoSquid", "業火イカ", 88, 17, 9, 70)
 	definitions[41] = upperMonsterDefinition(definitions[39], 41, "ArcaneJellyfish", "ゲンソウクラゲ", 94, 18, 10, 82)
 
+	// 仮のボス（wave1-C で本物のボスに置き換える）。既存の強い敵を基に能力値を上げたもの。
+	definitions[42] = provisionalBossDefinition(definitions[23], 42, "ヌシガンセキガニ", 160, 20, 13, 300)
+	definitions[43] = provisionalBossDefinition(definitions[32], 43, "ヌシトッカエダコ", 240, 25, 15, 500)
+	definitions[44] = provisionalBossDefinition(definitions[37], 44, "ヌシ蒼海竜", 340, 30, 17, 800)
+
 	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24, 40: 22, 41: 24} {
 		definition := definitions[id]
 		definition.RangedAttack.AttackPower = attackPower
@@ -555,6 +567,9 @@ func (g *Game) levelUpEnemy(index int) bool {
 	}
 
 	enemy := &g.state.Enemies[index]
+	if MonsterDefinitions[enemy.ID].IsBoss {
+		return false // ボスは上位種化しない
+	}
 	nextID, ok := MonsterLevelUpTable[enemy.ID]
 	if !ok {
 		return false

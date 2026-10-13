@@ -29,6 +29,7 @@ func (g *Game) handleFadingOut() {
 			// ジェノサイドで封じた系統は初期配置からも取り除く
 			g.removeGenocidedEnemies()
 			// フロア変更時のリセット処理
+			g.bossDefeated = false
 			g.floorTurns = 0
 			g.windWarning1Shown = false
 			g.windWarning2Shown = false
@@ -188,6 +189,19 @@ func (g *Game) ResetStairsIgnoreFlag() {
 func (g *Game) checkForStairs() {
 	player := &g.state.Player
 	playerTile := g.state.Map[player.Y][player.X]
+
+	// ボス階ではボスを倒すまで、最下層ではそれ以上、階段を使えない
+	if playerTile.Type == "stairs" && !stairsUsable(g.Floor, g.bossDefeated) {
+		if !g.ignoreStairs && !g.showStairsPrompt {
+			g.ignoreStairs = true // 階段から離れるまで同じメッセージを出さない
+			if g.Floor >= finalFloor {
+				g.EnqueueMessage("これより下へは進めないようだ", 0.8)
+			} else {
+				g.EnqueueMessage("ボスを倒すまで階段は使えない", 0.8)
+			}
+		}
+		return
+	}
 
 	// インベントリ表示中はSキーが整頓操作のため階段プロンプトを開かない
 	if g.keys().JustPressed(KeyS) && g.ignoreStairs && playerTile.Type == "stairs" && !g.showInventory {
@@ -358,6 +372,36 @@ func generateEnemies(rooms []Room, playerRoom Room, floor int, rng *gameRNG) []E
 	return enemies
 }
 
+// placeBoss はプレイヤーのいない最も大きな部屋（ボス部屋）にボスを配置する。
+// 部屋が1つしかない場合はその部屋に置く。ボスは眠っていない状態で配置する。
+func placeBoss(bossID int, mapGrid [][]Tile, rooms []Room, playerRoom Room, enemies []Enemy, player *Player, rng *gameRNG) Enemy {
+	bossRoom := playerRoom
+	for _, room := range rooms {
+		if room.ID == playerRoom.ID {
+			continue
+		}
+		if bossRoom.ID == playerRoom.ID || room.Width*room.Height > bossRoom.Width*bossRoom.Height {
+			bossRoom = room
+		}
+	}
+	isFree := func(x, y int) bool {
+		if mapGrid[y][x].Type != "floor" || (x == player.X && y == player.Y) {
+			return false
+		}
+		for _, enemy := range enemies {
+			if enemy.X == x && enemy.Y == y {
+				return false
+			}
+		}
+		return true
+	}
+	x, y := bossRoom.Center.X, bossRoom.Center.Y
+	if cells := pickFreeCellsInRoom(bossRoom, isFree, 1, rng.Intn); len(cells) > 0 {
+		x, y = cells[0].X, cells[0].Y
+	}
+	return CreateEnemyByID(bossID, x, y)
+}
+
 func generateItems(rooms []Room, rng *gameRNG) []Item {
 	var items []Item
 	for i := 0; i < 10; i++ {
@@ -436,10 +480,42 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gam
 
 	// Call the newly created functions to generate enemies and items
 	enemies := generateEnemies(rooms, playerRoom, newFloor, rng)
+	if bossID, ok := bossIDForFloor(newFloor); ok {
+		enemies = append(enemies, placeBoss(bossID, mapGrid, rooms, playerRoom, enemies, player, rng))
+	}
 	items := generateItems(rooms, rng)
 
 	// Generate map traps
 	traps := generateMapTraps(rooms, rng)
 
 	return mapGrid, enemies, items, newFloor, rooms, traps
+}
+
+// checkBossDefeated はボス階でボスがいなくなったかを調べ、撃破時の処理（階段の解放・クリア判定）を行う。
+// ボスを倒す経路（攻撃・投擲・カード・敵同士の戦闘など）に依らず、フロアからボスが消えたことで判定する。
+func (g *Game) checkBossDefeated() {
+	if g.bossDefeated || g.cleared || g.playerDead || !isBossFloor(g.Floor) {
+		return
+	}
+	for _, enemy := range g.state.Enemies {
+		if MonsterDefinitions[enemy.ID].IsBoss {
+			return
+		}
+	}
+	g.bossDefeated = true
+	if isClearingBossFloor(g.Floor, g.difficulty) {
+		g.clearRun()
+		return
+	}
+	g.EnqueueMessage("ボスを倒した！階段が使えるようになった", 1.0)
+}
+
+// clearRun は目標階のボスを倒したときに冒険をクリアで終える。
+func (g *Game) clearRun() {
+	g.cleared = true
+	g.gameResetTimer = 5.0
+	g.fadeOutProgress = 0.0
+	g.finishRun(true)
+	g.EnqueueMessage(fmt.Sprintf("%d階のボスを倒した！", g.Floor), 1.0)
+	g.EnqueueMessage(fmt.Sprintf("冒険クリア！（%s・%dターン）", g.difficulty, g.turnCount), 2.0)
 }

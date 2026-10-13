@@ -314,6 +314,8 @@ func (g *Game) buildSaveData() *SaveData {
 		Version:           saveDataVersion,
 		Seed:              g.seed,
 		RNGState:          rngState,
+		Difficulty:        g.difficulty,
+		BossDefeated:      g.bossDefeated,
 		Floor:             g.Floor,
 		Map:               g.state.Map,
 		Player:            savedPlayer,
@@ -489,6 +491,8 @@ func (g *Game) applySaveData(save *SaveData) error {
 	g.rooms = rooms
 	g.seed = save.Seed
 	g.rng = rng
+	g.difficulty = save.Difficulty
+	g.bossDefeated = save.BossDefeated
 	g.Floor = save.Floor
 	g.moveCount = save.MoveCount
 	g.turnCount = save.TurnCount
