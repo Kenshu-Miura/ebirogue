@@ -318,7 +318,7 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int, rng *gameRNG) 
 	return rooms
 }
 
-func generateEnemies(rooms []Room, playerRoom Room, floor int, rng *gameRNG) []Enemy {
+func generateEnemies(rooms []Room, playerRoom Room, player *Player, floor int, rng *gameRNG) []Enemy {
 	var enemies []Enemy
 
 	// 4~9体のモンスターを生成
@@ -332,6 +332,7 @@ func generateEnemies(rooms []Room, playerRoom Room, floor int, rng *gameRNG) []E
 		var enemyRoom Room
 		var enemyX, enemyY int
 		maxAttempts := 100
+		placed := false
 
 		for attempt := 0; attempt < maxAttempts; attempt++ {
 			enemyRoom = rooms[rng.Intn(len(rooms))]
@@ -344,8 +345,8 @@ func generateEnemies(rooms []Room, playerRoom Room, floor int, rng *gameRNG) []E
 			enemyX = rng.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
 			enemyY = rng.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
 
-			// 位置の重複チェック
-			occupied := false
+			// 位置の重複チェック（プレイヤーの位置にも置かない）
+			occupied := enemyX == player.X && enemyY == player.Y
 			for _, enemy := range enemies {
 				if enemy.X == enemyX && enemy.Y == enemyY {
 					occupied = true
@@ -355,8 +356,12 @@ func generateEnemies(rooms []Room, playerRoom Room, floor int, rng *gameRNG) []E
 
 			if !occupied {
 				usedRooms[enemyRoom.ID] = true
+				placed = true
 				break
 			}
+		}
+		if !placed {
+			continue // 空きマスが見つからなければこの敵は配置しない
 		}
 
 		// 敵を生成し、50%の確率で仮眠状態にする
@@ -479,7 +484,7 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gam
 	newFloor := currentFloor + 1
 
 	// Call the newly created functions to generate enemies and items
-	enemies := generateEnemies(rooms, playerRoom, newFloor, rng)
+	enemies := generateEnemies(rooms, playerRoom, player, newFloor, rng)
 	if bossID, ok := bossIDForFloor(newFloor); ok {
 		enemies = append(enemies, placeBoss(bossID, mapGrid, rooms, playerRoom, enemies, player, rng))
 	}

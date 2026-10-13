@@ -860,7 +860,9 @@ func (g *Game) handleSettingsInput() error {
 		switch g.settingsSelectedIndex {
 		case 0:
 			g.settings.Fullscreen = !g.settings.Fullscreen
-			ebiten.SetFullscreen(g.settings.Fullscreen)
+			if !g.headless {
+				ebiten.SetFullscreen(g.settings.Fullscreen)
+			}
 		case 1:
 			g.settings.ShowMiniMap = !g.settings.ShowMiniMap
 		}
@@ -911,7 +913,7 @@ func (g *Game) handleSuspendPromptInput() error {
 					Message:  "中断データの保存に失敗した",
 					Execute:  func(*Game) {},
 				})
-			} else {
+			} else if !g.headless { // ヘッドレス（BOT）ではゲームを終了させない
 				g.suspendRequested = true
 			}
 		} else { // やめる

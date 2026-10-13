@@ -304,6 +304,8 @@ func (g *Game) executeAction() {
 		}
 		g.showItemActions = false
 		g.selectedItemIndex = 0
+		// 「使う」「装備」はここで完結する（最後の1個を使うと所持品が空になるため、以降の処理へ進まない）
+		return
 	}
 
 	// 矢の「撃つ」アクション処理

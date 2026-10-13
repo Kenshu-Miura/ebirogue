@@ -242,6 +242,10 @@ func enqueueForcedMove(enemy *Enemy, g *Game, destinations []Coordinate, intn fu
 		Duration: 0.5,
 		Message:  fmt.Sprintf("%sに操られ、海老さんは勝手に移動した。", g.enemyDisplayName(enemy.Name)),
 		Execute: func(g *Game) {
+			// 予約から実行までの間にほかの敵が移動先へ入ることがあるため、実行時にも確認する
+			if !containsCoordinate(forcedMoveDestinations(g), destination) {
+				return
+			}
 			g.state.Player.X = destination.X
 			g.state.Player.Y = destination.Y
 			g.state.Player.Direction = determineDirection(dx, dy)
@@ -249,6 +253,15 @@ func enqueueForcedMove(enemy *Enemy, g *Game, destinations []Coordinate, intn fu
 			g.Animating = true
 		},
 	})
+}
+
+func containsCoordinate(coordinates []Coordinate, target Coordinate) bool {
+	for _, c := range coordinates {
+		if c == target {
+			return true
+		}
+	}
+	return false
 }
 
 func enqueueManipulationAttack(enemy *Enemy, g *Game, intn func(int) int) {

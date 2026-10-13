@@ -178,8 +178,14 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 			for i = 1; i <= throwRange; i++ {
 				targetX := x + i*dx
 				targetY := y + i*dy
+				// マップの外へは飛ばない（手前のマスに落ちる）
+				if targetY < 0 || targetY >= len(mapState) || targetX < 0 || targetX >= len(mapState[targetY]) {
+					onWallHit(item, Coordinate{X: x + (i-1)*dx, Y: y + (i-1)*dy}, g.selectedItemIndex)
+					return
+				}
 				tile := mapState[targetY][targetX]
-				if tile.Type == "wall" {
+				// 壁だけでなく通路の外側など通れないマスでも止まる（突き抜けてマップ外へ出ないように）
+				if tile.Type == "wall" || tile.Blocked {
 					//log.Printf("Cane item: %+v", item)
 					//log.Printf("Thrown item: %+v", g.ThrownItem)
 					// アイテムがCane型であり、BaseItem.Typeが"Effect"であるかチェック
