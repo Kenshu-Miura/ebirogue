@@ -16,9 +16,10 @@ const (
 	personaItemUser   persona = "itemUser"   // カード・杖・投擲を積極的に使う
 	personaDiver      persona = "diver"      // 階段へ直行する
 	personaRandom     persona = "random"     // ランダムに入力する（バグ探し用）
+	personaExpert     persona = "expert"     // 道具を使い分け、探索してレベルを上げる（bot_expert_test.go）
 )
 
-var allPersonas = []persona{personaAggressive, personaCautious, personaItemUser, personaDiver, personaRandom}
+var allPersonas = []persona{personaAggressive, personaCautious, personaItemUser, personaDiver, personaRandom, personaExpert}
 
 func parsePersona(name string) (persona, bool) {
 	for _, p := range allPersonas {
@@ -254,15 +255,27 @@ var botSteps = [8][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1,
 // pathStep は幅優先探索で goal を満たす最寄りのマスへ向かう最初の1歩を返す。
 // 敵のいるマスと発見済みの罠は通らない（敵のいるマスが goal なら隣まで進む）。
 func (b *bot) pathStep(goal func(x, y int) bool) (int, int, bool) {
+	return b.pathStepThrough(goal, false)
+}
+
+// pathStepThrough は pathStep と同じだが、through が true なら敵と発見済みの罠も通れるものとして探す
+// （通路をふさがれて行き先が無いときの最後の手段）。
+func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int, bool) {
 	g := b.g
 	height, width := len(g.state.Map), len(g.state.Map[0])
 	blocked := make([]bool, width*height)
 	for _, enemy := range g.state.Enemies {
+		if through {
+			break
+		}
 		if enemy.X >= 0 && enemy.Y >= 0 && enemy.X < width && enemy.Y < height {
 			blocked[enemy.Y*width+enemy.X] = true
 		}
 	}
 	for _, trap := range g.state.MapTraps {
+		if through {
+			break
+		}
 		if trap.Discovered && trap.X >= 0 && trap.Y >= 0 && trap.X < width && trap.Y < height {
 			blocked[trap.Y*width+trap.X] = true
 		}
@@ -350,6 +363,9 @@ func (b *bot) step() error {
 	}
 	if b.persona == personaRandom {
 		return b.randomInput()
+	}
+	if b.persona == personaExpert {
+		return b.expertStep()
 	}
 	if g.showStairsPrompt {
 		if b.wantsToDescend() && g.selectedOption == 0 {

@@ -117,6 +117,7 @@ type SaveData struct {
 	Messages          []string
 	CustomNames       map[int]string // 未識別アイテム種別に付けた任意名
 	GenocidedIDs      []int          // ジェノサイドのカードで封じられた敵ID
+	Stats             RunStats       // 冒険中の行動の統計（冒険の記録用）
 }
 
 // decodeSaveData はJSONを解析し、検証済みのセーブデータを返す

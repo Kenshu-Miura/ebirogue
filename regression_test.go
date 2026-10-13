@@ -190,3 +190,23 @@ func TestBlindEnemyAttacksResolveTargetsAtExecution(t *testing.T) {
 		t.Fatal("the first victim should be defeated")
 	}
 }
+
+// 炸裂装甲のカードの撃破が予約時の添字で行われ、同じ敵ターンに複数の敵が攻撃すると何度も発動して panic していた。
+// expert の BOT が発見。罠は1回で消費する。
+func TestExplosiveArmorTrapTriggersOnce(t *testing.T) {
+	g, _ := newHeadlessGame(1, DifficultyAdvanced)
+	g.state.Map = makeTestFloorMap(7, 7)
+	g.state.Items, g.state.MapTraps = nil, nil
+	g.state.Player.X, g.state.Player.Y = 3, 3
+	g.state.Player.SetTrap = buildItemFromTemplate(8, 0, 0)
+	g.state.Enemies = []Enemy{CreateEnemyByID(0, 2, 3), CreateEnemyByID(0, 4, 3), CreateEnemyByID(0, 3, 2)}
+	for i := range g.state.Enemies {
+		g.AttackFromEnemy(i)
+	}
+	if err := g.RunUntilInputReady(2000); err != nil {
+		t.Fatal(err)
+	}
+	if len(g.state.Enemies) != 2 || g.state.Player.SetTrap != nil {
+		t.Fatalf("enemies left %d (want 2), trap %v", len(g.state.Enemies), g.state.Player.SetTrap)
+	}
+}

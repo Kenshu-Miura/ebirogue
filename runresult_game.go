@@ -24,7 +24,9 @@ func (g *Game) buildRunResult(cleared bool) RunResult {
 		Floor:      g.Floor,
 		Turns:      g.turnCount,
 		Level:      player.Level,
+		Satiety:    player.Satiety,
 		Inventory:  []string{},
+		Stats:      g.stats,
 		Equipment:  []string{},
 	}
 	if !cleared {
@@ -33,6 +35,7 @@ func (g *Game) buildRunResult(cleared bool) RunResult {
 	}
 	for _, item := range player.Inventory {
 		result.Inventory = append(result.Inventory, item.GetName())
+		result.InventoryIDs = append(result.InventoryIDs, item.GetID())
 	}
 	if player.EquippedWeapon != nil {
 		result.Equipment = append(result.Equipment, player.EquippedWeapon.GetName())
@@ -69,4 +72,39 @@ func (g *Game) finishRun(cleared bool) {
 // LastRunResult は直近に終了した冒険の結果を返す（終了していなければ nil）。
 func (g *Game) LastRunResult() *RunResult {
 	return g.lastRunResult
+}
+
+// itemKind は統計に使うアイテムの種類名を返す。
+func itemKind(item Item) string {
+	switch item.(type) {
+	case *Weapon:
+		return "Weapon"
+	case *Armor:
+		return "Armor"
+	case *Arrow:
+		return "Arrow"
+	case *Food:
+		return "Food"
+	case *Potion:
+		return "Potion"
+	case *Card:
+		return "Card"
+	case *Cane:
+		return "Cane"
+	case *Accessory:
+		return "Accessory"
+	case *Money:
+		return "Money"
+	case *Trap:
+		return "Trap"
+	case *Pot:
+		return "Pot"
+	default:
+		return "Other"
+	}
+}
+
+// recordItemUse は道具を使ったことを統計に記録する。
+func (g *Game) recordItemUse(item Item) {
+	g.stats.recordUse(itemKind(item), item.GetID(), g.Floor, g.turnCount)
 }

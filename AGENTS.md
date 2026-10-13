@@ -38,9 +38,9 @@ go test -run TestSimReplay -count=1 . -args -sim.seed=<シード> -sim.persona=<
 go test -fuzz=FuzzInputSequence -fuzztime=30m .   # 入力列のファジング
 ```
 
-- BOT（`bot_test.go`）はゲーム状態を直接読み、仮想入力（`VirtualInput`）で本物のメニュー経路を操作する。性格は `aggressive` / `cautious` / `itemUser` / `diver` / `random`。
+- BOT（`bot_test.go`）はゲーム状態を直接読み、仮想入力（`VirtualInput`）で本物のメニュー経路を操作する。性格は `aggressive` / `cautious` / `itemUser` / `diver` / `random` / `expert`。`expert`（`bot_expert_test.go`）はカード・杖・薬をテンプレート ID ごとの分類表 `itemRoles`（攻撃・逃走・強化・回復・不利）で使い分け、強化値込みで装備を持ち替え、矢を撃ち、遠距離の敵の射線を避けて探索してから降りる。バランス評価には主に `expert` の結果を使い、ほかの性格は比較用に残す。**新しいカード・杖・薬を追加したら `itemRoles` にも分類を追加する。**
 - 毎行動で不変条件（`invariants_test.go`: 壁の中・重なり・HP/満腹度/所持品の範囲・座標・倒れた敵の残留）、ソフトロック（`RunUntilInputReady` が上限フレームで戻らない）、panic を検査し、ランダムなターンで中断セーブ→再開の一致も確かめる。
-- `TestSimBatch` は `reports/sim-<日時>.json`（全結果）と `.md`（難易度×性格のクリア率・到達階・ターン、階層別死亡率、死因上位、違反一覧、`reports/baseline.json` との差分）を出力する。`-sim.writebaseline` でベースラインを更新する。主なフラグ: `-sim.runs` `-sim.difficulty` `-sim.persona` `-sim.turns` `-sim.seedbase` `-sim.parallel` `-sim.out`。
+- `TestSimBatch` は `reports/sim-<日時>.json`（全結果）と `.md`（難易度×性格のクリア率・到達階・ターン、判断ミス死〔回復薬を持ったまま死亡・食料を持ったまま餓死・自分に不利なカードによる被害〕と死亡時のレベル・満腹度、性格別の死因上位、道具の操作回数、階層別死亡率、違反一覧、`reports/baseline.json` との差分）を出力する。`-sim.writebaseline` でベースラインを更新する。主なフラグ: `-sim.runs` `-sim.difficulty` `-sim.persona` `-sim.turns` `-sim.seedbase` `-sim.parallel` `-sim.out`。
 - `reports/` は `baseline.json` 以外を `.gitignore` 済み。
 - ファジングで見つかった入力は `testdata/fuzz/FuzzInputSequence/` に保存され、以後の `go test ./...` で毎回再生される（修正後もコミットして残す）。
 - BOT やファジングが見つけた不具合は修正し、`regression_test.go` に回帰テストを追加する。
@@ -85,7 +85,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `rng.go`（タグなし）: 冒険の乱数源 `gameRNG`（math/rand/v2 の PCG。状態を保存・復元できる）。ターン進行は `g.rng`（`g.random()` / `g.randIntn(n)`）、フロア生成は `newFloorRNG(seed, 階)` の専用系列。**`math/rand` のグローバル関数やパッケージ変数の乱数源は使わない。** `Game` を受け取らない関数には `intn func(int) int` を渡す。テストで特定の判定だけ固定するには `g.randHooks`（`random_hooks.go`）を使う。
 - `input_source.go`（タグなし）: 論理キー `Key`、`InputSource`、仮想入力 `VirtualInput`、記録 `InputRecorder`。`input_ebiten.go` が Ebiten の実キーボードを包む。**キー入力は `ebiten.IsKeyPressed` / `inpututil` を直接呼ばず `g.keys().Pressed(KeyZ)` / `JustPressed` / `PressDuration` を使う。** 入力のリピート間隔は実時間ではなくフレーム数（`stepRepeatFrames` など）。
 - `difficulty.go`（タグなし）: 難易度 `Difficulty`、`goalFloor`、`isBossFloor`、`bossIDForFloor`、`stairsUsable`。ボス撃破の判定とクリア処理は `map.go` の `checkBossDefeated` / `clearRun`（フロアからボスが消えたら撃破）。
-- `deathcause.go`（タグなし）: 死因 `DamageSource`、死亡文 `deathMessage`、冒険結果 `RunResult` と記録一覧。`runresult_game.go` の `g.damagePlayer(damage, source)` が HP 減少と死因の記録を行い、`g.finishRun(cleared)` が結果を保存する。**プレイヤーへのダメージは必ず `damagePlayer`（または `applyPlayerShieldDefense`）を通す。**
+- `deathcause.go`（タグなし）: 死因 `DamageSource`、死亡文 `deathMessage`、冒険結果 `RunResult` と記録一覧。`runresult_game.go` の `g.damagePlayer(damage, source)` が HP 減少と死因の記録を行い、`g.finishRun(cleared)` が結果を保存する。冒険中の統計 `g.stats`（`RunStats`: 種類別の拾う・使う・投げる・装備・射撃の回数、テンプレート ID ごとの使用回数、直近の使用記録）もセーブと冒険結果に含める。**プレイヤーへのダメージは必ず `damagePlayer`（または `applyPlayerShieldDefense`）を通す。**
 - `damage.go`（タグなし・純粋）: ダメージ計算式の一元管理。SFC シレン式の「ダメージ = 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率」。プレイヤー攻撃は `rollPlayerAttackDamage`（会心1/20＝防御無視×1.5、最低1ダメージ）、敵攻撃は `rollEnemyAttackDamage`、総攻撃力は `playerAttackTotal(攻撃力, パワー, レベル)`。特効などの補正は `DamageParams.Multiplier` へ乗算で合成する（`slayerMultiplier` 参照）。バランス調整は同ファイル冒頭の定数（軽減率・乱数幅・会心率など）を変更する。乱数源は呼び出し側が渡す `intn`（ゲームでは `g.damageIntn()`）で、テストでは `g.randHooks.damage` で差し替えて決定的にする。**新しいダメージ処理は式を手書きせず必ず `rollDamage` 系を経由する。**
 
 ## コアゲームループとターン進行

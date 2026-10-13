@@ -88,6 +88,7 @@ type simOutcome struct {
 	Turns      int
 	Level      int
 	DeathCause string         `json:",omitempty"`
+	Mistake    string         `json:",omitempty"` // 判断ミス死の種類（mistakeKind 参照）
 	Result     *RunResult     `json:",omitempty"`
 	Violations []simViolation `json:",omitempty"`
 }
@@ -122,6 +123,7 @@ func runSimCase(c simCase) (out simOutcome) {
 			out.Result = result
 			if !result.Cleared {
 				out.DeathCause = result.DeathCause.Label()
+				out.Mistake = mistakeKind(result)
 			}
 		}
 	}()
@@ -376,6 +378,48 @@ func TestInvariantsDetectInjectedBugs(t *testing.T) {
 
 // --- 集計とレポート ---
 
+// 判断ミス死の種類。
+const (
+	mistakeHealUnused  = "回復薬を持ったまま死亡"
+	mistakeFoodUnused  = "食料を持ったまま餓死"
+	mistakeHarmfulCard = "自分に不利なカードによる被害"
+)
+
+// harmfulCardWindow は不利なカードを使ってからこのターン数以内に同じ階で死んだら、その被害とみなす。
+const harmfulCardWindow = 100
+
+// mistakeKind は死亡した冒険の結果から判断ミス死の種類を返す（該当しなければ空）。
+func mistakeKind(r *RunResult) string {
+	if r == nil || r.Cleared {
+		return ""
+	}
+	cause := r.DeathCause.Kind
+	if cause == DamageSourceSelfDestruct {
+		return mistakeHarmfulCard
+	}
+	for _, use := range r.Stats.RecentUses {
+		if itemRoles[use.TemplateID] == roleHarmful && use.Floor == r.Floor && r.Turns-use.Turn <= harmfulCardWindow {
+			return mistakeHarmfulCard
+		}
+	}
+	hasFood, hasHeal := false, false
+	for _, id := range r.InventoryIDs {
+		if template, ok := itemTemplates[id]; ok && template.ItemType == "Food" {
+			hasFood = true
+		}
+		if itemRoles[id] == roleHeal {
+			hasHeal = true
+		}
+	}
+	switch {
+	case cause == DamageSourceStarvation && hasFood:
+		return mistakeFoodUnused
+	case cause != DamageSourceStarvation && cause != DamageSourceWind && hasHeal:
+		return mistakeHealUnused
+	}
+	return ""
+}
+
 type simGroupStats struct {
 	Runs        int
 	Cleared     int
@@ -385,6 +429,14 @@ type simGroupStats struct {
 	Died        int
 	TurnLimited int
 	BotStuck    int
+	// 判断ミス死と死亡時の状態
+	MistakeDeaths   int
+	MistakeRate     float64 // 死亡のうち判断ミス死の割合
+	AvgDeathLevel   float64
+	AvgDeathSatiety float64
+	Mistakes        map[string]int              `json:",omitempty"`
+	Causes          map[string]int              `json:",omitempty"` // 死因（判断ミス死はその種類で数える）
+	Items           map[string]ItemActionCounts `json:",omitempty"` // 種類別の操作回数の合計
 }
 
 type simSummary struct {
@@ -408,6 +460,7 @@ func groupKey(o simOutcome) string { return o.Difficulty + "/" + string(o.Person
 func summarizeOutcomes(outcomes []simOutcome) simSummary {
 	s := simSummary{Groups: map[string]*simGroupStats{}, FloorDeaths: map[int]int{}, FloorReach: map[int]int{}, DeathCauses: map[string]int{}}
 	floorSums, turnSums := map[string]int{}, map[string]int{}
+	levelSums, satietySums := map[string]int{}, map[string]int{}
 	for _, o := range outcomes {
 		s.Runs++
 		key := groupKey(o)
@@ -429,10 +482,38 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 			g.Died++
 			s.FloorDeaths[o.Floor]++
 			s.DeathCauses[o.DeathCause]++
+			if g.Causes == nil {
+				g.Causes, g.Mistakes = map[string]int{}, map[string]int{}
+			}
+			cause := o.DeathCause
+			if o.Mistake != "" {
+				g.MistakeDeaths++
+				g.Mistakes[o.Mistake]++
+				cause = "（判断ミス）" + o.Mistake
+			}
+			g.Causes[cause]++
+			if o.Result != nil {
+				levelSums[key] += o.Result.Level
+				satietySums[key] += o.Result.Satiety
+			}
 		case "turn_limit":
 			g.TurnLimited++
 		case "bot_stuck":
 			g.BotStuck++
+		}
+		if o.Result != nil {
+			for kind, c := range o.Result.Stats.Items {
+				if g.Items == nil {
+					g.Items = map[string]ItemActionCounts{}
+				}
+				total := g.Items[kind]
+				total.Picked += c.Picked
+				total.Used += c.Used
+				total.Thrown += c.Thrown
+				total.Equipped += c.Equipped
+				total.Shot += c.Shot
+				g.Items[kind] = total
+			}
 		}
 		for _, v := range o.Violations {
 			s.Violations++
@@ -448,6 +529,11 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 		g.ClearRate = float64(g.Cleared) / float64(g.Runs)
 		g.AvgFloor = float64(floorSums[key]) / float64(g.Runs)
 		g.AvgTurns = float64(turnSums[key]) / float64(g.Runs)
+		if g.Died > 0 {
+			g.MistakeRate = float64(g.MistakeDeaths) / float64(g.Died)
+			g.AvgDeathLevel = float64(levelSums[key]) / float64(g.Died)
+			g.AvgDeathSatiety = float64(satietySums[key]) / float64(g.Died)
+		}
 	}
 	return s
 }
@@ -508,6 +594,70 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 		fmt.Fprintf(&b, "| %s | %d | %.1f%% | %.2f | %.0f | %d | %d | %d |\n", key, g.Runs, g.ClearRate*100, g.AvgFloor, g.AvgTurns, g.Died, g.TurnLimited, g.BotStuck)
 	}
 
+	fmt.Fprintf(&b, "\n## 判断ミス死と死亡時の状態\n\n| 難易度/性格 | 死亡 | 判断ミス死 | 割合 | %s | %s | %s | 死亡時Lv | 死亡時満腹度 |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n", mistakeHealUnused, mistakeFoodUnused, mistakeHarmfulCard)
+	for _, key := range sortedKeys(s.Groups) {
+		g := s.Groups[key]
+		fmt.Fprintf(&b, "| %s | %d | %d | %.1f%% | %d | %d | %d | %.1f | %.1f |\n", key, g.Died, g.MistakeDeaths, g.MistakeRate*100,
+			g.Mistakes[mistakeHealUnused], g.Mistakes[mistakeFoodUnused], g.Mistakes[mistakeHarmfulCard], g.AvgDeathLevel, g.AvgDeathSatiety)
+	}
+
+	fmt.Fprintf(&b, "\n## 性格別の死因の上位（判断ミス死は種類で数える）\n\n")
+	personaCauses := map[string]map[string]int{}
+	for key, g := range s.Groups {
+		p := key[strings.Index(key, "/")+1:]
+		if personaCauses[p] == nil {
+			personaCauses[p] = map[string]int{}
+		}
+		for cause, n := range g.Causes {
+			personaCauses[p][cause] += n
+		}
+	}
+	for _, p := range sortedKeys(personaCauses) {
+		causes := sortedKeys(personaCauses[p])
+		sort.SliceStable(causes, func(i, j int) bool { return personaCauses[p][causes[i]] > personaCauses[p][causes[j]] })
+		var parts []string
+		for i, cause := range causes {
+			if i >= 5 {
+				break
+			}
+			parts = append(parts, fmt.Sprintf("%s %d", cause, personaCauses[p][cause]))
+		}
+		fmt.Fprintf(&b, "- %s: %s\n", p, strings.Join(parts, "、"))
+	}
+
+	fmt.Fprintf(&b, "\n## 道具の操作回数（1冒険あたり、全難易度）\n\n| 性格 | 拾う | 使う | 投げる | 装備 | 矢を撃つ | 使う（カード） | 使う（薬） | 使う（食料） |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	type itemRow struct {
+		runs  int
+		total ItemActionCounts
+		kinds map[string]ItemActionCounts
+	}
+	rows := map[string]*itemRow{}
+	for key, g := range s.Groups {
+		p := key[strings.Index(key, "/")+1:]
+		if rows[p] == nil {
+			rows[p] = &itemRow{kinds: map[string]ItemActionCounts{}}
+		}
+		r := rows[p]
+		r.runs += g.Runs
+		for kind, c := range g.Items {
+			r.total.Picked += c.Picked
+			r.total.Used += c.Used
+			r.total.Thrown += c.Thrown
+			r.total.Equipped += c.Equipped
+			r.total.Shot += c.Shot
+			k := r.kinds[kind]
+			k.Used += c.Used
+			r.kinds[kind] = k
+		}
+	}
+	for _, p := range sortedKeys(rows) {
+		r := rows[p]
+		n := float64(max(1, r.runs))
+		fmt.Fprintf(&b, "| %s | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f |\n", p,
+			float64(r.total.Picked)/n, float64(r.total.Used)/n, float64(r.total.Thrown)/n, float64(r.total.Equipped)/n, float64(r.total.Shot)/n,
+			float64(r.kinds["Card"].Used)/n, float64(r.kinds["Potion"].Used)/n, float64(r.kinds["Food"].Used)/n)
+	}
+
 	fmt.Fprintf(&b, "\n## 階層別の死亡率\n\n| 階 | 到達 | 死亡 | 死亡率 |\n|---:|---:|---:|---:|\n")
 	floors := make([]int, 0, len(s.FloorReach))
 	for f := range s.FloorReach {
@@ -554,14 +704,14 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 		fmt.Fprintf(&b, "ベースラインなし（`reports/baseline.json`）\n")
 		return b.String()
 	}
-	fmt.Fprintf(&b, "| 難易度/性格 | クリア率 | 平均到達階 | 平均ターン |\n|---|---:|---:|---:|\n")
+	fmt.Fprintf(&b, "| 難易度/性格 | クリア率 | 平均到達階 | 平均ターン | 判断ミス死の割合 |\n|---|---:|---:|---:|---:|\n")
 	for _, key := range sortedKeys(s.Groups) {
 		cur, base := s.Groups[key], baseline.Groups[key]
 		if base == nil {
-			fmt.Fprintf(&b, "| %s | 新規 | | |\n", key)
+			fmt.Fprintf(&b, "| %s | 新規 | | | |\n", key)
 			continue
 		}
-		fmt.Fprintf(&b, "| %s | %+.1f pt | %+.2f | %+.0f |\n", key, (cur.ClearRate-base.ClearRate)*100, cur.AvgFloor-base.AvgFloor, cur.AvgTurns-base.AvgTurns)
+		fmt.Fprintf(&b, "| %s | %+.1f pt | %+.2f | %+.0f | %.1f%% → %.1f%% |\n", key, (cur.ClearRate-base.ClearRate)*100, cur.AvgFloor-base.AvgFloor, cur.AvgTurns-base.AvgTurns, base.MistakeRate*100, cur.MistakeRate*100)
 	}
 	fmt.Fprintf(&b, "\n違反: %d → %d\n", baseline.Violations, s.Violations)
 	return b.String()

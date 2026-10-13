@@ -90,6 +90,7 @@ func (g *Game) shootArrow(arrow *Arrow, throwRange int) bool {
 	}
 
 	arrow.ShotCount--
+	g.stats.counts("Arrow").Shot++
 	shotArrow := *arrow
 	shotArrow.ShotCount = 1
 
@@ -118,6 +119,7 @@ func (g *Game) useCane(caneItem *Cane) bool {
 		g.EnqueueMessage(fmt.Sprintf("%sを使った。しかし何も起こらなかった。", caneItem.GetName()), 0.5)
 		return false
 	}
+	g.recordItemUse(caneItem)
 	// 効果弾として飛ばすための複製を作り、元の杖の残り回数を減らす
 	caneItemCopy := *caneItem
 	caneItem.Uses--
@@ -128,6 +130,10 @@ func (g *Game) useCane(caneItem *Cane) bool {
 
 // useConsumable は食料・薬・カード・お金・罠アイテムを使用する。該当しない場合は false を返す。
 func (g *Game) useConsumable(item Item) bool {
+	switch item.(type) {
+	case *Food, *Potion, *Card, *Money, *Trap:
+		g.recordItemUse(item)
+	}
 	switch v := item.(type) {
 	case *Food:
 		v.Use(g)

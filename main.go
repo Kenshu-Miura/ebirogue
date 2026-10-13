@@ -185,6 +185,7 @@ type Game struct {
 	persistent                bool         // セーブ・設定・冒険の記録をストレージへ書き込む（通常のゲームのみ true）
 	lastDamageSource          DamageSource // 最後にプレイヤーへダメージを与えた原因（死因）
 	lastRunResult             *RunResult   // 直近に終了した冒険の結果
+	stats                     RunStats     // 冒険中の行動の統計（拾う・使う・投げる・装備・射撃）
 	steppedTrapSource         DamageSource // 効果を処理中の罠（罠の効果関数が死因の記録に使う）
 	fastForward               bool         // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
 	runEnded                  bool         // ヘッドレスで冒険が終了した（死亡・クリア）

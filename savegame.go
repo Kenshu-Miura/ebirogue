@@ -329,6 +329,7 @@ func (g *Game) buildSaveData() *SaveData {
 		PickupBanned:      g.pickupBanned,
 		Messages:          g.messageLog.Messages,
 		CustomNames:       g.customNames,
+		Stats:             g.stats,
 	}
 
 	// ジェノサイドで封じた敵IDを保存する（順序を安定させるためソート）
@@ -492,6 +493,7 @@ func (g *Game) applySaveData(save *SaveData) error {
 	g.seed = save.Seed
 	g.rng = rng
 	g.difficulty = save.Difficulty
+	g.stats = save.Stats
 	g.bossDefeated = save.BossDefeated
 	g.Floor = save.Floor
 	g.moveCount = save.MoveCount

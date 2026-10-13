@@ -170,6 +170,7 @@ func (g *Game) executeGroundItemAction() {
 						message = fmt.Sprintf("%sを装備できない。", itemName)
 					} else {
 						message = equipMessage
+						g.stats.counts(itemKind(item)).Equipped++
 					}
 					g.PickUpItem(item, i)
 
@@ -197,6 +198,7 @@ func (g *Game) executeGroundItemAction() {
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 				g.selectedGroundItemIndex = i
 
+				g.stats.counts(itemKind(item)).Thrown++
 				g.throwWithCallbacks(item, 10)
 
 				g.closeGroundItemMenu()
@@ -282,6 +284,7 @@ func (g *Game) executeAction() {
 					message = fmt.Sprintf("%sを装備できない。", itemName)
 				} else {
 					message = equipMessage
+					g.stats.counts(itemKind(equipableItem)).Equipped++
 				}
 			}
 
@@ -368,6 +371,7 @@ func (g *Game) executeAction() {
 
 		if !isCursedEquipped {
 			// Continue with the throwing logic if the item is not cursed and equipped
+			g.stats.counts(itemKind(item)).Thrown++
 			g.throwWithCallbacks(item, 10)
 			g.isActioned = true
 		}
@@ -604,20 +608,26 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 		g.EnqueueMessage(fmt.Sprintf("%sの攻撃。", g.enemyDisplayName(enemy.Name)), 0.5)
 		g.EnqueueMessage(fmt.Sprintf("罠カード、%sが発動した。", trap.GetName()), 0.5)
 
+		// 罠は1回で消費する。同じ敵ターンに攻撃してくる別の敵では発動しない
+		g.state.Player.SetTrap = nil
+		enemyID, enemyX, enemyY, experience := enemy.ID, enemy.X, enemy.Y, enemy.ExperiencePoints
 		defeatAction := Action{
 			Duration: 0.5,
 			Message:  fmt.Sprintf("%sを倒した。", enemy.Name),
 			Execute: func(g *Game) {
-				g.dropEnemyHeldItem(enemyIndex)
-				g.state.Enemies = append(g.state.Enemies[:enemyIndex], g.state.Enemies[enemyIndex+1:]...)
+				// 予約から実行までに敵の並びが変わることがあるため、ID と座標で引き直す
+				index := g.findEnemyForDefense(enemyID, enemyX, enemyY)
+				if index < 0 {
+					return
+				}
+				g.dropEnemyHeldItem(index)
+				g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
+				g.miniMapDirty = true
 
 				// 敵の経験値をプレイヤーの所持経験値に加える
-				g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+				g.state.Player.ExperiencePoints += experience
 
 				g.state.Player.checkLevelUp(g) // レベルアップをチェック
-
-				// トラップをリセットする (オプショナル)
-				g.state.Player.SetTrap = nil
 			},
 		}
 		g.Enqueue(defeatAction)

@@ -101,6 +101,54 @@ func deathMessage(floor int, s DamageSource) string {
 	return fmt.Sprintf("%d階で 倒れた", floor)
 }
 
+// ItemActionCounts はアイテムの種類ごとの操作回数。
+type ItemActionCounts struct {
+	Picked   int `json:",omitempty"` // 拾った
+	Used     int `json:",omitempty"` // 使った（食べる・飲む・読む・振る・置く罠）
+	Thrown   int `json:",omitempty"` // 投げた
+	Equipped int `json:",omitempty"` // 装備した
+	Shot     int `json:",omitempty"` // 矢を撃った
+}
+
+// ItemUseRecord は道具を使った記録（判断ミスの集計用に直近の分だけ残す）。
+type ItemUseRecord struct {
+	TemplateID int
+	Floor      int
+	Turn       int
+}
+
+const recentItemUseLimit = 20
+
+// RunStats は冒険中の行動の統計。セーブにも保存し、再開後も数え続ける。
+type RunStats struct {
+	Items      map[string]*ItemActionCounts `json:",omitempty"` // キーはアイテムの種類（"Card" "Potion" など）
+	UsedIDs    map[int]int                  `json:",omitempty"` // テンプレート ID ごとの使用回数
+	RecentUses []ItemUseRecord              `json:",omitempty"`
+}
+
+func (s *RunStats) counts(kind string) *ItemActionCounts {
+	if s.Items == nil {
+		s.Items = map[string]*ItemActionCounts{}
+	}
+	if s.Items[kind] == nil {
+		s.Items[kind] = &ItemActionCounts{}
+	}
+	return s.Items[kind]
+}
+
+// recordUse は使用回数と直近の使用記録を更新する。
+func (s *RunStats) recordUse(kind string, templateID, floor, turn int) {
+	s.counts(kind).Used++
+	if s.UsedIDs == nil {
+		s.UsedIDs = map[int]int{}
+	}
+	s.UsedIDs[templateID]++
+	s.RecentUses = append(s.RecentUses, ItemUseRecord{TemplateID: templateID, Floor: floor, Turn: turn})
+	if len(s.RecentUses) > recentItemUseLimit {
+		s.RecentUses = s.RecentUses[len(s.RecentUses)-recentItemUseLimit:]
+	}
+}
+
 // RunResult は1回の冒険の結果。冒険の記録一覧と BOT のレポートに使う。
 type RunResult struct {
 	Seed         int64
@@ -111,7 +159,10 @@ type RunResult struct {
 	Level        int
 	DeathCause   DamageSource `json:",omitempty"`
 	DeathMessage string       `json:",omitempty"`
+	Satiety      int          // 終了時の満腹度
 	Inventory    []string     // 所持品の名前
+	InventoryIDs []int        `json:",omitempty"` // 所持品のテンプレート ID（Inventory と同じ順）
+	Stats        RunStats     `json:",omitempty"`
 	Equipment    []string     // 装備品の名前（武器・盾・矢・装身具）
 	EndedAt      string       `json:",omitempty"` // 終了日時（RFC3339。BOT では空）
 }

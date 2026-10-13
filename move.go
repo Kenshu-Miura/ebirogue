@@ -164,6 +164,7 @@ func (g *Game) startNewRun(seed int64) {
 	}
 	g.lastIncrementFrame, g.lastArrowPressFrame, g.lastDashStopFrame = 0, 0, 0
 	g.lastDamageSource = DamageSource{}
+	g.stats = RunStats{}
 	g.bossDefeated = false
 	g.cleared = false
 	g.lastRunResult = nil
