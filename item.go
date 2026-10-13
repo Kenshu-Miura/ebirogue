@@ -235,15 +235,7 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 							if caneItem, ok := item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
 								// Do nothing
 							} else {
-								if !g.GroundItemActioned {
-									// If it's not an arrow or D key wasn't pressed, remove the item from the player's inventory
-									g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
-								} else {
-									// If it's a ground item, remove the item from the map
-									g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
-									g.GroundItemActioned = false
-									g.selectedGroundActionIndex = 0
-								}
+								g.removeThrownItemFromSource(item)
 							}
 						}
 
@@ -282,6 +274,26 @@ func (g *Game) ThrowItem(item Item, throwRange int, character Character, mapStat
 	g.Enqueue(action)
 }
 
+// removeThrownItemFromSource は投げたアイテムを元の場所（所持品または足元）から取り除く。
+// 投擲は Action として遅れて実行され、その間に足元メニューなどの状態が変わるため、
+// 選択位置ではなくアイテムそのもので探す（足元から投げたのに所持品が消える不具合の対策）。
+func (g *Game) removeThrownItemFromSource(item Item) {
+	for i, owned := range g.state.Player.Inventory {
+		if owned == item {
+			g.state.Player.Inventory = append(g.state.Player.Inventory[:i], g.state.Player.Inventory[i+1:]...)
+			return
+		}
+	}
+	for i, ground := range g.state.Items {
+		if ground == item {
+			g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
+			g.GroundItemActioned = false
+			g.selectedGroundActionIndex = 0
+			return
+		}
+	}
+}
+
 func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 	// Set the position of the item to the position before hitting the wall
 	item.SetPosition(position.X, position.Y)
@@ -307,15 +319,7 @@ func (g *Game) onWallHit(item Item, position Coordinate, itemIndex int) {
 		if caneItem, ok := item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
 			// Do nothing
 		} else {
-			// If it's an item that was on the ground, remove it from the ground
-			if g.GroundItemActioned {
-				g.state.Items = append(g.state.Items[:g.selectedGroundItemIndex], g.state.Items[g.selectedGroundItemIndex+1:]...)
-				g.GroundItemActioned = false
-				g.selectedGroundActionIndex = 0
-			} else {
-				// If it's an item that was in the player's inventory, remove it from the inventory
-				g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
-			}
+			g.removeThrownItemFromSource(item)
 		}
 	}
 

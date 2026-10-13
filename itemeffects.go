@@ -144,7 +144,12 @@ var damageHP30 = func(g *Game) {
 }
 
 var money = func(g *Game) {
-	moneyItem := g.state.Player.Inventory[g.selectedItemIndex].(*Money)
+	// 足元から使った場合もあるため、ほかの効果と同じく使用元を判定する
+	item, isInventoryItem := determineItemSource(g)
+	moneyItem, ok := item.(*Money)
+	if !ok {
+		return
+	}
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%dを入手した。", moneyItem.Amount),
@@ -153,7 +158,7 @@ var money = func(g *Game) {
 		},
 	}
 	g.Enqueue(action)
-	g.state.Player.Inventory = append(g.state.Player.Inventory[:g.selectedItemIndex], g.state.Player.Inventory[g.selectedItemIndex+1:]...)
+	removeUsedItem(g, isInventoryItem)
 }
 
 var setTrap = func(g *Game) {

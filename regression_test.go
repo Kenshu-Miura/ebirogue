@@ -97,3 +97,65 @@ func TestForcedMoveRechecksDestination(t *testing.T) {
 		t.Fatalf("player was forced onto an occupied tile: (%d, %d)", g.state.Player.X, g.state.Player.Y)
 	}
 }
+
+// 足元のアイテムを投げると、足元ではなく所持品の選択位置のアイテムが消えていた（所持品が空なら panic）。
+// FuzzInputSequence が見つけた不具合。
+func TestThrowingGroundItemKeepsInventory(t *testing.T) {
+	for _, inventorySize := range []int{0, 1} {
+		g, _ := newHeadlessGame(1, DifficultyAdvanced)
+		g.state.Map = makeTestFloorMap(7, 5)
+		g.rooms = []Room{{ID: 0, X: 0, Y: 0, Width: 7, Height: 5}}
+		g.state.Enemies, g.state.MapTraps = nil, nil
+		g.state.Player.X, g.state.Player.Y, g.state.Player.Direction = 2, 2, Right
+		owned := buildItemFromTemplate(2, 0, 0)
+		g.state.Player.Inventory = []Item{owned}[:inventorySize]
+		ground := buildItemFromTemplate(1, 2, 2)
+		g.state.Items = []Item{ground}
+		g.currentGroundItem = ground
+		g.ShowGroundItem, g.GroundItemActioned = true, true
+		g.selectedGroundActionIndex = 3 // 投げる
+		g.executeGroundItemAction()
+		if err := g.RunUntilInputReady(2000); err != nil {
+			t.Fatal(err)
+		}
+		if len(g.state.Player.Inventory) != inventorySize {
+			t.Fatalf("inventory size %d -> %d", inventorySize, len(g.state.Player.Inventory))
+		}
+		if len(g.state.Items) != 1 {
+			t.Fatalf("ground items = %d, want only the thrown item", len(g.state.Items))
+		}
+		if x, y := g.state.Items[0].GetPosition(); x == 2 && y == 2 {
+			t.Fatal("thrown item should have left the player's tile")
+		}
+	}
+}
+
+// 足元のお金を「使う」と、所持品の選択位置をお金として扱い panic していた。FuzzInputSequence が発見。
+func TestUsingGroundMoneyAddsCash(t *testing.T) {
+	for _, inventorySize := range []int{0, 1} {
+		g, _ := newHeadlessGame(1, DifficultyAdvanced)
+		g.state.Enemies, g.state.MapTraps = nil, nil
+		px, py := g.state.Player.X, g.state.Player.Y
+		owned := buildItemFromTemplate(1, 0, 0)
+		g.state.Player.Inventory = []Item{owned}[:inventorySize]
+		var moneyID int
+		for _, id := range randomItemTemplateIDs {
+			if _, ok := buildItemFromTemplate(id, 0, 0).(*Money); ok {
+				moneyID = id
+			}
+		}
+		cash := buildItemFromTemplate(moneyID, px, py).(*Money)
+		cash.Amount = 123
+		g.state.Items = []Item{cash}
+		g.currentGroundItem = cash
+		g.ShowGroundItem, g.GroundItemActioned = true, true
+		g.selectedGroundActionIndex = 2 // 使う
+		g.executeGroundItemAction()
+		if err := g.RunUntilInputReady(2000); err != nil {
+			t.Fatal(err)
+		}
+		if g.state.Player.Cash != 123 || len(g.state.Items) != 0 || len(g.state.Player.Inventory) != inventorySize {
+			t.Fatalf("cash %d, ground items %d, inventory %d", g.state.Player.Cash, len(g.state.Items), len(g.state.Player.Inventory))
+		}
+	}
+}

@@ -494,7 +494,7 @@ func (g *Game) Update() error {
 	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
 		g.processDKeyPress()
 
-		// デバッグ用F1キー処理
+		// デバッグ用F1キー処理（-tags debug のビルドでのみ有効）
 		g.processF1KeyPress()
 	}
 
