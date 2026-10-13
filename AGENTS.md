@@ -17,16 +17,34 @@ This codebase implements a roguelike game in Go using the Ebiten library.  Each 
 go run .                                   # ローカル実行（ウィンドウが開く）
 go build                                   # 実行ファイル生成
 gofmt -w <変更したファイル>                  # コミット前に必須
-go test ./...                              # 通常ビルドのテスト（content_test.go など）
+go test ./...                              # 通常ビルドのテスト（content_*_test.go・TestSimSmoke など）
 go test -tags test ./...                   # スタブビルドのテスト（純粋ロジック系）
 GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o ebirogue.wasm   # WASMビルド
+go run -tags debug .                       # デバッグビルド（F1 で混乱薬を追加できる）
 ```
 
 **テストは2系統ある**点に注意:
 
-- `go test ./...`（タグなし）: 実際のゲームコード（`//go:build !test` 付きファイル）と一緒にコンパイルされる。`content_test.go`（アイテム・カード・敵などコンテンツの結合テスト）はこちらでのみ実行される。
+- `go test ./...`（タグなし）: 実際のゲームコード（`//go:build !test` 付きファイル）と一緒にコンパイルされる。分野別のコンテンツ結合テスト（`content_*_test.go`）、BOT のテストプレイ（`sim_test.go`）、ファジング（`fuzz_test.go`）はこちらでのみ実行される。
 - `go test -tags test ./...`: Ebiten 依存ファイルを除外し、`*_stub.go` と `ebitenstub/` で代替した軽量ビルド。`autostop_test.go` や `inventory_view_test.go` など純粋ロジックのテストが対象。
 - **変更時は両方実行すること。**
+
+### BOT によるテストプレイ（シミュレーション）とファジング
+
+```bash
+go test -run TestSimSmoke -count=1 .        # 20シード×5性格×500ターン（約1秒）。go test ./... にも含まれる
+go test -run TestSimBatch -count=1 -timeout 0 . -args -sim.runs=1000 -sim.difficulty=all -sim.out=reports
+go test -run TestSimReplay -count=1 . -args -sim.seed=<シード> -sim.persona=<性格> -sim.difficulty=<beginner|intermediate|advanced>
+go test -fuzz=FuzzInputSequence -fuzztime=30m .   # 入力列のファジング
+```
+
+- BOT（`bot_test.go`）はゲーム状態を直接読み、仮想入力（`VirtualInput`）で本物のメニュー経路を操作する。性格は `aggressive` / `cautious` / `itemUser` / `diver` / `random`。
+- 毎行動で不変条件（`invariants_test.go`: 壁の中・重なり・HP/満腹度/所持品の範囲・座標・倒れた敵の残留）、ソフトロック（`RunUntilInputReady` が上限フレームで戻らない）、panic を検査し、ランダムなターンで中断セーブ→再開の一致も確かめる。
+- `TestSimBatch` は `reports/sim-<日時>.json`（全結果）と `.md`（難易度×性格のクリア率・到達階・ターン、階層別死亡率、死因上位、違反一覧、`reports/baseline.json` との差分）を出力する。`-sim.writebaseline` でベースラインを更新する。主なフラグ: `-sim.runs` `-sim.difficulty` `-sim.persona` `-sim.turns` `-sim.seedbase` `-sim.parallel` `-sim.out`。
+- `reports/` は `baseline.json` 以外を `.gitignore` 済み。
+- ファジングで見つかった入力は `testdata/fuzz/FuzzInputSequence/` に保存され、以後の `go test ./...` で毎回再生される（修正後もコミットして残す）。
+- BOT やファジングが見つけた不具合は修正し、`regression_test.go` に回帰テストを追加する。
+- ヘッドレス実行（`headless.go`）: `newHeadlessGame(seed, difficulty)` は画像を読み込まず、`fastForward` でメッセージ待ち・アニメーション・フェード・キーリピート待ちを0フレームにする。死亡・クリアで自動リスタートせず `RunEnded()` になる。`StepFrame()` で1フレーム、`RunUntilInputReady(maxFrames)` で入力待ちまで進める。
 
 ### ブラウザ配布とデプロイ（WASM / Netlify）
 
@@ -52,7 +70,8 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go` |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go` |
+| デバッグビルド専用 | `//go:build debug && !test` / `!debug && !test` | `debug_on.go`（F1 の処理）/ `debug_off.go`（空の実装） |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
 - 新機能のロジックはなるべく「純粋関数をタグなしファイルへ切り出し + 単体テスト」の形にする（`autostop.go` + `autostop_test.go` が手本）。
@@ -63,7 +82,11 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `draw.go`: マップ・キャラ・アイテム・投擲・射線などワールド描画とアニメーション。HUD・ミニマップは `draw_hud.go`、インベントリ・メニュー・説明・設定などのウィンドウ描画は `draw_ui.go`。
 - `direction.go`: `Direction` ⇔ 移動量 (dx, dy) の変換ヘルパー（`determineDirection`/`directionToDelta`/`getDirections` 等）。方向変換の switch を手書きしない。
 - `gamehelpers.go`: 頻出パターンの共通ヘルパー。メッセージだけの Action は `g.EnqueueMessage(msg, duration)`、敵へのダメージ＋撃破処理は `g.applyDamageToEnemy(index, damage)`、投擲は `g.throwWithCallbacks(item, range)`、呪い判定は `isCursedEquipment` 等。**新規コードは同じ処理を手書きせずこれらを使う。**
-- `damage.go`（タグなし・純粋）: ダメージ計算式の一元管理。SFC シレン式の「ダメージ = 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率」。プレイヤー攻撃は `rollPlayerAttackDamage`（会心1/20＝防御無視×1.5、最低1ダメージ）、敵攻撃は `rollEnemyAttackDamage`、総攻撃力は `playerAttackTotal(攻撃力, パワー, レベル)`。特効などの補正は `DamageParams.Multiplier` へ乗算で合成する（`slayerMultiplier` 参照）。バランス調整は同ファイル冒頭の定数（軽減率・乱数幅・会心率など）を変更する。乱数源はパッケージ変数 `damageRandInt` で、テストでは差し替えて決定的にする。**新しいダメージ処理は式を手書きせず必ず `rollDamage` 系を経由する。**
+- `rng.go`（タグなし）: 冒険の乱数源 `gameRNG`（math/rand/v2 の PCG。状態を保存・復元できる）。ターン進行は `g.rng`（`g.random()` / `g.randIntn(n)`）、フロア生成は `newFloorRNG(seed, 階)` の専用系列。**`math/rand` のグローバル関数やパッケージ変数の乱数源は使わない。** `Game` を受け取らない関数には `intn func(int) int` を渡す。テストで特定の判定だけ固定するには `g.randHooks`（`random_hooks.go`）を使う。
+- `input_source.go`（タグなし）: 論理キー `Key`、`InputSource`、仮想入力 `VirtualInput`、記録 `InputRecorder`。`input_ebiten.go` が Ebiten の実キーボードを包む。**キー入力は `ebiten.IsKeyPressed` / `inpututil` を直接呼ばず `g.keys().Pressed(KeyZ)` / `JustPressed` / `PressDuration` を使う。** 入力のリピート間隔は実時間ではなくフレーム数（`stepRepeatFrames` など）。
+- `difficulty.go`（タグなし）: 難易度 `Difficulty`、`goalFloor`、`isBossFloor`、`bossIDForFloor`、`stairsUsable`。ボス撃破の判定とクリア処理は `map.go` の `checkBossDefeated` / `clearRun`（フロアからボスが消えたら撃破）。
+- `deathcause.go`（タグなし）: 死因 `DamageSource`、死亡文 `deathMessage`、冒険結果 `RunResult` と記録一覧。`runresult_game.go` の `g.damagePlayer(damage, source)` が HP 減少と死因の記録を行い、`g.finishRun(cleared)` が結果を保存する。**プレイヤーへのダメージは必ず `damagePlayer`（または `applyPlayerShieldDefense`）を通す。**
+- `damage.go`（タグなし・純粋）: ダメージ計算式の一元管理。SFC シレン式の「ダメージ = 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率」。プレイヤー攻撃は `rollPlayerAttackDamage`（会心1/20＝防御無視×1.5、最低1ダメージ）、敵攻撃は `rollEnemyAttackDamage`、総攻撃力は `playerAttackTotal(攻撃力, パワー, レベル)`。特効などの補正は `DamageParams.Multiplier` へ乗算で合成する（`slayerMultiplier` 参照）。バランス調整は同ファイル冒頭の定数（軽減率・乱数幅・会心率など）を変更する。乱数源は呼び出し側が渡す `intn`（ゲームでは `g.damageIntn()`）で、テストでは `g.randHooks.damage` で差し替えて決定的にする。**新しいダメージ処理は式を手書きせず必ず `rollDamage` 系を経由する。**
 
 ## コアゲームループとターン進行
 
@@ -93,34 +116,35 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜70 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
-| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜41 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜70） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
+| 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜44。42〜44 はボス〔`IsBoss`〕） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
 | 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜4） | `createMapTrapByID` | 同ファイルの効果クロージャ |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
 
 - アイテム効果関数（`UseAction = func(g *Game)`）は `determineItemSource(g)` で「インベントリから使ったか足元か」を判定し、最後に `removeUsedItem(g, isInventoryItem)` で消費する、というパターンが基本（itemeffects.go 冒頭参照）。
-- 既存カード効果（睡眠・混乱・部屋全体・フロア全体系）はランダム部分を `rollXxx(intn func(int) int)` の純粋関数に分離して `content_test.go` でテストしている。新規効果も同じ形式にする。
+- 既存カード効果（睡眠・混乱・部屋全体・フロア全体系）はランダム部分を `rollXxx(intn func(int) int)` の純粋関数に分離して `content_cards_test.go` などでテストしている。新規効果も同じ形式にする。
 
 ## 新要素追加チェックリスト
 
 新しいアイテム・敵・罠を 1 つ追加するときに触る場所:
 
-1. **テーブル**: 上記の該当テーブルへ追加（ID は連番を維持）。
+1. **テーブル**: 上記の該当テーブルへ追加（ID は `docs/agents/README.md` の割り当て表に従う）。
    - **敵を追加する場合は基本種だけで終わらせず、元画像の色相と能力値を変化させた同系統の上位種も同時に追加する。** 上位種は基本種の特殊能力を継承し、`MonsterLevelUpTable` に基本種→上位種の対応を登録する。
 2. **効果**: `itemeffects.go`（アイテム）/ 定義内クロージャ（敵・罠）。
 3. **画像**: `img/` に 30x30 透過 PNG。敵の上位種画像は基本種の輪郭・アルファ・明暗を保ち、色相だけを変更した色違いにする。`NewGame()`（main.go）で読み込み、`getItemImage` / `getEnemyImage` / `DrawMapTraps`（draw.go）の分岐に追加。画像は `BaseItem.Type` や `Enemy.Type` の文字列で選ばれる（例: `"Mintia"` → mintiaImg, `"Card"` → cardImg）。
 4. **セーブ対応**: アイテムはテンプレート ID から再生成される（`SavedItem`, savegame.go の `itemToSaved`/`savedToItem`）ので、**新しい可変フィールドを追加した場合は `SavedItem` と両変換関数に追記**する。敵は `SavedEnemy`（ID + 可変ステータス）。罠は `MapTrap.TemplateID` の明示 ID で保存されるので、**一度使った罠 ID は変更・再利用しない**。
 5. **湧き/出現**: 敵なら `FloorSpawnTables`。アイテムの床出現は現状 `createItem` が全テンプレートから一様ランダム。
-6. **テスト**: `content_test.go` にテンプレート存在チェックと効果のテストを追加。
+6. **テスト**: 分野別のコンテンツテスト（`content_weapons_test.go` / `content_enemies_test.go` / `content_cards_test.go` / `content_pots_test.go` / `content_traps_test.go` / `content_tables_test.go`）にテンプレート存在チェックと効果のテストを追加。`go test -run TestSimSmoke -count=1 .` で不変条件違反が無いことも確認する。
 7. **説明**: 必要なら `help.go` のヘルプページも更新。
 
 ## セーブ・設定システム
 
-- `savedata.go`（タグなし・純粋）: `SaveData`/`SavedPlayer` 等の構造体、`decodeSaveData`、破損検出の `validateSaveData`、`GameSettings`。`saveDataVersion = 1`（構造を壊す変更をしたらインクリメント。旧セーブは破棄され新規冒険になる）。
+- `savedata.go`（タグなし・純粋）: `SaveData`/`SavedPlayer` 等の構造体、`decodeSaveData`、破損検出の `validateSaveData`、`GameSettings`。`saveDataVersion = 3`（シード・乱数状態・難易度・ボス撃破を含む。構造を壊す変更をしたらインクリメント。旧セーブは破棄され新規冒険になる）。
 - `savegame.go`（`!test`）: セーブ/設定の I/O、`buildSaveData`/`applySaveData`、メニューの「中断」→ `saveSuspendData`、フロア移動時の `autoSave`、起動時の `tryResumeFromSave`、死亡時の `deleteSaveFile`。
 - 保存先は `storage.go`（`!js`, `os` ファイル）と `storage_js.go`（`js`, ブラウザ `localStorage`）が `storageRead`/`storageWrite`/`storageRemove`/`storageIsNotExist` として抽象化する。`savegame.go` は `os` を直接呼ばずこれらを使う。**新しい保存 I/O もこの4関数経由にすること。**
-- キーは `ebirogue_save.json` / `ebirogue_settings.json`。ネイティブ版はカレントディレクトリのファイル、WASM 版は同名キーの `localStorage` 項目。**WASM でも中断・オートセーブが機能する。**
+- キーは `ebirogue_save.json` / `ebirogue_settings.json` / `ebirogue_results.json`（冒険の記録、最大100件）。ネイティブ版はカレントディレクトリのファイル、WASM 版は同名キーの `localStorage` 項目。**WASM でも中断・オートセーブが機能する。**
+- ストレージへの書き込みは `g.persistent`（`NewGame` の通常のゲームだけ true）のときだけ行う。テストや BOT の `Game` はセーブ・設定・記録を書き換えない。
 
 ## ゲーム仕様早見表
 
@@ -133,10 +157,12 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - フロア滞在 1200/1300 ターンで風の警告（`checkFloorTimeWarnings`）。
 - 視界: 部屋単位。`updateTileBrightness`（map.go）が現在の部屋+隣接タイルのみ明るくする。敵・アイテムのミニマップ表示は同部屋・隣接・発見済みで決まる（`updateEnemyVisibility` / `updateItemVisibility`）。目潰し中は敵非表示。
 - マップ生成: `GenerateRandomMap`（map.go）→ `generateRooms` → `connectRooms`（mapgen.go, 最小全域木＋ループ辺1本で接続）→ 連結性・壁健全性チェック（`floorConnected`/`roomWallsIntact`, 不合格なら再生成）→ 階段・敵・アイテム・罠配置。通路計画などの純粋ロジックはタグなしの mapgen.go にあり、mapgen_test.go / mapgen_stress_test.go でテストする。
-- 主なキー操作: 方向キー移動 / `Z` 攻撃（正面の罠調査を兼ねる）/ `X`+方向 ダッシュ / `A`+方向 方向転換 / `D` 矢を撃つ / Space 扉を開く / `C` メニュー / `L` メッセージ履歴 / インベントリ内 `F` 絞り込み・`S` ソート・`N` 任意名。`F1` はデバッグ用（`processF1KeyPress`, input.go）。
+- 主なキー操作: 方向キー移動 / `Z` 攻撃（正面の罠調査を兼ねる）/ `X`+方向 ダッシュ / `A`+方向 方向転換 / `D` 矢を撃つ / Space 扉を開く / `C` メニュー / `L` メッセージ履歴 / インベントリ内 `F` 絞り込み・`S` ソート・`N` 任意名。`F1` はデバッグビルド（`-tags debug`）専用（`processF1KeyPress`, debug_on.go）。
+- 難易度: 初級・中級・上級（標準）で10・20・30階のボスがクリア条件。ボス階（10・20・30階）はボスを倒すまで階段を使えず、30階より下へは進めない。新しい冒険は上級で始まる（難易度選択画面は wave1-D）。
 
 ## 落とし穴・注意点
 
+- 演出待ち（Action の `Duration`、フェード、アニメーション）は `fastForward` で0になる。新しい演出を追加するときは、`fastForward` 中にも入力待ちへ戻ること（`isInputReady`）を確認する。
 - `createItem` / `createEnemy` / 敵の罠設置は、テーブルから作った「ランダム出現の対象 ID 一覧」（`randomItemTemplateIDs` / `randomMonsterIDs` / `randomMapTrapIDs`、`ids.go` の `sortedTemplateIDs`）から抽選する。ID に欠番があっても動くが、`docs/agents/README.md` の ID 割り当て表に従うこと。`IsBoss` の敵はランダム出現の対象外。
 - `Action` の `Execute` はメッセージ表示タイミングで遅延実行される。効果の副作用は `Execute` 内に書くこと（Enqueue した時点で即実行してはいけない）。`NonBlocking: true` の Action は入力を止めない。
 - 敵・アイテムはスライス（`[]Enemy`, `[]Item`）で保持され、インデックスで参照する処理が多い。ループ中の要素削除は既存コードのパターン（`append(s[:i], s[i+1:]...)` 後の break 等）に合わせる。
@@ -154,12 +180,12 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ## Tests
 - 純粋ロジックのテストは Ebiten のスタブを利用するため `go test -tags test ./...` を実行してください。
-- コンテンツ（アイテム・カード・敵）の結合テスト `content_test.go` は通常ビルドでのみ動くため `go test ./...` も実行してください。
+- コンテンツ（アイテム・カード・敵）の結合テスト `content_*_test.go` と BOT スモークテスト `TestSimSmoke` は通常ビルドでのみ動くため `go test ./...` も実行してください。
 - Unit tests are in `*_test.go` files.  They rely on stub files such as `draw_stub.go` and `fonts_stub.go` when built with the `test` tag.
 
 ## Pull requests
 - Summaries should briefly describe the change and mention if tests were added or updated.
-- Always run `go test -tags test ./...` and `go test ./...` before submitting a PR.
+- Always run `go test -tags test ./...` and `go test ./...` (includes `TestSimSmoke`) before submitting a PR.
 
 ## Implementation roadmap
 
@@ -173,13 +199,10 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority S: clear condition, difficulty and bosses
 
-- クリア条件を「目標階のボスを倒す」とし、難易度で目標階を選べるようにする。
-  - 初級: 10階のボス、中級: 20階のボス、上級（標準）: 30階のボス。
-  - 難易度は冒険開始時に選び、冒険データに保存する（冒険の途中で変更不可）。
-- 10・20・30階をボス階とし、各階に固有のボスを1体配置する。ボスを倒すまで階段は使えない。30階より下には進めない。
-- ボスはランダム出現と上位種化の対象外とし、「敵を追加するときは上位種も同時に追加する」規則の例外とする。
-- 難易度選択画面、クリア画面、HUD の難易度・目標階表示、冒険の記録一覧を追加する。
-- 実装手順は `docs/agents/phase0-foundation.md`（P0-6 骨格）、`docs/agents/wave1-C-bosses.md`、`docs/agents/wave1-D-difficulty-ui.md`。
+- クリア条件は「目標階のボスを倒す」（初級10階・中級20階・上級30階）。ボスはランダム出現と上位種化の対象外で、「敵を追加するときは上位種も同時に追加する」規則の例外とする。
+- 骨格（難易度・目標階・ボス階の階段封鎖・クリア判定・仮のボス ID 42〜44）はフェーズ0で実装済み。残りは次のとおり。
+  - 仮のボスを固有の能力を持つ本物のボスに置き換える（`docs/agents/wave1-C-bosses.md`）。
+  - 難易度選択画面、クリア画面、HUD の難易度・目標階表示、冒険の記録一覧（`ebirogue_results.json`）を追加する（`docs/agents/wave1-D-difficulty-ui.md`）。
 
 ### Priority A: cards based on scrolls
 
@@ -224,10 +247,8 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority C: replayability and diagnostics
 
-- ダンジョンシードを表示し、同じシードで再挑戦できるようにする。
-- 死亡原因、到達階、ターン数、所持品を冒険結果として保存する。
-- リプレイまたは入力履歴を保存し、不具合を再現しやすくする。
-- デバッグ用F1処理は通常プレイから分離し、デバッグビルドまたは明示的な開発者設定でのみ有効にする。
+- 通常プレイの入力履歴（`InputRecorder` が記録済み）をファイルへ保存し、シードと合わせて再生できるようにする（BOT の冒険は `TestSimReplay` でシードから再現できる）。
+- 足踏み（`X`+`Z`）は敵が行動するがターン数（`turnCount`）が増えず、湧き間隔とフロア滞在ターンが進まない。仕様として揃えるか検討する。
 
 ### Roadmap acceptance criteria
 
@@ -236,4 +257,4 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - ランダム処理は、可能な限り純粋関数や注入可能な乱数へ分離して単体テストを追加する。
 - 状態異常、装備能力、敵の特殊攻撃、罠効果には、正常系と解除・無効化・境界値のテストを追加する。
 - 画像を追加した場合は30x30、アルファチャンネル、透明な四隅、ゲーム内での視認性を確認する。
-- 実装完了後は `gofmt -w` と `go test -tags test ./...`、`go test ./...` を実行し、可能であれば通常ビルドとWASMビルドも確認する。
+- 実装完了後は `gofmt -w` と `go test -tags test ./...`、`go test ./...`（`TestSimSmoke` を含む）を実行し、可能であれば通常ビルドとWASMビルドも確認する。バランスに関わる変更は `TestSimBatch` のレポートをベースラインと比べる。

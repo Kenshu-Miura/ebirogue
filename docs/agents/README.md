@@ -42,7 +42,7 @@ ebirogue を Claude Code（Pro）と Codex（Plus）で並列開発し、BOT に
 - **Codex（Plus）**: フェーズ1以降の各担当を実装する。Claude とは別の利用枠なので、実装量の多い担当はこちらへ回す。
 - **CPU（無料）**: BOT のテストプレイとファジング。夜間や外出中に回す。
 - 5時間枠の目安は「並列2〜3本」。大きい担当は枠の開始直後に投入する。
-- エージェントには大きいファイル（`content_test.go`、`itemeffects.go`、`items.go`）を丸ごと読ませず、`grep` で該当箇所を探させる。
+- エージェントには大きいファイル（`content_cards_test.go`、`itemeffects.go`、`items.go`）を丸ごと読ませず、`grep` で該当箇所を探させる。
 
 ## 並列作業のルール（AGENTS.md の一部規則を並列時のみ上書き）
 
