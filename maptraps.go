@@ -157,14 +157,18 @@ type mapTrapTemplate struct {
 // mapTrapTemplates は罠テンプレートを明示 ID で引くテーブル。
 // ID はセーブデータに保存されるため、既存の ID を変更・再利用しないこと。
 var mapTrapTemplates = map[int]mapTrapTemplate{
-	0: {ID: 0, Name: "睡眠ガスの罠", Effect: sleepGasTrapEffect, FailRate: 30},
-	1: {ID: 1, Name: "毒矢の罠", Effect: poisonArrowTrapEffect, FailRate: 20},
-	2: {ID: 2, Name: "鈍足の罠", Effect: slowTrapEffect, FailRate: 20},
-	3: {ID: 3, Name: "地雷", Effect: mineTrapEffect, FailRate: 10},
-	4: {ID: 4, Name: "サビの罠", Effect: rustTrapEffect, FailRate: 20},
-	5: {ID: 5, Name: "ワープの罠", Effect: warpTrapEffect, FailRate: 20},
-	6: {ID: 6, Name: "落とし穴", Effect: pitfallTrapEffect, FailRate: 20},
-	7: {ID: 7, Name: "トラバサミ", Effect: bearTrapEffect, FailRate: 20},
+	0:  {ID: 0, Name: "睡眠ガスの罠", Effect: sleepGasTrapEffect, FailRate: 30},
+	1:  {ID: 1, Name: "毒矢の罠", Effect: poisonArrowTrapEffect, FailRate: 20},
+	2:  {ID: 2, Name: "鈍足の罠", Effect: slowTrapEffect, FailRate: 20},
+	3:  {ID: 3, Name: "地雷", Effect: mineTrapEffect, FailRate: 10},
+	4:  {ID: 4, Name: "サビの罠", Effect: rustTrapEffect, FailRate: 20},
+	5:  {ID: 5, Name: "ワープの罠", Effect: warpTrapEffect, FailRate: 20},
+	6:  {ID: 6, Name: "落とし穴", Effect: pitfallTrapEffect, FailRate: 20},
+	7:  {ID: 7, Name: "トラバサミ", Effect: bearTrapEffect, FailRate: 20},
+	8:  {ID: 8, Name: "木の矢の罠", Effect: woodArrowTrapEffect, FailRate: 20},
+	9:  {ID: 9, Name: "鉄の矢の罠", Effect: ironArrowTrapEffect, FailRate: 20},
+	10: {ID: 10, Name: "落石の罠", Effect: fallingRockTrapEffect, FailRate: 20},
+	11: {ID: 11, Name: "大型地雷", Effect: largeMineTrapEffect, FailRate: 10},
 }
 
 // randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。
@@ -276,7 +280,7 @@ func generateMapTraps(rooms []Room, rng *gameRNG, floor int) []MapTrap {
 
 		// 睡眠ガスを多めにしつつ、ほかの罠も混ぜる
 		if !duplicate {
-			trapIDs := []int{0, 0, 1, 2, 3, 4, 5, 6, 7}
+			trapIDs := []int{0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 			trapIDs = availableTrapIDs(trapIDs, floor)
 			trap := createMapTrapByID(trapIDs[rng.Intn(len(trapIDs))], x, y)
 			traps = append(traps, trap)

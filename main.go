@@ -179,6 +179,10 @@ type Game struct {
 	pitfallTrapImg            *ebiten.Image
 	bearTrapImg               *ebiten.Image
 	rustTrapImg               *ebiten.Image
+	largeMineTrapImg          *ebiten.Image
+	fallingRockTrapImg        *ebiten.Image
+	ironArrowTrapImg          *ebiten.Image
+	woodArrowTrapImg          *ebiten.Image
 	potImg                    *ebiten.Image
 	offsetX                   int
 	offsetY                   int
@@ -863,6 +867,10 @@ func NewGame() *Game {
 	pitfallTrapImg := loadImage("img/pitfall_trap.png")
 	bearTrapImg := loadImage("img/bear_trap.png")
 	rustTrapImg := loadImage("img/rust_trap.png")
+	largeMineTrapImg := loadImage("img/large_mine_trap.png")
+	fallingRockTrapImg := loadImage("img/falling_rock_trap.png")
+	ironArrowTrapImg := loadImage("img/iron_arrow_trap.png")
+	woodArrowTrapImg := loadImage("img/wood_arrow_trap.png")
 	potImg := loadImage("img/pot.png")
 
 	game := &Game{
@@ -913,6 +921,10 @@ func NewGame() *Game {
 		pitfallTrapImg:      pitfallTrapImg,
 		bearTrapImg:         bearTrapImg,
 		rustTrapImg:         rustTrapImg,
+		largeMineTrapImg:    largeMineTrapImg,
+		fallingRockTrapImg:  fallingRockTrapImg,
+		ironArrowTrapImg:    ironArrowTrapImg,
+		woodArrowTrapImg:    woodArrowTrapImg,
 		potImg:              potImg,
 		offsetX:             0,
 		offsetY:             0,
