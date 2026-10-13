@@ -773,7 +773,8 @@ var increaseFloorTraps = func(g *Game) {
 					continue
 				}
 				// 既存の罠生成と同じく睡眠ガスを多めに混ぜる
-				trapIDs := []int{0, 0, 1, 2, 3}
+				trapIDs := []int{0, 0, 1, 2, 3, 5, 6, 7}
+				trapIDs = availableTrapIDs(trapIDs, g.Floor)
 				g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(trapIDs[g.randIntn(len(trapIDs))], x, y))
 				added++
 			}

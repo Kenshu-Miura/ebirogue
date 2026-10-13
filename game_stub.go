@@ -20,6 +20,7 @@ type Coordinate struct {
 }
 
 type StatusAilments struct {
+	BearTrap    int // トラバサミの残りターン数
 	Confusion   int
 	Sleep       int
 	Blind       int
