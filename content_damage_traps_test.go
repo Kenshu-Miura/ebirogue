@@ -24,6 +24,7 @@ func TestDamageTrapEffects(t *testing.T) {
 			g := &Game{state: GameState{Player: Player{Health: 100}}}
 			g.randHooks.damage = func(int) int { return roll }
 			trap := createMapTrapByID(tc.id, 2, 2)
+			g.steppedTrapSource = trapSource(tc.id, trap.Name)
 			trap.Effect(g)
 			if g.state.Player.Health != 100 {
 				t.Fatal("effect must be deferred")

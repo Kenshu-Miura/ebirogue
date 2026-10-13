@@ -4,13 +4,16 @@ package main
 
 import "fmt"
 
+const pitfallTrapID = 6
+
+// availableTrapIDs はボス階と最終階で落とし穴を抽選から除く。
 func availableTrapIDs(ids []int, floor int) []int {
 	if !isBossFloor(floor) && floor < finalFloor {
 		return ids
 	}
 	result := make([]int, 0, len(ids))
 	for _, id := range ids {
-		if id != 6 {
+		if id != pitfallTrapID {
 			result = append(result, id)
 		}
 	}
@@ -42,13 +45,14 @@ var warpTrapEffect = func(g *Game) {
 }
 
 var pitfallTrapEffect = func(g *Game) {
+	source := g.steppedTrapSource
 	g.Enqueue(Action{Duration: 0.5, Message: "落とし穴が開いた", Execute: func(g *Game) {
 		if isBossFloor(g.Floor) || g.Floor >= finalFloor || g.cleared || g.playerDead {
 			g.EnqueueMessage("しかし落とし穴は作動しなかった", 0.4)
 			return
 		}
 		damage := rollPitfallDamage(g.randIntn)
-		g.damagePlayer(damage, trapSource(6, "落とし穴"))
+		g.damagePlayer(damage, source)
 		g.EnqueueMessage(fmt.Sprintf("落下して%dダメージを受けた", damage), 0.4)
 		g.state.Player.checkDeath(g)
 		if !g.playerDead {

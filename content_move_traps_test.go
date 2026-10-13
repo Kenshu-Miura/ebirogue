@@ -210,6 +210,7 @@ func TestPitfallBossSafetyAndDeath(t *testing.T) {
 	}
 	g, _ := newHeadlessGame(7, DifficultyAdvanced)
 	g.state.Player.Health = 1
+	g.steppedTrapSource = trapSource(pitfallTrapID, "落とし穴")
 	pitfallTrapEffect(g)
 	executeMoveTrapActions(g)
 	if !g.playerDead || g.fadingOut || g.lastDamageSource.TrapID != 6 {

@@ -171,6 +171,10 @@ var mapTrapTemplates = map[int]mapTrapTemplate{
 	11: {ID: 11, Name: "大型地雷", Effect: largeMineTrapEffect, FailRate: 10},
 }
 
+// floorTrapIDs は床生成とワナのカードで抽選する罠 ID の一覧。睡眠ガスを多めに混ぜる。
+// 新しい罠は既存の要素を並べ替えずに追記する。
+var floorTrapIDs = []int{0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
+
 // randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。
 var randomMapTrapIDs = sortedTemplateIDs(mapTrapTemplates, nil)
 
@@ -278,10 +282,8 @@ func generateMapTraps(rooms []Room, rng *gameRNG, floor int) []MapTrap {
 			}
 		}
 
-		// 睡眠ガスを多めにしつつ、ほかの罠も混ぜる
 		if !duplicate {
-			trapIDs := []int{0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
-			trapIDs = availableTrapIDs(trapIDs, floor)
+			trapIDs := availableTrapIDs(floorTrapIDs, floor)
 			trap := createMapTrapByID(trapIDs[rng.Intn(len(trapIDs))], x, y)
 			traps = append(traps, trap)
 		} else {
