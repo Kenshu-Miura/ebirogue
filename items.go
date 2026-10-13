@@ -811,6 +811,16 @@ var itemTemplates = map[int]ItemTemplate{
 		DefensePower: 15,
 		Abilities:    []EquipmentAbilityID{AbilityDisposableArmor},
 	},
+	71: {
+		ID:          71,
+		ItemType:    "Food",
+		Type:        "RottenSausage",
+		Name:        "腐ったウインナー",
+		Description: "満腹度を10回復するが、8ターン毒状態になる。満腹でも最大満腹度は増えない。",
+		Char:        '!',
+		Recovery:    10,
+		UseActions:  map[string]UseAction{"RestoreSatiety": eatRottenSausage},
+	},
 }
 
 // テーブルからアイテムを生成する共通関数

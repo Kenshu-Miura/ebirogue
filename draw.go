@@ -233,6 +233,8 @@ func (g *Game) getItemImage(item Item) *ebiten.Image {
 		img = g.armorImg
 	case "Sausage":
 		img = g.sausageImg
+	case "RottenSausage":
+		img = g.rottenSausageImg
 	case "Arrow":
 		img = g.arrowImg
 	case "Cane":
@@ -529,6 +531,12 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 					img = g.fallingRockTrapImg
 				case "大型地雷":
 					img = g.largeMineTrapImg
+				case "装備はずしの罠":
+					img = g.unequipTrapImg
+				case "腐敗の罠":
+					img = g.spoilTrapImg
+				case "散乱の罠":
+					img = g.scatterTrapImg
 				case "サビの罠":
 					img = g.rustTrapImg
 				default:
