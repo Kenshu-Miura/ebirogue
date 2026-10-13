@@ -7,8 +7,8 @@ import (
 
 func TestHelpPagesContent(t *testing.T) {
 	pages := helpPages()
-	if len(pages) != 5 {
-		t.Fatalf("expected 5 help pages, got %d", len(pages))
+	if len(pages) != 6 {
+		t.Fatalf("expected 6 help pages, got %d", len(pages))
 	}
 	for i, page := range pages {
 		if page.Title == "" {

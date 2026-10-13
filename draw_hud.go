@@ -265,6 +265,8 @@ func drawBarWithBorder(screen *ebiten.Image, x, y, width, height int, barColor, 
 func (g *Game) DrawHUD(screen *ebiten.Image) {
 	screenWidth, _ := screen.Bounds().Dx(), screen.Bounds().Dy()
 
+	text.Draw(screen, fmt.Sprintf("%s %d/%dF", g.difficulty, g.Floor, goalFloor(g.difficulty)), mplusSmallFont, 10, 12, color.White)
+
 	// Moves count
 	MoveText := fmt.Sprintf("ターン数: %3d", g.moveCount)
 	text.Draw(screen, MoveText, mplusNormalFont, screenWidth-130, 30, color.White)

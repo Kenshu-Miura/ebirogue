@@ -127,6 +127,13 @@ type ThrownItem struct {
 }
 
 type Game struct {
+	showDifficultySelect      bool
+	difficultyCursor          int
+	showClearScreen           bool
+	showRunHistory            bool
+	runHistory                []RunResult
+	runHistoryScroll          int
+	runHistoryError           string
 	state                     GameState
 	seed                      int64    // 冒険のシード（同じシードなら同じフロアが生成される）
 	rng                       *gameRNG // ターン進行用の乱数源。直接ではなく random()/randIntn() 経由で使う
@@ -349,7 +356,20 @@ func (g *Game) Update() error {
 		return nil
 	}
 
-	// 冒険クリア後はメッセージを出し切ってから終了する（通常のゲームでは新しい冒険を始める）
+	if g.showDifficultySelect {
+		g.handleDifficultyInput()
+		return nil
+	}
+	if g.showClearScreen {
+		g.handleClearInput()
+		return nil
+	}
+	if g.showRunHistory {
+		g.handleRunHistoryInput()
+		return nil
+	}
+
+	// 冒険クリア後はメッセージを出し切ってから終了する（通常のゲームではクリア画面で待つ）
 	if g.cleared {
 		g.ManageDescriptions()
 		g.HandleActionQueue()
@@ -358,14 +378,7 @@ func (g *Game) Update() error {
 				g.runEnded = true
 				return nil
 			}
-			if g.fadeOutProgress < 1.0 {
-				g.fadeOutProgress += 1.0 / 60.0
-			}
-			g.gameResetTimer -= 1.0 / 60.0
-			if g.gameResetTimer <= 0 {
-				g.resetGame()
-				g.fadeInProgress = 0.0
-			}
+			g.showClearScreen = true
 		}
 		return nil
 	}
@@ -606,6 +619,18 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	if g.showDifficultySelect {
+		g.drawDifficultyWindow(screen)
+		return
+	}
+	if g.showClearScreen {
+		g.drawClearWindow(screen)
+		return
+	}
+	if g.showRunHistory {
+		g.drawRunHistoryWindow(screen)
+		return
+	}
 
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	centerX := (screenWidth-tileSize)/2 - tileSize
@@ -898,7 +923,7 @@ func NewGame() *Game {
 	game := &Game{
 		input:               NewInputRecorder(ebitenInput{}),
 		persistent:          true,
-		difficulty:          DifficultyAdvanced, // 難易度選択画面（wave1-D）までは上級（標準）で始める
+		difficulty:          DifficultyAdvanced,
 		playerImg:           img,
 		tilesetImg:          tilesetImg,
 		ebiImg:              ebiImg,
@@ -974,6 +999,8 @@ func NewGame() *Game {
 	// 中断データがあれば再開する（壊れている場合は新しい冒険のまま）
 	if game.tryResumeFromSave() {
 		log.Println("中断データから冒険を再開します")
+	} else {
+		game.openDifficultySelect()
 	}
 
 	return game

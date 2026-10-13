@@ -29,6 +29,9 @@ func (g *Game) framesSince(frame int) int {
 // isInputReady は次のキー入力が行動としてそのまま受け付けられる状態かどうかを返す
 // （行動・アニメーション・フェードの処理中や、方向キーのリピート待ちでないこと）。
 func (g *Game) isInputReady() bool {
+	if g.showDifficultySelect || g.showClearScreen || g.showRunHistory {
+		return true
+	}
 	return g.CanAcceptInput() && len(g.ActionQueue.Queue) == 0 && !g.Animating &&
 		!g.fadingOut && !g.fadingIn && g.fadeInProgress >= 1.0 && !g.playerDead &&
 		g.ThrownItem.Item == nil && !g.isActioned && !g.isCombatActive &&
@@ -713,8 +716,8 @@ func (g *Game) handleMenuInput() error {
 		return nil
 	}
 
-	// 矢印キーでメニュー項目を移動（3行2列）
-	const menuRowCount = 3
+	// 矢印キーでメニュー項目を移動（最終行は記録）
+	const menuRowCount = 4
 	if g.keys().JustPressed(KeyUp) {
 		g.menuSelectedRow = (g.menuSelectedRow - 1 + menuRowCount) % menuRowCount
 	} else if g.keys().JustPressed(KeyDown) {
@@ -792,6 +795,9 @@ func (g *Game) handleMenuInput() error {
 				g.suspendSelectedOption = 1 // 誤操作防止のため「やめる」を初期選択にする
 				g.suspendPromptJustOpened = true
 			}
+		} else if g.menuSelectedRow == 3 {
+			g.showMenu = false
+			g.openRunHistory()
 		} else if g.menuSelectedRow == 2 {
 			// ヘルプ
 			g.showMenu = false
@@ -1068,4 +1074,66 @@ func (g *Game) handleEmptyInventoryMessage() error {
 	}
 
 	return nil
+}
+
+// openDifficultySelect は冒険終了後にも選択待ちに戻す。
+func (g *Game) openDifficultySelect() {
+	g.showDifficultySelect = true
+	g.showClearScreen = false
+	d := g.settings.LastDifficulty
+	if !d.valid() {
+		d = DifficultyAdvanced
+	}
+	g.difficultyCursor = int(d)
+}
+func (g *Game) handleDifficultyInput() {
+	if g.keys().JustPressed(KeyUp) || g.keys().JustPressed(KeyLeft) {
+		g.difficultyCursor = (g.difficultyCursor + 2) % 3
+	}
+	if g.keys().JustPressed(KeyDown) || g.keys().JustPressed(KeyRight) {
+		g.difficultyCursor = (g.difficultyCursor + 1) % 3
+	}
+	if g.keys().JustPressed(KeyZ) {
+		g.difficulty = Difficulty(g.difficultyCursor)
+		g.settings.LastDifficulty = g.difficulty
+		g.saveSettings()
+		g.startNewRun(newRandomSeed())
+	}
+}
+func (g *Game) handleClearInput() {
+	if g.keys().JustPressed(KeyZ) {
+		g.openDifficultySelect()
+	}
+}
+func (g *Game) openRunHistory() {
+	g.showRunHistory = true
+	g.runHistoryScroll = 0
+	g.runHistoryError = ""
+	g.runHistory = nil
+	data, err := storageRead(runHistoryFileName)
+	if err != nil && !storageIsNotExist(err) {
+		g.runHistoryError = "記録を読み込めませんでした"
+		return
+	}
+	history, err := decodeRunHistory(data)
+	if err != nil {
+		g.runHistoryError = "記録が壊れているため表示できません"
+		return
+	}
+	g.runHistory = newestRunHistory(history)
+}
+func (g *Game) handleRunHistoryInput() {
+	if g.keys().JustPressed(KeyUp) {
+		g.runHistoryScroll = max(0, g.runHistoryScroll-1)
+	}
+	if g.keys().JustPressed(KeyDown) {
+		g.runHistoryScroll = min(max(0, len(g.runHistory)-5), g.runHistoryScroll+1)
+	}
+	if g.keys().JustPressed(KeyX) {
+		g.showRunHistory = false
+		g.showMenu = true
+	}
+	if g.keys().JustPressed(KeyC) {
+		g.showRunHistory = false
+	}
 }

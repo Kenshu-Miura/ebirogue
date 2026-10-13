@@ -150,6 +150,10 @@ func newInitialPlayer() Player {
 
 // ゲームリセット機能（新しいシードで冒険をやり直す）
 func (g *Game) resetGame() {
+	if !g.headless {
+		g.openDifficultySelect()
+		return
+	}
 	g.startNewRun(newRandomSeed())
 }
 
@@ -165,6 +169,7 @@ func (g *Game) retrySameSeed() {
 // startNewRun は指定シードで1階から新しい冒険を始める。
 // 同じシードなら同じフロアが生成され、ターン進行の乱数列も同じになる。
 func (g *Game) startNewRun(seed int64) {
+	g.showDifficultySelect, g.showClearScreen, g.showRunHistory = false, false, false
 	g.seed = seed
 	g.rng = newTurnRNG(seed)
 	// 入力の記録は冒険ごとに取り直す（同じシード＋記録した入力でこの冒険を再生できる）
