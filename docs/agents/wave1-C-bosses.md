@@ -1,7 +1,7 @@
 # wave1-C: ボス3体とボス階（Codex 用）
 
 ブランチ: `agent/wave1-C-bosses`
-前提: フェーズ0（特に P0-6「クリア条件と難易度の骨格」）が master にマージ済みであること。
+前提: フェーズ0（特に P0-6「クリア条件と難易度の骨格」）と、`balance-level99.md`（レベル上限99と階層ごとの敵の強さ）が master にマージ済みであること。ボスの能力値は、その「決定事項」にある各階の想定レベルを基準に決める。
 最初に `AGENTS.md` と `docs/agents/README.md` を読み、並列作業のルールに従うこと（`AGENTS.md` と `IMPLEMENTED_FEATURES.md` は編集しない）。
 
 ## 作るもの
