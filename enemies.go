@@ -128,6 +128,7 @@ type MonsterDefinition struct {
 	SpecialMovement          SpecialMovement
 	Disguise                 EnemyDisguise
 	Traits                   []EnemyTrait
+	IsBoss                   bool // ボスはランダム出現と上位種化の対象外
 }
 
 // upperMonsterDefinition は基本種の固有能力を引き継ぎ、上位種の能力値と表示情報を設定する。
@@ -615,7 +616,9 @@ func CreateEnemyByID(id, x, y int) Enemy {
 	}
 }
 
+// randomMonsterIDs はランダム出現の対象となる敵 ID の一覧（昇順、ボスを除く）。
+var randomMonsterIDs = sortedTemplateIDs(MonsterDefinitions, func(def MonsterDefinition) bool { return !def.IsBoss })
+
 func createEnemy(x, y int) Enemy {
-	randomValue := rand.Intn(len(MonsterDefinitions))
-	return CreateEnemyByID(randomValue, x, y)
+	return CreateEnemyByID(pickTemplateID(randomMonsterIDs, rand.Intn, 0), x, y)
 }

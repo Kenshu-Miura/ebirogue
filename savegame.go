@@ -226,11 +226,15 @@ func savedToEnemy(s SavedEnemy) Enemy {
 	return enemy
 }
 
-// mapTrapTemplateID は罠テンプレートのインデックスを名前から取得する
-func mapTrapTemplateID(name string) int {
-	for i, template := range mapTrapTemplates {
-		if template.Name == name {
-			return i
+// mapTrapTemplateID は罠のテンプレート ID を返す。
+// TemplateID が正しく設定されていない罠（テスト用の直書きなど）は名前から逆引きする。
+func mapTrapTemplateID(trap MapTrap) int {
+	if template, ok := mapTrapTemplates[trap.TemplateID]; ok && template.Name == trap.Name {
+		return trap.TemplateID
+	}
+	for _, id := range sortedTemplateIDs(mapTrapTemplates, nil) {
+		if mapTrapTemplates[id].Name == trap.Name {
+			return id
 		}
 	}
 	return 0
@@ -332,7 +336,7 @@ func (g *Game) buildSaveData() *SaveData {
 	}
 	for _, trap := range g.state.MapTraps {
 		save.MapTraps = append(save.MapTraps, SavedMapTrap{
-			TemplateID: mapTrapTemplateID(trap.Name),
+			TemplateID: mapTrapTemplateID(trap),
 			X:          trap.X,
 			Y:          trap.Y,
 			Discovered: trap.Discovered,

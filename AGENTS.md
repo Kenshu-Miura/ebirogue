@@ -95,7 +95,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|---|
 | アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜70 連番） | `buildItemFromTemplate` / `createItemByID` | `itemeffects.go` |
 | 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜41 連番） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
-| 罠 | `mapTrapTemplates []mapTrapTemplate`（maptraps.go） | `createMapTrapByID` | 同ファイルの効果クロージャ |
+| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜4） | `createMapTrapByID` | 同ファイルの効果クロージャ |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
 
@@ -110,7 +110,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
    - **敵を追加する場合は基本種だけで終わらせず、元画像の色相と能力値を変化させた同系統の上位種も同時に追加する。** 上位種は基本種の特殊能力を継承し、`MonsterLevelUpTable` に基本種→上位種の対応を登録する。
 2. **効果**: `itemeffects.go`（アイテム）/ 定義内クロージャ（敵・罠）。
 3. **画像**: `img/` に 30x30 透過 PNG。敵の上位種画像は基本種の輪郭・アルファ・明暗を保ち、色相だけを変更した色違いにする。`NewGame()`（main.go）で読み込み、`getItemImage` / `getEnemyImage` / `DrawMapTraps`（draw.go）の分岐に追加。画像は `BaseItem.Type` や `Enemy.Type` の文字列で選ばれる（例: `"Mintia"` → mintiaImg, `"Card"` → cardImg）。
-4. **セーブ対応**: アイテムはテンプレート ID から再生成される（`SavedItem`, savegame.go の `itemToSaved`/`savedToItem`）ので、**新しい可変フィールドを追加した場合は `SavedItem` と両変換関数に追記**する。敵は `SavedEnemy`（ID + 可変ステータス）。罠は**名前→テンプレート ID の対応表 `mapTrapTemplateID`（savegame.go）に必ず追加**する。
+4. **セーブ対応**: アイテムはテンプレート ID から再生成される（`SavedItem`, savegame.go の `itemToSaved`/`savedToItem`）ので、**新しい可変フィールドを追加した場合は `SavedItem` と両変換関数に追記**する。敵は `SavedEnemy`（ID + 可変ステータス）。罠は `MapTrap.TemplateID` の明示 ID で保存されるので、**一度使った罠 ID は変更・再利用しない**。
 5. **湧き/出現**: 敵なら `FloorSpawnTables`。アイテムの床出現は現状 `createItem` が全テンプレートから一様ランダム。
 6. **テスト**: `content_test.go` にテンプレート存在チェックと効果のテストを追加。
 7. **説明**: 必要なら `help.go` のヘルプページも更新。
@@ -137,7 +137,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ## 落とし穴・注意点
 
-- **`createItem` は `rand.Intn(len(itemTemplates))`、`createEnemy` は `rand.Intn(len(MonsterDefinitions))` で ID を引く**ため、テーブルの ID は 0 からの連番を維持しないと存在しない ID を引いてフォールバック（混乱薬 / エビ）になる。
+- `createItem` / `createEnemy` / 敵の罠設置は、テーブルから作った「ランダム出現の対象 ID 一覧」（`randomItemTemplateIDs` / `randomMonsterIDs` / `randomMapTrapIDs`、`ids.go` の `sortedTemplateIDs`）から抽選する。ID に欠番があっても動くが、`docs/agents/README.md` の ID 割り当て表に従うこと。`IsBoss` の敵はランダム出現の対象外。
 - `Action` の `Execute` はメッセージ表示タイミングで遅延実行される。効果の副作用は `Execute` 内に書くこと（Enqueue した時点で即実行してはいけない）。`NonBlocking: true` の Action は入力を止めない。
 - 敵・アイテムはスライス（`[]Enemy`, `[]Item`）で保持され、インデックスで参照する処理が多い。ループ中の要素削除は既存コードのパターン（`append(s[:i], s[i+1:]...)` 後の break 等）に合わせる。
 - `Player.EquippedItems [5]Item` は後方互換のために残っている旧配列。新規コードは `EquippedWeapon`/`EquippedArmor`/`EquippedArrow`/`EquippedAccessories` を使う（equipment.go）。

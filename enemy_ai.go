@@ -440,7 +440,7 @@ func (g *Game) createTrapAfterEnemyMove(enemyIndex, startX, startY int, intn fun
 			return false
 		}
 	}
-	trapID := intn(len(mapTrapTemplates))
+	trapID := pickTemplateID(randomMapTrapIDs, intn, 0)
 	g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(trapID, enemy.X, enemy.Y))
 	g.miniMapDirty = true
 	return true

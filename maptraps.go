@@ -11,6 +11,7 @@ import (
 // マップ上に配置される罠の構造体
 type MapTrap struct {
 	X, Y       int
+	TemplateID int // mapTrapTemplates の ID（セーブ・復元に使う）
 	Name       string
 	Discovered bool          // プレイヤーが発見済みかどうか
 	Effect     func(g *Game) // 罠の効果を実行する関数
@@ -147,25 +148,31 @@ var rustTrapEffect = func(g *Game) {
 }
 
 type mapTrapTemplate struct {
+	ID       int
 	Name     string
 	Effect   func(g *Game)
 	FailRate int
 }
 
-var mapTrapTemplates = []mapTrapTemplate{
-	{Name: "睡眠ガスの罠", Effect: sleepGasTrapEffect, FailRate: 30},
-	{Name: "毒矢の罠", Effect: poisonArrowTrapEffect, FailRate: 20},
-	{Name: "鈍足の罠", Effect: slowTrapEffect, FailRate: 20},
-	{Name: "地雷", Effect: mineTrapEffect, FailRate: 10},
-	{Name: "サビの罠", Effect: rustTrapEffect, FailRate: 20},
+// mapTrapTemplates は罠テンプレートを明示 ID で引くテーブル。
+// ID はセーブデータに保存されるため、既存の ID を変更・再利用しないこと。
+var mapTrapTemplates = map[int]mapTrapTemplate{
+	0: {ID: 0, Name: "睡眠ガスの罠", Effect: sleepGasTrapEffect, FailRate: 30},
+	1: {ID: 1, Name: "毒矢の罠", Effect: poisonArrowTrapEffect, FailRate: 20},
+	2: {ID: 2, Name: "鈍足の罠", Effect: slowTrapEffect, FailRate: 20},
+	3: {ID: 3, Name: "地雷", Effect: mineTrapEffect, FailRate: 10},
+	4: {ID: 4, Name: "サビの罠", Effect: rustTrapEffect, FailRate: 20},
 }
 
+// randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。
+var randomMapTrapIDs = sortedTemplateIDs(mapTrapTemplates, nil)
+
 func createMapTrapByID(id, x, y int) MapTrap {
-	if id < 0 || id >= len(mapTrapTemplates) {
-		id = 0
+	template, ok := mapTrapTemplates[id]
+	if !ok {
+		template = mapTrapTemplates[0]
 	}
-	template := mapTrapTemplates[id]
-	return MapTrap{X: x, Y: y, Name: template.Name, Effect: template.Effect, FailRate: template.FailRate}
+	return MapTrap{X: x, Y: y, TemplateID: template.ID, Name: template.Name, Effect: template.Effect, FailRate: template.FailRate}
 }
 
 // 罠を踏んだ時の処理

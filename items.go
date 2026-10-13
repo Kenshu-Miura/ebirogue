@@ -921,10 +921,11 @@ func buildItemFromTemplate(id, x, y int) Item {
 	return item
 }
 
+// randomItemTemplateIDs は床のランダム生成で一様に抽選するアイテム ID の一覧（昇順）。
+var randomItemTemplateIDs = sortedTemplateIDs(itemTemplates, nil)
+
 func createItem(x, y int) Item {
-	randomValue := rand.Intn(len(itemTemplates))
-	//randomValue := 9
-	return buildItemFromTemplate(randomValue, x, y)
+	return buildItemFromTemplate(pickTemplateID(randomItemTemplateIDs, rand.Intn, 0), x, y)
 }
 
 // デバッグ用：特定のIDのアイテムを生成する関数
