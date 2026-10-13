@@ -1076,7 +1076,8 @@ func (g *Game) handleEmptyInventoryMessage() error {
 	return nil
 }
 
-// openDifficultySelect は冒険終了後にも選択待ちに戻す。
+// openDifficultySelect は難易度選択画面を開き、前回選んだ難易度にカーソルを合わせる。
+// 初回起動・死亡後・クリア後に呼ばれる。
 func (g *Game) openDifficultySelect() {
 	g.showDifficultySelect = true
 	g.showClearScreen = false
@@ -1086,25 +1087,31 @@ func (g *Game) openDifficultySelect() {
 	}
 	g.difficultyCursor = int(d)
 }
+
+// handleDifficultyInput は難易度選択画面の入力を処理する。Z で選んだ難易度を記憶して冒険を始める。
 func (g *Game) handleDifficultyInput() {
 	if g.keys().JustPressed(KeyUp) || g.keys().JustPressed(KeyLeft) {
-		g.difficultyCursor = (g.difficultyCursor + 2) % 3
+		g.difficultyCursor = (g.difficultyCursor + len(allDifficulties) - 1) % len(allDifficulties)
 	}
 	if g.keys().JustPressed(KeyDown) || g.keys().JustPressed(KeyRight) {
-		g.difficultyCursor = (g.difficultyCursor + 1) % 3
+		g.difficultyCursor = (g.difficultyCursor + 1) % len(allDifficulties)
 	}
 	if g.keys().JustPressed(KeyZ) {
-		g.difficulty = Difficulty(g.difficultyCursor)
+		g.difficulty = allDifficulties[g.difficultyCursor]
 		g.settings.LastDifficulty = g.difficulty
 		g.saveSettings()
 		g.startNewRun(newRandomSeed())
 	}
 }
+
+// handleClearInput はクリア画面の入力を処理する。Z で次の冒険の難易度選択へ戻る。
 func (g *Game) handleClearInput() {
 	if g.keys().JustPressed(KeyZ) {
 		g.openDifficultySelect()
 	}
 }
+
+// openRunHistory は保存済みの冒険の記録を読み込み、新しい順に一覧表示する。
 func (g *Game) openRunHistory() {
 	g.showRunHistory = true
 	g.runHistoryScroll = 0
@@ -1122,12 +1129,14 @@ func (g *Game) openRunHistory() {
 	}
 	g.runHistory = newestRunHistory(history)
 }
+
+// handleRunHistoryInput は記録一覧の入力を処理する（↑↓でスクロール、X でメニュー、C で閉じる）。
 func (g *Game) handleRunHistoryInput() {
 	if g.keys().JustPressed(KeyUp) {
 		g.runHistoryScroll = max(0, g.runHistoryScroll-1)
 	}
 	if g.keys().JustPressed(KeyDown) {
-		g.runHistoryScroll = min(max(0, len(g.runHistory)-5), g.runHistoryScroll+1)
+		g.runHistoryScroll = min(max(0, len(g.runHistory)-runHistoryPageSize), g.runHistoryScroll+1)
 	}
 	if g.keys().JustPressed(KeyX) {
 		g.showRunHistory = false

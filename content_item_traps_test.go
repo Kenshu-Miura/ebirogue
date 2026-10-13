@@ -158,6 +158,28 @@ func TestScatterTrapPlacementAndLimit(t *testing.T) {
 	}
 }
 
+func TestScatterTrapInCorridor(t *testing.T) {
+	g := newItemTrapTestGame()
+	// 敵が通路に仕掛けた罠でも、周囲の通路へ散らばる（扉・壁には落ちない）。
+	for y := range g.state.Map {
+		for x := range g.state.Map[y] {
+			g.state.Map[y][x].Type = "wall"
+		}
+	}
+	g.state.Map[3][2].Type = "corridor"
+	g.state.Map[3][3].Type = "corridor"
+	g.state.Map[3][4].Type = "door"
+	g.state.Player.Inventory = []Item{buildItemFromTemplate(1, 0, 0), buildItemFromTemplate(1, 0, 0)}
+	scatterTrapEffect(g)
+	executeMoveTrapActions(g)
+	if len(g.state.Items) != 1 || len(g.state.Player.Inventory) != 1 {
+		t.Fatalf("items/inventory = %d/%d", len(g.state.Items), len(g.state.Player.Inventory))
+	}
+	if x, y := g.state.Items[0].GetPosition(); x != 2 || y != 3 {
+		t.Fatalf("placed at %d,%d", x, y)
+	}
+}
+
 func TestScatterTrapNoSpaceAndSpecialItems(t *testing.T) {
 	g := newItemTrapTestGame()
 	pot := buildItemFromTemplate(46, 0, 0).(*Pot)

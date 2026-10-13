@@ -127,13 +127,15 @@ type ThrownItem struct {
 }
 
 type Game struct {
-	showDifficultySelect      bool
-	difficultyCursor          int
-	showClearScreen           bool
-	showRunHistory            bool
-	runHistory                []RunResult
-	runHistoryScroll          int
-	runHistoryError           string
+	// 難易度選択・クリア画面・冒険の記録（いずれも表示中は Update/Draw がそれだけを処理する）
+	showDifficultySelect bool
+	difficultyCursor     int
+	showClearScreen      bool
+	showRunHistory       bool
+	runHistory           []RunResult
+	runHistoryScroll     int
+	runHistoryError      string
+
 	state                     GameState
 	seed                      int64    // 冒険のシード（同じシードなら同じフロアが生成される）
 	rng                       *gameRNG // ターン進行用の乱数源。直接ではなく random()/randIntn() 経由で使う

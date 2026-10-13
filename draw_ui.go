@@ -658,10 +658,15 @@ func (g *Game) drawHelpWindow(screen *ebiten.Image) {
 	}
 }
 
+// runHistoryPageSize は記録一覧に一度に表示する件数。
+const runHistoryPageSize = 5
+
+// drawRunPanel は難易度選択・クリア・記録の全画面パネルの背景と見出しを描く。
 func drawRunPanel(screen *ebiten.Image, title string) {
 	screen.Fill(color.NRGBA{20, 25, 40, 255})
 	text.Draw(screen, title, mplusMediumFont, 40, 50, color.White)
 }
+
 func (g *Game) drawDifficultyWindow(screen *ebiten.Image) {
 	drawRunPanel(screen, "海老さんの冒険 ― 難易度選択")
 	for i, d := range allDifficulties {
@@ -673,6 +678,7 @@ func (g *Game) drawDifficultyWindow(screen *ebiten.Image) {
 	}
 	text.Draw(screen, "矢印キー：選択    Z：冒険を始める", mplusNormalFont, 40, 420, color.White)
 }
+
 func (g *Game) drawClearWindow(screen *ebiten.Image) {
 	drawRunPanel(screen, "冒険クリア！")
 	result := g.lastRunResult
@@ -684,6 +690,7 @@ func (g *Game) drawClearWindow(screen *ebiten.Image) {
 		text.Draw(screen, line, mplusNormalFont, 60, 140+i*55, color.White)
 	}
 }
+
 func (g *Game) drawRunHistoryWindow(screen *ebiten.Image) {
 	drawRunPanel(screen, fmt.Sprintf("冒険の記録（%d件）", len(g.runHistory)))
 	if g.runHistoryError != "" {
@@ -691,7 +698,7 @@ func (g *Game) drawRunHistoryWindow(screen *ebiten.Image) {
 	} else if len(g.runHistory) == 0 {
 		text.Draw(screen, "冒険の記録はまだありません", mplusNormalFont, 40, 100, color.White)
 	}
-	for i := g.runHistoryScroll; i < min(len(g.runHistory), g.runHistoryScroll+5); i++ {
+	for i := g.runHistoryScroll; i < min(len(g.runHistory), g.runHistoryScroll+runHistoryPageSize); i++ {
 		r := g.runHistory[i]
 		date := r.EndedAt
 		if t, err := time.Parse(time.RFC3339, date); err == nil {

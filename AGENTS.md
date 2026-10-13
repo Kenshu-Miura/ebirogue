@@ -70,7 +70,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go` |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go` |
 | デバッグビルド専用 | `//go:build debug && !test` / `!debug && !test` | `debug_on.go`（F1 の処理）/ `debug_off.go`（空の実装） |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
@@ -116,9 +116,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜70） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go, ID 0〜71） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
 | 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜65。42〜44 はボス〔`IsBoss`〕、45〜65 は第3段階） | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ |
-| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜11）。床生成・ワナのカードの重み付き抽選一覧は `floorTrapIDs` | `createMapTrapByID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`） |
+| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜14）。床生成・ワナのカードの重み付き抽選一覧は `floorTrapIDs` | `createMapTrapByID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`）、装備・所持品の罠は `maptraps_items.go`（対象の抽選は `item_trap_selection.go`） |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go。1〜8階は個別、9〜30階は `deepFloorSpawnBands` の帯） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go） | テンプレートの `Abilities` に付与 | 判定ヘルパーを同ファイルへ |
 
@@ -160,7 +160,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 視界: 部屋単位。`updateTileBrightness`（map.go）が現在の部屋+隣接タイルのみ明るくする。敵・アイテムのミニマップ表示は同部屋・隣接・発見済みで決まる（`updateEnemyVisibility` / `updateItemVisibility`）。目潰し中は敵非表示。
 - マップ生成: `GenerateRandomMap`（map.go）→ `generateRooms` → `connectRooms`（mapgen.go, 最小全域木＋ループ辺1本で接続）→ 連結性・壁健全性チェック（`floorConnected`/`roomWallsIntact`, 不合格なら再生成）→ 階段・敵・アイテム・罠配置。通路計画などの純粋ロジックはタグなしの mapgen.go にあり、mapgen_test.go / mapgen_stress_test.go でテストする。
 - 主なキー操作: 方向キー移動 / `Z` 攻撃（正面の罠調査を兼ねる）/ `X`+方向 ダッシュ / `A`+方向 方向転換 / `D` 矢を撃つ / Space 扉を開く / `C` メニュー / `L` メッセージ履歴 / インベントリ内 `F` 絞り込み・`S` ソート・`N` 任意名。`F1` はデバッグビルド（`-tags debug`）専用（`processF1KeyPress`, debug_on.go）。
-- 難易度: 初級・中級・上級（標準）で10・20・30階のボスがクリア条件。ボス階（10・20・30階）はボスを倒すまで階段を使えず、30階より下へは進めない。新しい冒険は上級で始まる（難易度選択画面は wave1-D）。
+- 難易度: 初級・中級・上級（標準）で10・20・30階のボスがクリア条件。ボス階（10・20・30階）はボスを倒すまで階段を使えず、30階より下へは進めない。新しい冒険（初回起動・死亡後・クリア後）は難易度選択画面（`openDifficultySelect`、input.go）から始まり、カーソルの初期位置は `GameSettings.LastDifficulty`。中断再開では表示しない。目標階のボス撃破後はクリア画面（`showClearScreen`）を経て選択画面へ戻る。ヘッドレス（BOT）は選択画面を出さず `newHeadlessGame` の引数の難易度で始まる。
 
 ## 落とし穴・注意点
 
@@ -202,9 +202,8 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 ### Priority S: clear condition, difficulty and bosses
 
 - クリア条件は「目標階のボスを倒す」（初級10階・中級20階・上級30階）。ボスはランダム出現と上位種化の対象外で、「敵を追加するときは上位種も同時に追加する」規則の例外とする。
-- 骨格（難易度・目標階・ボス階の階段封鎖・クリア判定・仮のボス ID 42〜44）はフェーズ0で実装済み。残りは次のとおり。
+- 骨格（難易度・目標階・ボス階の階段封鎖・クリア判定・仮のボス ID 42〜44）はフェーズ0、難易度選択・クリア画面・冒険の記録は wave1-D で実装済み。残りは次のとおり。
   - 仮のボスを固有の能力を持つ本物のボスに置き換える（`docs/agents/wave1-C-bosses.md`）。
-  - 難易度選択画面、クリア画面、HUD の難易度・目標階表示、冒険の記録一覧（`ebirogue_results.json`）を追加する（`docs/agents/wave1-D-difficulty-ui.md`）。
 
 ### Priority A: cards based on scrolls
 
@@ -218,8 +217,6 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority A: traps and status ailments
 
-- 装備・所持品へ干渉する罠を追加する。
-  - 装備解除、食料腐敗、所持品散乱（武器や盾の強化値低下＝サビの罠は実装済み）
 - プレイヤーだけでなく敵も罠を踏むようにする。
 - 矢、投擲アイテム、爆発で罠を起動できるようにし、罠を攻略へ利用可能にする。
 - 追加予定の状態異常・一時効果:
@@ -227,9 +224,11 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 攻撃力・防御力の上昇と低下、レベル低下、回復不能（口封じは実装済み）
 - 状態異常は残りターン、重複時の規則、解除手段、耐性を共通処理へまとめる。可能な状態はプレイヤーと敵の双方へ適用できるようにする。
 - 新しい罠には `img/` 配下へ30x30の透過PNGを用意し、発見済み表示とミニマップ表示を確認する。
-- 仮画像を正式な画像へ差し替える（wave1 でスクリプトにより仮作成した 30x30 透過 PNG）。
+- 仮画像を正式な画像へ差し替える（wave1・wave2 でスクリプトにより仮作成した 30x30 透過 PNG）。
   - 移動罠: `img/warp_trap.png`（青い渦）、`img/pitfall_trap.png`（穴）、`img/bear_trap.png`（トラバサミ）
   - ダメージ罠: `img/wood_arrow_trap.png`、`img/iron_arrow_trap.png`、`img/falling_rock_trap.png`、`img/large_mine_trap.png`（`go run tools/damage_trap_images.go` で再生成できる単純図形）
+  - 装備・所持品の罠（wave2-A）: `img/unequip_trap.png`（装備が外れる図形）、`img/spoil_trap.png`（緑の腐敗霧）、`img/scatter_trap.png`（散らばる3個の物）（`go run tools/item_trap_images.go` で再生成できる単純図形）
+  - 腐ったウインナー（アイテム ID 71）: `img/rotten_sausage.png`（`sausage.png` を緑がかった色にしたもの。同じスクリプトで再生成）
   - いずれもゲーム画面上での視認性は未確認。
   - 第3段階の敵（ID 45〜65）: 第2段階の画像の色相を150度回したもの（`tools/third_stage_enemy_images.go`）。基本種や他系統と色が似ていないか、暗い床での視認性を確認して必要なら描き直す。
 

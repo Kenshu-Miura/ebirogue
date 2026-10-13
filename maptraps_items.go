@@ -12,7 +12,8 @@ func init() {
 	mapTrapTemplates[13] = template
 }
 
-// itemTrapDropPositions は周囲8マスの空き床を返す。
+// itemTrapDropPositions は周囲8マスの空き床（部屋の床か通路）を返す。
+// 壁・階段・扉・既存のアイテム・罠・敵のいるマスは除く。
 func (g *Game) itemTrapDropPositions() []Coordinate {
 	x, y := g.state.Player.GetPosition()
 	positions := []Coordinate{}
@@ -26,7 +27,7 @@ func (g *Game) itemTrapDropPositions() []Coordinate {
 				continue
 			}
 			tile := g.state.Map[ny][nx]
-			if tile.Type != "floor" || tile.Blocked {
+			if (tile.Type != "floor" && tile.Type != "corridor") || tile.Blocked || isOccupied(g, nx, ny) {
 				continue
 			}
 			occupied := false
@@ -36,9 +37,6 @@ func (g *Game) itemTrapDropPositions() []Coordinate {
 			}
 			for _, trap := range g.state.MapTraps {
 				occupied = occupied || (trap.X == nx && trap.Y == ny)
-			}
-			for _, enemy := range g.state.Enemies {
-				occupied = occupied || (enemy.X == nx && enemy.Y == ny)
 			}
 			if !occupied {
 				positions = append(positions, Coordinate{X: nx, Y: ny})
@@ -93,7 +91,7 @@ var spoilTrapEffect = func(g *Game) {
 	g.Enqueue(Action{Duration: 0.5, Message: "腐った霧が噴き出した", Execute: func(g *Game) {
 		candidates := []int{}
 		for i, item := range g.state.Player.Inventory {
-			if food, ok := item.(*Food); ok && food.ID != 71 {
+			if food, ok := item.(*Food); ok && food.ID != rottenSausageItemID {
 				candidates = append(candidates, i)
 			}
 		}
@@ -104,7 +102,7 @@ var spoilTrapEffect = func(g *Game) {
 		}
 		i := selected[0]
 		name := g.state.Player.Inventory[i].GetName()
-		g.state.Player.Inventory[i] = g.createItemByID(71, 0, 0)
+		g.state.Player.Inventory[i] = g.createItemByID(rottenSausageItemID, 0, 0)
 		g.EnqueueMessage(fmt.Sprintf("%sが腐ったウインナーになった", name), 0.4)
 	}})
 }

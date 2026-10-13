@@ -2,32 +2,26 @@
 
 package main
 
+const (
+	rottenSausageItemID    = 71 // 腐ったウインナー（腐敗の罠が食料を変える先）
+	rottenFoodPoisonTurns  = 8  // 腐った食料を食べたときの毒のターン数
+	rottenFoodEatenMessage = "満腹度が少し回復したが、毒状態になった"
+)
+
 // eatRottenSausage は通常の食料と違い、満腹時にも最大値を増やさない。
 var eatRottenSausage = func(g *Game) {
-	item, inventory := determineItemSource(g)
+	item, _ := determineItemSource(g)
 	g.Enqueue(Action{Duration: 0.4, Message: item.GetName() + "を食べた", Execute: func(g *Game) {
 		player := &g.state.Player
-		player.Satiety = recoveredValue(player.Satiety, player.MaxSatiety, 10, false)
-		player.StatusAilments.Poison = max(player.StatusAilments.Poison, 8)
-		// 通常の食料と同じ消費経路を使い、副作用を遅延実行する。
-		for i, owned := range player.Inventory {
-			if inventory && owned == item {
-				g.selectedItemIndex = i
-				removeUsedItem(g, true)
-				g.selectedItemIndex = 0
-				g.EnqueueMessage("満腹度が少し回復したが、毒状態になった", 0.4)
-				return
-			}
+		recovery := 0
+		if food, ok := item.(*Food); ok {
+			recovery = food.Satiety
 		}
-		if !inventory {
-			for i, ground := range g.state.Items {
-				if ground == item {
-					g.selectedGroundItemIndex = i
-					removeUsedItem(g, false)
-					break
-				}
-			}
-		}
-		g.EnqueueMessage("満腹度が少し回復したが、毒状態になった", 0.4)
+		player.Satiety = recoveredValue(player.Satiety, player.MaxSatiety, recovery, false)
+		player.StatusAilments.Poison = max(player.StatusAilments.Poison, rottenFoodPoisonTurns)
+		// 実行までに並びが変わっても、所持品か足元から同じオブジェクトを消費する。
+		g.removeThrownItemFromSource(item)
+		g.selectedItemIndex = 0
+		g.EnqueueMessage(rottenFoodEatenMessage, 0.4)
 	}})
 }
