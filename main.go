@@ -49,6 +49,7 @@ type Entity struct {
 
 // 状態異常を管理する構造体
 type StatusAilments struct {
+	BearTrap    int  // トラバサミの残りターン数
 	Confusion   int  // 混乱の残りターン数
 	Sleep       int  // 睡眠の残りターン数
 	Blind       int  // 目潰しの残りターン数
@@ -174,6 +175,9 @@ type Game struct {
 	poisonArrowTrapImg        *ebiten.Image
 	slowTrapImg               *ebiten.Image
 	mineTrapImg               *ebiten.Image
+	warpTrapImg               *ebiten.Image
+	pitfallTrapImg            *ebiten.Image
+	bearTrapImg               *ebiten.Image
 	rustTrapImg               *ebiten.Image
 	potImg                    *ebiten.Image
 	offsetX                   int
@@ -855,6 +859,9 @@ func NewGame() *Game {
 	poisonArrowTrapImg := loadImage("img/poison_arrow_trap.png")
 	slowTrapImg := loadImage("img/slow_trap.png")
 	mineTrapImg := loadImage("img/mine_trap.png")
+	warpTrapImg := loadImage("img/warp_trap.png")
+	pitfallTrapImg := loadImage("img/pitfall_trap.png")
+	bearTrapImg := loadImage("img/bear_trap.png")
 	rustTrapImg := loadImage("img/rust_trap.png")
 	potImg := loadImage("img/pot.png")
 
@@ -902,6 +909,9 @@ func NewGame() *Game {
 		poisonArrowTrapImg:  poisonArrowTrapImg,
 		slowTrapImg:         slowTrapImg,
 		mineTrapImg:         mineTrapImg,
+		warpTrapImg:         warpTrapImg,
+		pitfallTrapImg:      pitfallTrapImg,
+		bearTrapImg:         bearTrapImg,
 		rustTrapImg:         rustTrapImg,
 		potImg:              potImg,
 		offsetX:             0,

@@ -33,6 +33,9 @@ func wakeFromSleep(status *StatusAilments) bool {
 
 func formatPlayerStatus(status StatusAilments) string {
 	statuses := make([]string, 0, 8)
+	if status.BearTrap > 0 {
+		statuses = append(statuses, fmt.Sprintf("トラバサミ(%d)", status.BearTrap))
+	}
 	if status.Poison > 0 {
 		statuses = append(statuses, fmt.Sprintf("毒(%d)", status.Poison))
 	}

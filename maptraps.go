@@ -162,6 +162,9 @@ var mapTrapTemplates = map[int]mapTrapTemplate{
 	2: {ID: 2, Name: "鈍足の罠", Effect: slowTrapEffect, FailRate: 20},
 	3: {ID: 3, Name: "地雷", Effect: mineTrapEffect, FailRate: 10},
 	4: {ID: 4, Name: "サビの罠", Effect: rustTrapEffect, FailRate: 20},
+	5: {ID: 5, Name: "ワープの罠", Effect: warpTrapEffect, FailRate: 20},
+	6: {ID: 6, Name: "落とし穴", Effect: pitfallTrapEffect, FailRate: 20},
+	7: {ID: 7, Name: "トラバサミ", Effect: bearTrapEffect, FailRate: 20},
 }
 
 // randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。
@@ -247,7 +250,7 @@ func (g *Game) checkTrapInFront() bool {
 }
 
 // 罠を生成する関数
-func generateMapTraps(rooms []Room, rng *gameRNG) []MapTrap {
+func generateMapTraps(rooms []Room, rng *gameRNG, floor int) []MapTrap {
 	var traps []MapTrap
 
 	// 5-10個の罠をランダムに生成
@@ -273,7 +276,8 @@ func generateMapTraps(rooms []Room, rng *gameRNG) []MapTrap {
 
 		// 睡眠ガスを多めにしつつ、ほかの罠も混ぜる
 		if !duplicate {
-			trapIDs := []int{0, 0, 1, 2, 3, 4}
+			trapIDs := []int{0, 0, 1, 2, 3, 4, 5, 6, 7}
+			trapIDs = availableTrapIDs(trapIDs, floor)
 			trap := createMapTrapByID(trapIDs[rng.Intn(len(trapIDs))], x, y)
 			traps = append(traps, trap)
 		} else {

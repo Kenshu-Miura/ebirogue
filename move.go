@@ -288,6 +288,11 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 		return false
 	}
 
+	if g.state.Player.StatusAilments.BearTrap > 0 {
+		g.EnqueueMessage("トラバサミにかかっていて動けない", 0.4)
+		g.isActioned = true
+		return true
+	}
 	// プレイヤーが混乱状態の場合、入力方向に関係なくランダムな8方向に移動
 	if g.state.Player.StatusAilments.Confusion > 0 {
 		return g.movePlayerConfused()
@@ -340,6 +345,12 @@ func isOccupied(g *Game, x, y int) bool {
 
 // 状態異常のターン数を減らす関数
 func (g *Game) decrementStatusAilments() {
+	if g.state.Player.StatusAilments.BearTrap > 0 {
+		g.state.Player.StatusAilments.BearTrap--
+		if g.state.Player.StatusAilments.BearTrap == 0 {
+			g.EnqueueMessage("トラバサミから抜け出した", 0.4)
+		}
+	}
 	// プレイヤーの状態異常を減らす
 	if g.state.Player.StatusAilments.Confusion > 0 {
 		g.state.Player.StatusAilments.Confusion--

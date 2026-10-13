@@ -515,6 +515,12 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 					img = g.slowTrapImg
 				case "地雷":
 					img = g.mineTrapImg
+				case "ワープの罠":
+					img = g.warpTrapImg
+				case "落とし穴":
+					img = g.pitfallTrapImg
+				case "トラバサミ":
+					img = g.bearTrapImg
 				case "サビの罠":
 					img = g.rustTrapImg
 				default:

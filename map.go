@@ -8,6 +8,18 @@ import (
 	"math"
 )
 
+// beginFloorDescent は階段と落とし穴で共用するフロア移動の入口。
+func (g *Game) beginFloorDescent() {
+	if g.playerDead || g.cleared || !stairsUsable(g.Floor, g.bossDefeated) {
+		return
+	}
+	g.fadingOut = true
+	g.fadeAlpha = 0
+	g.frameCounter = 0
+	g.showStairsPrompt = false
+	g.ignoreStairs = false
+}
+
 func (g *Game) handleFadingOut() {
 	g.fadeAlpha += 1.0 / 60 // 1秒かけて暗くする
 	if g.fastForward {
@@ -160,8 +172,7 @@ func (g *Game) handleStairsPrompt() {
 		}
 		if g.keys().JustPressed(KeyZ) {
 			if g.selectedOption == 0 { // "Proceed" is selected
-				g.fadingOut = true // 暗転開始
-				g.fadeAlpha = 0.0
+				g.beginFloorDescent()
 			} else { // "Cancel" is selected
 				g.selectedOption = 0
 				g.ignoreStairs = true
@@ -491,7 +502,7 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gam
 	items := generateItems(rooms, rng)
 
 	// Generate map traps
-	traps := generateMapTraps(rooms, rng)
+	traps := generateMapTraps(rooms, rng, newFloor)
 
 	return mapGrid, enemies, items, newFloor, rooms, traps
 }
