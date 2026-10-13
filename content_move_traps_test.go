@@ -87,6 +87,7 @@ func executeMoveTrapActions(g *Game) {
 			a.Execute(g)
 		}
 	}
+	g.startPendingFloorDescent()
 }
 
 func TestMoveTrapsActivationAndFailure(t *testing.T) {

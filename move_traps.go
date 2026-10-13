@@ -56,7 +56,7 @@ var pitfallTrapEffect = func(g *Game) {
 		g.EnqueueMessage(fmt.Sprintf("落下して%dダメージを受けた", damage), 0.4)
 		g.state.Player.checkDeath(g)
 		if !g.playerDead {
-			g.beginFloorDescent()
+			g.requestFloorDescent()
 		}
 	}})
 }

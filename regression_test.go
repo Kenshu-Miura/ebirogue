@@ -210,3 +210,33 @@ func TestExplosiveArmorTrapTriggersOnce(t *testing.T) {
 		t.Fatalf("enemies left %d (want 2), trap %v", len(g.state.Enemies), g.state.Player.SetTrap)
 	}
 }
+
+// 足元の道具を拾う行動がキューに残ったまま落とし穴で階を移動すると、
+// 古い階の添字で新しい階の道具一覧を削除して panic していた（seed=121 itemUser 中級）。
+func TestPitfallWaitsForQueuedPickup(t *testing.T) {
+	g, _ := newHeadlessGame(121, DifficultyIntermediate)
+	px, py := g.state.Player.X, g.state.Player.Y
+	// 足元のウインナー（ID 1）を新しい階の道具数より後ろの添字に置く
+	for i := 0; i < 40; i++ {
+		g.state.Items = append(g.state.Items, g.createItemByID(1, 0, 0))
+	}
+	item := g.createItemByID(1, px, py)
+	g.state.Items = append(g.state.Items, item)
+	g.state.Player.Inventory = nil
+	floor := g.Floor
+
+	// 実際の順序どおり、罠の発動の後に拾う行動が積まれる
+	g.steppedTrapSource = trapSource(pitfallTrapID, "落とし穴")
+	pitfallTrapEffect(g)
+	g.PickupItem()
+	g.isActioned = true
+	if err := g.RunUntilInputReady(3000); err != nil {
+		t.Fatal(err)
+	}
+	if g.Floor != floor+1 {
+		t.Fatalf("floor = %d, want %d", g.Floor, floor+1)
+	}
+	if len(g.state.Player.Inventory) != 1 || g.state.Player.Inventory[0] != item {
+		t.Fatalf("pickup before falling failed: %v", g.state.Player.Inventory)
+	}
+}

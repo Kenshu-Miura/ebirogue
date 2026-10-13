@@ -190,6 +190,7 @@ func (g *Game) startNewRun(seed int64) {
 	// その他のゲーム状態をリセット
 	g.rooms = rooms // 部屋情報を更新
 	g.pickupBanned = false
+	g.pendingFloorDescent = false
 	g.genocidedMonsterIDs = nil
 	g.showBlankCardMenu = false
 	g.blankCardTarget = nil

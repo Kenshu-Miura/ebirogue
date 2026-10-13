@@ -254,6 +254,7 @@ type Game struct {
 	miniMapDirty              bool          // ミニマップが更新される必要があるかどうかを示すフラグ
 	prevPlayerX, prevPlayerY  int           // 前のフレームのプレイヤーの座標
 	fadingOut                 bool
+	pendingFloorDescent       bool // 落とし穴の落下待ち（行動の処理と敵ターンが終わってから階を移動する）
 	fadingIn                  bool
 	fadeAlpha                 float64 // 0.0（透明）から1.0（完全な不透明）の間の値
 	frameCounter              int
@@ -453,7 +454,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if !g.showInventory && g.CanAcceptInput() && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
+	if !g.showInventory && g.CanAcceptInput() && !g.pendingFloorDescent && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
 		// 睡眠状態の場合は自動的にターンを進行させる
 		if g.state.Player.StatusAilments.Sleep > 0 {
 			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
@@ -591,6 +592,8 @@ func (g *Game) Update() error {
 	g.checkForStairs()
 	g.handleStairsPrompt()
 	g.ResetStairsIgnoreFlag()
+
+	g.startPendingFloorDescent()
 
 	// 暗転処理
 	if g.fadingOut {

@@ -20,6 +20,21 @@ func (g *Game) beginFloorDescent() {
 	g.ignoreStairs = false
 }
 
+// requestFloorDescent は行動の処理と敵ターンが終わってから階を移動するよう予約する（落とし穴用）。
+// すぐに暗転を始めると、キューに残った行動（足元の道具を拾うなど）が新しい階で実行されてしまう。
+func (g *Game) requestFloorDescent() {
+	g.pendingFloorDescent = true
+}
+
+// startPendingFloorDescent は予約された階移動を、キューが空でターンの処理が終わったときに始める。
+func (g *Game) startPendingFloorDescent() {
+	if !g.pendingFloorDescent || len(g.ActionQueue.Queue) > 0 || g.isActioned {
+		return
+	}
+	g.pendingFloorDescent = false
+	g.beginFloorDescent()
+}
+
 func (g *Game) handleFadingOut() {
 	g.fadeAlpha += 1.0 / 60 // 1秒かけて暗くする
 	if g.fastForward {
