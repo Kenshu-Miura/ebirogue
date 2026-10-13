@@ -31,9 +31,6 @@ const (
 	DownLeft      = 7
 )
 
-// Go 1.20+では、グローバルなrand関数が自動的にシードされるため、手動シードは不要
-var levelExpRequirements = []int{0, 5, 12, 22, 35, 51, 70, 92, 118, 148, 181} // レベル10までの経験値要件
-
 type Tile struct {
 	Type       string // タイルの種類（例: "floor", "wall", "water" 等）
 	Blocked    bool   // タイルが通行可能かどうか

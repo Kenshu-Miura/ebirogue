@@ -79,8 +79,12 @@ func TestRollPlayerAttackDamageWithSlayerMultiplier(t *testing.T) {
 }
 
 func TestPlayerAttackTotal(t *testing.T) {
-	if got := playerAttackTotal(3, 8, 1); got != 12 {
-		t.Fatalf("playerAttackTotal(3, 8, 1) = %d, want 12", got)
+	// Lv1 のレベル補正は0、Lv10 は round(3×√9)=9
+	if got := playerAttackTotal(3, 8, 1); got != 11 {
+		t.Fatalf("playerAttackTotal(3, 8, 1) = %d, want 11", got)
+	}
+	if got := playerAttackTotal(3, 8, 10); got != 20 {
+		t.Fatalf("playerAttackTotal(3, 8, 10) = %d, want 20", got)
 	}
 }
 

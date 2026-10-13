@@ -77,7 +77,7 @@ func rollDamage(params DamageParams, intn func(int) int) DamageResult {
 
 // playerAttackTotal は装備込み攻撃力にちからとレベルの補正を加えた総攻撃力を返す。
 func playerAttackTotal(attackPower, power, level int) int {
-	return attackPower + power + level
+	return attackPower + power + levelAttackBonus(level)
 }
 
 // rollPlayerAttackDamage はプレイヤーの通常攻撃・射撃のダメージを算出する。

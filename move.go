@@ -86,21 +86,30 @@ func (g *Game) movePlayerConfused() bool {
 	return false // 移動失敗時はターンを消費しない
 }
 
+// checkLevelUp は累計経験値で到達できるレベルまで上げる（1回の獲得で複数レベル上がる）。
 func (p *Player) checkLevelUp(g *Game) {
-	if p.Level < 10 && p.Level < len(levelExpRequirements) && p.ExperiencePoints >= levelExpRequirements[p.Level] {
-		p.Level++ // レベルアップ
-		// 必要に応じて他のプレイヤーステータスをアップデート
-		p.MaxHealth += 10
-
-		// レベルアップメッセージを表示
-		levelUpMessage := fmt.Sprintf("海老さんはレベル%dに上がった", p.Level)
-		levelUpAction := Action{
-			Duration: 1.0,
-			Message:  levelUpMessage,
-			Execute:  func(g *Game) {}, // 何もしない
-		}
-		g.ActionQueue.Queue = append(g.ActionQueue.Queue, levelUpAction)
+	newLevel := levelForExp(p.ExperiencePoints)
+	if newLevel <= p.Level {
+		return
 	}
+	p.setLevel(newLevel)
+	g.EnqueueMessage(fmt.Sprintf("海老さんはレベル%dに上がった", p.Level), 1.0)
+}
+
+// setLevel はレベルを変更し、最大HPをレベルの差分だけ増減する。
+// レベルが上がった分は現在HPも増え、下がったときは経験値をそのレベルの下限に揃える。
+func (p *Player) setLevel(level int) {
+	level = clampPlayerLevel(level)
+	diff := levelHealthBonus(level) - levelHealthBonus(p.Level)
+	p.MaxHealth = max(1, p.MaxHealth+diff)
+	if diff > 0 {
+		p.Health += diff
+	}
+	p.Health = min(p.Health, p.MaxHealth)
+	if level < p.Level {
+		p.ExperiencePoints = expForLevel(level)
+	}
+	p.Level = level
 }
 
 // プレイヤーの死亡チェック
@@ -122,8 +131,8 @@ func newInitialPlayer() Player {
 	return Player{
 		Name:             "海老さん",
 		Entity:           Entity{Char: '@'},
-		Health:           100,
-		MaxHealth:        100,
+		Health:           initialPlayerHealth,
+		MaxHealth:        initialPlayerHealth,
 		Satiety:          100,
 		MaxSatiety:       100,
 		Inventory:        []Item{},

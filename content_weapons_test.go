@@ -257,9 +257,9 @@ func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
 			Map: makeTestFloorMap(5, 5),
 			Player: Player{
 				Entity:         Entity{X: 1, Y: 1},
-				AttackPower:    20,
+				AttackPower:    21,
 				Power:          8,
-				Level:          1,
+				Level:          1, // レベル補正0
 				EquippedWeapon: weapon,
 			},
 			Enemies: []Enemy{enemy},
