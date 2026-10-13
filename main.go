@@ -184,6 +184,10 @@ type Game struct {
 	bearTrapImg               *ebiten.Image
 	rustTrapImg               *ebiten.Image
 	largeMineTrapImg          *ebiten.Image
+	unequipTrapImg            *ebiten.Image
+	spoilTrapImg              *ebiten.Image
+	scatterTrapImg            *ebiten.Image
+	rottenSausageImg          *ebiten.Image
 	fallingRockTrapImg        *ebiten.Image
 	ironArrowTrapImg          *ebiten.Image
 	woodArrowTrapImg          *ebiten.Image
@@ -915,6 +919,10 @@ func NewGame() *Game {
 	bearTrapImg := loadImage("img/bear_trap.png")
 	rustTrapImg := loadImage("img/rust_trap.png")
 	largeMineTrapImg := loadImage("img/large_mine_trap.png")
+	unequipTrapImg := loadImage("img/unequip_trap.png")
+	spoilTrapImg := loadImage("img/spoil_trap.png")
+	scatterTrapImg := loadImage("img/scatter_trap.png")
+	rottenSausageImg := loadImage("img/rotten_sausage.png")
 	fallingRockTrapImg := loadImage("img/falling_rock_trap.png")
 	ironArrowTrapImg := loadImage("img/iron_arrow_trap.png")
 	woodArrowTrapImg := loadImage("img/wood_arrow_trap.png")
@@ -969,6 +977,10 @@ func NewGame() *Game {
 		bearTrapImg:         bearTrapImg,
 		rustTrapImg:         rustTrapImg,
 		largeMineTrapImg:    largeMineTrapImg,
+		unequipTrapImg:      unequipTrapImg,
+		spoilTrapImg:        spoilTrapImg,
+		scatterTrapImg:      scatterTrapImg,
+		rottenSausageImg:    rottenSausageImg,
 		fallingRockTrapImg:  fallingRockTrapImg,
 		ironArrowTrapImg:    ironArrowTrapImg,
 		woodArrowTrapImg:    woodArrowTrapImg,
