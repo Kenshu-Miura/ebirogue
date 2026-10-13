@@ -34,6 +34,7 @@ var (
 	simSeed       = flag.Int64("sim.seed", -1, "TestSimReplay で再現するシード")
 	simSeedBase   = flag.Int64("sim.seedbase", 1, "TestSimBatch の最初のシード")
 	simWriteBase  = flag.Bool("sim.writebaseline", false, "TestSimBatch の集計を -sim.baseline へ書き出す")
+	simImmortal   = flag.Bool("sim.immortal", false, "計測用の不死モード（HP が1未満にならない）。1〜30階のレベル曲線を測る")
 )
 
 func personaNames() string {
@@ -76,6 +77,7 @@ type simCase struct {
 	Persona    persona
 	Difficulty Difficulty
 	MaxTurns   int
+	Immortal   bool // 計測用の不死モード
 }
 
 // simOutcome は1回の冒険の結果。
@@ -87,10 +89,12 @@ type simOutcome struct {
 	Floor      int
 	Turns      int
 	Level      int
-	DeathCause string         `json:",omitempty"`
-	Mistake    string         `json:",omitempty"` // 判断ミス死の種類（mistakeKind 参照）
-	Result     *RunResult     `json:",omitempty"`
-	Violations []simViolation `json:",omitempty"`
+	// FloorLevels[i] は i+1 階に初めて着いたときのレベル
+	FloorLevels []int          `json:",omitempty"`
+	DeathCause  string         `json:",omitempty"`
+	Mistake     string         `json:",omitempty"` // 判断ミス死の種類（mistakeKind 参照）
+	Result      *RunResult     `json:",omitempty"`
+	Violations  []simViolation `json:",omitempty"`
 }
 
 const maxViolationsPerRun = 20
@@ -99,6 +103,7 @@ const maxViolationsPerRun = 20
 func runSimCase(c simCase) (out simOutcome) {
 	out = simOutcome{Seed: c.Seed, Persona: c.Persona, Difficulty: c.Difficulty.String()}
 	g, in := newHeadlessGame(c.Seed, c.Difficulty)
+	g.immortal = c.Immortal
 	b := newBot(g, in, c.Persona, c.Seed)
 	turns, lastTurn := 0, 0
 	seen := map[string]bool{}
@@ -139,6 +144,9 @@ func runSimCase(c simCase) (out simOutcome) {
 			turns += g.turnCount - lastTurn
 		}
 		lastTurn = g.turnCount // 「再挑戦」でターン数が戻っても累計で数える
+		for len(out.FloorLevels) < g.Floor {
+			out.FloorLevels = append(out.FloorLevels, g.state.Player.Level)
+		}
 		if g.RunEnded() {
 			out.Ended = "died"
 			if g.cleared {
@@ -264,11 +272,15 @@ func TestSimBatch(t *testing.T) {
 	// 冒険数を難易度×性格の組に均等に割り振る
 	perGroup := max(1, (*simRuns+len(difficulties)*len(personas)-1)/(len(difficulties)*len(personas)))
 	cases := buildSimCases(*simSeedBase, perGroup, personas, difficulties, *simTurns)
+	for i := range cases {
+		cases[i].Immortal = *simImmortal
+	}
 	start := time.Now()
 	outcomes := runSimCases(cases, *simParallel)
 	elapsed := time.Since(start)
 
 	summary := summarizeOutcomes(outcomes)
+	summary.Immortal = *simImmortal
 	var baseline *simSummary
 	if data, err := os.ReadFile(*simBaseline); err == nil {
 		var b simBaselineFile
@@ -437,10 +449,17 @@ type simGroupStats struct {
 	Mistakes        map[string]int              `json:",omitempty"`
 	Causes          map[string]int              `json:",omitempty"` // 死因（判断ミス死はその種類で数える）
 	Items           map[string]ItemActionCounts `json:",omitempty"` // 種類別の操作回数の合計
+	// レベル曲線
+	MaxLevelDeaths    int             // 死亡時にレベル上限だった回数
+	MaxLevelDeathRate float64         // 死亡のうちレベル上限だった割合
+	FloorLevelSums    map[int]int     `json:",omitempty"` // 階ごとの到着時レベルの合計
+	FloorLevelRuns    map[int]int     `json:",omitempty"` // 階ごとの到着数
+	AvgFloorLevel     map[int]float64 `json:",omitempty"` // 階ごとの到着時の平均レベル
 }
 
 type simSummary struct {
 	Runs        int
+	Immortal    bool                      // 計測用の不死モードで集計した
 	Groups      map[string]*simGroupStats // "難易度/性格"
 	FloorDeaths map[int]int               // 階層別の死亡数
 	FloorReach  map[int]int               // 階層別の到達数
@@ -472,6 +491,13 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 		g.Runs++
 		floorSums[key] += o.Floor
 		turnSums[key] += o.Turns
+		for i, level := range o.FloorLevels {
+			if g.FloorLevelSums == nil {
+				g.FloorLevelSums, g.FloorLevelRuns = map[int]int{}, map[int]int{}
+			}
+			g.FloorLevelSums[i+1] += level
+			g.FloorLevelRuns[i+1]++
+		}
 		for f := 1; f <= o.Floor; f++ {
 			s.FloorReach[f]++
 		}
@@ -495,6 +521,9 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 			if o.Result != nil {
 				levelSums[key] += o.Result.Level
 				satietySums[key] += o.Result.Satiety
+				if o.Result.Level >= maxPlayerLevel {
+					g.MaxLevelDeaths++
+				}
 			}
 		case "turn_limit":
 			g.TurnLimited++
@@ -533,6 +562,13 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 			g.MistakeRate = float64(g.MistakeDeaths) / float64(g.Died)
 			g.AvgDeathLevel = float64(levelSums[key]) / float64(g.Died)
 			g.AvgDeathSatiety = float64(satietySums[key]) / float64(g.Died)
+			g.MaxLevelDeathRate = float64(g.MaxLevelDeaths) / float64(g.Died)
+		}
+		for f, sum := range g.FloorLevelSums {
+			if g.AvgFloorLevel == nil {
+				g.AvgFloorLevel = map[int]float64{}
+			}
+			g.AvgFloorLevel[f] = float64(sum) / float64(g.FloorLevelRuns[f])
 		}
 	}
 	return s
@@ -583,6 +619,61 @@ func writeSimReport(dir string, outcomes []simOutcome, s simSummary, baseline *s
 	return jsonPath, mdPath, nil
 }
 
+// levelCurveFloors はレポートのレベル曲線に載せる階。
+var levelCurveFloors = []int{1, 2, 3, 4, 5, 7, 10, 15, 20, 25, 30}
+
+// renderLevelCurve は性格ごと（全難易度の合計）の到着時の平均レベルと、死亡時にレベル上限だった割合を書く。
+func renderLevelCurve(b *strings.Builder, s simSummary) {
+	type personaCurve struct {
+		sums, runs           map[int]int
+		died, maxLevelDeaths int
+	}
+	curves := map[string]*personaCurve{}
+	for key, g := range s.Groups {
+		name := key[strings.Index(key, "/")+1:]
+		c := curves[name]
+		if c == nil {
+			c = &personaCurve{sums: map[int]int{}, runs: map[int]int{}}
+			curves[name] = c
+		}
+		for f, sum := range g.FloorLevelSums {
+			c.sums[f] += sum
+			c.runs[f] += g.FloorLevelRuns[f]
+		}
+		c.died += g.Died
+		c.maxLevelDeaths += g.MaxLevelDeaths
+	}
+	title := "到着時の平均レベル"
+	if s.Immortal {
+		title += "（不死モード）"
+	}
+	fmt.Fprintf(b, "\n## %s（全難易度・括弧内は到着数）\n\n| 性格 |", title)
+	for _, f := range levelCurveFloors {
+		fmt.Fprintf(b, " %d階 |", f)
+	}
+	fmt.Fprintf(b, " 死亡時Lv上限 |\n|---|")
+	for range levelCurveFloors {
+		fmt.Fprintf(b, "---:|")
+	}
+	fmt.Fprintf(b, "---:|\n")
+	for _, name := range sortedKeys(curves) {
+		c := curves[name]
+		fmt.Fprintf(b, "| %s |", name)
+		for _, f := range levelCurveFloors {
+			if c.runs[f] == 0 {
+				fmt.Fprintf(b, " - |")
+				continue
+			}
+			fmt.Fprintf(b, " %.1f (%d) |", float64(c.sums[f])/float64(c.runs[f]), c.runs[f])
+		}
+		rate := 0.0
+		if c.died > 0 {
+			rate = float64(c.maxLevelDeaths) / float64(c.died) * 100
+		}
+		fmt.Fprintf(b, " %.1f%% |\n", rate)
+	}
+}
+
 func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary, elapsed time.Duration) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# BOT シミュレーションレポート\n\n")
@@ -600,6 +691,8 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 		fmt.Fprintf(&b, "| %s | %d | %d | %.1f%% | %d | %d | %d | %.1f | %.1f |\n", key, g.Died, g.MistakeDeaths, g.MistakeRate*100,
 			g.Mistakes[mistakeHealUnused], g.Mistakes[mistakeFoodUnused], g.Mistakes[mistakeHarmfulCard], g.AvgDeathLevel, g.AvgDeathSatiety)
 	}
+
+	renderLevelCurve(&b, s)
 
 	fmt.Fprintf(&b, "\n## 性格別の死因の上位（判断ミス死は種類で数える）\n\n")
 	personaCauses := map[string]map[string]int{}

@@ -10,7 +10,11 @@ func (g *Game) damagePlayer(damage int, source DamageSource) {
 	if damage <= 0 {
 		return
 	}
-	g.state.Player.Health = max(0, g.state.Player.Health-damage)
+	minHealth := 0
+	if g.immortal {
+		minHealth = 1 // 計測用の不死モード（BOT のレベル曲線を深い階まで測る）
+	}
+	g.state.Player.Health = max(minHealth, g.state.Player.Health-damage)
 	g.lastDamageSource = source
 }
 

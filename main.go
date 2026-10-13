@@ -193,6 +193,7 @@ type Game struct {
 	stats                     RunStats     // 冒険中の行動の統計（拾う・使う・投げる・装備・射撃）
 	steppedTrapSource         DamageSource // 効果を処理中の罠（罠の効果関数が死因の記録に使う）
 	fastForward               bool         // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
+	immortal                  bool         // シミュレーションの計測専用（-sim.immortal）。HP が1未満にならない
 	runEnded                  bool         // ヘッドレスで冒険が終了した（死亡・クリア）
 	difficulty                Difficulty   // 冒険の難易度（開始時に決め、途中で変えない）
 	bossDefeated              bool         // 現在のボス階のボスを倒したか（フロア移動でリセット）

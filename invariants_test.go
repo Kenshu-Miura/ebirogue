@@ -94,6 +94,7 @@ func saveRoundTrip(g *Game) (*Game, []simViolation) {
 		input:                g.input,
 		headless:             g.headless,
 		fastForward:          g.fastForward,
+		immortal:             g.immortal,
 		tmpSelectedItemIndex: -1,
 		customNames:          map[int]string{},
 		settings:             g.settings,
