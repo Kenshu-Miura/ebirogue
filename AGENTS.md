@@ -151,9 +151,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 初期ステータス: HP 40（`initialPlayerHealth`）/ 満腹度 100 / パワー 8 / 攻撃 3 / 防御 3 / インベントリ上限 20。
 - レベル（`leveling.go`、タグなし・純粋）: 上限99。必要経験値は式で生成する `playerLevelExpTable`（`expForLevel` / `levelForExp`）、最大HPの増加は `levelHealthGains`、攻撃力の補正は `levelAttackBonus`。レベルの変更は `Player.setLevel`（move.go。最大HPを差分だけ増減、将来のレベル低下もこれを使う）、経験値獲得後は `checkLevelUp` で複数レベルまとめて上がる。数値の根拠は `docs/agents/balance-level99.md` の決定事項。
 - ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + `levelAttackBonus(レベル)`。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。
-- 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は毎ターン HP-2。
+- 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は毎ターン HP-1（`poisonDamagePerTurn`, trap_damage.go）。
 - 特殊盾は爆発・炎・魔法の半減、盗難無効、状態異常50%無効、敵攻撃25%回避、爆発以外の遠距離攻撃反射、通常攻撃への半分カウンターを提供する。使い捨ての盾は被弾ごとに強化値と防御力が1低下する。
-- 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）、大型地雷は 3/4 切り上げ（`largeMineTrapDamage`, trap_damage.go）。
+- 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）、大型地雷は 3/4 切り上げ（`largeMineTrapDamage`, trap_damage.go）。木の矢・鉄の矢・落石の罠は固定の威力 6・12・16（trap_damage.go、初期HP40に合わせた値。根拠は `docs/agents/balance-level99.md` の「残った課題」）。
 - 罠の効果関数は `stepOnTrap` が設定する `g.steppedTrapSource` を死因に使う（罠 ID・名前を手書きしない）。落とし穴は `availableTrapIDs` でボス階・30階の抽選から除き、落下は `requestFloorDescent` で予約し、キューが空になりターンの処理が終わってから階段と同じ `beginFloorDescent`（map.go）を通す（すぐ暗転すると残った行動が新しい階で実行される）。
 - モンスター湧き: 上限 19 体、20〜30 ターン間隔、プレイヤーから 8 マス以内には湧かない（monster_spawn.go の定数）。
 - フロア滞在 1200/1300 ターンで風の警告（`checkFloorTimeWarnings`）。

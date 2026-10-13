@@ -19,7 +19,13 @@ func executeDamageTrapQueue(g *Game) {
 }
 
 func TestDamageTrapEffects(t *testing.T) {
-	for _, tc := range []struct{ id, lo, hi int }{{8, 10, 13}, {9, 21, 27}, {10, 26, 33}, {11, 75, 75}} {
+	// 物理罠は威力の7/8〜9/8（防御0）、大型地雷は現在HPの3/4。
+	physical := func(id, power int) struct{ id, lo, hi int } {
+		return struct{ id, lo, hi int }{id, power * 7 / 8, (power*9 + 7) / 8}
+	}
+	for _, tc := range []struct{ id, lo, hi int }{
+		physical(8, woodArrowTrapPower), physical(9, ironArrowTrapPower), physical(10, fallingRockTrapPower), {11, 75, 75},
+	} {
 		for _, roll := range []int{0, 32} {
 			g := &Game{state: GameState{Player: Player{Health: 100}}}
 			g.randHooks.damage = func(int) int { return roll }

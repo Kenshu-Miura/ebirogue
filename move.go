@@ -10,7 +10,7 @@ import (
 func (g *Game) IncrementMoveCount() {
 	g.moveCount++
 	if g.state.Player.StatusAilments.Poison > 0 {
-		g.damagePlayer(2, DamageSource{Kind: DamageSourcePoison})
+		g.damagePlayer(poisonDamagePerTurn, DamageSource{Kind: DamageSourcePoison})
 		g.state.Player.checkDeath(g)
 	}
 	// 状態異常のターン数を減らす

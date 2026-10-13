@@ -93,7 +93,7 @@ func TestDeathCauseStarvationAndPoison(t *testing.T) {
 		t.Fatalf("starvation cause = %+v", result.DeathCause)
 	}
 
-	poisoned := newDeathTestGame(t, 2)
+	poisoned := newDeathTestGame(t, poisonDamagePerTurn)
 	poisoned.state.Player.StatusAilments.Poison = 5
 	poisoned.IncrementMoveCount()
 	if result := finishDeath(t, poisoned); result.DeathCause.Kind != DamageSourcePoison {
