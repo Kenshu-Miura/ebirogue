@@ -66,7 +66,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 	attack := enemy.RangedAttack
 	targetX, targetY := g.state.Player.X, g.state.Player.Y
 	dx, dy := sign(targetX-enemy.X), sign(targetY-enemy.Y)
-	damage := rollEnemyAttackDamage(attack.AttackPower, g.state.Player.DefensePower, damageRandInt)
+	damage := rollEnemyAttackDamage(attack.AttackPower, g.state.Player.DefensePower, g.damageIntn())
 	defense := g.resolvePlayerShieldDefense(damage, enemyDamageKindForRangedAttack(attack.Kind), EnemyAttackRanged)
 	enemyName := g.enemyDisplayName(enemy.Name)
 
@@ -146,7 +146,7 @@ func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targ
 				if !withinBlastRadius(targetX, targetY, target.X, target.Y, attack.BlastRadius) {
 					continue
 				}
-				target.Health -= rollEnemyAttackDamage(attack.AttackPower, target.DefensePower, damageRandInt)
+				target.Health -= rollEnemyAttackDamage(attack.AttackPower, target.DefensePower, g.damageIntn())
 				target.StatusAilments.Sleep = 0
 				target.StatusAilments.Paralysis = false
 				if target.Health <= 0 {

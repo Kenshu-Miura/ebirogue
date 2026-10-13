@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 )
 
 // モンスター湧きシステムの定数
@@ -99,12 +98,12 @@ func (g *Game) FindValidSpawnPosition() *Coordinate {
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		// ランダムな部屋を選択
-		roomIndex := rand.Intn(len(g.rooms))
+		roomIndex := g.randIntn(len(g.rooms))
 		room := g.rooms[roomIndex]
 
 		// 部屋内のランダムな位置
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+		x := room.X + 1 + g.randIntn(room.Width-2)
+		y := room.Y + 1 + g.randIntn(room.Height-2)
 
 		// 位置が有効かチェック
 		if g.IsValidSpawnPosition(x, y, playerX, playerY) {
@@ -177,7 +176,7 @@ func (g *Game) IsInPlayerVisibleRoom(x, y int) bool {
 
 // 階層に応じたモンスター選択。全系統が封じられている場合は-1を返す。
 func (g *Game) SelectMonsterForSpawn() int {
-	return selectMonsterForFloor(g.Floor, g.genocidedMonsterIDs, rand.Intn)
+	return selectMonsterForFloor(g.Floor, g.genocidedMonsterIDs, g.randIntn)
 }
 
 // selectMonsterForFloor は階層別テーブルから敵IDを重み付きで選ぶ。
@@ -223,7 +222,7 @@ func selectMonsterForFloor(floor int, banned map[int]bool, intn func(int) int) i
 
 // 次回湧き間隔を設定
 func (g *Game) SetNextSpawnInterval() {
-	g.spawnInterval = MinSpawnInterval + rand.Intn(MaxSpawnInterval-MinSpawnInterval+1)
+	g.spawnInterval = MinSpawnInterval + g.randIntn(MaxSpawnInterval-MinSpawnInterval+1)
 }
 
 // 初期化時の湧き設定
@@ -249,7 +248,7 @@ func (g *Game) CheckSleepingEnemyWakeUp() {
 
 		// プレイヤーが同じ部屋に入った場合
 		if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
-			if rand.Float64() < 0.5 { // 50%の確率で起床
+			if g.random().Float64() < 0.5 { // 50%の確率で起床
 				enemy.StatusAilments.Sleep = 0
 			}
 		}
@@ -270,7 +269,7 @@ func (g *Game) WakeUpSleepingEnemyByProximity(enemyIndex int) {
 
 	// プレイヤーが隣接している場合
 	adjacent := (abs(playerX-enemyX) <= 1 && abs(playerY-enemyY) <= 1)
-	if adjacent && rand.Float64() < 0.5 { // 50%の確率で起床
+	if adjacent && g.random().Float64() < 0.5 { // 50%の確率で起床
 		enemy.StatusAilments.Sleep = 0
 	}
 }

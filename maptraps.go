@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 )
 
 // マップ上に配置される罠の構造体
@@ -119,7 +118,7 @@ var rustTrapEffect = func(g *Game) {
 		Message:  "赤茶けた液体が噴き出した",
 		Execute: func(g *Game) {
 			player := &g.state.Player
-			switch rollRustTarget(player.EquippedWeapon != nil, player.EquippedArmor != nil, rand.Intn) {
+			switch rollRustTarget(player.EquippedWeapon != nil, player.EquippedArmor != nil, g.randIntn) {
 			case rustWeapon:
 				weapon := player.EquippedWeapon
 				if weapon.RustProof {
@@ -190,7 +189,7 @@ func (g *Game) stepOnTrap(trapIndex int) {
 	}
 	g.Enqueue(action)
 
-	if rand.Intn(100) < trap.FailRate {
+	if g.randIntn(100) < trap.FailRate {
 		g.Enqueue(Action{
 			Duration: 0.5,
 			Message:  "しかし" + trap.Name + "は作動しなかった",
@@ -245,20 +244,20 @@ func (g *Game) checkTrapInFront() bool {
 }
 
 // 罠を生成する関数
-func generateMapTraps(rooms []Room) []MapTrap {
+func generateMapTraps(rooms []Room, rng *gameRNG) []MapTrap {
 	var traps []MapTrap
 
 	// 5-10個の罠をランダムに生成
-	numTraps := rand.Intn(6) + 5 // 5～10個
+	numTraps := rng.Intn(6) + 5 // 5～10個
 
 	for i := 0; i < numTraps; i++ {
 		// ランダムな部屋を選択
-		roomIndex := rand.Intn(len(rooms))
+		roomIndex := rng.Intn(len(rooms))
 		room := rooms[roomIndex]
 
 		// 部屋内のランダムな位置を選択（部屋の境界を除く）
-		x := rand.Intn(room.Width-2) + room.X + 1
-		y := rand.Intn(room.Height-2) + room.Y + 1
+		x := rng.Intn(room.Width-2) + room.X + 1
+		y := rng.Intn(room.Height-2) + room.Y + 1
 
 		// 既存の罠と重複しないかチェック
 		duplicate := false
@@ -272,7 +271,7 @@ func generateMapTraps(rooms []Room) []MapTrap {
 		// 睡眠ガスを多めにしつつ、ほかの罠も混ぜる
 		if !duplicate {
 			trapIDs := []int{0, 0, 1, 2, 3, 4}
-			trap := createMapTrapByID(trapIDs[rand.Intn(len(trapIDs))], x, y)
+			trap := createMapTrapByID(trapIDs[rng.Intn(len(trapIDs))], x, y)
 			traps = append(traps, trap)
 			log.Printf("罠を生成しました: %s 座標(%d, %d)", trap.Name, x, y)
 		} else {

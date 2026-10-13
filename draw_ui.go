@@ -375,7 +375,8 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 
 	// メニューウィンドウのサイズと位置
 	menuWidth := 300
-	menuHeight := 280
+	menuHeight := 310
+	itemsHeight := 280 // 項目を並べる領域（下端にシードを表示する）
 	menuX := (screenWidth - menuWidth) / 2
 	menuY := (screenHeight - menuHeight) / 2
 
@@ -402,15 +403,15 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 	opts.GeoM.Translate(float64(menuX), float64(menuY))
 	screen.DrawImage(menuWindow, opts)
 
-	// メニュー項目のテキスト（3行目はヘルプのみで全幅を使う）
+	// メニュー項目のテキスト
 	menuItems := [][]string{
 		{"道具", "足元"},
 		{"設定", "中断"},
-		{"ヘルプ"},
+		{"ヘルプ", "再挑戦"},
 	}
 
 	// テキストの描画位置
-	itemHeight := menuHeight / len(menuItems)
+	itemHeight := itemsHeight / len(menuItems)
 
 	for row := range menuItems {
 		itemWidth := menuWidth / len(menuItems[row])
@@ -438,6 +439,9 @@ func (g *Game) drawMenuWindow(screen *ebiten.Image) {
 			text.Draw(screen, menuItems[row][col], mplusMediumFont, textX, textY, textColor)
 		}
 	}
+
+	// 現在の冒険のシード（「再挑戦」で同じシードの1階からやり直せる）
+	text.Draw(screen, fmt.Sprintf("シード: %d", g.seed), mplusNormalFont, menuX+15, menuY+menuHeight-12, color.NRGBA{200, 200, 200, 255})
 }
 
 // 空のインベントリメッセージの描画
@@ -534,9 +538,13 @@ func (g *Game) drawSuspendPrompt(screen *ebiten.Image) {
 
 	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 220)
 
-	text.Draw(screen, "冒険を中断して終了しますか？", mplusNormalFont, windowX+20, windowY+30, color.White)
+	question, confirm := "冒険を中断して終了しますか？", "中断する"
+	if g.promptRetry {
+		question, confirm = "同じシードで1階からやり直しますか？", "再挑戦"
+	}
+	text.Draw(screen, question, mplusNormalFont, windowX+20, windowY+30, color.White)
 
-	options := []string{"中断する", "やめる"}
+	options := []string{confirm, "やめる"}
 	for i, option := range options {
 		x := windowX + 50 + i*150
 		y := windowY + 75

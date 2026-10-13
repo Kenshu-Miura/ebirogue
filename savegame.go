@@ -298,8 +298,14 @@ func (g *Game) buildSaveData() *SaveData {
 		savedPlayer.SetTrap = &savedTrap
 	}
 
+	rngState, err := g.random().MarshalState()
+	if err != nil {
+		log.Printf("乱数状態の保存に失敗: %v", err)
+	}
 	save := &SaveData{
 		Version:           saveDataVersion,
+		Seed:              g.seed,
+		RNGState:          rngState,
 		Floor:             g.Floor,
 		Map:               g.state.Map,
 		Player:            savedPlayer,
@@ -350,6 +356,12 @@ func (g *Game) buildSaveData() *SaveData {
 // 全ての要素の構築に成功してからゲーム状態へ反映するため、
 // 途中でエラーが起きてもゲーム状態は変化しない。
 func (g *Game) applySaveData(save *SaveData) error {
+	// 乱数源の復元（失敗したらゲーム状態を変更しない）
+	rng := newTurnRNG(save.Seed)
+	if err := rng.UnmarshalState(save.RNGState); err != nil {
+		return fmt.Errorf("乱数状態の復元に失敗: %w", err)
+	}
+
 	// インベントリの再構築
 	inventory := make([]Item, 0, len(save.Player.Inventory))
 	for _, s := range save.Player.Inventory {
@@ -467,6 +479,8 @@ func (g *Game) applySaveData(save *SaveData) error {
 		MapTraps: traps,
 	}
 	g.rooms = rooms
+	g.seed = save.Seed
+	g.rng = rng
 	g.Floor = save.Floor
 	g.moveCount = save.MoveCount
 	g.turnCount = save.TurnCount

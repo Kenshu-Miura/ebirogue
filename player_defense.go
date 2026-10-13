@@ -4,12 +4,7 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 )
-
-// 盾能力の乱数源。テストでは差し替えて決定的にする。
-var shieldDefenseRandInt = rand.Intn
-var statusResistanceRandInt = rand.Intn
 
 func equippedArmorAbilities(player *Player) []EquipmentAbilityID {
 	if player.EquippedArmor == nil {
@@ -19,11 +14,11 @@ func equippedArmorAbilities(player *Player) []EquipmentAbilityID {
 }
 
 func (g *Game) resolvePlayerShieldDefense(damage int, kind EnemyDamageKind, delivery EnemyAttackDelivery) ShieldDefenseResult {
-	return resolveShieldDefense(damage, kind, delivery, equippedArmorAbilities(&g.state.Player), shieldDefenseRandInt)
+	return resolveShieldDefense(damage, kind, delivery, equippedArmorAbilities(&g.state.Player), g.shieldDefenseIntn())
 }
 
 func (g *Game) playerResistsStatus() bool {
-	return rollStatusResistance(equippedArmorAbilities(&g.state.Player), statusResistanceRandInt)
+	return rollStatusResistance(equippedArmorAbilities(&g.state.Player), g.statusResistanceIntn())
 }
 
 func (g *Game) playerBlocksTheft() bool {

@@ -814,7 +814,15 @@ var itemTemplates = map[int]ItemTemplate{
 }
 
 // テーブルからアイテムを生成する共通関数
+// buildItemFromTemplate はテンプレートからアイテムを作る。強化値などのランダムな値は
+// 冒険の乱数系列を使わない（テストやセーブ復元用。復元時は保存値で上書きされる）。
+// ゲーム中の生成は rollItemFromTemplate へ乱数源を渡すこと。
 func buildItemFromTemplate(id, x, y int) Item {
+	return rollItemFromTemplate(id, x, y, rand.Intn)
+}
+
+// rollItemFromTemplate はテンプレートからアイテムを作り、ランダムな値を intn で決める。
+func rollItemFromTemplate(id, x, y int, intn func(int) int) Item {
 	template, exists := itemTemplates[id]
 	if !exists {
 		// デフォルトで混乱薬を返す
@@ -835,13 +843,13 @@ func buildItemFromTemplate(id, x, y int) Item {
 	}
 
 	var item Item
-	sharpnessValue := rand.Intn(5) - 1
+	sharpnessValue := intn(5) - 1
 
 	switch template.ItemType {
 	case "Money":
 		item = &Money{
 			BaseItem:   baseItem,
-			Amount:     rand.Intn(2001),
+			Amount:     intn(2001),
 			Identified: true,
 		}
 	case "Food":
@@ -879,7 +887,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 	case "Arrow":
 		item = &Arrow{
 			BaseItem:    baseItem,
-			ShotCount:   rand.Intn(11) + 5,
+			ShotCount:   intn(11) + 5,
 			AttackPower: template.AttackPower,
 			Cursed:      false,
 			Identified:  true,
@@ -895,7 +903,7 @@ func buildItemFromTemplate(id, x, y int) Item {
 	case "Pot":
 		item = &Pot{
 			BaseItem:   baseItem,
-			Capacity:   rand.Intn(3) + 3, // 容量3〜5
+			Capacity:   intn(3) + 3, // 容量3〜5
 			Identified: true,
 		}
 	case "Cane":
@@ -924,11 +932,11 @@ func buildItemFromTemplate(id, x, y int) Item {
 // randomItemTemplateIDs は床のランダム生成で一様に抽選するアイテム ID の一覧（昇順）。
 var randomItemTemplateIDs = sortedTemplateIDs(itemTemplates, nil)
 
-func createItem(x, y int) Item {
-	return buildItemFromTemplate(pickTemplateID(randomItemTemplateIDs, rand.Intn, 0), x, y)
+func createItem(x, y int, intn func(int) int) Item {
+	return rollItemFromTemplate(pickTemplateID(randomItemTemplateIDs, intn, 0), x, y, intn)
 }
 
-// デバッグ用：特定のIDのアイテムを生成する関数
+// 特定のIDのアイテムを冒険の乱数系列で生成する関数
 func (g *Game) createItemByID(id int, x, y int) Item {
-	return buildItemFromTemplate(id, x, y)
+	return rollItemFromTemplate(id, x, y, g.randIntn)
 }

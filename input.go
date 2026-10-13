@@ -720,7 +720,7 @@ func (g *Game) handleMenuInput() error {
 		return nil
 	}
 
-	// 矢印キーでメニュー項目を移動（3行目はヘルプのみの1項目）
+	// 矢印キーでメニュー項目を移動（3行2列）
 	const menuRowCount = 3
 	if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 		g.menuSelectedRow = (g.menuSelectedRow - 1 + menuRowCount) % menuRowCount
@@ -786,11 +786,21 @@ func (g *Game) handleMenuInput() error {
 			} else {
 				g.showMenu = false
 				g.showSuspendPrompt = true
+				g.promptRetry = false
 				g.suspendSelectedOption = 0
 				g.suspendPromptJustOpened = true
 			}
+		} else if g.menuSelectedRow == 2 && g.menuSelectedCol == 1 {
+			// 再挑戦（同じシードで1階から）
+			g.showMenu = false
+			if len(g.ActionQueue.Queue) == 0 {
+				g.showSuspendPrompt = true
+				g.promptRetry = true
+				g.suspendSelectedOption = 1 // 誤操作防止のため「やめる」を初期選択にする
+				g.suspendPromptJustOpened = true
+			}
 		} else if g.menuSelectedRow == 2 {
-			// ヘルプ（3行目は列に関係なくヘルプを開く）
+			// ヘルプ
 			g.showMenu = false
 			g.showHelp = true
 			g.returnToMenuFromHelp = true
@@ -866,7 +876,10 @@ func (g *Game) handleSuspendPromptInput() error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
-		if g.suspendSelectedOption == 0 { // 中断する
+		if g.suspendSelectedOption == 0 && g.promptRetry { // 同じシードで再挑戦
+			g.showSuspendPrompt = false
+			g.retrySameSeed()
+		} else if g.suspendSelectedOption == 0 { // 中断する
 			g.showSuspendPrompt = false
 			if err := g.saveSuspendData(); err != nil {
 				log.Printf("中断セーブに失敗: %v", err)

@@ -14,10 +14,16 @@ func makeValidSaveData() *SaveData {
 			tiles[y][x] = Tile{Type: "floor"}
 		}
 	}
+	rngState, err := newTurnRNG(42).MarshalState()
+	if err != nil {
+		panic(err)
+	}
 	return &SaveData{
-		Version: saveDataVersion,
-		Floor:   2,
-		Map:     tiles,
+		Version:  saveDataVersion,
+		Seed:     42,
+		RNGState: rngState,
+		Floor:    2,
+		Map:      tiles,
 		Player: SavedPlayer{
 			X: 1, Y: 1,
 			Health: 50, MaxHealth: 100,
@@ -32,6 +38,14 @@ func makeValidSaveData() *SaveData {
 func TestValidateSaveDataValid(t *testing.T) {
 	if err := validateSaveData(makeValidSaveData()); err != nil {
 		t.Errorf("有効なデータが検証エラーになった: %v", err)
+	}
+}
+
+func TestValidateSaveDataRejectsBrokenRNGState(t *testing.T) {
+	save := makeValidSaveData()
+	save.RNGState = []byte("broken")
+	if err := validateSaveData(save); err == nil {
+		t.Error("壊れた乱数状態が検証を通過した")
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"math"
-	"math/rand"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -18,7 +17,7 @@ func (g *Game) handleFadingOut() {
 		g.fadeAlpha = 1.0
 		if g.frameCounter == 0 {
 			// マップ生成
-			mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMap(70, 70, g.Floor, &g.state.Player)
+			mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMap(70, 70, g.Floor, &g.state.Player, newFloorRNG(g.seed, g.Floor+1))
 			// 新しいマップ情報を設定
 			g.miniMap = nil
 			g.state.Map = mapGrid
@@ -239,7 +238,7 @@ func isWithinDistanceRange(newRoom Room, rooms []Room, minDistance, maxDistance 
 	return true
 }
 
-func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
+func generateRooms(mapGrid [][]Tile, width, height, numRooms int, rng *gameRNG) []Room {
 	var rooms []Room
 
 	for i := 0; i < numRooms; i++ { // Attempt to create a specified number of rooms
@@ -248,28 +247,28 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 
 			// If there are already rooms created, try to align the new room with one of them
 			if len(rooms) > 0 {
-				alignWith := rooms[rand.Intn(len(rooms))] // Randomly select a room to align with
+				alignWith := rooms[rng.Intn(len(rooms))] // Randomly select a room to align with
 
 				// Randomly decide to align horizontally or vertically
-				if rand.Intn(2) == 0 {
+				if rng.Intn(2) == 0 {
 					// Align horizontally
-					roomWidth = rand.Intn(10) + 6 // Random width between 6 and 15
+					roomWidth = rng.Intn(10) + 6  // Random width between 6 and 15
 					roomHeight = alignWith.Height // Match the height of the room to align with
-					roomX = rand.Intn(width-roomWidth-1) + 1
+					roomX = rng.Intn(width-roomWidth-1) + 1
 					roomY = alignWith.Y
 				} else {
 					// Align vertically
-					roomWidth = alignWith.Width    // Match the width of the room to align with
-					roomHeight = rand.Intn(10) + 6 // Random height between 6 and 15
+					roomWidth = alignWith.Width   // Match the width of the room to align with
+					roomHeight = rng.Intn(10) + 6 // Random height between 6 and 15
 					roomX = alignWith.X
-					roomY = rand.Intn(height-roomHeight-1) + 1
+					roomY = rng.Intn(height-roomHeight-1) + 1
 				}
 			} else {
 				// If this is the first room, generate random dimensions and position
-				roomWidth = rand.Intn(min(10, width-2)) + 6   // Random width between 6 and 15, but not exceeding map width
-				roomHeight = rand.Intn(min(10, height-2)) + 6 // Random height between 6 and 15, but not exceeding map height
-				roomX = rand.Intn(width-roomWidth-1) + 1
-				roomY = rand.Intn(height-roomHeight-1) + 1
+				roomWidth = rng.Intn(min(10, width-2)) + 6   // Random width between 6 and 15, but not exceeding map width
+				roomHeight = rng.Intn(min(10, height-2)) + 6 // Random height between 6 and 15, but not exceeding map height
+				roomX = rng.Intn(width-roomWidth-1) + 1
+				roomY = rng.Intn(height-roomHeight-1) + 1
 			}
 
 			newRoom := Room{
@@ -305,11 +304,11 @@ func generateRooms(mapGrid [][]Tile, width, height, numRooms int) []Room {
 	return rooms
 }
 
-func generateEnemies(rooms []Room, playerRoom Room, floor int) []Enemy {
+func generateEnemies(rooms []Room, playerRoom Room, floor int, rng *gameRNG) []Enemy {
 	var enemies []Enemy
 
 	// 4~9体のモンスターを生成
-	numEnemies := 4 + rand.Intn(6) // 4 + (0~5) = 4~9
+	numEnemies := 4 + rng.Intn(6) // 4 + (0~5) = 4~9
 
 	// 使用済み部屋を追跡
 	usedRooms := make(map[int]bool)
@@ -321,15 +320,15 @@ func generateEnemies(rooms []Room, playerRoom Room, floor int) []Enemy {
 		maxAttempts := 100
 
 		for attempt := 0; attempt < maxAttempts; attempt++ {
-			enemyRoom = rooms[rand.Intn(len(rooms))]
+			enemyRoom = rooms[rng.Intn(len(rooms))]
 
 			// できる限り異なる部屋に配置（全部屋使用済みの場合は重複を許可）
 			if len(usedRooms) < len(rooms) && usedRooms[enemyRoom.ID] {
 				continue
 			}
 
-			enemyX = rand.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
-			enemyY = rand.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
+			enemyX = rng.Intn(enemyRoom.Width-2) + enemyRoom.X + 1
+			enemyY = rng.Intn(enemyRoom.Height-2) + enemyRoom.Y + 1
 
 			// 位置の重複チェック
 			occupied := false
@@ -348,9 +347,9 @@ func generateEnemies(rooms []Room, playerRoom Room, floor int) []Enemy {
 
 		// 敵を生成し、50%の確率で仮眠状態にする
 		// （ジェノサイドで封じた系統はフロア移動時のremoveGenocidedEnemiesで取り除かれる）
-		enemyID := selectMonsterForFloor(floor, nil, rand.Intn)
+		enemyID := selectMonsterForFloor(floor, nil, rng.Intn)
 		enemy := CreateEnemyByID(enemyID, enemyX, enemyY)
-		if rand.Float64() < 0.5 {
+		if rng.Float64() < 0.5 {
 			enemy.StatusAilments.Sleep = -1 // -1で仮眠状態を表現（通常の睡眠と区別）
 		}
 
@@ -359,15 +358,15 @@ func generateEnemies(rooms []Room, playerRoom Room, floor int) []Enemy {
 	return enemies
 }
 
-func generateItems(rooms []Room) []Item {
+func generateItems(rooms []Room, rng *gameRNG) []Item {
 	var items []Item
 	for i := 0; i < 10; i++ {
 		var itemRoom Room
 		var itemX, itemY int
 		for {
-			itemRoom = rooms[rand.Intn(len(rooms))]
-			itemX = rand.Intn(itemRoom.Width-2) + itemRoom.X + 1
-			itemY = rand.Intn(itemRoom.Height-2) + itemRoom.Y + 1
+			itemRoom = rooms[rng.Intn(len(rooms))]
+			itemX = rng.Intn(itemRoom.Width-2) + itemRoom.X + 1
+			itemY = rng.Intn(itemRoom.Height-2) + itemRoom.Y + 1
 			occupied := false
 			for _, item := range items {
 				newitemX, newitemY := item.GetPosition()
@@ -381,7 +380,7 @@ func generateItems(rooms []Room) []Item {
 			}
 		}
 
-		items = append(items, createItem(itemX, itemY))
+		items = append(items, createItem(itemX, itemY, rng.Intn))
 	}
 	return items
 }
@@ -390,7 +389,8 @@ func generateItems(rooms []Room) []Item {
 // 全部屋が連結になるまで作り直す（通常は1回目で成功する）。
 const maxMapGenAttempts = 30
 
-func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Tile, []Enemy, []Item, int, []Room, []MapTrap) {
+// GenerateRandomMap は currentFloor+1 階を生成する。rng はその階専用の乱数源（newFloorRNG）を渡す。
+func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gameRNG) ([][]Tile, []Enemy, []Item, int, []Room, []MapTrap) {
 	var mapGrid [][]Tile
 	var rooms []Room
 
@@ -404,7 +404,7 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 			}
 		}
 
-		rooms = generateRooms(mapGrid, width, height, 6) // Step 2: Generate rooms
+		rooms = generateRooms(mapGrid, width, height, 6, rng) // Step 2: Generate rooms
 		if len(rooms) < 2 {
 			continue
 		}
@@ -418,28 +418,28 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player) ([][]Til
 	}
 
 	// プレイヤーの新しい位置を設定
-	playerRoom := rooms[rand.Intn(len(rooms))]
-	playerX := rand.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
-	playerY := rand.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
+	playerRoom := rooms[rng.Intn(len(rooms))]
+	playerX := rng.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
+	playerY := rng.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
 	player.Entity.X = playerX
 	player.Entity.Y = playerY
 
 	// 階段タイルを配置するためのランダムな部屋を選択
-	stairsRoom := rooms[rand.Intn(len(rooms))]
+	stairsRoom := rooms[rng.Intn(len(rooms))]
 	// 階段のランダムな位置を選ぶ（壁を避ける）
-	stairsX := rand.Intn(stairsRoom.Width-2) + stairsRoom.X + 1
-	stairsY := rand.Intn(stairsRoom.Height-2) + stairsRoom.Y + 1
+	stairsX := rng.Intn(stairsRoom.Width-2) + stairsRoom.X + 1
+	stairsY := rng.Intn(stairsRoom.Height-2) + stairsRoom.Y + 1
 	// 階段タイルを配置
 	mapGrid[stairsY][stairsX] = Tile{Type: "stairs", Blocked: false, BlockSight: false}
 
 	newFloor := currentFloor + 1
 
 	// Call the newly created functions to generate enemies and items
-	enemies := generateEnemies(rooms, playerRoom, newFloor)
-	items := generateItems(rooms)
+	enemies := generateEnemies(rooms, playerRoom, newFloor, rng)
+	items := generateItems(rooms, rng)
 
 	// Generate map traps
-	traps := generateMapTraps(rooms)
+	traps := generateMapTraps(rooms, rng)
 
 	return mapGrid, enemies, items, newFloor, rooms, traps
 }

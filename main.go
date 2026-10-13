@@ -132,6 +132,9 @@ type ThrownItem struct {
 
 type Game struct {
 	state                     GameState
+	seed                      int64    // 冒険のシード（同じシードなら同じフロアが生成される）
+	rng                       *gameRNG // ターン進行用の乱数源。直接ではなく random()/randIntn() 経由で使う
+	randHooks                 randHooks
 	rooms                     []Room
 	playerImg                 *ebiten.Image
 	ebiImg                    *ebiten.Image
@@ -280,6 +283,7 @@ type Game struct {
 	showSettings            bool         // 設定ウィンドウの表示フラグ
 	settingsSelectedIndex   int          // 設定ウィンドウで選択中の項目
 	showSuspendPrompt       bool         // 中断確認ダイアログの表示フラグ
+	promptRetry             bool         // 確認ダイアログが「同じシードで再挑戦」用かどうか（false なら中断）
 	suspendSelectedOption   int          // 中断確認で選択中の項目（0=中断する, 1=やめる）
 	suspendPromptJustOpened bool         // 中断確認が開かれたばかりかどうかのフラグ
 	suspendRequested        bool         // 中断セーブが完了しゲーム終了を要求するフラグ
@@ -796,38 +800,7 @@ func NewGame() *Game {
 	rustTrapImg := loadImage("img/rust_trap.png")
 	potImg := loadImage("img/pot.png")
 
-	// プレイヤーの初期化
-	player := Player{
-		Name:             "海老さん",
-		Entity:           Entity{Char: '@'},
-		Health:           100,
-		MaxHealth:        100,
-		Satiety:          100,
-		MaxSatiety:       100,
-		Inventory:        []Item{},
-		MaxInventory:     20,
-		AttackPower:      3,
-		DefensePower:     3,
-		ExperiencePoints: 0,
-		Level:            1,
-		Power:            8,
-		MaxPower:         8,
-		Direction:        Up,
-		Cash:             0,
-	}
-
-	// 最初のマップを生成
-	mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMap(70, 70, 0, &player) // 初期階層は1です
-
 	game := &Game{
-		state: GameState{
-			Map:      mapGrid,
-			Player:   player,
-			Enemies:  enemies,
-			Items:    items,
-			MapTraps: traps,
-		},
-		rooms:               newRoom,
 		playerImg:           img,
 		tilesetImg:          tilesetImg,
 		ebiImg:              ebiImg,
@@ -872,7 +845,6 @@ func NewGame() *Game {
 		potImg:              potImg,
 		offsetX:             0,
 		offsetY:             0,
-		Floor:               newFloor,
 		frameCount:          0,
 		tmpPlayerOffsetX:    0,
 		tmpPlayerOffsetY:    0,
@@ -885,8 +857,8 @@ func NewGame() *Game {
 		customNames:          map[int]string{},
 	}
 
-	// モンスター湧きシステム初期化
-	game.InitializeSpawnSystem()
+	// 新しいシードで最初のマップを生成する（湧きシステムの初期化も含む）
+	game.startNewRun(newRandomSeed())
 
 	// フェードイン状態を初期化
 	game.fadeInProgress = 0.0

@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
-	"math/rand"
 )
 
 func (g *Game) IncrementMoveCount() {
@@ -54,7 +53,7 @@ func (g *Game) IncrementMoveCount() {
 func (g *Game) movePlayerConfused() bool {
 	// 8方向のランダムな移動先を選択
 	directions := getDirections()
-	direction := directions[rand.Intn(len(directions))]
+	direction := directions[g.randIntn(len(directions))]
 	newX := g.state.Player.X + direction.dx
 	newY := g.state.Player.Y + direction.dy
 
@@ -121,12 +120,11 @@ func (p *Player) checkDeath(g *Game) {
 	}
 }
 
-// ゲームリセット機能
-func (g *Game) resetGame() {
-	// プレイヤーの初期化（座標は後でGenerateRandomMapで設定される）
-	player := Player{
+// newInitialPlayer は冒険開始時のプレイヤーを作る（座標は GenerateRandomMap で設定される）。
+func newInitialPlayer() Player {
+	return Player{
 		Name:             "海老さん",
-		Entity:           Entity{Char: '@'}, // X、Yは0のまま（GenerateRandomMapで設定される）
+		Entity:           Entity{Char: '@'},
 		Health:           100,
 		MaxHealth:        100,
 		Satiety:          100,
@@ -142,9 +140,35 @@ func (g *Game) resetGame() {
 		Direction:        Up,
 		Cash:             0,
 	}
+}
+
+// ゲームリセット機能（新しいシードで冒険をやり直す）
+func (g *Game) resetGame() {
+	g.startNewRun(newRandomSeed())
+}
+
+// retrySameSeed は現在の冒険を破棄し、同じシードで1階からやり直す。
+func (g *Game) retrySameSeed() {
+	seed := g.seed
+	deleteSaveFile() // 破棄した冒険の中断データから再開しないようにする
+	g.startNewRun(seed)
+	g.fadeInProgress = 0.0
+	g.EnqueueMessage(fmt.Sprintf("シード %d で1階から再挑戦した", seed), 1.0)
+}
+
+// startNewRun は指定シードで1階から新しい冒険を始める。
+// 同じシードなら同じフロアが生成され、ターン進行の乱数列も同じになる。
+func (g *Game) startNewRun(seed int64) {
+	g.seed = seed
+	g.rng = newTurnRNG(seed)
+	player := newInitialPlayer()
 
 	// 新しいマップを生成（プレイヤーの座標も部屋の中に設定される）
-	mapGrid, enemies, items, _, rooms, traps := GenerateRandomMap(70, 70, 0, &player)
+	mapGrid, enemies, items, newFloor, rooms, traps := GenerateRandomMap(70, 70, 0, &player, newFloorRNG(seed, 1))
+	g.Floor = newFloor
+	g.floorTurns = 0
+	g.windWarning1Shown = false
+	g.windWarning2Shown = false
 
 	// ゲーム状態をリセット
 	g.state = GameState{

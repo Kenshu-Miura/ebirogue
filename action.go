@@ -6,7 +6,6 @@ import (
 	"fmt"
 	_ "image/png" // PNG画像を読み込むために必要
 	"log"
-	"math/rand"
 )
 
 // isMouthItem は口封じ状態で使えないアイテム（口にする・読み上げるもの）かどうかを返す。
@@ -515,7 +514,7 @@ func (aq *ActionQueue) Enqueue(action Action) {
 func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 
-	netDamage := rollEnemyAttackDamage(enemy.AttackPower, g.state.Player.DefensePower, damageRandInt)
+	netDamage := rollEnemyAttackDamage(enemy.AttackPower, g.state.Player.DefensePower, g.damageIntn())
 	defense := g.resolvePlayerShieldDefense(netDamage, EnemyDamageNormal, EnemyAttackMelee)
 	enemyName := g.enemyDisplayName(enemy.Name)
 	enemyID, enemyX, enemyY := enemy.ID, enemy.X, enemy.Y
@@ -549,7 +548,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 	target := &g.state.Enemies[targetIndex]
 
 	// 敵同士の攻撃（目潰し状態の敵が他の敵を攻撃）
-	netDamage := rollEnemyAttackDamage(attacker.AttackPower, target.DefensePower, damageRandInt)
+	netDamage := rollEnemyAttackDamage(attacker.AttackPower, target.DefensePower, g.damageIntn())
 
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
 
@@ -609,7 +608,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 	}
 
 	// Generate a random float number between 0 and 1 to compare with specialAttackProbability
-	randomValue := rand.Float64()
+	randomValue := g.random().Float64()
 
 	// Check if the enemy will perform a special attack (封印状態の敵は特技を使用しない)
 	if enemy.SpecialAttack != nil && randomValue <= enemy.SpecialAttackProbability && !enemy.StatusAilments.Seal {
@@ -664,7 +663,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAbilityID) {
 	enemy := g.state.Enemies[enemyIndex]
 	targetX, targetY := enemy.X, enemy.Y
-	hit := rollPlayerAttackHit(weaponAbilities, attackHitRandInt)
+	hit := rollPlayerAttackHit(weaponAbilities, g.attackHitIntn())
 	if !hit {
 		g.Enqueue(Action{
 			Duration: 0.5,
@@ -678,7 +677,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 
 	multiplier, slayerEffective := slayerMultiplier(weaponAbilities, enemy.Traits)
 	attack := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level)
-	result := rollPlayerAttackDamage(attack, enemy.DefensePower, multiplier, damageRandInt)
+	result := rollPlayerAttackDamage(attack, enemy.DefensePower, multiplier, g.damageIntn())
 	netDamage := result.Damage
 	message := fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(enemy.Name), netDamage)
 	if slayerEffective {
@@ -758,7 +757,7 @@ func (g *Game) enqueueDisposableWeaponWear(weapon *Weapon) {
 func (g *Game) attackPlayerConfused() {
 	// 8方向のランダムな攻撃方向を選択
 	directions := getDirections()
-	direction := directions[rand.Intn(len(directions))]
+	direction := directions[g.randIntn(len(directions))]
 
 	// プレイヤーの方向を設定
 	g.state.Player.Direction = determineDirection(direction.dx, direction.dy)

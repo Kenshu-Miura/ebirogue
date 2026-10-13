@@ -453,11 +453,11 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			if arrow, ok := item.(*Arrow); ok {
 				attack += arrow.AttackPower
 			}
-			result := rollPlayerAttackDamage(attack, target.GetDefensePower(), 1.0, damageRandInt)
+			result := rollPlayerAttackDamage(attack, target.GetDefensePower(), 1.0, g.damageIntn())
 			damage = result.Damage
 			critical = result.Critical
 		} else {
-			damage = rollThrownItemDamage(damageRandInt)
+			damage = rollThrownItemDamage(g.damageIntn())
 		}
 		// 目潰し状態の場合は敵の名前を「何者」に変更（targetがEnemyの場合のみ）
 		targetDisplayName := target.GetName()

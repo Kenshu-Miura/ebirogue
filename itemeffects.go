@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"sort"
 )
 
@@ -265,7 +264,7 @@ var identifyItem = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
 
 	// 低確率で持ち物すべてを識別する（識別の巻物相当）
-	if rollIdentifyAll(rand.Intn) {
+	if rollIdentifyAll(g.randIntn) {
 		g.Enqueue(Action{
 			Duration: 0.5,
 			Message:  fmt.Sprintf("%sが強く輝いた。持ち物すべての正体が明らかになった", item.GetName()),
@@ -492,7 +491,7 @@ func isInRoomWideEffect(playerX, playerY, targetX, targetY int, rooms []Room) bo
 // 真空斬りのカードは部屋全体、通路では周囲1マスの敵へダメージを与える。
 var vacuumSlash = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	damage := rollVacuumSlashDamage(rand.Intn)
+	damage := rollVacuumSlashDamage(g.randIntn)
 	g.Enqueue(Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを使用した。真空の刃が走った", item.GetName()),
@@ -542,7 +541,7 @@ func rollMonsterHouseItemCount(intn func(int) int) int {
 }
 
 // createItemを直接参照するとitemTemplatesとの初期化循環になるため、init時に間接参照を張る
-var newRandomFloorItem func(x, y int) Item
+var newRandomFloorItem func(x, y int, intn func(int) int) Item
 
 func init() {
 	newRandomFloorItem = createItem
@@ -602,9 +601,9 @@ var summonMonsterHouse = func(g *Game) {
 				}
 				return true
 			}
-			enemyCount := rollMonsterHouseEnemyCount(rand.Intn)
-			itemCount := rollMonsterHouseItemCount(rand.Intn)
-			cells := pickFreeCellsInRoom(*room, isFree, enemyCount+itemCount, rand.Intn)
+			enemyCount := rollMonsterHouseEnemyCount(g.randIntn)
+			itemCount := rollMonsterHouseItemCount(g.randIntn)
+			cells := pickFreeCellsInRoom(*room, isFree, enemyCount+itemCount, g.randIntn)
 			if len(cells) == 0 {
 				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
 				return
@@ -621,7 +620,7 @@ var summonMonsterHouse = func(g *Game) {
 					enemy.ShowOnMiniMap = true
 					g.state.Enemies = append(g.state.Enemies, enemy)
 				} else {
-					g.state.Items = append(g.state.Items, newRandomFloorItem(cell.X, cell.Y))
+					g.state.Items = append(g.state.Items, newRandomFloorItem(cell.X, cell.Y, g.randIntn))
 				}
 			}
 			g.EnqueueMessage("モンスターハウスだ！", 0.5)
@@ -747,12 +746,12 @@ var increaseFloorTraps = func(g *Game) {
 		Message:  fmt.Sprintf("%sを使用した。なんだか嫌な予感がする…", item.GetName()),
 		Execute: func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
-			count := rollExtraTrapCount(rand.Intn)
+			count := rollExtraTrapCount(g.randIntn)
 			added := 0
 			for attempt := 0; attempt < 100 && added < count; attempt++ {
-				room := g.rooms[rand.Intn(len(g.rooms))]
-				x := rand.Intn(room.Width-2) + room.X + 1
-				y := rand.Intn(room.Height-2) + room.Y + 1
+				room := g.rooms[g.randIntn(len(g.rooms))]
+				x := g.randIntn(room.Width-2) + room.X + 1
+				y := g.randIntn(room.Height-2) + room.Y + 1
 				if x == playerX && y == playerY {
 					continue
 				}
@@ -771,7 +770,7 @@ var increaseFloorTraps = func(g *Game) {
 				}
 				// 既存の罠生成と同じく睡眠ガスを多めに混ぜる
 				trapIDs := []int{0, 0, 1, 2, 3}
-				g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(trapIDs[rand.Intn(len(trapIDs))], x, y))
+				g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(trapIDs[g.randIntn(len(trapIDs))], x, y))
 				added++
 			}
 			g.isActioned = true

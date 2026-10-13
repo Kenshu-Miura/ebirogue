@@ -1,7 +1,5 @@
 package main
 
-import "math/rand"
-
 // EquipmentAbilityID identifies an equipment ability independently of its name.
 type EquipmentAbilityID string
 
@@ -53,9 +51,6 @@ const (
 )
 
 const basePlayerAttackAccuracy = 90
-
-// attackHitRandInt は命中判定の乱数源。テストでは差し替えて決定的にする。
-var attackHitRandInt = rand.Intn
 
 func hasEquipmentAbility(abilities []EquipmentAbilityID, target EquipmentAbilityID) bool {
 	for _, ability := range abilities {

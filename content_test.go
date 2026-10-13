@@ -249,18 +249,11 @@ func TestEnemyTraitsForSlayerWeapons(t *testing.T) {
 
 func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
 	// 会心判定を必ず外し、乱数係数を最大(9/8)へ固定して決定的にする
-	restoreIntn := damageRandInt
-	restoreHitIntn := attackHitRandInt
-	damageRandInt = func(n int) int { return n - 1 }
-	attackHitRandInt = func(int) int { return 0 }
-	defer func() {
-		damageRandInt = restoreIntn
-		attackHitRandInt = restoreHitIntn
-	}()
+	hooks := randHooks{damage: func(n int) int { return n - 1 }, attackHit: func(int) int { return 0 }}
 
 	weapon := buildItemFromTemplate(49, 0, 0).(*Weapon)
 	enemy := CreateEnemyByID(36, 2, 1)
-	g := &Game{
+	g := &Game{randHooks: hooks,
 		state: GameState{
 			Map: makeTestFloorMap(5, 5),
 			Player: Player{
@@ -290,9 +283,7 @@ func TestSlayerWeaponAffectsPlayerNormalAttack(t *testing.T) {
 }
 
 func TestThreeWayWeaponAttacksFrontArc(t *testing.T) {
-	restoreHitIntn := attackHitRandInt
-	attackHitRandInt = func(int) int { return 0 }
-	defer func() { attackHitRandInt = restoreHitIntn }()
+	hooks := randHooks{attackHit: func(int) int { return 0 }}
 
 	weapon := buildItemFromTemplate(57, 0, 0).(*Weapon)
 	enemies := []Enemy{
@@ -305,7 +296,7 @@ func TestThreeWayWeaponAttacksFrontArc(t *testing.T) {
 		enemies[i].Health = 1000
 		enemies[i].MaxHealth = 1000
 	}
-	g := &Game{state: GameState{
+	g := &Game{randHooks: hooks, state: GameState{
 		Map: makeTestFloorMap(5, 5),
 		Player: Player{
 			Entity:         Entity{X: 2, Y: 2},
@@ -338,13 +329,11 @@ func TestThreeWayWeaponAttacksFrontArc(t *testing.T) {
 }
 
 func TestSureHitWeaponAndNormalAttackMiss(t *testing.T) {
-	restoreHitIntn := attackHitRandInt
-	attackHitRandInt = func(int) int { return 99 }
-	defer func() { attackHitRandInt = restoreHitIntn }()
+	hooks := randHooks{attackHit: func(int) int { return 99 }}
 
 	newGame := func(weapon *Weapon) *Game {
 		enemy := CreateEnemyByID(0, 2, 1)
-		return &Game{state: GameState{
+		return &Game{randHooks: hooks, state: GameState{
 			Map:     makeTestFloorMap(5, 5),
 			Player:  Player{Entity: Entity{X: 1, Y: 1}, AttackPower: 10, Power: 8, Level: 1, EquippedWeapon: weapon},
 			Enemies: []Enemy{enemy},
@@ -1257,18 +1246,13 @@ func TestSealedRangedEnemyCannotUseAbility(t *testing.T) {
 }
 
 func TestDefensiveShieldCombatEffects(t *testing.T) {
-	restoreDamage := damageRandInt
-	restoreDefense := shieldDefenseRandInt
-	damageRandInt = func(n int) int { return n - 1 }
-	defer func() {
-		damageRandInt = restoreDamage
-		shieldDefenseRandInt = restoreDefense
-	}()
+	maxDamage := func(n int) int { return n - 1 }
+	evade := randHooks{damage: maxDamage, shieldDefense: func(int) int { return 0 }}
+	noEvade := randHooks{damage: maxDamage, shieldDefense: func(int) int { return 99 }}
 
 	t.Run("evasion", func(t *testing.T) {
-		shieldDefenseRandInt = func(int) int { return 0 }
 		armor := buildItemFromTemplate(66, 0, 0).(*Armor)
-		g := &Game{state: GameState{
+		g := &Game{randHooks: evade, state: GameState{
 			Player:  Player{Entity: Entity{X: 2, Y: 2}, Health: 100, DefensePower: 3, EquippedArmor: armor},
 			Enemies: []Enemy{CreateEnemyByID(0, 3, 2)},
 		}}
@@ -1280,11 +1264,10 @@ func TestDefensiveShieldCombatEffects(t *testing.T) {
 	})
 
 	t.Run("counter", func(t *testing.T) {
-		shieldDefenseRandInt = func(int) int { return 99 }
 		armor := buildItemFromTemplate(68, 0, 0).(*Armor)
 		enemy := CreateEnemyByID(0, 3, 2)
 		enemy.Health = 100
-		g := &Game{state: GameState{
+		g := &Game{randHooks: noEvade, state: GameState{
 			Player:  Player{Entity: Entity{X: 2, Y: 2}, Health: 100, DefensePower: 3, EquippedArmor: armor},
 			Enemies: []Enemy{enemy},
 		}}
@@ -1300,7 +1283,7 @@ func TestDefensiveShieldCombatEffects(t *testing.T) {
 		enemy := CreateEnemyByID(4, 1, 4)
 		enemy.PlayerDiscovered = true
 		enemy.Health = 100
-		g := &Game{state: GameState{
+		g := &Game{randHooks: noEvade, state: GameState{
 			Map:     makeTestFloorMap(10, 10),
 			Player:  Player{Entity: Entity{X: 7, Y: 4}, Health: 100, DefensePower: 3, EquippedArmor: armor},
 			Enemies: []Enemy{enemy},
@@ -1326,7 +1309,7 @@ func TestDefensiveShieldCombatEffects(t *testing.T) {
 			armor := buildItemFromTemplate(tt.armorID, 0, 0).(*Armor)
 			enemy := CreateEnemyByID(tt.enemyID, 1, 4)
 			enemy.PlayerDiscovered = true
-			g := &Game{state: GameState{
+			g := &Game{randHooks: noEvade, state: GameState{
 				Map:     makeTestFloorMap(10, 10),
 				Player:  Player{Entity: Entity{X: 5, Y: 4}, Health: 100, EquippedArmor: armor},
 				Enemies: []Enemy{enemy},
@@ -1358,12 +1341,9 @@ func TestInventoryAndStatusResistanceShields(t *testing.T) {
 	})
 
 	t.Run("status", func(t *testing.T) {
-		restore := statusResistanceRandInt
-		statusResistanceRandInt = func(int) int { return 0 }
-		defer func() { statusResistanceRandInt = restore }()
 		armor := buildItemFromTemplate(65, 0, 0).(*Armor)
 		enemy := CreateEnemyByID(3, 2, 2)
-		g := &Game{state: GameState{Player: Player{EquippedArmor: armor}, Enemies: []Enemy{enemy}}}
+		g := &Game{randHooks: randHooks{statusResistance: func(int) int { return 0 }}, state: GameState{Player: Player{EquippedArmor: armor}, Enemies: []Enemy{enemy}}}
 		g.state.Enemies[0].SpecialAttack(&g.state.Enemies[0], g)
 		g.ActionQueue.Queue[0].Execute(g)
 		if g.state.Player.StatusAilments.Slow != 0 {
@@ -1373,18 +1353,11 @@ func TestInventoryAndStatusResistanceShields(t *testing.T) {
 }
 
 func TestDisposableShieldWeakensAndPersists(t *testing.T) {
-	restoreDamage := damageRandInt
-	restoreDefense := shieldDefenseRandInt
-	damageRandInt = func(n int) int { return n - 1 }
-	shieldDefenseRandInt = func(int) int { return 99 }
-	defer func() {
-		damageRandInt = restoreDamage
-		shieldDefenseRandInt = restoreDefense
-	}()
+	hooks := randHooks{damage: func(n int) int { return n - 1 }, shieldDefense: func(int) int { return 99 }}
 
 	armor := buildItemFromTemplate(70, 0, 0).(*Armor)
 	armor.Sharpness = 0
-	g := &Game{state: GameState{
+	g := &Game{randHooks: hooks, state: GameState{
 		Player:  Player{Entity: Entity{X: 2, Y: 2}, Health: 100, DefensePower: 18, EquippedArmor: armor},
 		Enemies: []Enemy{CreateEnemyByID(0, 3, 2)},
 	}}

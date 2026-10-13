@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"math/rand"
 )
 
 type SpecialAttackFunc func(e *Enemy, g *Game)
@@ -308,7 +307,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		AttackPower:              5,
 		DefensePower:             4,
 		ExperiencePoints:         14,
-		SpecialAttack:            func(e *Enemy, g *Game) { enqueueStealAttack(e, g, rand.Intn) },
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueStealAttack(e, g, g.randIntn) },
 		SpecialAttackProbability: 0.45,
 	},
 	8: {
@@ -321,7 +320,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		AttackPower:              7,
 		DefensePower:             4,
 		ExperiencePoints:         18,
-		SpecialAttack:            func(e *Enemy, g *Game) { enqueueFoodTransformationAttack(e, g, rand.Intn) },
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueFoodTransformationAttack(e, g, g.randIntn) },
 		SpecialAttackProbability: 0.35,
 	},
 	9: {
@@ -334,7 +333,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		AttackPower:              8,
 		DefensePower:             6,
 		ExperiencePoints:         22,
-		SpecialAttack:            func(e *Enemy, g *Game) { enqueueCurseAttack(e, g, rand.Intn) },
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueCurseAttack(e, g, g.randIntn) },
 		SpecialAttackProbability: 0.35,
 	},
 	10: {
@@ -347,7 +346,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		AttackPower:              9,
 		DefensePower:             5,
 		ExperiencePoints:         28,
-		SpecialAttack:            func(e *Enemy, g *Game) { enqueueManipulationAttack(e, g, rand.Intn) },
+		SpecialAttack:            func(e *Enemy, g *Game) { enqueueManipulationAttack(e, g, g.randIntn) },
 		SpecialAttackProbability: 0.3,
 	},
 	11: {
@@ -619,6 +618,7 @@ func CreateEnemyByID(id, x, y int) Enemy {
 // randomMonsterIDs はランダム出現の対象となる敵 ID の一覧（昇順、ボスを除く）。
 var randomMonsterIDs = sortedTemplateIDs(MonsterDefinitions, func(def MonsterDefinition) bool { return !def.IsBoss })
 
-func createEnemy(x, y int) Enemy {
-	return CreateEnemyByID(pickTemplateID(randomMonsterIDs, rand.Intn, 0), x, y)
+// createEnemy は階層に依らず、ランダム出現の対象から一様に敵を選んで生成する。
+func createEnemy(x, y int, intn func(int) int) Enemy {
+	return CreateEnemyByID(pickTemplateID(randomMonsterIDs, intn, 0), x, y)
 }

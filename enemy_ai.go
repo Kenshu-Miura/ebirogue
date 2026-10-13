@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 )
 
 // 敵の行動AI（追跡・巡回・状態異常時の行動）をまとめたファイル。
@@ -92,7 +91,7 @@ func moveTowardsCorridor(g *Game, i int) bool {
 
 	// 通路方向がある場合、ランダムに一つ選んで移動
 	if len(corridorDirections) > 0 {
-		chosenDir := corridorDirections[rand.Intn(len(corridorDirections))]
+		chosenDir := corridorDirections[g.randIntn(len(corridorDirections))]
 		return moveEnemy(g, i, chosenDir.dx, chosenDir.dy)
 	}
 
@@ -106,7 +105,7 @@ func moveAroundRoomPerimeter(g *Game, i int) {
 	// 方向が初期化されていない場合、ランダムに設定
 	if enemy.Direction == Uninitialized {
 		directions := []Direction{Up, Down, Left, Right}
-		enemy.Direction = directions[rand.Intn(len(directions))]
+		enemy.Direction = directions[g.randIntn(len(directions))]
 	}
 
 	// 現在の方向で移動を試行
@@ -123,7 +122,7 @@ func moveAroundRoomPerimeter(g *Game, i int) {
 	default:
 		// 斜め方向の場合は主方向に変換
 		directions := []Direction{Up, Down, Left, Right}
-		enemy.Direction = directions[rand.Intn(len(directions))]
+		enemy.Direction = directions[g.randIntn(len(directions))]
 		dx, dy = 0, -1 // とりあえず上方向
 	}
 
@@ -173,7 +172,7 @@ func moveEnemyInCorridor(g *Game, i int) {
 	// 方向が初期化されていない場合、ランダムに設定
 	if enemy.Direction == Uninitialized {
 		directions := []Direction{Up, Down, Left, Right}
-		enemy.Direction = directions[rand.Intn(len(directions))]
+		enemy.Direction = directions[g.randIntn(len(directions))]
 	}
 
 	// まず直進を試行
@@ -202,7 +201,7 @@ func moveStraightInCorridor(g *Game, i int) bool {
 	default:
 		// 斜め方向の場合は主方向に変換
 		directions := []Direction{Up, Down, Left, Right}
-		enemy.Direction = directions[rand.Intn(len(directions))]
+		enemy.Direction = directions[g.randIntn(len(directions))]
 		return moveStraightInCorridor(g, i) // 再帰呼び出し
 	}
 
@@ -483,7 +482,7 @@ func (g *Game) MoveTowardsPlayer(enemyIndex int) {
 			(dx > 0 && dy < 0 && (blockUp || blockRight)) ||
 			(dx < 0 && dy > 0 && (blockDown || blockLeft)) ||
 			(dx < 0 && dy < 0 && (blockUp || blockLeft))) {
-			if rand.Intn(2) == 0 {
+			if g.randIntn(2) == 0 {
 				stepY = 0 // 縦移動をやめる
 			} else {
 				stepX = 0 // 横移動をやめる
@@ -553,7 +552,7 @@ func (g *Game) moveEnemyConfused(i int) {
 	// 8方向のランダムな移動先を選択
 	directions := getDirections()
 
-	direction := directions[rand.Intn(len(directions))]
+	direction := directions[g.randIntn(len(directions))]
 	newX := enemy.X + direction.dx
 	newY := enemy.Y + direction.dy
 
@@ -584,7 +583,7 @@ func (g *Game) moveEnemyBlind(i int) {
 	// 方向が初期化されていない場合、ランダムに設定
 	if enemy.Direction == Uninitialized {
 		directions := []Direction{Up, Down, Left, Right, UpRight, UpLeft, DownRight, DownLeft}
-		enemy.Direction = directions[rand.Intn(len(directions))]
+		enemy.Direction = directions[g.randIntn(len(directions))]
 	}
 
 	// 現在の方向に基づいて移動先を計算
@@ -641,7 +640,7 @@ func (g *Game) changeBlindEnemyDirection(i int) {
 	}
 
 	if len(availableDirections) > 0 {
-		enemy.Direction = availableDirections[rand.Intn(len(availableDirections))]
+		enemy.Direction = availableDirections[g.randIntn(len(availableDirections))]
 	}
 }
 
@@ -707,7 +706,7 @@ func (g *Game) actEnemy(i int) {
 
 	startX, startY := enemy.X, enemy.Y
 	if enemy.SpecialMovement == SpecialMovementCreateTrap && !enemy.StatusAilments.Seal {
-		defer g.createTrapAfterEnemyMove(i, startX, startY, rand.Intn)
+		defer g.createTrapAfterEnemyMove(i, startX, startY, g.randIntn)
 	}
 
 	// Variables to store the difference in position
@@ -728,7 +727,7 @@ func (g *Game) actEnemy(i int) {
 
 	// ワープと場所替えは共通状態処理後、かつ封印されていない場合だけ試みる。
 	if g.state.Enemies[i].PlayerDiscovered {
-		if g.tryWarpEnemy(i, rand.Intn) || g.trySwapEnemyWithPlayer(i, rand.Intn) {
+		if g.tryWarpEnemy(i, g.randIntn) || g.trySwapEnemyWithPlayer(i, g.randIntn) {
 			return
 		}
 	}

@@ -11,7 +11,7 @@ import (
 const (
 	saveFileName     = "ebirogue_save.json"
 	settingsFileName = "ebirogue_settings.json"
-	saveDataVersion  = 1
+	saveDataVersion  = 2 // 2: シードと乱数状態を追加
 )
 
 // SavedRoom は部屋情報のセーブ用表現
@@ -95,6 +95,8 @@ type SavedPlayer struct {
 // SaveData は中断セーブ全体
 type SaveData struct {
 	Version           int
+	Seed              int64  // 冒険のシード（フロア生成に使う）
+	RNGState          []byte // ターン進行用乱数源（gameRNG）の内部状態
 	Floor             int
 	Map               [][]Tile
 	Rooms             []SavedRoom
@@ -131,6 +133,9 @@ func decodeSaveData(data []byte) (*SaveData, error) {
 func validateSaveData(save *SaveData) error {
 	if save.Version != saveDataVersion {
 		return fmt.Errorf("中断データのバージョンが不正: %d", save.Version)
+	}
+	if err := newTurnRNG(save.Seed).UnmarshalState(save.RNGState); err != nil {
+		return fmt.Errorf("乱数状態が不正: %w", err)
 	}
 	if len(save.Map) == 0 || len(save.Map[0]) == 0 {
 		return fmt.Errorf("マップデータが空")

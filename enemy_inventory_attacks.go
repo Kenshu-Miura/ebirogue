@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"sort"
 )
 
@@ -301,5 +300,5 @@ func (g *Game) moveEnemyAwayFromPlayer(enemyIndex int, intn func(int) int) bool 
 }
 
 func (g *Game) moveFleeingEnemy(enemyIndex int) bool {
-	return g.moveEnemyAwayFromPlayer(enemyIndex, rand.Intn)
+	return g.moveEnemyAwayFromPlayer(enemyIndex, g.randIntn)
 }

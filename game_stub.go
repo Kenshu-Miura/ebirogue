@@ -52,4 +52,6 @@ type GameState struct {
 type Game struct {
 	state      GameState
 	isActioned bool
+	seed       int64
+	rng        *gameRNG
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"math"
-	"math/rand"
 )
 
 // ダメージ計算のチューニング用定数。
@@ -25,9 +24,6 @@ const (
 	// 命中した攻撃の最低保証ダメージ。
 	minAttackDamage = 1
 )
-
-// damageRandInt はダメージ計算で使う乱数源。テストから差し替えて決定的にできる。
-var damageRandInt = rand.Intn
 
 // DamageParams は1回のダメージ計算への入力。
 // 新しい補正（属性・状態異常・地形など）は Multiplier へ乗算で合成する。
