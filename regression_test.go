@@ -159,3 +159,34 @@ func TestUsingGroundMoneyAddsCash(t *testing.T) {
 		}
 	}
 }
+
+// 目潰し中の敵どうしの攻撃が予約時の添字とポインタを使っていたため、先の攻撃で敵が倒れて並びが変わると、
+// ダメージが別の敵に入ったり HP 0 以下の敵が残ったりしていた。TestSimBatch が発見。
+func TestBlindEnemyAttacksResolveTargetsAtExecution(t *testing.T) {
+	g, _ := newHeadlessGame(1, DifficultyAdvanced)
+	g.state.Map = makeTestFloorMap(9, 7)
+	g.state.Items, g.state.MapTraps = nil, nil
+	g.state.Player.X, g.state.Player.Y = 7, 5
+	g.randHooks.damage = func(n int) int { return n - 1 }
+	attacker1, victim1 := CreateEnemyByID(5, 1, 1), CreateEnemyByID(0, 2, 1)
+	attacker2, victim2 := CreateEnemyByID(5, 1, 3), CreateEnemyByID(0, 2, 3)
+	victim1.Health = 1
+	victim2.Health, victim2.MaxHealth = 500, 500
+	g.state.Enemies = []Enemy{attacker1, victim1, attacker2, victim2}
+	g.AttackEnemyFromBlindEnemy(0, 1)
+	g.AttackEnemyFromBlindEnemy(2, 3)
+	if err := g.RunUntilInputReady(2000); err != nil {
+		t.Fatal(err)
+	}
+	for _, enemy := range g.state.Enemies {
+		if enemy.Health <= 0 {
+			t.Fatalf("%s remains with HP %d", enemy.Name, enemy.Health)
+		}
+	}
+	if i := g.enemyIndexAt(2, 3); i < 0 || g.state.Enemies[i].Health >= 500 {
+		t.Fatal("the second attack should damage its own target")
+	}
+	if g.enemyIndexAt(2, 1) >= 0 {
+		t.Fatal("the first victim should be defeated")
+	}
+}

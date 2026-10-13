@@ -94,9 +94,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 入力受付は `CanAcceptInput()`（ActionQueue にブロッキング Action が無いこと）と各種ウィンドウ表示フラグ（`showInventory`, `showMenu`, `showHelp` など）が全て false のときのみ。
 - **ターン進行の流れ**:
   1. `HandleInput()`（input.go）が方向を返し、`MovePlayer(dx, dy)`（move.go）で移動、または `Z` キーで `CheckForEnemies`（攻撃, action.go）。
-  2. 行動すると `isActioned = true` になり `AdvanceTurn()`（monster_spawn.go）でターン数加算・湧きチェック。
+  2. 行動すると `isActioned = true` になる。行動を消費する操作は**これだけを行い、`AdvanceTurn()` を直接呼ばない**。
   3. 攻撃・アイテム効果・罠などはすべて `Action`（`Duration`/`Message`/`Execute`）として `g.Enqueue()` で `ActionQueue` に積まれ、`HandleActionQueue()`（animation.go）が 1 件ずつ実行してメッセージ表示とアニメーションのタイミングを制御する。`Message` は自動的に `messageLog` にも入る。
-  4. キューが空になると `CheckCombatState()`（animation.go）が `IncrementMoveCount()`（毒ダメージ・満腹度減少・HP自然回復・状態異常ターン減算）と `MoveEnemies()`（敵ターン, enemy_ai.go）を実行する。プレイヤーが鈍足なら敵は 2 回動く。
+  4. キューが空になると `CheckCombatState()`（animation.go）が `AdvanceTurn()`（monster_spawn.go。ターン数・フロア滞在ターン加算、風の警告、仮眠中の敵の起床、湧きチェック）を1回だけ呼び、続けて `IncrementMoveCount()`（毒ダメージ・満腹度減少・HP自然回復・状態異常ターン減算）と `MoveEnemies()`（敵ターン, enemy_ai.go）を実行する。プレイヤーが鈍足なら敵は 2 回動く（ターン数は1だけ増える）。移動・攻撃・射撃・足踏み（`X`+`Z`）・道具の使用/投擲/装備・扉・睡眠中の自動行動はどれも1ターン、`A`+方向の方向転換やメニュー操作は0ターン（`turn_test.go`）。
 - 死亡処理は `checkDeath` → `playerDead` フラグ → 死亡メッセージ → フェードアウト → `resetGame()`（move.go）。
 
 ## 主要データ構造（定義場所）
@@ -248,7 +248,6 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 ### Priority C: replayability and diagnostics
 
 - 通常プレイの入力履歴（`InputRecorder` が記録済み）をファイルへ保存し、シードと合わせて再生できるようにする（BOT の冒険は `TestSimReplay` でシードから再現できる）。
-- 足踏み（`X`+`Z`）は敵が行動するがターン数（`turnCount`）が増えず、湧き間隔とフロア滞在ターンが進まない。仕様として揃えるか検討する。
 
 ### Roadmap acceptance criteria
 

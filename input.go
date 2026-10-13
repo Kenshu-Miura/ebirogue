@@ -60,10 +60,7 @@ func (g *Game) processDKeyPress() {
 
 	if g.keys().JustPressed(KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
 		equippedArrow := g.state.Player.EquippedArrow
-		if g.shootArrow(equippedArrow, 10) {
-			// 矢を撃つことでもターン進行
-			g.AdvanceTurn()
-		} else {
+		if !g.shootArrow(equippedArrow, 10) {
 			g.dPressed = false
 			g.EnqueueMessage("矢が装備されていません", 0.5)
 		}

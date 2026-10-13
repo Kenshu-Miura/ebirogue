@@ -132,9 +132,13 @@ func (g *Game) HandleActionQueue() {
 	}
 }
 
+// CheckCombatState は行動の処理が終わった後に1ターンを進める。
+// 行動を消費する操作（移動・攻撃・射撃・足踏み・道具・扉・睡眠中の自動行動など）は
+// isActioned を立てるだけにし、ターン数・湧き・風の警告（AdvanceTurn）と敵ターンはここで1回だけ処理する。
 func (g *Game) CheckCombatState() {
 	if g.isActioned {
 		if !g.isCombatActive {
+			g.AdvanceTurn()
 			g.IncrementMoveCount()
 			g.MoveEnemies()
 			if shouldTakeExtraEnemyTurn(g.state.Player.StatusAilments.Slow, g.moveCount) {

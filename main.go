@@ -463,8 +463,6 @@ func (g *Game) Update() error {
 				g.CheckForEnemies(dx, dy)
 			}
 			g.zPressed = false
-			// 攻撃でもターン進行
-			g.AdvanceTurn()
 			return nil
 		}
 
@@ -479,8 +477,6 @@ func (g *Game) Update() error {
 			if g.state.Player.StatusAilments.Confusion == 0 {
 				g.dx, g.dy = dx, dy // Save the direction of movement
 			}
-			// ターン進行とモンスター湧きチェック
-			g.AdvanceTurn()
 		}
 
 		// 扉を開く処理の追加

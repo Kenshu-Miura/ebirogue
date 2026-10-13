@@ -553,22 +553,37 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 	netDamage := rollEnemyAttackDamage(attacker.AttackPower, target.DefensePower, g.damageIntn())
 
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
+	attackerID, attackerX, attackerY := attacker.ID, attacker.X, attacker.Y
+	targetID, targetX, targetY := target.ID, target.X, target.Y
 
 	action := Action{
 		Duration: 0.5,
 		Message:  fmt.Sprintf("%sが%sを攻撃して%dダメージを与えた", g.enemyDisplayName(attacker.Name), g.enemyDisplayName(target.Name), netDamage),
 		Execute: func(g *Game) {
-			attacker.AttackTimer = 0.5
-			attacker.AttackDirection = determineDirection(dx, dy)
+			// 予約から実行までに別の攻撃で敵が倒れて並びが変わることがあるため、実行時に ID と座標で引き直す
+			targetIndex := g.findEnemyForDefense(targetID, targetX, targetY)
+			if targetIndex < 0 {
+				return
+			}
+			attackerIndex := g.findEnemyForDefense(attackerID, attackerX, attackerY)
+			if attackerIndex >= 0 {
+				g.state.Enemies[attackerIndex].AttackTimer = 0.5
+				g.state.Enemies[attackerIndex].AttackDirection = determineDirection(dx, dy)
+			}
+			target := &g.state.Enemies[targetIndex]
 			target.Health -= netDamage
 
 			// ダメージを受けた敵の金縛り状態を解除
-			if target.StatusAilments.Paralysis {
-				target.StatusAilments.Paralysis = false
-			}
+			target.StatusAilments.Paralysis = false
 
 			if target.Health <= 0 {
-				g.defeatEnemyByEnemy(attackerIndex, targetIndex)
+				if attackerIndex >= 0 {
+					g.defeatEnemyByEnemy(attackerIndex, targetIndex)
+				} else {
+					g.dropEnemyHeldItem(targetIndex)
+					g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
+					g.miniMapDirty = true
+				}
 			}
 		},
 	}
