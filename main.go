@@ -318,6 +318,12 @@ type Game struct {
 	suspendSelectedOption   int          // 中断確認で選択中の項目（0=中断する, 1=やめる）
 	suspendPromptJustOpened bool         // 中断確認が開かれたばかりかどうかのフラグ
 	suspendRequested        bool         // 中断セーブが完了しゲーム終了を要求するフラグ
+
+	showKeyConfig        bool
+	keyConfigSelected    int
+	keyConfigCapturing   bool
+	keyConfigWaitRelease bool
+
 	// ヘルプシステム
 	showHelp             bool // ヘルプウィンドウの表示フラグ
 	helpPage             int  // ヘルプで表示中のページ番号
@@ -351,6 +357,11 @@ func (g *Game) Update() error {
 	// フレームの区切り（入力状態の更新）
 	g.keys().Update()
 	g.inputFrame++
+	if g.showKeyConfig {
+		physical, held := capturePhysicalKey()
+		g.handleKeyConfigFrame(physical, held)
+		return nil
+	}
 
 	// 中断セーブ完了後はゲームを終了する
 	if g.suspendRequested {
@@ -679,6 +690,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw the settings window if the showSettings flag is set
 	if g.showSettings {
 		g.drawSettingsWindow(screen)
+	}
+	if g.showKeyConfig {
+		g.drawKeyConfigWindow(screen)
 	}
 
 	// Draw the suspend prompt if the showSuspendPrompt flag is set
@@ -1012,6 +1026,7 @@ func NewGame() *Game {
 
 	// 設定ファイルを読み込む（存在しない・壊れている場合は初期値）
 	game.settings = loadSettings()
+	game.input = NewInputRecorder(ebitenInput{settings: &game.settings})
 
 	// 中断データがあれば再開する（壊れている場合は新しい冒険のまま）
 	if game.tryResumeFromSave() {

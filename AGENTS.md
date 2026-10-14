@@ -87,6 +87,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `gamehelpers.go`: 頻出パターンの共通ヘルパー。メッセージだけの Action は `g.EnqueueMessage(msg, duration)`、敵へのダメージ＋撃破処理は `g.applyDamageToEnemy(index, damage)`、投擲は `g.throwWithCallbacks(item, range)`、呪い判定は `isCursedEquipment` 等。**新規コードは同じ処理を手書きせずこれらを使う。**
 - `rng.go`（タグなし）: 冒険の乱数源 `gameRNG`（math/rand/v2 の PCG。状態を保存・復元できる）。ターン進行は `g.rng`（`g.random()` / `g.randIntn(n)`）、フロア生成は `newFloorRNG(seed, 階)` の専用系列。**`math/rand` のグローバル関数やパッケージ変数の乱数源は使わない。** `Game` を受け取らない関数には `intn func(int) int` を渡す。テストで特定の判定だけ固定するには `g.randHooks`（`random_hooks.go`）を使う。
 - `input_source.go`（タグなし）: 論理キー `Key`、`InputSource`、仮想入力 `VirtualInput`、記録 `InputRecorder`。`input_ebiten.go` が Ebiten の実キーボードを包む。**キー入力は `ebiten.IsKeyPressed` / `inpututil` を直接呼ばず `g.keys().Pressed(KeyZ)` / `JustPressed` / `PressDuration` を使う。** 入力のリピート間隔は実時間ではなくフレーム数（`stepRepeatFrames` など）。
+- `keybinding.go`（タグなし・純粋）: キー設定の役割名 `keyRoles`、割り当ての補正 `normalizeKeyBindings`・入れ替え `bindPhysicalKey`、画面の案内文の置換 `keyGuide`。画面は `keybinding_ui.go`。**画面にキー名を書く文言は `g.keyGuide(...)` を通す**（ヘルプは `helpPages(bindings)`）。
 - `difficulty.go`（タグなし）: 難易度 `Difficulty`、`goalFloor`、`isBossFloor`、`bossIDForFloor`、`stairsUsable`。ボス撃破の判定とクリア処理は `map.go` の `checkBossDefeated` / `clearRun`（フロアからボスが消えたら撃破）。
 - `bosses.go`: ボス3体（ID 42〜44）の固有行動（殻・召喚・墨・二連撃・場所替え・炎と魔法・HP半減時の2回行動）と、ボスごとの状態異常耐性・即時消去の無効化の定数。テストは `content_bosses_test.go`（`TestSimBossBalance` は `-sim.immortal` でボス単体の撃破ターン数と被ダメージを測る）。
 - `deathcause.go`（タグなし）: 死因 `DamageSource`、死亡文 `deathMessage`、冒険結果 `RunResult` と記録一覧。`runresult_game.go` の `g.damagePlayer(damage, source)` が HP 減少と死因の記録を行い、`g.finishRun(cleared)` が結果を保存する。冒険中の統計 `g.stats`（`RunStats`: 種類別の拾う・使う・投げる・装備・射撃の回数、テンプレート ID ごとの使用回数、直近の使用記録）もセーブと冒険結果に含める。**プレイヤーへのダメージは必ず `damagePlayer`（または `applyPlayerShieldDefense`）を通す。**
@@ -163,7 +164,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - フロア滞在 1200/1300 ターンで風の警告（`checkFloorTimeWarnings`）。
 - 視界: 部屋単位。`updateTileBrightness`（map.go）が現在の部屋+隣接タイルのみ明るくする。敵・アイテムのミニマップ表示は同部屋・隣接・発見済みで決まる（`updateEnemyVisibility` / `updateItemVisibility`）。目潰し中は敵非表示。
 - マップ生成: `GenerateRandomMap`（map.go）→ `generateRooms` → `connectRooms`（mapgen.go, 最小全域木＋ループ辺1本で接続）→ 連結性・壁健全性チェック（`floorConnected`/`roomWallsIntact`, 不合格なら再生成）→ 階段・敵・アイテム・罠配置。通路計画などの純粋ロジックはタグなしの mapgen.go にあり、mapgen_test.go / mapgen_stress_test.go でテストする。
-- 主なキー操作: 方向キー移動 / `Z` 攻撃（正面の罠調査を兼ねる）/ `X`+方向 ダッシュ / `A`+方向 方向転換 / `D` 矢を撃つ / Space 扉を開く / `C` メニュー / `L` メッセージ履歴 / インベントリ内 `F` 絞り込み・`S` ソート・`N` 任意名。`F1` はデバッグビルド（`-tags debug`）専用（`processF1KeyPress`, debug_on.go）。
+- 主なキー操作（初期設定。設定の「キー設定」で変更でき、割り当ては `GameSettings.KeyBindings`、検証・補正・入れ替えは `keybinding.go`、物理キーの読み取りは `input_ebiten.go`）: 方向キー移動 / `Z` 攻撃（正面の罠調査を兼ねる）/ `X`+方向 ダッシュ / `A`+方向 方向転換 / `D` 矢を撃つ / Space 扉を開く / `C` メニュー / `L` メッセージ履歴 / インベントリ内 `F` 絞り込み・`S` ソート・`N` 任意名。`F1` はデバッグビルド（`-tags debug`）専用（`processF1KeyPress`, debug_on.go）。
 - 難易度: 初級・中級・上級（標準）で10・20・30階のボスがクリア条件。ボス階（10・20・30階）はボスを倒すまで階段を使えず、30階より下へは進めない。新しい冒険（初回起動・死亡後・クリア後）は難易度選択画面（`openDifficultySelect`、input.go）から始まり、カーソルの初期位置は `GameSettings.LastDifficulty`。中断再開では表示しない。目標階のボス撃破後はクリア画面（`showClearScreen`）を経て選択画面へ戻る。ヘッドレス（BOT）は選択画面を出さず `newHeadlessGame` の引数の難易度で始まる。
 
 ## 落とし穴・注意点
@@ -240,7 +241,6 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 - 設定メニューを拡張する（フルスクリーン・ミニマップ表示は実装済み）。
   - BGM・効果音の音量設定（音声システム自体が未実装のため、その導入後に追加する）
-  - キー設定（キーの割り当て変更）
 
 ### Priority B: dungeon systems
 

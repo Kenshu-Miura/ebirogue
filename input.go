@@ -822,7 +822,13 @@ func (g *Game) handleSettingsInput() error {
 		return nil
 	}
 
-	const settingsItemCount = 2
+	const settingsItemCount = 3
+	if g.settingsSelectedIndex == 2 && g.keys().JustPressed(KeyZ) {
+		g.showKeyConfig = true
+		g.keyConfigSelected = 0
+		g.keyConfigWaitRelease = true
+		return nil
+	}
 
 	// ↑↓で項目を移動
 	if g.keys().JustPressed(KeyUp) {
@@ -954,7 +960,7 @@ func (g *Game) handleMessageLogInput() error {
 // ヘルプウィンドウの入力処理
 func (g *Game) handleHelpInput() error {
 	if g.showHelp {
-		pages := helpPages()
+		pages := helpPages(g.settings.KeyBindings)
 
 		// ←→でページを切り替え
 		if g.keys().JustPressed(KeyLeft) {

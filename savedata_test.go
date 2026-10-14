@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 )
 
@@ -200,7 +201,7 @@ func TestDecodeSettings(t *testing.T) {
 	if err == nil {
 		t.Error("壊れた設定がエラーにならなかった")
 	}
-	if settings != defaultSettings() {
+	if !reflect.DeepEqual(settings, defaultSettings()) {
 		t.Errorf("壊れた設定で初期値が返らなかった: %+v", settings)
 	}
 }

@@ -265,7 +265,7 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 	const columnWidth = 180   // 列の幅 (ピクセル)
 
 	// 絞り込み中のカテゴリと操作説明をウィンドウ下部に表示
-	footerText := "【" + categoryLabel(g.inventoryFilter) + "】 F:絞り込み S:整頓 N:名前"
+	footerText := "【" + categoryLabel(g.inventoryFilter) + "】" + g.keyGuide(" F:絞り込み S:整頓 N:名前")
 	text.Draw(screen, footerText, mplusNormalFont, windowX+15, windowY+windowHeight-8, color.NRGBA{200, 200, 200, 255})
 
 	indices := g.normalizeInventoryView()
@@ -367,7 +367,7 @@ func (g *Game) drawNameInputWindow(screen *ebiten.Image) {
 	}
 
 	// 操作説明
-	text.Draw(screen, "Z:入力  X:削除(空で閉じる)  Enter:決定", mplusNormalFont, windowX+15, windowY+windowHeight-15, color.NRGBA{200, 200, 200, 255})
+	text.Draw(screen, g.keyGuide("Z:入力  X:削除(空で閉じる)  Enter:決定"), mplusNormalFont, windowX+15, windowY+windowHeight-15, color.NRGBA{200, 200, 200, 255})
 }
 
 // メニューウィンドウの描画
@@ -489,7 +489,7 @@ func (g *Game) drawEmptyInventoryMessage(screen *ebiten.Image) {
 // 設定ウィンドウを描画する
 func (g *Game) drawSettingsWindow(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-	windowWidth, windowHeight := 340, 200
+	windowWidth, windowHeight := 580, 235
 	windowX := (screenWidth - windowWidth) / 2
 	windowY := (screenHeight - windowHeight) / 2
 
@@ -528,7 +528,12 @@ func (g *Game) drawSettingsWindow(screen *ebiten.Image) {
 	}
 
 	// 操作説明
-	text.Draw(screen, "↑↓:選択  ←→:切替  X:戻る", mplusNormalFont, windowX+15, windowY+windowHeight-20, color.NRGBA{200, 200, 200, 255})
+	keyColor := color.Color(color.White)
+	if g.settingsSelectedIndex == 2 {
+		keyColor = color.NRGBA{255, 255, 0, 255}
+	}
+	text.Draw(screen, "キー設定", mplusNormalFont, windowX+45, windowY+140, keyColor)
+	text.Draw(screen, g.keyGuide("↑/↓:選択  ←/→:切替  Z:キー設定  X:戻る"), mplusSmallFont, windowX+15, windowY+windowHeight-20, color.NRGBA{200, 200, 200, 255})
 }
 
 // 中断確認ダイアログを描画する
@@ -568,7 +573,7 @@ func (g *Game) drawMessageLogWindow(screen *ebiten.Image) {
 
 	// タイトルと操作説明
 	text.Draw(screen, "メッセージ履歴", mplusMediumFont, windowX+10, windowY+30, color.White)
-	text.Draw(screen, "↑↓:スクロール  X:閉じる", mplusNormalFont, windowX+windowWidth-220, windowY+30, color.NRGBA{200, 200, 200, 255})
+	text.Draw(screen, g.keyGuide("↑↓:スクロール  X:閉じる"), mplusNormalFont, windowX+windowWidth-220, windowY+30, color.NRGBA{200, 200, 200, 255})
 
 	messages := g.messageLog.Visible(g.messageLogScroll, messageLogPageSize)
 	if len(messages) == 0 {
@@ -623,7 +628,7 @@ func (g *Game) drawBlankCardMenu(screen *ebiten.Image) {
 	}
 
 	// 操作説明
-	text.Draw(screen, "Z:書き込む  X:やめる", mplusNormalFont, windowX+15, windowY+windowHeight-15, color.NRGBA{200, 200, 200, 255})
+	text.Draw(screen, g.keyGuide("Z:書き込む  X:やめる"), mplusNormalFont, windowX+15, windowY+windowHeight-15, color.NRGBA{200, 200, 200, 255})
 }
 
 // ヘルプウィンドウを描画する
@@ -635,13 +640,13 @@ func (g *Game) drawHelpWindow(screen *ebiten.Image) {
 
 	drawWindowWithBorder(screen, windowX, windowY, windowWidth, windowHeight, 220)
 
-	pages := helpPages()
+	pages := helpPages(g.settings.KeyBindings)
 	page := pages[g.helpPage]
 
 	// タイトルとページ番号、操作説明
 	title := fmt.Sprintf("%s (%d/%d)", page.Title, g.helpPage+1, len(pages))
 	text.Draw(screen, title, mplusMediumFont, windowX+10, windowY+30, color.White)
-	text.Draw(screen, "←→:ページ  ↑↓:スクロール  X:閉じる", mplusNormalFont, windowX+windowWidth-290, windowY+30, color.NRGBA{200, 200, 200, 255})
+	text.Draw(screen, g.keyGuide("←→:ページ  ↑↓:スクロール  X:閉じる"), mplusNormalFont, windowX+windowWidth-290, windowY+30, color.NRGBA{200, 200, 200, 255})
 
 	lineHeight := 22
 	lines := helpVisibleLines(page.Lines, g.helpScroll, helpPageSize)
@@ -676,7 +681,7 @@ func (g *Game) drawDifficultyWindow(screen *ebiten.Image) {
 		}
 		text.Draw(screen, label, mplusMediumFont, 60, 140+i*70, color.White)
 	}
-	text.Draw(screen, "矢印キー：選択    Z：冒険を始める", mplusNormalFont, 40, 420, color.White)
+	text.Draw(screen, g.keyGuide("矢印キー：選択    Z：冒険を始める"), mplusNormalFont, 40, 420, color.White)
 }
 
 func (g *Game) drawClearWindow(screen *ebiten.Image) {
@@ -685,7 +690,7 @@ func (g *Game) drawClearWindow(screen *ebiten.Image) {
 	if result == nil {
 		return
 	}
-	lines := []string{fmt.Sprintf("難易度：%s（%d階）", result.Difficulty, result.Floor), fmt.Sprintf("ターン数：%d", result.Turns), fmt.Sprintf("レベル：%d", result.Level), fmt.Sprintf("シード：%d", result.Seed), "Z：次の冒険の難易度を選ぶ"}
+	lines := []string{fmt.Sprintf("難易度：%s（%d階）", result.Difficulty, result.Floor), fmt.Sprintf("ターン数：%d", result.Turns), fmt.Sprintf("レベル：%d", result.Level), fmt.Sprintf("シード：%d", result.Seed), g.keyGuide("Z：次の冒険の難易度を選ぶ")}
 	for i, line := range lines {
 		text.Draw(screen, line, mplusNormalFont, 60, 140+i*55, color.White)
 	}
@@ -718,5 +723,5 @@ func (g *Game) drawRunHistoryWindow(screen *ebiten.Image) {
 		// 長い死因も画面幅内に収まるよう小さいフォントで表示する。
 		text.Draw(screen, cause, mplusSmallFont, 40, y+23, color.White)
 	}
-	text.Draw(screen, "↑↓：スクロール    X：メニュー    C：閉じる", mplusNormalFont, 30, 440, color.White)
+	text.Draw(screen, g.keyGuide("↑↓：スクロール    X：メニュー    C：閉じる"), mplusNormalFont, 30, 440, color.White)
 }

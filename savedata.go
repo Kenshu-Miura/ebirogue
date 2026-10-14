@@ -195,9 +195,10 @@ func inMapBounds(x, y, width, height int) bool {
 
 // GameSettings はゲーム設定
 type GameSettings struct {
-	LastDifficulty Difficulty `json:"lastDifficulty"`
-	Fullscreen     bool       `json:"fullscreen"`
-	ShowMiniMap    bool       `json:"showMinimap"`
+	LastDifficulty Difficulty        `json:"lastDifficulty"`
+	Fullscreen     bool              `json:"fullscreen"`
+	ShowMiniMap    bool              `json:"showMinimap"`
+	KeyBindings    map[string]string `json:"keyBindings"`
 }
 
 // defaultSettings は設定の初期値を返す
@@ -206,6 +207,7 @@ func defaultSettings() GameSettings {
 		LastDifficulty: DifficultyAdvanced,
 		Fullscreen:     false,
 		ShowMiniMap:    true,
+		KeyBindings:    defaultKeyBindings(),
 	}
 }
 
@@ -219,5 +221,6 @@ func decodeSettings(data []byte) (GameSettings, error) {
 	if !settings.LastDifficulty.valid() {
 		settings.LastDifficulty = DifficultyAdvanced
 	}
+	settings.KeyBindings = normalizeKeyBindings(settings.KeyBindings)
 	return settings, nil
 }
