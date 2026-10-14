@@ -144,7 +144,13 @@ func (b *bot) useInventoryItem(index int, actionName string) (bool, error) {
 	if ok, err := b.chooseItemAction(actionName); !ok || err != nil {
 		return false, err
 	}
-	// 識別・壺・白紙のカードなど、続けて対象を選ぶ画面が開いたら取り消す
+	// 真実の眼のカードは識別する道具を選んで確定する（取り消すとカードが残り、同じ判断を繰り返して行き詰まる）
+	if b.g.useIdentifyItem && b.g.showInventory {
+		if err := b.confirmIdentifyTarget(); err != nil {
+			return true, err
+		}
+	}
+	// 壺・白紙のカードなど、ほかに続けて対象を選ぶ画面が開いたら取り消す
 	return true, b.closeWindows()
 }
 
@@ -786,4 +792,41 @@ func satietyHarmfulEquipment(id int) bool {
 		return true
 	}
 	return false
+}
+
+// confirmIdentifyTarget は識別の対象を選ぶ画面で、使ったカード以外の未識別の道具（無ければ別の道具）を選んで確定する。
+func (b *bot) confirmIdentifyTarget() error {
+	g := b.g
+	target := -1
+	for i, item := range g.state.Player.Inventory {
+		if i == g.tmpSelectedItemIndex && !g.GroundItemActioned {
+			continue
+		}
+		if identifiable, ok := item.(Identifiable); ok && !identifiable.IsIdentified() {
+			target = i
+			break
+		}
+		if target < 0 {
+			target = -2 - i // 未識別が無いときの候補（先頭の別の道具）
+		}
+	}
+	if target < -1 {
+		target = -2 - target
+	}
+	if target < 0 {
+		return nil
+	}
+	for i := 0; i < 2*g.state.Player.MaxInventory && g.selectedItemIndex != target; i++ {
+		key := KeyDown
+		if g.selectedItemIndex > target {
+			key = KeyUp
+		}
+		if err := b.tap(key); err != nil {
+			return err
+		}
+	}
+	if g.selectedItemIndex != target {
+		return nil
+	}
+	return b.tap(KeyZ)
 }

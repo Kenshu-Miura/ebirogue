@@ -104,7 +104,8 @@ func (b *bot) hasCursedBelongings() bool {
 
 func (b *bot) hasUnidentified() bool {
 	for _, item := range b.g.state.Player.Inventory {
-		if identifiable, ok := item.(Identifiable); ok && !identifiable.IsIdentified() {
+		// 真実の眼のカード自身は対象に選べない
+		if identifiable, ok := item.(Identifiable); ok && !identifiable.IsIdentified() && item.GetID() != 11 {
 			return true
 		}
 	}
