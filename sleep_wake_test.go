@@ -4,8 +4,42 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
+
+func TestSleepingEnemyDamagePaths(t *testing.T) {
+	for _, path := range []string{"enemyMelee", "enemyExplosion", "rangedExplosion"} {
+		for _, sleep := range []int{-1, 5} {
+			t.Run(path+fmt.Sprint(sleep), func(t *testing.T) {
+				g := newFoundationTestGame()
+				attacker := addTestEnemy(g, 0, 5, 4)
+				target := addTestEnemy(g, 0, 6, 4)
+				g.state.Enemies[target].Health = 100
+				g.state.Enemies[target].StatusAilments.Sleep = sleep
+				switch path {
+				case "enemyMelee":
+					g.AttackEnemyFromBlindEnemy(attacker, target)
+				case "enemyExplosion":
+					g.enqueueEnemyExplosion(EnemyExplosion{BomberIndex: attacker, CenterX: 5, CenterY: 4, Radius: 1, Damage: 10})
+				case "rangedExplosion":
+					g.enqueueExplosionCollateral(0, 5, 4, 6, 4, RangedAttackDefinition{AttackPower: 10, BlastRadius: 1})
+				}
+				if g.state.Enemies[target].StatusAilments.Sleep != sleep {
+					t.Fatal("damage acted before queued action")
+				}
+				runQueuedActions(g)
+				want := 0
+				if path == "enemyMelee" && sleep > 0 {
+					want = sleep
+				}
+				if g.state.Enemies[target].Health >= 100 || g.state.Enemies[target].StatusAilments.Sleep != want {
+					t.Fatalf("health=%d sleep=%d want sleep=%d", g.state.Enemies[target].Health, g.state.Enemies[target].StatusAilments.Sleep, want)
+				}
+			})
+		}
+	}
+}
 
 func TestSleepingRoomStayDoesNotReroll(t *testing.T) {
 	g := newFoundationTestGame()
