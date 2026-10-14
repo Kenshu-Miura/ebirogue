@@ -12,4 +12,5 @@ var cardItemTemplates = map[int]ItemTemplate{
 	171: {ID: 171, ItemType: "Card", Type: "Card", Name: "道具寄せのカード", Description: "床の道具を近い順に自分の周囲へ集める。足元の道具と貼りついた聖域のカードは動かない。", Char: 'C', UseActions: map[string]UseAction{"UseCard": gatherItemsCard}},
 	172: {ID: 172, ItemType: "Card", Type: "Card", Name: "バクチのカード", Description: "半分の確率で所持金が2倍と100増える。残りの半分は所持金が0になる。", Char: 'C', UseActions: map[string]UseAction{"UseCard": gambleCard}},
 	173: {ID: 173, ItemType: "Card", Type: "Card", Name: "困った時のカード", Description: "HPを全回復し、悪い状態異常・空腹・呪い・パワー低下の順に困りごとを1つ解消する。", Char: 'C', UseActions: map[string]UseAction{"UseCard": troubleCard}},
+	174: {ID: 174, ItemType: "Card", Type: "Card", Name: "ゾワゾワのカード", Char: 'C', Description: "周囲1マスの敵を20ターン、反対向きに攻撃するゾワゾワにする。ボスは短縮される。", UseActions: map[string]UseAction{"UseCard": backwardCard}},
 }
