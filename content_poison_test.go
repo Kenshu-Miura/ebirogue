@@ -121,3 +121,51 @@ func TestPoisonArrowTrapStatusResistance(t *testing.T) {
 		}
 	}
 }
+
+func TestNaturalRegenByLevelAndHunger(t *testing.T) {
+	for _, c := range []struct{ level, want int }{{1, 1}, {10, 2}, {20, 3}} {
+		g := newPoisonTestGame(8)
+		g.state.Player.Level = c.level
+		g.state.Player.Health, g.state.Player.MaxHealth = 10, 300
+		g.IncrementMoveCount()
+		if got := g.state.Player.Health - 10; got != c.want {
+			t.Fatalf("Lv%d regen = %d, want %d", c.level, got, c.want)
+		}
+	}
+	// 最大HPを超えない
+	g := newPoisonTestGame(8)
+	g.state.Player.Level = 20
+	g.state.Player.Health, g.state.Player.MaxHealth = 39, 40
+	g.IncrementMoveCount()
+	if g.state.Player.Health != 40 {
+		t.Fatalf("HP = %d, want 40", g.state.Player.Health)
+	}
+	// 満腹度0では回復せず1減る
+	g = newPoisonTestGame(8)
+	g.state.Player.Satiety = 0
+	g.state.Player.Health = 20
+	g.IncrementMoveCount()
+	if g.state.Player.Health != 19 {
+		t.Fatalf("starving HP = %d, want 19", g.state.Player.Health)
+	}
+}
+
+func TestEarlyBalanceValues(t *testing.T) {
+	if got := MonsterDefinitions[5].RangedAttack.AttackPower; got != 8 {
+		t.Errorf("イシガニの投石 = %d, want 8", got)
+	}
+	for _, id := range []int{1, 20, 46} {
+		if got := MonsterDefinitions[id].SpecialAttackProbability; got != 0.15 {
+			t.Errorf("enemy %d special attack probability = %v, want 0.15", id, got)
+		}
+	}
+	count := 0
+	for _, id := range itemSpawnPool {
+		if id == 43 {
+			count++
+		}
+	}
+	if count != powerUpCardSpawnWeight || len(itemSpawnPool) != len(randomItemTemplateIDs)+powerUpCardSpawnWeight-1 {
+		t.Fatalf("power-up card appears %d times in a pool of %d", count, len(itemSpawnPool))
+	}
+}

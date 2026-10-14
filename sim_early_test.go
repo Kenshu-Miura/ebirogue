@@ -47,12 +47,14 @@ type deathTrace struct {
 	Snaps     []traceSnap
 	FloorFood []int // 各階に着いたとき床にあった食料の数（i 番目が i+1 階）
 	FloorHeal []int // 同じく回復の道具の数
+	FloorPow  []int // 各階に着いたときのパワー
 }
 
 type traceRecorder struct {
 	ring      []traceSnap
 	floorFood []int
 	floorHeal []int
+	floorPow  []int
 	lastFloor int
 }
 
@@ -135,6 +137,7 @@ func (r *traceRecorder) record(b *bot) {
 		for len(r.floorFood) < g.Floor {
 			r.floorFood = append(r.floorFood, food)
 			r.floorHeal = append(r.floorHeal, heal)
+			r.floorPow = append(r.floorPow, p.Power)
 		}
 	}
 	s := traceSnap{
@@ -159,7 +162,7 @@ func (r *traceRecorder) record(b *bot) {
 }
 
 func (r *traceRecorder) trace() *deathTrace {
-	return &deathTrace{Snaps: append([]traceSnap(nil), r.ring...), FloorFood: r.floorFood, FloorHeal: r.floorHeal}
+	return &deathTrace{Snaps: append([]traceSnap(nil), r.ring...), FloorFood: r.floorFood, FloorHeal: r.floorHeal, FloorPow: r.floorPow}
 }
 
 // --- 分類 ---
@@ -322,6 +325,7 @@ type earlyFloorStats struct {
 	ArrivalLevel  float64 // その階に着いた全冒険の到着時平均レベル
 	FoodOnFloor   float64 // 着いたとき床にあった食料の平均
 	HealOnFloor   float64
+	ArrivalPower  float64 // 着いたときの平均パワー
 }
 
 type earlyReport struct {
@@ -364,6 +368,7 @@ func buildEarlyReport(outcomes []simOutcome, maxFloor int) earlyReport {
 			if o.Death != nil && f <= len(o.Death.FloorFood) {
 				st.FoodOnFloor += float64(o.Death.FloorFood[f-1])
 				st.HealOnFloor += float64(o.Death.FloorHeal[f-1])
+				st.ArrivalPower += float64(o.Death.FloorPow[f-1])
 			}
 		}
 		if o.Ended != "died" || o.Floor > maxFloor || o.Death == nil {
@@ -426,6 +431,7 @@ func buildEarlyReport(outcomes []simOutcome, maxFloor int) earlyReport {
 			st.ArrivalLevel /= float64(st.Reached)
 			st.FoodOnFloor /= float64(st.Reached)
 			st.HealOnFloor /= float64(st.Reached)
+			st.ArrivalPower /= float64(st.Reached)
 		}
 	}
 	return rep
@@ -472,10 +478,10 @@ func renderEarlyReport(rep earlyReport) string {
 	}
 	fmt.Fprintf(&b, "# 序盤（1〜%d階）の死亡分析\n\n", rep.MaxFloor)
 	fmt.Fprintf(&b, "- 生成: %s、性格 %s、冒険数 %d、1〜%d階での死亡 %d\n\n", time.Now().Format("2006-01-02 15:04"), rep.Persona, rep.Runs, rep.MaxFloor, rep.Deaths)
-	b.WriteString("## 階ごと\n\n| 階 | 到達 | 死亡 | 死亡率 | 到着時Lv | 死亡時Lv | 床の食料 | 床の回復 |\n|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	b.WriteString("## 階ごと\n\n| 階 | 到達 | 死亡 | 死亡率 | 到着時Lv | 死亡時Lv | 床の食料 | 床の回復 | 到着時パワー |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for f := 1; f <= rep.MaxFloor; f++ {
 		st := rep.Floors[f]
-		fmt.Fprintf(&b, "| %d | %d | %d | %s | %.1f | %.1f | %.2f | %.2f |\n", f, st.Reached, st.Died, pct(st.Died, st.Reached), st.ArrivalLevel, st.DeathLevel, st.FoodOnFloor, st.HealOnFloor)
+		fmt.Fprintf(&b, "| %d | %d | %d | %s | %.1f | %.1f | %.2f | %.2f | %.1f |\n", f, st.Reached, st.Died, pct(st.Died, st.Reached), st.ArrivalLevel, st.DeathLevel, st.FoodOnFloor, st.HealOnFloor, st.ArrivalPower)
 	}
 	a, bb := 0, 0
 	for class, n := range rep.Classes {

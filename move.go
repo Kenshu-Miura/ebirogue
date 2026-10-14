@@ -19,15 +19,9 @@ func (g *Game) IncrementMoveCount() {
 		// 死亡チェック
 		g.state.Player.checkDeath(g)
 	} else {
-		// 満腹度が0でない場合のみHP自動回復
-		if g.moveCount%5 == 0 && g.moveCount != 0 {
-			// Recover 1 HP for the player
-			g.state.Player.Health += 1
-			// Ensure player's health does not exceed MaxHealth
-			if g.state.Player.Health > g.state.Player.MaxHealth {
-				g.state.Player.Health = g.state.Player.MaxHealth
-			}
-		}
+		// 満腹度が0でない場合のみ、レベルに応じて毎ターンHPが自然回復する
+		player := &g.state.Player
+		player.Health = recoveredValue(player.Health, player.MaxHealth, naturalRegenPerTurn(player.Level), false)
 	}
 
 	armorAbilities := []EquipmentAbilityID(nil)

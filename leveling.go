@@ -24,6 +24,24 @@ var levelHealthGains = []struct{ UpTo, Gain int }{
 	{maxPlayerLevel, 2},
 }
 
+// naturalRegenByLevel は満腹度が残っているときの毎ターンの自然回復量（風来のシレン6を参考）。
+// UpTo 以下のレベルでは Amount だけ回復する。
+var naturalRegenByLevel = []struct{ UpTo, Amount int }{
+	{9, 1},
+	{19, 2},
+	{maxPlayerLevel, 3},
+}
+
+// naturalRegenPerTurn はレベル level のときの毎ターンの自然回復量。
+func naturalRegenPerTurn(level int) int {
+	for _, r := range naturalRegenByLevel {
+		if level <= r.UpTo {
+			return r.Amount
+		}
+	}
+	return naturalRegenByLevel[len(naturalRegenByLevel)-1].Amount
+}
+
 // playerLevelExpTable は各レベルに到達するための累計経験値（添字がレベル。0と1は0）。
 var playerLevelExpTable = buildPlayerLevelExpTable()
 

@@ -137,7 +137,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 2. **効果**: `itemeffects.go`（アイテム）/ 定義内クロージャ（敵・罠）。
 3. **画像**: `img/` に 30x30 透過 PNG。敵の上位種画像は基本種の輪郭・アルファ・明暗を保ち、色相だけを変更した色違いにする。`NewGame()`（main.go）で読み込み、`getItemImage` / `getEnemyImage` / `DrawMapTraps`（draw.go）の分岐に追加。画像は `BaseItem.Type` や `Enemy.Type` の文字列で選ばれる（例: `"Mintia"` → mintiaImg, `"Card"` → cardImg）。
 4. **セーブ対応**: アイテムはテンプレート ID から再生成される（`SavedItem`, savegame.go の `itemToSaved`/`savedToItem`）ので、**新しい可変フィールドを追加した場合は `SavedItem` と両変換関数に追記**する。敵は `SavedEnemy`（ID + 可変ステータス）。罠は `MapTrap.TemplateID` の明示 ID で保存されるので、**一度使った罠 ID は変更・再利用しない**。
-5. **湧き/出現**: 敵なら `FloorSpawnTables`。アイテムの床出現は現状 `createItem` が全テンプレートから一様ランダム。
+5. **湧き/出現**: 敵なら `FloorSpawnTables`。アイテムの床出現は `createItem` が `itemSpawnPool`（items.go。`itemSpawnWeights` に書いた ID だけ重みを付け、ほかは同じ重み）から抽選する。
 6. **テスト**: 分野別のコンテンツテスト（`content_weapons_test.go` / `content_enemies_test.go` / `content_cards_test.go` / `content_pots_test.go` / `content_traps_test.go` / `content_tables_test.go`）にテンプレート存在チェックと効果のテストを追加。`go test -run TestSimSmoke -count=1 .` で不変条件違反が無いことも確認する。
 7. **説明**: 必要なら `help.go` のヘルプページも更新。
 
@@ -154,7 +154,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 初期ステータス: HP 40（`initialPlayerHealth`）/ 満腹度 100 / パワー 8 / 攻撃 3 / 防御 3 / インベントリ上限 20。
 - レベル（`leveling.go`、タグなし・純粋）: 上限99。必要経験値は式で生成する `playerLevelExpTable`（`expForLevel` / `levelForExp`）、最大HPの増加は `levelHealthGains`、攻撃力の補正は `levelAttackBonus`。レベルの変更は `Player.setLevel`（move.go。最大HPを差分だけ増減、将来のレベル低下もこれを使う）、経験値獲得後は `checkLevelUp` で複数レベルまとめて上がる。数値の根拠は `docs/agents/balance-level99.md` の決定事項。
 - ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + `levelAttackBonus(レベル)`。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。
-- 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら 5 ターンごとに HP+1 自然回復。毒は状態異常ではなくパワー1低下の即時効果（`g.drainPlayerPower`, player_power.go。量は `poisonPowerDrain`, trap_damage.go）。毒ヘビ系・毒矢の罠・腐った食料が使い、完全回復のカードでは戻らない。
+- 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら毎ターン自然回復し、量は Lv1〜9 で1・Lv10〜19 で2・Lv20 以上で3（`naturalRegenPerTurn`, leveling.go）。毒は状態異常ではなくパワー1低下の即時効果（`g.drainPlayerPower`, player_power.go。量は `poisonPowerDrain`, trap_damage.go）。毒ヘビ系・毒矢の罠・腐った食料が使い、完全回復のカードでは戻らない。
 - 特殊盾は爆発・炎・魔法の半減、盗難無効、状態異常50%無効、敵攻撃25%回避、爆発以外の遠距離攻撃反射、通常攻撃への半分カウンターを提供する。使い捨ての盾は被弾ごとに強化値と防御力が1低下する。
 - 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）、大型地雷は 3/4 切り上げ（`largeMineTrapDamage`, trap_damage.go）。木の矢・鉄の矢・落石の罠は固定の威力 6・12・16（trap_damage.go、初期HP40に合わせた値。根拠は `docs/agents/balance-level99.md` の「残った課題」）。
 - 罠の効果関数は `stepOnTrap` が設定する `g.steppedTrapSource` を死因に使う（罠 ID・名前を手書きしない）。落とし穴は `availableTrapIDs` でボス階・30階の抽選から除き、落下は `requestFloorDescent` で予約し、キューが空になりターンの処理が終わってから階段と同じ `beginFloorDescent`（map.go）を通す（すぐ暗転すると残った行動が新しい階で実行される）。

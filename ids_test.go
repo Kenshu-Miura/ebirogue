@@ -33,3 +33,16 @@ func TestPickTemplateIDOnlyReturnsListedIDs(t *testing.T) {
 		t.Fatalf("empty ids should return fallback, got %d", got)
 	}
 }
+
+func TestWeightedTemplateIDs(t *testing.T) {
+	got := weightedTemplateIDs([]int{1, 2, 3}, map[int]int{2: 3, 3: 0})
+	want := []int{1, 2, 2, 2}
+	if len(got) != len(want) {
+		t.Fatalf("pool = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("pool = %v, want %v", got, want)
+		}
+	}
+}
