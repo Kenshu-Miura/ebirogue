@@ -71,24 +71,34 @@ func (g *Game) enqueueCursedEquipReveal(item Equipable, itemName string, identif
 	})
 }
 
-// throwWithCallbacks は標準のコールバックでプレイヤーの位置からアイテムを投げる。
+// throwWithCallbacks は海老さんの位置から向いている方向へ道具を飛ばす（投擲・射撃・杖の魔法弾。projectile.go）。
+// 射撃（g.dPressed）は shootArrow から呼ぶ。
 func (g *Game) throwWithCallbacks(item Item, throwRange int) {
-	g.ThrowItem(item, throwRange, &g.state.Player, g.state.Map, g.state.Enemies,
-		func(item Item, position Coordinate, itemIndex int) {
-			g.onWallHit(item, position, itemIndex)
-		},
-		func(target Character, item Item, index int) {
-			g.onTargetHit(target, item, index)
-		})
+	g.ThrowItem(g.newPlayerProjectile(item, g.projectileKindFor(item), throwRange))
 }
 
 // shootArrow は矢を1本消費し、射撃として投射する。
 // Dキーとインベントリの「撃つ」で同じ処理を使い、回転・ダメージ判定を統一する。
+// 連射の能力（Projectile.Volley）があれば、矢が残っている限り続けて撃つ。
 func (g *Game) shootArrow(arrow *Arrow, throwRange int) bool {
 	if arrow == nil || arrow.ShotCount <= 0 {
 		return false
 	}
 
+	// 描画の回転、射撃メッセージ、射撃ダメージの判定に使用される。
+	g.dPressed = true
+	p := g.newPlayerProjectile(g.takeShotArrow(arrow), ProjectileShot, throwRange)
+	g.ThrowItem(p)
+	for n := 1; n < p.Volley && arrow.ShotCount > 0; n++ {
+		next := p
+		next.Item = g.takeShotArrow(arrow)
+		g.ThrowItem(next)
+	}
+	return true
+}
+
+// takeShotArrow は矢の束から1本を取り出して返す。撃ち尽くしたら束を所持品と装備から外す。
+func (g *Game) takeShotArrow(arrow *Arrow) *Arrow {
 	arrow.ShotCount--
 	g.stats.counts("Arrow").Shot++
 	shotArrow := *arrow
@@ -106,11 +116,7 @@ func (g *Game) shootArrow(arrow *Arrow, throwRange int) bool {
 			g.state.Player.EquippedArrow = nil
 		}
 	}
-
-	// 描画の回転、射撃メッセージ、射撃ダメージの判定に使用される。
-	g.dPressed = true
-	g.throwWithCallbacks(&shotArrow, throwRange)
-	return true
+	return &shotArrow
 }
 
 // useCane は杖を1回振る。残り回数がない場合はメッセージのみ表示して false を返す。

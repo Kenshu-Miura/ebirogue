@@ -13,6 +13,7 @@ type randHooks struct {
 	enemyCritical    func(int) int // 敵の痛恨の一撃の判定
 	enemyEvasion     func(int) int // 敵が通常攻撃をかわす判定
 	displacement     func(int) int // 持ち物を落とす処理の対象・位置の抽選
+	projectile       func(int) int // 投げた道具・矢が敵に当たるかの判定（命中率が100%未満のときだけ）
 }
 
 func (g *Game) hookOrRandIntn(hook func(int) int) func(int) int {
@@ -40,3 +41,5 @@ func (g *Game) enemyCriticalIntn() func(int) int { return g.hookOrRandIntn(g.ran
 func (g *Game) enemyEvasionIntn() func(int) int { return g.hookOrRandIntn(g.randHooks.enemyEvasion) }
 
 func (g *Game) displacementIntn() func(int) int { return g.hookOrRandIntn(g.randHooks.displacement) }
+
+func (g *Game) projectileIntn() func(int) int { return g.hookOrRandIntn(g.randHooks.projectile) }
