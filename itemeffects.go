@@ -503,6 +503,7 @@ var vacuumSlash = func(g *Game) {
 			playerX, playerY := g.state.Player.GetPosition()
 			survivors := g.state.Enemies[:0]
 			defeatedExperience := 0
+			var defeated []Enemy
 			for i := range g.state.Enemies {
 				enemy := g.state.Enemies[i]
 				if !isInRoomWideEffect(playerX, playerY, enemy.X, enemy.Y, g.rooms) {
@@ -516,11 +517,15 @@ var vacuumSlash = func(g *Game) {
 				if enemy.Health <= 0 {
 					defeatedExperience += enemy.ExperiencePoints
 					g.EnqueueMessage(fmt.Sprintf("%sを倒した。", enemy.Name), 0.4)
+					defeated = append(defeated, enemy)
 					continue
 				}
 				survivors = append(survivors, enemy)
 			}
 			g.state.Enemies = survivors
+			for _, enemy := range defeated {
+				g.onEnemyDefeated(enemy)
+			}
 			if defeatedExperience > 0 {
 				g.state.Player.ExperiencePoints += defeatedExperience
 				g.state.Player.checkLevelUp(g)

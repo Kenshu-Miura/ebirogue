@@ -134,6 +134,10 @@ type MonsterDefinition struct {
 	CriticalPercent int
 	// プレイヤーの通常攻撃をかわす確率（%、F4）。必中・封印・睡眠・金縛り中は0
 	EvasionPercent int
+	// Behavior は系統固有の行動（逃げ回る・仲間を呼ぶ・ほかの敵を回復するなど）。enemy_behaviors.go の runEnemyBehavior が呼ぶ
+	Behavior EnemyBehavior
+	// OnDefeated は倒れたときの処理（遅れて別の敵が現れるなど）。enemy_behaviors.go の onEnemyDefeated が呼ぶ
+	OnDefeated EnemyDefeatedFunc
 }
 
 // enemyCriticalPercent は敵の通常攻撃が痛恨の一撃になる確率（%）を返す。
@@ -569,6 +573,9 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 		definition.RangedAttack.AttackPower = attackPower
 		definitions[id] = definition
 	}
+
+	// 追加計画の敵（ID 66〜）は系統ごとの表から加える（enemy_expansion.go）。
+	addMonsterFamilies(definitions, allMonsterFamilies())
 	return definitions
 }
 

@@ -159,6 +159,7 @@ func (g *Game) defeatEnemy(index int) {
 	g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
 	g.state.Player.ExperiencePoints += enemy.ExperiencePoints
 	g.state.Player.checkLevelUp(g)
+	g.onEnemyDefeated(enemy)
 }
 
 // dropEnemyHeldItem は盗賊系の敵が持つアイテムを撃破地点へ戻す。
@@ -192,6 +193,7 @@ func (g *Game) defeatEnemyByEnemy(attackerIndex, targetIndex int) {
 		return
 	}
 
+	defeated := g.state.Enemies[targetIndex]
 	g.dropEnemyHeldItem(targetIndex)
 	g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
 	if targetIndex < attackerIndex {
@@ -199,6 +201,7 @@ func (g *Game) defeatEnemyByEnemy(attackerIndex, targetIndex int) {
 	}
 	g.levelUpEnemy(attackerIndex)
 	g.miniMapDirty = true
+	g.onEnemyDefeated(defeated)
 }
 
 // enemyIndexAt は指定座標にいる敵のインデックスを返す。

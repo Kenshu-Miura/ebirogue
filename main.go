@@ -290,6 +290,8 @@ type Game struct {
 	blankCardIndex      int          // 書き込み先リストで選択中の位置
 	blankCardTarget     *Card        // 書き込み対象の白紙のカード
 	genocidedMonsterIDs map[int]bool // ジェノサイドのカードで封じられた敵ID（冒険中は出現しない）
+	// 敵の行動システム（enemy_behaviors.go）
+	pendingEnemySpawns []PendingEnemySpawn // 遅れて現れる敵の予約（フロア移動で消える）
 	// メニューシステム
 	showMenu                  bool // メニューウィンドウの表示フラグ
 	menuSelectedRow           int  // メニューで選択中の行（0=上, 1=下）

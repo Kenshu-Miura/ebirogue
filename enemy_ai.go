@@ -465,42 +465,9 @@ func (g *Game) revealEnemy(enemyIndex int) bool {
 }
 
 // MoveTowardsPlayer は敵をプレイヤーへ1マス近づける。
-// まっすぐ近づけない場合は enemyMoveFallbacks の代替候補を優先順に試す。
+// まっすぐ近づけない場合は enemyMoveFallbacks の代替候補を優先順に試す（stepEnemyToward）。
 func (g *Game) MoveTowardsPlayer(enemyIndex int) {
-	enemy := &g.state.Enemies[enemyIndex]
-	player := g.state.Player
-
-	dx := player.X - enemy.X
-	dy := player.Y - enemy.Y
-	stepX, stepY := sign(dx), sign(dy)
-
-	// 斜め移動が壁に阻まれる場合は縦か横だけの移動へ切り替える
-	if dx != 0 && dy != 0 {
-		blockUp, blockDown, blockLeft, blockRight := isBlocked(g, enemy.X, enemy.Y)
-		blockDiagonal := isDiagonallyBlocked(g, enemy.X+stepX, enemy.Y+stepY)
-		if blockDiagonal || ((dx > 0 && dy > 0 && (blockDown || blockRight)) ||
-			(dx > 0 && dy < 0 && (blockUp || blockRight)) ||
-			(dx < 0 && dy > 0 && (blockDown || blockLeft)) ||
-			(dx < 0 && dy < 0 && (blockUp || blockLeft))) {
-			if g.randIntn(2) == 0 {
-				stepY = 0 // 縦移動をやめる
-			} else {
-				stepX = 0 // 横移動をやめる
-			}
-		}
-	}
-
-	// まずプレイヤーへ直進する
-	if g.tryMoveEnemy(enemyIndex, stepX, stepY) {
-		return
-	}
-
-	// 直進できない場合は方向別の代替候補を順に試す
-	for _, step := range enemyMoveFallbacks(g, enemyIndex, dx, dy) {
-		if g.tryMoveEnemy(enemyIndex, step[0], step[1]) {
-			return
-		}
-	}
+	g.stepEnemyToward(enemyIndex, g.state.Player.X, g.state.Player.Y)
 }
 
 // enemyMoveFallbacks は直進できない敵の代替移動候補を優先順で返す。
@@ -724,6 +691,11 @@ func (g *Game) actEnemy(i int) {
 		g.state.Enemies[i].PlayerDiscovered = false
 	} else if inSameRoom {
 		g.state.Enemies[i].PlayerDiscovered = true
+	}
+
+	// 系統固有の行動（逃げ回る・仲間を呼ぶ・回復するなど、enemy_behaviors.go）。封印中は行わない。
+	if g.runEnemyBehavior(i) {
+		return
 	}
 
 	// ワープと場所替えは共通状態処理後、かつ封印されていない場合だけ試みる。

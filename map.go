@@ -61,6 +61,7 @@ func (g *Game) handleFadingOut() {
 			g.windWarning1Shown = false
 			g.windWarning2Shown = false
 			g.pickupBanned = false // 拾得禁止はフロア移動で解除
+			g.pendingEnemySpawns = nil
 			// フロア到着時にオートセーブ（クラッシュ時の復旧用）
 			g.autoSave()
 		}

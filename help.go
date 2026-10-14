@@ -11,6 +11,11 @@ type HelpPage struct {
 	Lines []string
 }
 
+// expansionHelpPages は追加計画の担当（敵・指輪など）が init() で加えるヘルプのページ。
+// 「特殊な敵」の直後に、加えた順（ファイル名の順）で並ぶ。担当ごとに別のページを加え、help.go は編集しない
+// （並列の担当が同じページの行を書き換えて衝突しないため）。
+var expansionHelpPages []HelpPage
+
 // helpPages はヘルプ画面の全ページ（操作方法・状態異常）を返す
 func helpPages(bindings ...map[string]string) []HelpPage {
 	pages := []HelpPage{
@@ -145,6 +150,7 @@ func helpPages(bindings ...map[string]string) []HelpPage {
 			},
 		},
 	}
+	pages = insertHelpPagesAfter(pages, "特殊な敵", expansionHelpPages)
 	if len(bindings) > 0 {
 		for i, line := range pages[0].Lines {
 			pages[0].Lines[i] = keyGuide(bindings[0], line)
@@ -161,6 +167,24 @@ func helpPages(bindings ...map[string]string) []HelpPage {
 		}
 	}
 	return pages
+}
+
+// insertHelpPagesAfter は title のページの直後に extra を挿入した一覧を返す（title が無ければ末尾に加える）。
+func insertHelpPagesAfter(pages []HelpPage, title string, extra []HelpPage) []HelpPage {
+	if len(extra) == 0 {
+		return pages
+	}
+	at := len(pages)
+	for i, page := range pages {
+		if page.Title == title {
+			at = i + 1
+			break
+		}
+	}
+	result := make([]HelpPage, 0, len(pages)+len(extra))
+	result = append(result, pages[:at]...)
+	result = append(result, extra...)
+	return append(result, pages[at:]...)
 }
 
 // helpMaxScroll は総行数 total と表示行数 count からスクロールできる最大量を返す
