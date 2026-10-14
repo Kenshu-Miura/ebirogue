@@ -55,6 +55,7 @@ func (g *Game) handleFadingOut() {
 			g.rooms = newRoom
 			// ジェノサイドで封じた系統は初期配置からも取り除く
 			g.removeGenocidedEnemies()
+			g.wakeSleepingEnemiesOnArrival()
 			// フロア変更時のリセット処理
 			g.bossDefeated = false
 			g.floorTurns = 0

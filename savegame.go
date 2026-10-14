@@ -508,6 +508,7 @@ func (g *Game) applySaveData(save *SaveData) error {
 		MapTraps: traps,
 	}
 	g.rooms = rooms
+	g.previousPlayerRoomID = g.roomIDAt(g.state.Player.X, g.state.Player.Y)
 	g.seed = save.Seed
 	g.rng = rng
 	g.difficulty = save.Difficulty

@@ -279,6 +279,12 @@ func (g *Game) InitializeSpawnSystem() {
 // 仮眠状態の敵の起床チェック
 func (g *Game) CheckSleepingEnemyWakeUp() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
+	roomID := g.roomIDAt(playerX, playerY)
+	previous := g.previousPlayerRoomID
+	g.previousPlayerRoomID = roomID
+	if roomID == -1 || roomID == previous {
+		return
+	}
 
 	for i := range g.state.Enemies {
 		enemy := &g.state.Enemies[i]
@@ -297,6 +303,21 @@ func (g *Game) CheckSleepingEnemyWakeUp() {
 			}
 		}
 	}
+}
+
+// roomIDAt は isSameRoom と同じ部屋の内側を調べる。通路・壁は -1。
+func (g *Game) roomIDAt(x, y int) int {
+	for _, room := range g.rooms {
+		if x > room.X && x < room.X+room.Width-1 && y > room.Y && y < room.Y+room.Height-1 {
+			return room.ID
+		}
+	}
+	return -1
+}
+
+func (g *Game) wakeSleepingEnemiesOnArrival() {
+	g.previousPlayerRoomID = -1
+	g.CheckSleepingEnemyWakeUp()
 }
 
 // 隣接時や攻撃時の起床チェック（他の関数から呼び出される）

@@ -388,36 +388,12 @@ var trajectoryDotImg, trajectoryLandingImg *ebiten.Image
 // trajectoryPreviewSpec は射線プレビューを表示すべきかどうかと、
 // その射程・壁のマス自体に到達するか（杖の魔法弾）を返す
 func (g *Game) trajectoryPreviewSpec() (throwRange int, stopOnWallTile bool, active bool) {
-	// インベントリのアクションメニューで「撃つ」「投げる」「使う（杖）」を選択中
-	if g.showItemActions && g.selectedItemIndex >= 0 && g.selectedItemIndex < len(g.state.Player.Inventory) {
-		item := g.state.Player.Inventory[g.selectedItemIndex]
-		if _, isArrow := item.(*Arrow); isArrow {
-			// 矢のメニューは「装備/はずす」「撃つ」「投げる」の並び
-			if g.selectedActionIndex == 1 || g.selectedActionIndex == 2 {
-				return 10, false, true
-			}
-			return 0, false, false
-		}
-		if _, isCane := item.(*Cane); isCane && g.selectedActionIndex == 0 { // 使う（魔法弾）
-			return 30, true, true
-		}
-		if g.selectedActionIndex == 1 { // 投げる
-			return 10, false, true
-		}
-		return 0, false, false
+	if g.showItemActions && !g.showItemDescription && g.selectedItemIndex >= 0 && g.selectedItemIndex < len(g.state.Player.Inventory) {
+		return itemActionPreview(g.state.Player.Inventory[g.selectedItemIndex], g.currentItemActions(), g.selectedActionIndex)
 	}
-
-	// 足元メニューで「投げる」「使う（杖）」を選択中
 	if g.ShowGroundItem && g.currentGroundItem != nil && !g.showGroundItemDescription {
-		if g.selectedGroundActionIndex == 3 { // 投げる
-			return 10, false, true
-		}
-		if _, isCane := g.currentGroundItem.(*Cane); isCane && g.selectedGroundActionIndex == 2 { // 使う（魔法弾）
-			return 30, true, true
-		}
-		return 0, false, false
+		return itemActionPreview(g.currentGroundItem, g.currentGroundItemActions(), g.selectedGroundActionIndex)
 	}
-
 	// Aキーで向きを変えている間、装備中の矢の射線を表示する
 	if g.keys().Pressed(KeyA) && g.state.Player.EquippedArrow != nil &&
 		!g.showInventory && !g.showMenu && !g.showSettings && !g.showSuspendPrompt &&

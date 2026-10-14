@@ -89,14 +89,7 @@ func (g *Game) HandleGroundItemInput() {
 
 	// Cキーで全てのメニューを閉じる処理
 	if g.keys().JustPressed(KeyC) && g.ShowGroundItem {
-		g.ShowGroundItem = false
-		g.selectedGroundActionIndex = 0
-		g.GroundItemActioned = false
-		g.showGroundItemDescription = false
-		g.groundItemDescriptionText = ""
-		g.groundMenuJustOpened = false // フラグもリセット
-		g.showMenu = false
-		g.returnToMenuFromGround = false
+		g.closeAllMenus()
 	}
 
 	if g.ShowGroundItem && g.currentGroundItem != nil && !g.GroundItemActioned {
@@ -304,24 +297,8 @@ func (g *Game) handleInventoryInput() error {
 	// Cキーが押された場合の処理
 	if cPressed {
 		// 何かメニューが開いている場合は全て閉じる
-		if g.showInventory || g.ShowGroundItem || g.showMenu || g.showEmptyInventoryMessage {
-			g.showInventory = false
-			g.ShowGroundItem = false
-			g.showMenu = false
-			g.showEmptyInventoryMessage = false
-			g.returnToMenuFromInventory = false
-			g.returnToMenuFromGround = false
-			g.selectedItemIndex = 0
-			g.selectedActionIndex = 0
-			g.selectedGroundActionIndex = 0
-			// アイテム詳細関連のフラグもリセット
-			g.showItemActions = false
-			g.showItemDescription = false
-			g.useIdentifyItem = false
-			g.usePotInsert = false
-			g.itemTargetEffect = nil
-			g.GroundItemActioned = false
-			g.tmpSelectedItemIndex = -1
+		if g.showInventory || g.ShowGroundItem || g.showMenu || g.showEmptyInventoryMessage || g.showItemDescription || g.showGroundItemDescription {
+			g.closeAllMenus()
 			return nil
 		}
 
@@ -887,7 +864,7 @@ func (g *Game) handleSettingsInput() error {
 
 	// Cキーで設定を保存して全て閉じる
 	if g.keys().JustPressed(KeyC) {
-		g.showSettings = false
+		g.closeAllMenus()
 		g.saveSettings()
 	}
 
@@ -942,8 +919,7 @@ func (g *Game) handleSuspendPromptInput() error {
 
 	// Cキーで全て閉じる
 	if g.keys().JustPressed(KeyC) {
-		g.showSuspendPrompt = false
-		g.suspendSelectedOption = 0
+		g.closeAllMenus()
 	}
 
 	return nil
@@ -967,6 +943,9 @@ func (g *Game) handleMessageLogInput() error {
 		if g.keys().JustPressed(KeyX) || g.keys().JustPressed(KeyL) {
 			g.showMessageLog = false
 			g.messageLogScroll = 0
+		}
+		if g.keys().JustPressed(KeyC) {
+			g.closeAllMenus()
 		}
 		return nil
 	}
@@ -1022,10 +1001,7 @@ func (g *Game) handleHelpInput() error {
 
 		// Cキーで全て閉じる
 		if g.keys().JustPressed(KeyC) {
-			g.showHelp = false
-			g.showMenu = false
-			g.helpScroll = 0
-			g.returnToMenuFromHelp = false
+			g.closeAllMenus()
 		}
 		return nil
 	}
@@ -1107,9 +1083,7 @@ func (g *Game) handleEmptyInventoryMessage() error {
 
 	// Cキーで全メニューを閉じてゲームに戻る
 	if g.keys().JustPressed(KeyC) {
-		g.showEmptyInventoryMessage = false
-		g.showMenu = false
-		g.returnToMenuFromInventory = false
+		g.closeAllMenus()
 	}
 
 	return nil
@@ -1182,6 +1156,6 @@ func (g *Game) handleRunHistoryInput() {
 		g.showMenu = true
 	}
 	if g.keys().JustPressed(KeyC) {
-		g.showRunHistory = false
+		g.closeAllMenus()
 	}
 }

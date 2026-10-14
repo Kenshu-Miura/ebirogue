@@ -221,6 +221,7 @@ type Game struct {
 	selectedItemIndex         int
 	showItemActions           bool
 	selectedActionIndex       int
+	previousPlayerRoomID      int // 仮眠の入室抽選用。セーブ再開時は現在の部屋で初期化
 	showDescription           bool
 	descriptionText           string
 	showItemDescription       bool
