@@ -103,10 +103,11 @@ func (g *Game) updateEnemyVisibility() {
 		if g.state.Player.StatusAilments.Blind > 0 {
 			enemy.SetShowOnMiniMap(false)
 			g.miniMapDirty = true
-		} else if inSameRoom || adjacent || enemy.PlayerDiscovered {
+		} else if inSameRoom || adjacent || enemy.PlayerDiscovered || (!isEnemyDisguised(*enemy) && (g.playerHasAbility(AbilitySenseEnemies) || g.playerHasAbility(AbilityClairvoyance))) {
 			g.miniMapDirty = true
 			enemy.SetShowOnMiniMap(true)
 		} else {
+			g.miniMapDirty = g.miniMapDirty || enemy.ShowOnMiniMap
 			enemy.SetShowOnMiniMap(false)
 		}
 	}

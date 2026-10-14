@@ -84,19 +84,29 @@ func TestKeyBindingHelpFollowsSettings(t *testing.T) {
 	bindings = bindPhysicalKey(bindings, KeyUp, "W")
 	bindings = bindPhysicalKey(bindings, KeyX, "Tab")
 	pages := helpPages(bindings)
+	pageByTitle := func(title string) HelpPage {
+		t.Helper()
+		for _, page := range pages {
+			if page.Title == title {
+				return page
+			}
+		}
+		t.Fatalf("help page %q missing", title)
+		return HelpPage{}
+	}
 	if !strings.Contains(strings.Join(pages[0].Lines, "\n"), "Q：決定  Tab：キャンセル") {
 		t.Fatal(pages[0])
 	}
 	if !strings.Contains(pages[0].Lines[1], "W/") {
 		t.Fatal("movement guide stale")
 	}
-	if !strings.Contains(pages[4].Lines[12], "Qで正面") {
+	if !strings.Contains(pageByTitle("罠").Lines[12], "Qで正面") {
 		t.Fatal("trap guide stale")
 	}
-	if !strings.Contains(pages[6].Lines[0], "Qで開始") {
+	if !strings.Contains(pageByTitle("難易度とクリア条件").Lines[0], "Qで開始") {
 		t.Fatal("difficulty guide stale")
 	}
-	if !strings.Contains(pages[4].Lines[11], "HPが1") {
+	if !strings.Contains(pageByTitle("罠").Lines[11], "HPが1") {
 		t.Fatal("non-key text changed")
 	}
 	if got := keyGuide(bindPhysicalKey(nil, KeyZ, "X"), "Z:決定 X:戻る"); got != "X:決定 Z:戻る" {

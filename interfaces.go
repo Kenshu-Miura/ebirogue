@@ -170,6 +170,12 @@ func (ac *Accessory) UpdatePlayerStats(player *Player, equip bool) {
 	}
 	player.Power += bonus
 	player.MaxPower += bonus
+	satietyBonus := accessorySatietyBonus(ac.Abilities)
+	if !equip {
+		satietyBonus = -satietyBonus
+	}
+	player.MaxSatiety = max(1, player.MaxSatiety+satietyBonus)
+	player.Satiety = min(player.Satiety, player.MaxSatiety)
 }
 
 func (bi BaseItem) GetID() int {

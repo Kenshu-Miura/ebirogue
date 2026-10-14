@@ -302,6 +302,14 @@ func generateMapTraps(rooms []Room, rng *gameRNG, floor int) []MapTrap {
 func (g *Game) checkForTrapAtPosition(x, y int) {
 	for i, trap := range g.state.MapTraps {
 		if trap.X == x && trap.Y == y {
+			if g.playerHasAbility(AbilityLevitation) {
+				if !trap.Discovered {
+					g.state.MapTraps[i].Discovered = true
+					g.miniMapDirty = true
+					g.EnqueueMessage(fmt.Sprintf("%sの上を浮いて通り過ぎた。", trap.Name), 0.5)
+				}
+				return
+			}
 			// 罠を踏んだ処理を実行
 			g.stepOnTrap(i)
 			return

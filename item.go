@@ -29,12 +29,13 @@ func (g *Game) updateItemVisibility() {
 				item.SetPlayerDiscovered(true)
 				item.SetShowOnMiniMap(true)
 				g.miniMapDirty = true
-			} else if item.GetPlayerDiscovered() {
+			} else if item.GetPlayerDiscovered() || g.playerHasAbility(AbilitySenseItems) || g.playerHasAbility(AbilityClairvoyance) {
 				// 同じ部屋にないが一度発見されたアイテムは表示し続ける
 				item.SetShowOnMiniMap(true)
 				g.miniMapDirty = true
 			} else {
 				// 発見されていないアイテムは非表示
+				g.miniMapDirty = g.miniMapDirty || item.GetShowOnMiniMap()
 				item.SetShowOnMiniMap(false)
 			}
 		}
@@ -708,6 +709,10 @@ func (g *Game) PickUpItem(item Item, i int) {
 	} else {
 		// それ以外の場合、アイテムをプレイヤーのインベントリに追加
 		g.state.Player.Inventory = append(g.state.Player.Inventory, item)
+		if identifiable, ok := item.(Identifiable); ok && !identifiable.IsIdentified() && g.playerHasAbility(AbilityAppraiser) {
+			identifiable.SetIdentified(true)
+			g.EnqueueMessage(fmt.Sprintf("%sだった。", identifiable.GetName()), 0.5)
+		}
 	}
 	// アイテムをGameState.Itemsから削除
 	g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
