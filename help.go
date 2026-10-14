@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 // ヘルプウィンドウの1ページに表示する行数
 const helpPageSize = 15
 
@@ -10,8 +12,8 @@ type HelpPage struct {
 }
 
 // helpPages はヘルプ画面の全ページ（操作方法・状態異常）を返す
-func helpPages() []HelpPage {
-	return []HelpPage{
+func helpPages(bindings ...map[string]string) []HelpPage {
+	pages := []HelpPage{
 		{
 			Title: "操作方法",
 			Lines: []string{
@@ -143,6 +145,22 @@ func helpPages() []HelpPage {
 			},
 		},
 	}
+	if len(bindings) > 0 {
+		for i, line := range pages[0].Lines {
+			pages[0].Lines[i] = keyGuide(bindings[0], line)
+		}
+		for page := range pages {
+			if pages[page].Title != "罠" && pages[page].Title != "難易度とクリア条件" {
+				continue
+			}
+			for i, line := range pages[page].Lines {
+				if strings.Contains(line, "で正面") || strings.Contains(line, "矢印キー") || strings.Contains(line, "画面のZ") || strings.Contains(line, "記録は上下") {
+					pages[page].Lines[i] = keyGuide(bindings[0], line)
+				}
+			}
+		}
+	}
+	return pages
 }
 
 // helpMaxScroll は総行数 total と表示行数 count からスクロールできる最大量を返す
