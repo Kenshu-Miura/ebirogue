@@ -63,3 +63,50 @@ func TestWave5MischiefGuardShieldBlocksToss(t *testing.T) {
 		}
 	}
 }
+
+// 段4（wave6-A/B/C）の組み合わせ: フグの自爆が化けたミミックダコの正体を現し、シビレエイの帯電を進める。
+func TestWave6FuguExplosionRevealsMimicAndChargesRay(t *testing.T) {
+	g := newFoundationTestGame()
+	g.state.Map = makeTestFloorMap(12, 9)
+	fugu := addTestEnemy(g, 108, 5, 4)
+	mimic := addTestEnemy(g, 117, 6, 4)
+	g.state.Enemies[mimic].Health = 99
+	disguiseEnemyAs(&g.state.Enemies[mimic], 0)
+	ray := addTestEnemy(g, 114, 5, 5)
+	g.state.Enemies[ray].Health = 99
+
+	g.enqueueEnemyExplosion(EnemyExplosion{BomberIndex: fugu, CenterX: 5, CenterY: 4, Radius: 1, Damage: 14, SelfDestruct: true})
+	runQueuedActions(g)
+
+	for _, e := range g.state.Enemies {
+		switch e.ID {
+		case 117:
+			if !e.Revealed || e.Name != "ミミックダコ" {
+				t.Fatalf("mimic = %+v, the explosion should reveal it", e)
+			}
+		case 114:
+			if e.Counter != 1 {
+				t.Fatalf("ray counter = %d, the explosion counts as a hit", e.Counter)
+			}
+		case 108:
+			t.Fatal("the fugu should be gone")
+		}
+	}
+}
+
+// 化けた姿の能力は使わない: フクレフグに化けたミミックダコは弱っても破裂せず、ウチカエシエビに化けても打ち返さない。
+func TestWave6MimicDoesNotUseDisguisedAbilities(t *testing.T) {
+	g := newFoundationTestGame()
+	mimic := addTestEnemy(g, 117, 5, 4)
+	disguiseEnemyAs(&g.state.Enemies[mimic], 108)
+	g.state.Enemies[mimic].Revealed = false
+
+	if enemyProjectileReturnPercent(g.state.Enemies[mimic]) != 0 {
+		t.Fatal("a mimic never returns projectiles")
+	}
+	g.applyDamageToEnemy(mimic, g.state.Enemies[mimic].Health-1)
+	messages := runQueuedActions(g)
+	if len(g.state.Enemies) != 1 || g.state.Player.Health != 40 || g.state.Enemies[0].Flag {
+		t.Fatalf("mimic should not inflate or explode: %+v, messages = %q", g.state.Enemies, messages)
+	}
+}
