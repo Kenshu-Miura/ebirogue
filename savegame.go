@@ -56,7 +56,8 @@ func itemToSaved(item Item) SavedItem {
 	case *Weapon:
 		attackPower := v.AttackPower
 		return SavedItem{Kind: "Weapon", ID: v.ID, X: v.X, Y: v.Y,
-			Sharpness: v.Sharpness, AttackPower: &attackPower, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
+			AbilityCounter: v.AbilityCounter,
+			Sharpness:      v.Sharpness, AttackPower: &attackPower, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
 	case *Armor:
 		return SavedItem{Kind: "Armor", ID: v.ID, X: v.X, Y: v.Y,
 			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
@@ -103,6 +104,7 @@ func savedToItem(s SavedItem) (Item, error) {
 			return nil, fmt.Errorf("アイテムID %dはWeaponではない", s.ID)
 		}
 		v.Sharpness = s.Sharpness
+		v.AbilityCounter = s.AbilityCounter
 		if s.AttackPower != nil {
 			v.AttackPower = *s.AttackPower
 		}

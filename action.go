@@ -27,6 +27,13 @@ func (g *Game) currentItemActions() []string {
 		return []string{"入れる", "出す", "投げる", "置く", "説明"}
 	}
 	if equipableItem, isEquipable := item.(Equipable); isEquipable {
+		if weapon, ok := item.(*Weapon); ok && hasEquipmentAbility(weapon.Abilities, AbilityEdible) {
+			first := "装備"
+			if g.state.Player.IsEquipped(weapon) {
+				first = "はずす"
+			}
+			return []string{first, "かじる", "投げる", "置く", "説明"}
+		}
 		_, isArrow := equipableItem.(*Arrow)
 		if g.state.Player.IsEquipped(equipableItem) {
 			if isArrow {
@@ -219,6 +226,16 @@ func (g *Game) executeGroundItemAction() {
 }
 
 func (g *Game) executeAction() {
+	// かつおぶしだけに増えた項目を処理し、後続の既存添字へ対応させる。
+	if w, ok := g.state.Player.Inventory[g.selectedItemIndex].(*Weapon); ok && hasEquipmentAbility(w.Abilities, AbilityEdible) {
+		if g.selectedActionIndex == 1 {
+			g.gnawWeapon(w)
+			return
+		}
+		if g.selectedActionIndex > 1 {
+			g.selectedActionIndex--
+		}
+	}
 
 	// 壺の「入れる」「出す」はここで処理する（それ以降の項目は汎用処理へ流す）
 	if pot, isPot := g.state.Player.Inventory[g.selectedItemIndex].(*Pot); isPot {

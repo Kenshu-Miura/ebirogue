@@ -229,6 +229,10 @@ func (b *bot) bestEquipment() (int, bool) {
 	for i, item := range p.Inventory {
 		switch v := item.(type) {
 		case *Weapon:
+			// 満腹度を消費・参照する武器は自動で持ち替えない。
+			if v.GetID() == 136 || v.GetID() == 137 {
+				continue
+			}
 			if v.Sharpness < 0 || !usable(v) {
 				continue
 			}

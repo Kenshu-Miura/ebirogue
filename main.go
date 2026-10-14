@@ -126,6 +126,7 @@ type ThrownItem struct {
 }
 
 type Game struct {
+	inDoubleStrike bool // 追撃の実行が終わるまで再追撃を防ぐ（保存しない）
 	// 難易度選択・クリア画面・冒険の記録（いずれも表示中は Update/Draw がそれだけを処理する）
 	showDifficultySelect bool
 	difficultyCursor     int
@@ -852,6 +853,28 @@ var specialWeaponImagePaths = map[string]string{
 	"SureHitSword":     "img/sure_hit_sword.png",
 	"ShrimpPickaxe":    "img/shrimp_pickaxe.png",
 	"DisposableSword":  "img/disposable_sword.png",
+
+	"Katana":            "img/katana.png",
+	"Gouken":            "img/gouken.png",
+	"GoldSword":         "img/gold_sword.png",
+	"ShellCutter":       "img/shell_cutter.png",
+	"UniBreaker":        "img/uni_breaker.png",
+	"SkyBlade":          "img/sky_blade.png",
+	"DoubleStrikeSword": "img/double_strike_sword.png",
+	"GreatAxe":          "img/great_axe.png",
+	"HealingSword":      "img/healing_sword.png",
+	"KobanClub":         "img/koban_club.png",
+	"IronMassSword":     "img/iron_mass_sword.png",
+	"HungryKnife":       "img/hungry_knife.png",
+	"ChargeSword":       "img/charge_sword.png",
+	"FourProngHarpoon":  "img/four_prong_harpoon.png",
+	"LuckyRake":         "img/lucky_rake.png",
+	"Mallet":            "img/mallet.png",
+	"TrapProbe":         "img/trap_probe.png",
+	"Katsuobushi":       "img/katsuobushi.png",
+	"CursedKnife":       "img/cursed_knife.png",
+	"GoldenPickaxe":     "img/golden_pickaxe.png",
+	"KajinTachi":        "img/kajin_tachi.png",
 }
 
 var specialArmorImagePaths = map[string]string{
