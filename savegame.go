@@ -189,6 +189,8 @@ func savedToItem(s SavedItem) (Item, error) {
 // enemyToSaved は敵をセーブ用表現へ変換する
 func enemyToSaved(enemy *Enemy) SavedEnemy {
 	saved := SavedEnemy{
+		BossShellTurns:   enemy.BossShellTurns,
+		BossMinion:       enemy.BossMinion,
 		ID:               enemy.ID,
 		X:                enemy.X,
 		Y:                enemy.Y,
@@ -214,6 +216,8 @@ func enemyToSaved(enemy *Enemy) SavedEnemy {
 // 定義テーブルから生成した後、可変フィールドをセーブ値で上書きする。
 func savedToEnemy(s SavedEnemy) Enemy {
 	enemy := CreateEnemyByID(s.ID, s.X, s.Y)
+	enemy.BossShellTurns = s.BossShellTurns
+	enemy.BossMinion = s.BossMinion
 	enemy.Health = s.Health
 	enemy.MaxHealth = s.MaxHealth
 	enemy.AttackPower = s.AttackPower

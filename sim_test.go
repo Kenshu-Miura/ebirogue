@@ -91,12 +91,13 @@ type simOutcome struct {
 	Turns      int
 	Level      int
 	// FloorLevels[i] は i+1 階に初めて着いたときのレベル
-	FloorLevels []int          `json:",omitempty"`
-	DeathCause  string         `json:",omitempty"`
-	Mistake     string         `json:",omitempty"` // 判断ミス死の種類（mistakeKind 参照）
-	Result      *RunResult     `json:",omitempty"`
-	Violations  []simViolation `json:",omitempty"`
-	Death       *deathTrace    `json:",omitempty"` // Trace のときだけ。最後の数十ターンと各階の床の道具
+	FloorLevels        []int          `json:",omitempty"`
+	BossDefeatedFloors []int          `json:",omitempty"` // 撃破後、次の階へ進む前に死亡した場合も記録
+	DeathCause         string         `json:",omitempty"`
+	Mistake            string         `json:",omitempty"` // 判断ミス死の種類（mistakeKind 参照）
+	Result             *RunResult     `json:",omitempty"`
+	Violations         []simViolation `json:",omitempty"`
+	Death              *deathTrace    `json:",omitempty"` // Trace のときだけ。最後の数十ターンと各階の床の道具
 }
 
 const maxViolationsPerRun = 20
@@ -156,6 +157,17 @@ func runSimCase(c simCase) (out simOutcome) {
 			tracer.record(b)
 		}
 		lastTurn = g.turnCount // 「再挑戦」でターン数が戻っても累計で数える
+		if g.bossDefeated && isBossFloor(g.Floor) {
+			found := false
+			for _, floor := range out.BossDefeatedFloors {
+				if floor == g.Floor {
+					found = true
+				}
+			}
+			if !found {
+				out.BossDefeatedFloors = append(out.BossDefeatedFloors, g.Floor)
+			}
+		}
 		for len(out.FloorLevels) < g.Floor {
 			out.FloorLevels = append(out.FloorLevels, g.state.Player.Level)
 		}
@@ -772,6 +784,24 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 	for _, f := range floors {
 		reach, deaths := s.FloorReach[f], s.FloorDeaths[f]
 		fmt.Fprintf(&b, "| %d | %d | %d | %.1f%% |\n", f, reach, deaths, float64(deaths)*100/float64(max(1, reach)))
+	}
+
+	fmt.Fprintf(&b, "\n## ボス撃破率\n\n| 階 | 到達 | 撃破 | 撃破率 |\n|---:|---:|---:|---:|\n")
+	for _, floor := range []int{10, 20, 30} {
+		kills := 0
+		for _, outcome := range outcomes {
+			for _, defeated := range outcome.BossDefeatedFloors {
+				if defeated == floor {
+					kills++
+					break
+				}
+			}
+		}
+		if s.FloorReach[floor] == 0 {
+			fmt.Fprintf(&b, "| %d | 0 | 0 | - |\n", floor)
+		} else {
+			fmt.Fprintf(&b, "| %d | %d | %d | %.1f%% |\n", floor, s.FloorReach[floor], kills, float64(kills)*100/float64(s.FloorReach[floor]))
+		}
 	}
 
 	fmt.Fprintf(&b, "\n## 死因の上位\n\n| 死因 | 回数 |\n|---|---:|\n")

@@ -648,7 +648,7 @@ func (g *Game) MoveEnemies() {
 	for i := range g.state.Enemies {
 		enemy := &g.state.Enemies[i]
 		hasExtraAction := enemy.StatusAilments.Haste > 0 ||
-			(enemy.SpecialMovement == SpecialMovementDoubleSpeed && !enemy.StatusAilments.Seal)
+			(enemy.SpecialMovement == SpecialMovementDoubleSpeed && !enemy.StatusAilments.Seal) || bossExtraAction(*enemy)
 		if enemy.StatusAilments.Slow > 0 && !hasExtraAction && g.moveCount%2 != 0 {
 			continue
 		}
@@ -656,7 +656,7 @@ func (g *Game) MoveEnemies() {
 		// 倍速状態または固有の倍速能力を持つ敵はもう一度行動する。
 		// 封印は固有能力だけを止め、カードなどで付与された倍速状態は維持する。
 		// 鈍足中は倍速と相殺して通常の1回行動にする。
-		if hasExtraAction && enemy.StatusAilments.Slow == 0 {
+		if hasExtraAction && g.state.Enemies[i].StatusAilments.Slow == 0 {
 			g.actEnemy(i)
 		}
 	}
@@ -664,6 +664,7 @@ func (g *Game) MoveEnemies() {
 
 // actEnemy はインデックスで指定した敵を1回行動させる
 func (g *Game) actEnemy(i int) {
+	normalizeBossStatus(&g.state.Enemies[i])
 	enemy := g.state.Enemies[i]
 
 	// 仮眠状態の敵の起床チェック（隣接時）
@@ -727,6 +728,9 @@ func (g *Game) actEnemy(i int) {
 
 	// ワープと場所替えは共通状態処理後、かつ封印されていない場合だけ試みる。
 	if g.state.Enemies[i].PlayerDiscovered {
+		if g.tryBossSpecial(i) {
+			return
+		}
 		if g.tryWarpEnemy(i, g.randIntn) || g.trySwapEnemyWithPlayer(i, g.randIntn) {
 			return
 		}

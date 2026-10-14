@@ -443,9 +443,13 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		if _, isEnemy := target.(*Enemy); isEnemy && index >= 0 && index < len(g.state.Enemies) {
 			targetID := g.state.Enemies[index].ID
 			targetName := g.state.Enemies[index].Name
+			message := fmt.Sprintf("%sの系統はこの世から封じられた", g.enemyDisplayName(targetName))
+			if MonsterDefinitions[targetID].IsBoss {
+				message = fmt.Sprintf("%sはジェノサイドの力を跳ね返した", g.enemyDisplayName(targetName))
+			}
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sの系統はこの世から封じられた", g.enemyDisplayName(targetName)),
+				Message:  message,
 				Execute: func(g *Game) {
 					g.applyGenocide(targetID)
 					g.isActioned = true

@@ -88,6 +88,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `rng.go`（タグなし）: 冒険の乱数源 `gameRNG`（math/rand/v2 の PCG。状態を保存・復元できる）。ターン進行は `g.rng`（`g.random()` / `g.randIntn(n)`）、フロア生成は `newFloorRNG(seed, 階)` の専用系列。**`math/rand` のグローバル関数やパッケージ変数の乱数源は使わない。** `Game` を受け取らない関数には `intn func(int) int` を渡す。テストで特定の判定だけ固定するには `g.randHooks`（`random_hooks.go`）を使う。
 - `input_source.go`（タグなし）: 論理キー `Key`、`InputSource`、仮想入力 `VirtualInput`、記録 `InputRecorder`。`input_ebiten.go` が Ebiten の実キーボードを包む。**キー入力は `ebiten.IsKeyPressed` / `inpututil` を直接呼ばず `g.keys().Pressed(KeyZ)` / `JustPressed` / `PressDuration` を使う。** 入力のリピート間隔は実時間ではなくフレーム数（`stepRepeatFrames` など）。
 - `difficulty.go`（タグなし）: 難易度 `Difficulty`、`goalFloor`、`isBossFloor`、`bossIDForFloor`、`stairsUsable`。ボス撃破の判定とクリア処理は `map.go` の `checkBossDefeated` / `clearRun`（フロアからボスが消えたら撃破）。
+- `bosses.go`: ボス3体（ID 42〜44）の固有行動（殻・召喚・墨・二連撃・場所替え・炎と魔法・HP半減時の2回行動）と、ボスごとの状態異常耐性・即時消去の無効化の定数。テストは `content_bosses_test.go`（`TestSimBossBalance` は `-sim.immortal` でボス単体の撃破ターン数と被ダメージを測る）。
 - `deathcause.go`（タグなし）: 死因 `DamageSource`、死亡文 `deathMessage`、冒険結果 `RunResult` と記録一覧。`runresult_game.go` の `g.damagePlayer(damage, source)` が HP 減少と死因の記録を行い、`g.finishRun(cleared)` が結果を保存する。冒険中の統計 `g.stats`（`RunStats`: 種類別の拾う・使う・投げる・装備・射撃の回数、テンプレート ID ごとの使用回数、直近の使用記録）もセーブと冒険結果に含める。**プレイヤーへのダメージは必ず `damagePlayer`（または `applyPlayerShieldDefense`）を通す。**
 - `damage.go`（タグなし・純粋）: ダメージ計算式の一元管理。SFC シレン式の「ダメージ = 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率」。プレイヤー攻撃は `rollPlayerAttackDamage`（会心1/20＝防御無視×1.5、最低1ダメージ）、敵攻撃は `rollEnemyAttackDamage`、総攻撃力は `playerAttackTotal(攻撃力, パワー, レベル)`。特効などの補正は `DamageParams.Multiplier` へ乗算で合成する（`slayerMultiplier` 参照）。バランス調整は同ファイル冒頭の定数（軽減率・乱数幅・会心率など）を変更する。乱数源は呼び出し側が渡す `intn`（ゲームでは `g.damageIntn()`）で、テストでは `g.randHooks.damage` で差し替えて決定的にする。**新しいダメージ処理は式を手書きせず必ず `rollDamage` 系を経由する。**
 
@@ -205,8 +206,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 ### Priority S: clear condition, difficulty and bosses
 
 - クリア条件は「目標階のボスを倒す」（初級10階・中級20階・上級30階）。ボスはランダム出現と上位種化の対象外で、「敵を追加するときは上位種も同時に追加する」規則の例外とする。
-- 骨格（難易度・目標階・ボス階の階段封鎖・クリア判定・仮のボス ID 42〜44）はフェーズ0、難易度選択・クリア画面・冒険の記録は wave1-D で実装済み。残りは次のとおり。
-  - 仮のボスを固有の能力を持つ本物のボスに置き換える（`docs/agents/wave1-C-bosses.md`）。
+- 骨格（難易度・目標階・ボス階の階段封鎖・クリア判定）はフェーズ0、難易度選択・クリア画面・冒険の記録は wave1-D、ボス3体（`bosses.go`、ID 42〜44）は wave1-C で実装済み。ボスの仕様と計測方法は `docs/agents/done/wave1-C.md`。
 
 ### Priority A: cards based on scrolls
 
@@ -233,6 +233,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 装備・所持品の罠（wave2-A）: `img/unequip_trap.png`（装備が外れる図形）、`img/spoil_trap.png`（緑の腐敗霧）、`img/scatter_trap.png`（散らばる3個の物）（`go run tools/item_trap_images.go` で再生成できる単純図形）
   - 腐ったウインナー（アイテム ID 71）: `img/rotten_sausage.png`（`sausage.png` を緑がかった色にしたもの。同じスクリプトで再生成）
   - いずれもゲーム画面上での視認性は未確認。
+  - ボス（wave1-C）: `img/boss_crab.png`・`img/boss_octopus.png`・`img/boss_dragon.png`（既存の敵画像の色相を回したもの。`go run tools/boss_images.go` で再生成）。ボスらしい大きさ・形の正式画像に差し替え、暗い床と戦闘中の視認性を確認する。
   - 第3段階の敵（ID 45〜65）: 第2段階の画像の色相を150度回したもの（`tools/third_stage_enemy_images.go`）。基本種や他系統と色が似ていないか、暗い床での視認性を確認して必要なら描き直す。
 
 ### Priority A: usability

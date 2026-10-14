@@ -494,6 +494,22 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gam
 
 	// プレイヤーの新しい位置を設定
 	playerRoom := rooms[rng.Intn(len(rooms))]
+	// ボス階では最大の部屋をボス用に確保し、その外から開始する。
+	if isBossFloor(currentFloor + 1) {
+		largest := rooms[0]
+		for _, room := range rooms[1:] {
+			if room.Width*room.Height > largest.Width*largest.Height {
+				largest = room
+			}
+		}
+		otherRooms := make([]Room, 0, len(rooms)-1)
+		for _, room := range rooms {
+			if room.ID != largest.ID {
+				otherRooms = append(otherRooms, room)
+			}
+		}
+		playerRoom = otherRooms[rng.Intn(len(otherRooms))]
+	}
 	playerX := rng.Intn(playerRoom.Width-2) + playerRoom.X + 1  // Exclude walls
 	playerY := rng.Intn(playerRoom.Height-2) + playerRoom.Y + 1 // Exclude walls
 	player.Entity.X = playerX
@@ -534,6 +550,9 @@ func (g *Game) checkBossDefeated() {
 		}
 	}
 	g.bossDefeated = true
+	if id, ok := bossIDForFloor(g.Floor); ok {
+		g.EnqueueMessage(bossDefeatMessage(id), 1.0)
+	}
 	if isClearingBossFloor(g.Floor, g.difficulty) {
 		g.clearRun()
 		return

@@ -409,6 +409,7 @@ func (g *Game) decrementStatusAilments() {
 
 	// 敵の状態異常を減らす
 	for i := range g.state.Enemies {
+		advanceBossState(&g.state.Enemies[i])
 		if g.state.Enemies[i].StatusAilments.Confusion > 0 {
 			g.state.Enemies[i].StatusAilments.Confusion--
 		}

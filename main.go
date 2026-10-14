@@ -206,6 +206,7 @@ type Game struct {
 	steppedTrapSource         DamageSource // 効果を処理中の罠（罠の効果関数が死因の記録に使う）
 	fastForward               bool         // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
 	immortal                  bool         // シミュレーションの計測専用（-sim.immortal）。HP が1未満にならない
+	headlessDamageTaken       int          // 計測用。HPの下限を適用する前の被ダメージ合計
 	runEnded                  bool         // ヘッドレスで冒険が終了した（死亡・クリア）
 	difficulty                Difficulty   // 冒険の難易度（開始時に決め、途中で変えない）
 	bossDefeated              bool         // 現在のボス階のボスを倒したか（フロア移動でリセット）
@@ -782,6 +783,9 @@ func loadImage(filepath string) *ebiten.Image {
 }
 
 var upperEnemyImagePaths = map[string]string{
+	"BossCrab":              "img/boss_crab.png",
+	"BossOctopus":           "img/boss_octopus.png",
+	"BossDragon":            "img/boss_dragon.png",
 	"GreatShrimp":           "img/dai_ebi.png",
 	"CaveMamuru":            "img/anagura_mamuru.png",
 	"VenomSnake":            "img/moudoku_hebi.png",

@@ -787,7 +787,7 @@ var increaseFloorTraps = func(g *Game) {
 // splitEnemiesByExplosion は自爆の爆発（周囲1マス）に巻き込まれる敵と生き残る敵を分ける。
 func splitEnemiesByExplosion(playerX, playerY int, enemies []Enemy) (survivors []Enemy, destroyed []string) {
 	for _, enemy := range enemies {
-		if abs(enemy.X-playerX) <= 1 && abs(enemy.Y-playerY) <= 1 {
+		if abs(enemy.X-playerX) <= 1 && abs(enemy.Y-playerY) <= 1 && !MonsterDefinitions[enemy.ID].IsBoss {
 			destroyed = append(destroyed, enemy.Name)
 			continue
 		}
@@ -1030,6 +1030,9 @@ func monsterFamilyIDs(monsterID int) []int {
 // applyGenocide は指定した敵と同系統の敵をフロアから消し去り、以後の出現を封じる。
 // 消し去った敵の数を返す。経験値は入らない。
 func (g *Game) applyGenocide(monsterID int) int {
+	if MonsterDefinitions[monsterID].IsBoss {
+		return 0
+	}
 	if g.genocidedMonsterIDs == nil {
 		g.genocidedMonsterIDs = map[int]bool{}
 	}
@@ -1039,7 +1042,7 @@ func (g *Game) applyGenocide(monsterID int) int {
 	removed := 0
 	survivors := g.state.Enemies[:0]
 	for i := range g.state.Enemies {
-		if g.genocidedMonsterIDs[g.state.Enemies[i].ID] {
+		if g.genocidedMonsterIDs[g.state.Enemies[i].ID] && !MonsterDefinitions[g.state.Enemies[i].ID].IsBoss {
 			removed++
 			continue
 		}
@@ -1057,7 +1060,7 @@ func (g *Game) removeGenocidedEnemies() {
 	}
 	survivors := g.state.Enemies[:0]
 	for i := range g.state.Enemies {
-		if g.genocidedMonsterIDs[g.state.Enemies[i].ID] {
+		if g.genocidedMonsterIDs[g.state.Enemies[i].ID] && !MonsterDefinitions[g.state.Enemies[i].ID].IsBoss {
 			continue
 		}
 		survivors = append(survivors, g.state.Enemies[i])
@@ -1096,7 +1099,7 @@ func (g *Game) playerOnSanctuary() bool {
 // splitEnemiesByRoomWideEffect は部屋全体効果（通路では周囲1マス）の対象と対象外の敵を分ける。
 func splitEnemiesByRoomWideEffect(playerX, playerY int, enemies []Enemy, rooms []Room) (survivors []Enemy, destroyed []string) {
 	for _, enemy := range enemies {
-		if isInRoomWideEffect(playerX, playerY, enemy.X, enemy.Y, rooms) {
+		if isInRoomWideEffect(playerX, playerY, enemy.X, enemy.Y, rooms) && !MonsterDefinitions[enemy.ID].IsBoss {
 			destroyed = append(destroyed, enemy.Name)
 			continue
 		}

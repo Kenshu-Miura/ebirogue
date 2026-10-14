@@ -109,6 +109,9 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 		Duration: rangedAttackEffectDuration,
 		Message:  message,
 		Execute: func(g *Game) {
+			if MonsterDefinitions[attackerID].IsBoss && g.livingBossIndex(attackerID) < 0 {
+				return
+			}
 			enemy.AttackTimer = 0.5
 			enemy.AttackDirection = determineDirection(dx, dy)
 			enemy.Direction = enemy.AttackDirection
