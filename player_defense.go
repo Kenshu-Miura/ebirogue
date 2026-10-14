@@ -29,6 +29,9 @@ func (g *Game) resolvePlayerDefense(damage int, kind EnemyDamageKind, delivery E
 	}
 	incoming := IncomingDamage{Damage: result.Damage, Kind: kind, Delivery: delivery, Attacker: attacker, Critical: critical}
 	g.runModifyIncomingDamageHooks(&incoming)
+	if incoming.Evaded {
+		return ShieldDefenseResult{Evaded: true, Guard: incoming.EvadedBy}
+	}
 	result.Damage = incoming.Damage
 	if len(incoming.Effects) > 0 {
 		result.Effects = &incoming.Effects
@@ -51,6 +54,9 @@ func (g *Game) shieldDefenseMessage(enemyName string, result ShieldDefenseResult
 	armorName := "盾"
 	if g.state.Player.EquippedArmor != nil {
 		armorName = g.state.Player.EquippedArmor.Name
+	}
+	if result.Guard != "" {
+		armorName = result.Guard
 	}
 	switch {
 	case result.Evaded:

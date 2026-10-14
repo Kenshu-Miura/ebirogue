@@ -19,6 +19,7 @@ type PlayerAttack struct {
 	Accuracy            int     // 命中率（%）
 	SureHit             bool    // 必ず命中し、敵の回避も無視する
 	EnemyEvasion        int     // 敵が攻撃をかわす確率（%、F4）。0ならかわさない
+	AttackBonus         int     // 総攻撃力への加算（呪いの包丁など）
 	Multiplier          float64 // ダメージ倍率（特効などを乗算で合成する）
 	CriticalDenominator int     // 1/N で会心の一撃。小さいほど出やすい
 	ForceCritical       bool    // 必ず会心の一撃にする
@@ -33,6 +34,12 @@ type PlayerAttackHit struct {
 	Damage   int
 	Critical bool
 	Defeated bool
+}
+
+// PlayerSwing は通常攻撃（Z）1回ぶんの情報。AfterPlayerSwing に渡す。
+type PlayerSwing struct {
+	DX, DY   int  // 攻撃した方向
+	HitEnemy bool // 正面（三方向攻撃なら3マス）に敵がいた
 }
 
 // EnemyAttack は敵の通常攻撃1回の条件。BeforeEnemyAttack のフックが書き換える。
@@ -50,6 +57,8 @@ type IncomingDamage struct {
 	Delivery EnemyAttackDelivery
 	Attacker *Enemy // 敵以外（罠など）なら nil
 	Critical bool   // 敵の痛恨の一撃
+	Evaded   bool   // true にすると攻撃をかわした扱いにする（ダメージ0・カウンターなし・「かわした」と表示）
+	EvadedBy string // かわしたときのメッセージに使う装備品の名前（空なら盾の名前）
 	Effects  []func(g *Game)
 }
 
@@ -63,6 +72,9 @@ type AbilityHooks struct {
 	AfterPlayerHit func(g *Game, hit PlayerAttackHit, stacks int)
 	// AfterEnemyDefeated は通常攻撃で敵を倒した直後に呼ばれる（AfterPlayerHit の後）。
 	AfterEnemyDefeated func(g *Game, hit PlayerAttackHit, stacks int)
+	// AfterPlayerSwing は通常攻撃（空振り・壁掘りを含む）の Action を積み終えた後に呼ばれる。
+	// 正面の罠を壊す・直線に炎を出すなど、攻撃のたびに起きる処理は Action を積んで書く。
+	AfterPlayerSwing func(g *Game, swing PlayerSwing, stacks int)
 	// BeforeEnemyAttack は敵の通常攻撃のダメージ計算の前に呼ばれる（痛恨の確率・倍率）。
 	BeforeEnemyAttack func(g *Game, attack *EnemyAttack, stacks int)
 	// ModifyIncomingDamage は被ダメージが確定する前に呼ばれる（盾の軽減・小銭の消費など）。
@@ -155,6 +167,14 @@ func (g *Game) runAfterPlayerHitHooks(hit PlayerAttackHit) {
 	})
 }
 
+func (g *Game) runAfterPlayerSwingHooks(swing PlayerSwing) {
+	g.forEachEquippedAbilityHook(func(h AbilityHooks, stacks int) {
+		if h.AfterPlayerSwing != nil {
+			h.AfterPlayerSwing(g, swing, stacks)
+		}
+	})
+}
+
 func (g *Game) runBeforeEnemyAttackHooks(attack *EnemyAttack) {
 	g.forEachEquippedAbilityHook(func(h AbilityHooks, stacks int) {
 		if h.BeforeEnemyAttack != nil {
@@ -165,7 +185,7 @@ func (g *Game) runBeforeEnemyAttackHooks(attack *EnemyAttack) {
 
 func (g *Game) runModifyIncomingDamageHooks(incoming *IncomingDamage) {
 	g.forEachEquippedAbilityHook(func(h AbilityHooks, stacks int) {
-		if h.ModifyIncomingDamage != nil && incoming.Damage > 0 {
+		if h.ModifyIncomingDamage != nil && incoming.Damage > 0 && !incoming.Evaded {
 			h.ModifyIncomingDamage(g, incoming, stacks)
 		}
 	})

@@ -122,7 +122,7 @@ var rustTrapEffect = func(g *Game) {
 			switch rollRustTarget(player.EquippedWeapon != nil, player.EquippedArmor != nil, g.randIntn) {
 			case rustWeapon:
 				weapon := player.EquippedWeapon
-				if weapon.RustProof {
+				if itemResistsRust(weapon.RustProof, weapon.Abilities) || g.playerImmuneTo(StatusRust) {
 					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", weapon.GetName()), 0.4)
 					return
 				}
@@ -132,7 +132,7 @@ var rustTrapEffect = func(g *Game) {
 				g.EnqueueMessage(fmt.Sprintf("%sが錆びてしまった", weapon.GetName()), 0.4)
 			case rustArmor:
 				armor := player.EquippedArmor
-				if armor.RustProof {
+				if itemResistsRust(armor.RustProof, armor.Abilities) || g.playerImmuneTo(StatusRust) {
 					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", armor.GetName()), 0.4)
 					return
 				}

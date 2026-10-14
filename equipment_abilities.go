@@ -36,6 +36,9 @@ const (
 	// 位置を動かす攻撃への耐性（F3）。
 	AbilityImmovable EquipmentAbilityID = "immovable"  // 不動: 吹き飛ばし・引き寄せ・場所替えを受けない
 	AbilityBreakFall EquipmentAbilityID = "break_fall" // 受け身: 吹き飛ばされてぶつかってもダメージを受けない
+	// AbilityRustImmune は、その装備品自身がさびない（金の剣・金の盾）。ほかの装備品は守らない。
+	// 装備中の武器・盾をまとめて守る指輪は statusImmunities に StatusRust を登録する。
+	AbilityRustImmune EquipmentAbilityID = "rust_immune"
 )
 
 // EnemyTrait は、特効などの判定に使う敵の分類タグを表す。
@@ -157,6 +160,11 @@ const (
 	StatusSlow      StatusKind = "slow"
 	StatusBearTrap  StatusKind = "bear_trap"
 	StatusPoison    StatusKind = "poison" // 毒によるパワー低下（g.drainPlayerPower）
+	// 状態異常ではないが、同じ問い合わせで防ぐ悪い効果。
+	StatusCurse         StatusKind = "curse"          // 持ち物が呪われる（ノロイガニ系）
+	StatusRust          StatusKind = "rust"           // 装備中の武器・盾の強化値が下がる（さびの罠）
+	StatusFoodTransform StatusKind = "food_transform" // 持ち物をウインナーに変えられる（にぎりエビ系）
+	StatusManipulation  StatusKind = "manipulation"   // 道具を使わされる・歩かされる（あやつりクラゲ系）
 )
 
 // statusImmunities は能力 ID ごとの、確実に無効化する状態異常の一覧。
@@ -179,9 +187,22 @@ func statusKindLabel(kind StatusKind) string {
 		return "トラバサミ"
 	case StatusPoison:
 		return "毒"
+	case StatusCurse:
+		return "呪い"
+	case StatusRust:
+		return "さび"
+	case StatusFoodTransform:
+		return "食料への変化"
+	case StatusManipulation:
+		return "あやつり"
 	default:
 		return string(kind)
 	}
+}
+
+// itemResistsRust は装備品1つがさび（強化値の低下）を受けないかを返す（さび止め済みか、AbilityRustImmune）。
+func itemResistsRust(rustProof bool, abilities []EquipmentAbilityID) bool {
+	return rustProof || hasEquipmentAbility(abilities, AbilityRustImmune)
 }
 
 // abilitiesGrantImmunity は能力一覧のどれかが kind を無効化するかを返す。
@@ -233,6 +254,8 @@ type ShieldDefenseResult struct {
 	Reflected     bool
 	CounterDamage int
 	WearArmor     bool
+	// Guard は回避などのメッセージに使う装備品の名前（空なら装備中の盾の名前）。
+	Guard string
 	// Effects は装備能力のフック（ModifyIncomingDamage）が積んだ、ダメージを受けるときの処理。
 	// 構造体を == で比べられるようポインタで持つ（無ければ nil）。
 	Effects *[]func(g *Game)

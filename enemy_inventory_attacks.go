@@ -70,6 +70,10 @@ func enqueueStealAttack(enemy *Enemy, g *Game, intn func(int) int) {
 }
 
 func enqueueFoodTransformationAttack(enemy *Enemy, g *Game, intn func(int) int) {
+	if message, immune := g.playerImmunityMessage(StatusFoodTransform); immune {
+		g.EnqueueMessage(message, 0.5)
+		return
+	}
 	index, ok := chooseInventoryIndex(&g.state.Player, func(item Item) bool {
 		if isEquippedByPlayer(&g.state.Player, item) {
 			return false
@@ -156,6 +160,10 @@ func curseItem(player *Player, item Item) bool {
 }
 
 func enqueueCurseAttack(enemy *Enemy, g *Game, intn func(int) int) {
+	if message, immune := g.playerImmunityMessage(StatusCurse); immune {
+		g.EnqueueMessage(message, 0.5)
+		return
+	}
 	index, ok := chooseInventoryIndex(&g.state.Player, isCurseableItem, intn)
 	name := g.enemyDisplayName(enemy.Name)
 	if !ok {
@@ -265,6 +273,10 @@ func containsCoordinate(coordinates []Coordinate, target Coordinate) bool {
 }
 
 func enqueueManipulationAttack(enemy *Enemy, g *Game, intn func(int) int) {
+	if message, immune := g.playerImmunityMessage(StatusManipulation); immune {
+		g.EnqueueMessage(message, 0.5)
+		return
+	}
 	useIndices := forcedUseItemIndices(&g.state.Player)
 	moveDestinations := forcedMoveDestinations(g)
 	if len(useIndices) == 0 && len(moveDestinations) == 0 {

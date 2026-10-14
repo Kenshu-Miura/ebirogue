@@ -707,6 +707,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	g.enqueueDisposableWeaponWear(weapon)
 	// 攻撃時に前方の罠を発見する
 	g.checkTrapInFront()
+	g.runAfterPlayerSwingHooks(PlayerSwing{DX: sign(x), DY: sign(y), HitEnemy: g.isFrontEnemy})
 	return true
 }
 
@@ -756,7 +757,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 		return
 	}
 
-	total := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level)
+	total := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level) + attack.AttackBonus
 	result := rollDamage(DamageParams{
 		Attack:              total,
 		Defense:             enemy.DefensePower,
