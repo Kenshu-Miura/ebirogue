@@ -1,6 +1,6 @@
 //go:build ignore
 
-// img-1 の基本種から上位2段階を作る: go run tools/expansion_enemy_images.go
+// img-1・img-2 の基本種から上位2段階を作る: go run tools/expansion_enemy_images.go
 // 輪郭・アルファ・明暗を保ち、色相だけを回転させる（AGENTS.md の上位種画像の規則）。
 // 彩度の低い（灰色に近い）画像は色相を回しても変化が見えないため、彩度を少し足す。
 package main
@@ -35,6 +35,30 @@ var stages = []struct {
 	{"sunakake_moguri", "sunaarashi_moguri", 150},
 	{"yoroi_ebi", "kabuto_ebi", 60},
 	{"kabuto_ebi", "musha_ebi", 150},
+	{"umi_dango", "oo_umi_dango", 60},
+	{"oo_umi_dango", "daiou_umi_dango", 150},
+	{"kaeru_ankou", "oo_kaeru_ankou", 60},
+	{"oo_kaeru_ankou", "nushi_kaeru_ankou", 150},
+	{"hajiki_gani", "kengou_gani", 60},
+	{"kengou_gani", "kensei_gani", 150},
+	{"sabi_hitode", "kusare_hitode", 60},
+	{"kusare_hitode", "doro_hitode", 150},
+	{"itazura_kawahagi", "warusa_kawahagi", 60},
+	{"warusa_kawahagi", "akutare_kawahagi", 150},
+	{"oohasami_gani", "guillotine_gani", 60},
+	{"guillotine_gani", "danzai_gani", 150},
+	{"fukure_fugu", "bakuhatsu_fugu", 60},
+	{"bakuhatsu_fugu", "daibakuhatsu_fugu", 150},
+	{"ana_jako", "oo_ana_jako", 60},
+	{"oo_ana_jako", "jigoku_ana_jako", 150},
+	{"shibire_ei", "denki_ei", 60},
+	{"denki_ei", "raitei_ei", 150},
+	{"mimic_dako", "henge_dako", 60},
+	{"henge_dako", "senmen_dako", 150},
+	{"kobanzame", "oobanzame", 60},
+	{"oobanzame", "senryouzame", 150},
+	{"uchikaeshi_ebi", "hajikikaeshi_ebi", 60},
+	{"hajikikaeshi_ebi", "zenbukaeshi_ebi", 150},
 }
 
 func main() {
