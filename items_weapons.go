@@ -26,4 +26,5 @@ var weaponItemTemplates = map[int]ItemTemplate{
 	144: {ID: 144, ItemType: "Weapon", Type: "CursedKnife", Name: "呪いの包丁", AttackPower: 7, Char: '!', Description: "呪われている間、通常攻撃の総攻撃力が3上がる。", Abilities: []EquipmentAbilityID{AbilityCursePower}},
 	145: {ID: 145, ItemType: "Weapon", Type: "GoldenPickaxe", Name: "黄金のつるはし", AttackPower: 2, Char: '!', Description: "壁を掘れる、さびないつるはし。掘っても劣化しない。", Abilities: []EquipmentAbilityID{AbilityDigWall, AbilityRustImmune}},
 	146: {ID: 146, ItemType: "Weapon", Type: "KajinTachi", Name: "火迅の太刀", AttackPower: 12, Char: '!', Description: "HP満タンで攻撃すると直線10マスの炎。最初の敵に20ダメージ。", Abilities: []EquipmentAbilityID{AbilityFlameBlade}},
+	147: {ID: 147, ItemType: "Weapon", Type: "GiantHarisen", Name: "巨大ハリセン", AttackPower: 4, Char: '!', Description: "命中後25%で敵を最大10マス吹き飛ばす。衝突で5ダメージ。ボスは動かない。", Abilities: []EquipmentAbilityID{AbilityGiantFan}},
 }

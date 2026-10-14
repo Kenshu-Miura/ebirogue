@@ -35,8 +35,11 @@ func TestWave4RingTemplatesAndSave(t *testing.T) {
 		{195, "爆発の指輪", "explosion_ring", false}, {196, "垂れ流しの指輪", "leak_items", true}, {197, "小銭垂れ流しの指輪", "leak_money", true},
 		{198, "魔物呼びの指輪", "monster_call", false}, {199, "罠増しの指輪", "trap_increase", false},
 	}
-	if len(ringItemTemplates) != 20 {
-		t.Fatal("ring count", len(ringItemTemplates))
+	// 段3（wave5-C）で 189〜193・200〜202・204 が加わったので、数ではなく段2の20種がそろっていることを下で検査する。
+	for _, tc := range cases {
+		if _, ok := ringItemTemplates[tc.id]; !ok {
+			t.Fatal("missing ring", tc.id)
+		}
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

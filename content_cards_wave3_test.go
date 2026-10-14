@@ -61,9 +61,7 @@ func TestWave3CardTemplatesAndSave(t *testing.T) {
 			t.Fatal(label)
 		}
 	}
-	if _, exists := cardItemTemplates[174]; exists {
-		t.Fatal("174 is reserved")
-	}
+	// 174（ゾワゾワのカード）は段3の wave5-C で追加済み。内容は content_items_wave5c_test.go が検査する。
 	if itemCategorySpawnWeights["Card"] != 31 {
 		t.Fatal("category weight changed")
 	}

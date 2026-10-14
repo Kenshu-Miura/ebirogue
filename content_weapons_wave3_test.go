@@ -111,9 +111,7 @@ func TestWave3WeaponTemplates(t *testing.T) {
 	if itemCategorySpawnWeights["Weapon"] != 12 {
 		t.Fatal("weapon category weight changed")
 	}
-	if _, exists := weaponItemTemplates[147]; exists {
-		t.Fatal("reserved weapon included")
-	}
+	// 147（巨大ハリセン）は段3の wave5-C で追加済み。内容は content_items_wave5c_test.go が検査する。
 }
 
 func TestWave3GoldSwordAndPickaxe(t *testing.T) {
