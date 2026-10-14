@@ -36,9 +36,6 @@ func formatPlayerStatus(status StatusAilments) string {
 	if status.BearTrap > 0 {
 		statuses = append(statuses, fmt.Sprintf("トラバサミ(%d)", status.BearTrap))
 	}
-	if status.Poison > 0 {
-		statuses = append(statuses, fmt.Sprintf("毒(%d)", status.Poison))
-	}
 	if status.Slow > 0 {
 		statuses = append(statuses, fmt.Sprintf("鈍足(%d)", status.Slow))
 	}
@@ -67,4 +64,14 @@ func formatPlayerStatus(status StatusAilments) string {
 		return "正常"
 	}
 	return strings.Join(statuses, " ")
+}
+
+// drainedPower はパワーを amount だけ下げた値と、実際に下がった量を返す。
+// パワーは0未満にならず、すでに0以下なら変えない。
+func drainedPower(power, amount int) (newPower, drained int) {
+	if power <= 0 || amount <= 0 {
+		return power, 0
+	}
+	drained = min(amount, power)
+	return power - drained, drained
 }

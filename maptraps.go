@@ -38,7 +38,7 @@ var poisonArrowTrapEffect = func(g *Game) {
 	source := g.steppedTrapSource
 	resisted := g.playerResistsStatus()
 	defense := g.resolvePlayerShieldDefense(5, EnemyDamageNormal, EnemyAttackEnvironment)
-	message := "毒矢が刺さり、5ダメージを受けて毒状態になった"
+	message := "毒矢が刺さり、5ダメージを受けた"
 	if resisted {
 		message = fmt.Sprintf("毒矢で5ダメージを受けたが、%sが毒を防いだ", g.state.Player.EquippedArmor.Name)
 	}
@@ -47,8 +47,8 @@ var poisonArrowTrapEffect = func(g *Game) {
 		Message:  message,
 		Execute: func(g *Game) {
 			g.applyPlayerShieldDefense(defense, source, -1, -1, -1)
-			if !resisted {
-				g.state.Player.StatusAilments.Poison = 8
+			if !resisted && g.state.Player.Health > 0 {
+				g.drainPlayerPower(poisonPowerDrain)
 			}
 		},
 	})

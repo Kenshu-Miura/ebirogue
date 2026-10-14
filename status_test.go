@@ -34,8 +34,8 @@ func TestFormatPlayerStatus(t *testing.T) {
 		t.Fatalf("empty status = %q, want 正常", got)
 	}
 
-	status := StatusAilments{Poison: 4, Slow: 2, Paralysis: true}
-	if got := formatPlayerStatus(status); got != "毒(4) 鈍足(2) 金縛り" {
+	status := StatusAilments{Slow: 2, Paralysis: true}
+	if got := formatPlayerStatus(status); got != "鈍足(2) 金縛り" {
 		t.Fatalf("formatted status = %q", got)
 	}
 
@@ -63,5 +63,21 @@ func TestWakeFromSleep(t *testing.T) {
 	}
 	if plain.Sleep != 0 || plain.Haste != 0 {
 		t.Fatalf("unexpected status after wake: %#v", plain)
+	}
+}
+
+func TestDrainedPower(t *testing.T) {
+	cases := []struct{ power, amount, want, drained int }{
+		{8, 1, 7, 1},
+		{1, 3, 0, 1}, // 0未満にならない
+		{0, 1, 0, 0}, // これ以上下がらない
+		{-2, 1, -2, 0},
+		{5, 0, 5, 0},
+	}
+	for _, c := range cases {
+		got, drained := drainedPower(c.power, c.amount)
+		if got != c.want || drained != c.drained {
+			t.Errorf("drainedPower(%d, %d) = (%d, %d), want (%d, %d)", c.power, c.amount, got, drained, c.want, c.drained)
+		}
 	}
 }

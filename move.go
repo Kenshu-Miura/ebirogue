@@ -9,10 +9,6 @@ import (
 
 func (g *Game) IncrementMoveCount() {
 	g.moveCount++
-	if g.state.Player.StatusAilments.Poison > 0 {
-		g.damagePlayer(poisonDamagePerTurn, DamageSource{Kind: DamageSourcePoison})
-		g.state.Player.checkDeath(g)
-	}
 	// 状態異常のターン数を減らす
 	g.decrementStatusAilments()
 
@@ -394,16 +390,6 @@ func (g *Game) decrementStatusAilments() {
 				Execute:  func(g *Game) {},
 			}
 			g.Enqueue(action)
-		}
-	}
-	if g.state.Player.StatusAilments.Poison > 0 {
-		g.state.Player.StatusAilments.Poison--
-		if g.state.Player.StatusAilments.Poison == 0 {
-			g.Enqueue(Action{
-				Duration: 0.4,
-				Message:  "毒が抜けた",
-				Execute:  func(g *Game) {},
-			})
 		}
 	}
 	if g.state.Player.StatusAilments.Slow > 0 {

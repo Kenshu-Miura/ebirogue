@@ -149,6 +149,33 @@ func TestDecodeSaveDataRoundTrip(t *testing.T) {
 	}
 }
 
+// 毒が状態異常だったころのセーブデータ（StatusAilments.Poison を含む）も読み込め、値は無視される。
+func TestDecodeSaveDataIgnoresLegacyPoison(t *testing.T) {
+	original := makeValidSaveData()
+	original.Player.StatusAilments.MouthSeal = 3
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatal(err)
+	}
+	ailments := raw["Player"].(map[string]any)["StatusAilments"].(map[string]any)
+	ailments["Poison"] = 8
+	legacy, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := decodeSaveData(legacy)
+	if err != nil {
+		t.Fatalf("旧セーブの読み込みに失敗: %v", err)
+	}
+	if decoded.Player.StatusAilments.MouthSeal != 3 || decoded.Player.Health != original.Player.Health {
+		t.Errorf("ほかの値が失われた: %+v", decoded.Player)
+	}
+}
+
 func TestDecodeSettings(t *testing.T) {
 	// 正常な設定
 	settings, err := decodeSettings([]byte(`{"fullscreen":true,"showMinimap":false}`))
