@@ -335,6 +335,7 @@ func (g *Game) buildSaveData() *SaveData {
 		CustomNames:       g.customNames,
 		Stats:             g.stats,
 	}
+	save.PendingEnemySpawns = append([]PendingEnemySpawn(nil), g.pendingEnemySpawns...)
 
 	// ジェノサイドで封じた敵IDを保存する（順序を安定させるためソート）
 	for id := range g.genocidedMonsterIDs {
@@ -508,6 +509,8 @@ func (g *Game) applySaveData(save *SaveData) error {
 	g.windWarning1Shown = save.WindWarning1Shown
 	g.windWarning2Shown = save.WindWarning2Shown
 	g.pickupBanned = save.PickupBanned
+
+	g.pendingEnemySpawns = append([]PendingEnemySpawn(nil), save.PendingEnemySpawns...)
 
 	// ジェノサイドで封じた敵IDを復元する
 	g.genocidedMonsterIDs = nil

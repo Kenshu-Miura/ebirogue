@@ -68,6 +68,8 @@ func init() {
 			FloorSpawnTables[floor] = band.Entries
 		}
 	}
+	// 追加計画の敵（enemy_expansion.go）の出現階は、帯を展開した後に階ごとに加える。
+	applyMonsterFamilySpawns(FloorSpawnTables, allMonsterFamilies())
 }
 
 // プレイヤーターン進行時の処理
@@ -77,6 +79,9 @@ func (g *Game) AdvanceTurn() {
 
 	// フロア滞在時間チェック
 	g.checkFloorTimeWarnings()
+
+	// 遅れて現れる敵（ヨロイエビ系など、enemy_behaviors.go）
+	g.processPendingEnemySpawns()
 
 	// 仮眠状態の敵の起床チェック
 	g.CheckSleepingEnemyWakeUp()

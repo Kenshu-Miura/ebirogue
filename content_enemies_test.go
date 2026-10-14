@@ -34,11 +34,21 @@ func TestSpecialMovementEnemyDefinitions(t *testing.T) {
 // ID は map のキーなので重複しない。欠番があってもランダム抽選は ID 一覧から行う。
 
 // 各系統は 基本種 → 第2段階 → 第3段階 の3段階で、上位ほど能力値が高く、固有能力を引き継ぐ。
-func TestEveryBaseMonsterHasUpperSpecies(t *testing.T) {
-	if len(MonsterLevelUpTable) != 2*len(baseMonsterDefinitions) {
-		t.Fatalf("level-up mappings = %d, want two for each of %d base monsters", len(MonsterLevelUpTable), len(baseMonsterDefinitions))
+// allBaseMonsterIDs は既存の基本種と追加計画の系統（enemy_expansion.go）の基本種の ID を返す。
+func allBaseMonsterIDs() []int {
+	ids := expansionBaseMonsterIDs()
+	for id := range baseMonsterDefinitions {
+		ids = append(ids, id)
 	}
-	for baseID := range baseMonsterDefinitions {
+	return ids
+}
+
+func TestEveryBaseMonsterHasUpperSpecies(t *testing.T) {
+	baseIDs := allBaseMonsterIDs()
+	if len(MonsterLevelUpTable) != 2*len(baseIDs) {
+		t.Fatalf("level-up mappings = %d, want two for each of %d base monsters", len(MonsterLevelUpTable), len(baseIDs))
+	}
+	for _, baseID := range baseIDs {
 		secondID, ok := MonsterLevelUpTable[baseID]
 		if !ok {
 			t.Fatalf("base monster %d has no upper species", baseID)
@@ -372,8 +382,9 @@ func TestEnemySprites(t *testing.T) {
 	}
 }
 
+// upperSpeciesSpritePairs は基本種と上位種の画像の組。追加計画の系統（enemy_expansion.go）は表から自動で加わる。
 func upperSpeciesSpritePairs() [][2]string {
-	return [][2]string{
+	pairs := [][2]string{
 		{"img/ebi.png", "img/dai_ebi.png"},
 		{"img/mamuru.png", "img/anagura_mamuru.png"},
 		{"img/snake.png", "img/moudoku_hebi.png"},
@@ -395,6 +406,10 @@ func upperSpeciesSpritePairs() [][2]string {
 		{"img/fire_squid.png", "img/inferno_squid.png"},
 		{"img/magic_jellyfish.png", "img/arcane_jellyfish.png"},
 	}
+	for _, family := range allMonsterFamilies() {
+		pairs = append(pairs, [2]string{family.BaseImage, family.Second.Image}, [2]string{family.BaseImage, family.Third.Image})
+	}
+	return pairs
 }
 
 func TestUpperSpeciesSpritesOnlyRecolorOriginal(t *testing.T) {
@@ -900,7 +915,7 @@ func TestRangedEnemyFloorSpawnTables(t *testing.T) {
 // 9〜30階のテーブル: 全階に定義があり、第3段階は9階から出現し8階以前には出ない。
 func TestDeepFloorSpawnTables(t *testing.T) {
 	thirdStage := map[int]bool{}
-	for baseID := range baseMonsterDefinitions {
+	for _, baseID := range allBaseMonsterIDs() {
 		thirdStage[MonsterLevelUpTable[MonsterLevelUpTable[baseID]]] = true
 	}
 	seen := map[int]bool{}

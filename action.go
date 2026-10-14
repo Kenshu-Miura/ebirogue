@@ -537,7 +537,8 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 		message = "痛恨の一撃！" + message
 	}
 
-	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
+	// 2マス先へ届く攻撃（テッポウエビ系）でも向きが合うよう符号だけを使う
+	dx, dy := sign(g.state.Player.X-enemy.X), sign(g.state.Player.Y-enemy.Y)
 
 	action := Action{
 		Duration: 0.5,
@@ -599,9 +600,11 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 				if attackerIndex >= 0 {
 					g.defeatEnemyByEnemy(attackerIndex, targetIndex)
 				} else {
+					defeated := *target
 					g.dropEnemyHeldItem(targetIndex)
 					g.state.Enemies = append(g.state.Enemies[:targetIndex], g.state.Enemies[targetIndex+1:]...)
 					g.miniMapDirty = true
+					g.onEnemyDefeated(defeated)
 				}
 			}
 		},
@@ -645,6 +648,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 				if index < 0 {
 					return
 				}
+				defeated := g.state.Enemies[index]
 				g.dropEnemyHeldItem(index)
 				g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
 				g.miniMapDirty = true
@@ -653,6 +657,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 				g.state.Player.ExperiencePoints += experience
 
 				g.state.Player.checkLevelUp(g) // レベルアップをチェック
+				g.onEnemyDefeated(defeated)
 			},
 		}
 		g.Enqueue(defeatAction)

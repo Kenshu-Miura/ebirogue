@@ -201,6 +201,7 @@ func (g *Game) startNewRun(seed int64) {
 	g.pickupBanned = false
 	g.pendingFloorDescent = false
 	g.genocidedMonsterIDs = nil
+	g.pendingEnemySpawns = nil
 	g.showBlankCardMenu = false
 	g.blankCardTarget = nil
 	g.blankCardIndex = 0
