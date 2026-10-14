@@ -133,7 +133,7 @@ func octopusBossSpecial(e *Enemy, g *Game) {
 	if g.randIntn(2) == 0 {
 		g.Enqueue(Action{Duration: 0.5, Message: "深海ダコ将軍が墨を吐いた！", Execute: func(g *Game) {
 			i := g.livingBossIndex(id)
-			if i >= 0 && !g.state.Enemies[i].StatusAilments.Seal && !g.playerOnSanctuary() && !g.playerResistsStatus() {
+			if i >= 0 && !g.state.Enemies[i].StatusAilments.Seal && !g.playerOnSanctuary() && !g.playerBlocksStatus(StatusBlind) {
 				g.state.Player.StatusAilments.Blind = max(g.state.Player.StatusAilments.Blind, bossInkDuration)
 			}
 		}})
@@ -172,12 +172,12 @@ func (g *Game) tryBossSpecial(i int) bool {
 		e.SpecialAttack(e, g)
 		return true
 	}
-	if e.ID != 43 {
+	if e.ID != 43 || g.playerImmovable() {
 		return false
 	}
 	g.Enqueue(Action{Duration: 0.5, Message: "深海ダコ将軍と場所が入れ替わった！", Execute: func(g *Game) {
 		i := g.livingBossIndex(43)
-		if i < 0 || g.state.Enemies[i].StatusAilments.Seal || g.playerOnSanctuary() {
+		if i < 0 || g.state.Enemies[i].StatusAilments.Seal || g.playerOnSanctuary() || g.playerImmovable() {
 			return
 		}
 		e := &g.state.Enemies[i]

@@ -159,13 +159,29 @@ func TestEarlyBalanceValues(t *testing.T) {
 			t.Errorf("enemy %d special attack probability = %v, want 0.15", id, got)
 		}
 	}
-	count := 0
-	for _, id := range itemSpawnPool {
-		if id == 43 {
-			count++
+	count, cards := 0, 0
+	for _, category := range itemSpawnCategories {
+		if category.Name != "Card" {
+			continue
+		}
+		cards = len(category.Pool)
+		for _, id := range category.Pool {
+			if id == 43 {
+				count++
+			}
 		}
 	}
-	if count != powerUpCardSpawnWeight || len(itemSpawnPool) != len(randomItemTemplateIDs)+powerUpCardSpawnWeight-1 {
-		t.Fatalf("power-up card appears %d times in a pool of %d", count, len(itemSpawnPool))
+	if count != powerUpCardSpawnWeight || cards != countTemplatesOfType("Card")+powerUpCardSpawnWeight-1 {
+		t.Fatalf("power-up card appears %d times in a card pool of %d", count, cards)
 	}
+}
+
+func countTemplatesOfType(itemType string) int {
+	n := 0
+	for _, template := range itemTemplates {
+		if template.ItemType == itemType {
+			n++
+		}
+	}
+	return n
 }

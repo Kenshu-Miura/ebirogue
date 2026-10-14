@@ -358,14 +358,24 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 	} else if potion, ok := item.(*Potion); ok {
 		// 睡眠薬の場合の処理
 		if potion.Name == "睡眠薬" {
+			message := fmt.Sprintf("%sは眠った", target.GetName())
+			guardMessage, immune := "", false
+			if _, ok := target.(*Player); ok {
+				guardMessage, immune = g.playerImmunityMessage(StatusSleep)
+			}
+			if immune {
+				message = guardMessage
+			}
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sは眠った", target.GetName()),
+				Message:  message,
 				Execute: func(g *Game) {
 					// Type assertion to check if target is of type *Player or *Enemy
 					if _, ok := target.(*Player); ok {
-						// If target is of type *Player
-						g.state.Player.StatusAilments.Sleep = 10
+						// If target is of type *Player（装備能力で無効なら眠らない）
+						if !immune {
+							g.state.Player.StatusAilments.Sleep = 10
+						}
 					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 						// If target is of type *Enemy
 						g.state.Enemies[index].StatusAilments.Sleep = 10
@@ -376,14 +386,24 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			g.Enqueue(action)
 		} else if potion.Name == "混乱薬" {
 			// 混乱薬の場合の処理
+			message := fmt.Sprintf("%sは混乱した", target.GetName())
+			guardMessage, immune := "", false
+			if _, ok := target.(*Player); ok {
+				guardMessage, immune = g.playerImmunityMessage(StatusConfusion)
+			}
+			if immune {
+				message = guardMessage
+			}
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sは混乱した", target.GetName()),
+				Message:  message,
 				Execute: func(g *Game) {
 					// Type assertion to check if target is of type *Player or *Enemy
 					if _, ok := target.(*Player); ok {
-						// If target is of type *Player
-						g.state.Player.StatusAilments.Confusion = 10
+						// If target is of type *Player（装備能力で無効なら混乱しない）
+						if !immune {
+							g.state.Player.StatusAilments.Confusion = 10
+						}
 					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 						// If target is of type *Enemy
 						g.state.Enemies[index].StatusAilments.Confusion = 10
@@ -395,9 +415,13 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		} else if potion.Name == "目潰し薬" {
 			// 目潰し薬の場合の処理
 			// 効果を即座に適用（ミニマップを即座に非表示にするため）
+			message := fmt.Sprintf("%sは目が見えなくなった", target.GetName())
 			if _, ok := target.(*Player); ok {
-				// If target is of type *Player
-				g.state.Player.StatusAilments.Blind = 30
+				if guardMessage, immune := g.playerImmunityMessage(StatusBlind); immune {
+					message = guardMessage // 装備能力で無効なら目潰しにならない
+				} else {
+					g.state.Player.StatusAilments.Blind = 30
+				}
 				// ミニマップを更新するためのフラグを設定
 				g.miniMapDirty = true
 				// ミニマップキャッシュを強制的にクリアして即座に更新
@@ -411,7 +435,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 
 			action := Action{
 				Duration: 0.5,
-				Message:  fmt.Sprintf("%sは目が見えなくなった", target.GetName()),
+				Message:  message,
 				Execute: func(g *Game) {
 					g.isActioned = true
 				},

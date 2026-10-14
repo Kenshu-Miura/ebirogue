@@ -18,10 +18,10 @@ type MapTrap struct {
 
 // 罠の効果関数
 var sleepGasTrapEffect = func(g *Game) {
-	resisted := g.playerResistsStatus()
+	guard, resisted := g.playerStatusGuard(StatusSleep)
 	message := "海老さんは眠った"
 	if resisted {
-		message = fmt.Sprintf("%sが睡眠ガスを防いだ", g.state.Player.EquippedArmor.Name)
+		message = fmt.Sprintf("%sが睡眠ガスを防いだ", guard)
 	}
 	g.Enqueue(Action{
 		Duration: 0.5,
@@ -36,11 +36,11 @@ var sleepGasTrapEffect = func(g *Game) {
 
 var poisonArrowTrapEffect = func(g *Game) {
 	source := g.steppedTrapSource
-	resisted := g.playerResistsStatus()
+	guard, resisted := g.playerStatusGuard(StatusPoison)
 	defense := g.resolvePlayerShieldDefense(5, EnemyDamageNormal, EnemyAttackEnvironment)
 	message := "毒矢が刺さり、5ダメージを受けた"
 	if resisted {
-		message = fmt.Sprintf("毒矢で5ダメージを受けたが、%sが毒を防いだ", g.state.Player.EquippedArmor.Name)
+		message = fmt.Sprintf("毒矢で5ダメージを受けたが、%sが毒を防いだ", guard)
 	}
 	g.Enqueue(Action{
 		Duration: 0.5,
@@ -55,10 +55,10 @@ var poisonArrowTrapEffect = func(g *Game) {
 }
 
 var slowTrapEffect = func(g *Game) {
-	resisted := g.playerResistsStatus()
+	guard, resisted := g.playerStatusGuard(StatusSlow)
 	message := "体が重くなり、鈍足状態になった"
 	if resisted {
-		message = fmt.Sprintf("%sが鈍足を防いだ", g.state.Player.EquippedArmor.Name)
+		message = fmt.Sprintf("%sが鈍足を防いだ", guard)
 	}
 	g.Enqueue(Action{
 		Duration: 0.5,
@@ -122,7 +122,7 @@ var rustTrapEffect = func(g *Game) {
 			switch rollRustTarget(player.EquippedWeapon != nil, player.EquippedArmor != nil, g.randIntn) {
 			case rustWeapon:
 				weapon := player.EquippedWeapon
-				if weapon.RustProof {
+				if itemResistsRust(weapon.RustProof, weapon.Abilities) || g.playerImmuneTo(StatusRust) {
 					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", weapon.GetName()), 0.4)
 					return
 				}
@@ -132,7 +132,7 @@ var rustTrapEffect = func(g *Game) {
 				g.EnqueueMessage(fmt.Sprintf("%sが錆びてしまった", weapon.GetName()), 0.4)
 			case rustArmor:
 				armor := player.EquippedArmor
-				if armor.RustProof {
+				if itemResistsRust(armor.RustProof, armor.Abilities) || g.playerImmuneTo(StatusRust) {
 					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", armor.GetName()), 0.4)
 					return
 				}

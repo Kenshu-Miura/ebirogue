@@ -27,6 +27,18 @@ const (
 	AbilityCounter             EquipmentAbilityID = "counter"
 	AbilitySatietyHunger       EquipmentAbilityID = "satiety_hunger"
 	AbilityDisposableArmor     EquipmentAbilityID = "disposable_armor"
+	// 敵の属性（F2）への特効。対応する属性は slayerTraits の表で引く。
+	AbilityShellSlayer     EquipmentAbilityID = "shell_slayer"
+	AbilityExplosiveSlayer EquipmentAbilityID = "explosive_slayer"
+	AbilityFloatingSlayer  EquipmentAbilityID = "floating_slayer"
+	// 指輪の能力。
+	AbilityPowerBoost EquipmentAbilityID = "power_boost" // 鼓舞の指輪: パワーと最大パワーを上げる（呪われていると下げる）
+	// 位置を動かす攻撃への耐性（F3）。
+	AbilityImmovable EquipmentAbilityID = "immovable"  // 不動: 吹き飛ばし・引き寄せ・場所替えを受けない
+	AbilityBreakFall EquipmentAbilityID = "break_fall" // 受け身: 吹き飛ばされてぶつかってもダメージを受けない
+	// AbilityRustImmune は、その装備品自身がさびない（金の剣・金の盾）。ほかの装備品は守らない。
+	// 装備中の武器・盾をまとめて守る指輪は statusImmunities に StatusRust を登録する。
+	AbilityRustImmune EquipmentAbilityID = "rust_immune"
 )
 
 // EnemyTrait は、特効などの判定に使う敵の分類タグを表す。
@@ -37,7 +49,26 @@ const (
 	EnemyTraitGhost   EnemyTrait = "ghost"
 	EnemyTraitOneEye  EnemyTrait = "one_eye"
 	EnemyTraitDrainer EnemyTrait = "drainer"
+	// 甲殻（カニ・ヤドカリ・貝）、爆発（ウニ・フグ）、浮遊（クラゲ）。
+	EnemyTraitShell     EnemyTrait = "shell"
+	EnemyTraitExplosive EnemyTrait = "explosive"
+	EnemyTraitFloating  EnemyTrait = "floating"
 )
+
+// slayerTraits は特効能力と、その能力が効く敵の属性の対応表。
+// 新しい特効武器は能力 ID をここへ追加するだけで slayerMultiplier に反映される。
+var slayerTraits = map[EquipmentAbilityID]EnemyTrait{
+	AbilityDragonSlayer:    EnemyTraitDragon,
+	AbilityGhostSlayer:     EnemyTraitGhost,
+	AbilityOneEyeSlayer:    EnemyTraitOneEye,
+	AbilityDrainerSlayer:   EnemyTraitDrainer,
+	AbilityShellSlayer:     EnemyTraitShell,
+	AbilityExplosiveSlayer: EnemyTraitExplosive,
+	AbilityFloatingSlayer:  EnemyTraitFloating,
+}
+
+// powerRingBonus は鼓舞の指輪（AbilityPowerBoost）1つあたりのパワーの増減量。
+const powerRingBonus = 3
 
 const (
 	baseSatietyLossInterval     = 10
@@ -73,14 +104,117 @@ func hasEnemyTrait(traits []EnemyTrait, target EnemyTrait) bool {
 // slayerMultiplier は、武器能力と敵の分類が一致したときのダメージ倍率を返す。
 // 複数の特効条件が一致しても倍率は重複させず、rollDamage の Multiplier へ乗算で渡す。
 func slayerMultiplier(abilities []EquipmentAbilityID, traits []EnemyTrait) (float64, bool) {
-	matched := (hasEquipmentAbility(abilities, AbilityDragonSlayer) && hasEnemyTrait(traits, EnemyTraitDragon)) ||
-		(hasEquipmentAbility(abilities, AbilityGhostSlayer) && hasEnemyTrait(traits, EnemyTraitGhost)) ||
-		(hasEquipmentAbility(abilities, AbilityOneEyeSlayer) && hasEnemyTrait(traits, EnemyTraitOneEye)) ||
-		(hasEquipmentAbility(abilities, AbilityDrainerSlayer) && hasEnemyTrait(traits, EnemyTraitDrainer))
-	if !matched {
-		return 1.0, false
+	for _, ability := range abilities {
+		if trait, ok := slayerTraits[ability]; ok && hasEnemyTrait(traits, trait) {
+			return slayerDamageMultiplier, true
+		}
 	}
-	return slayerDamageMultiplier, true
+	return 1.0, false
+}
+
+// countEquipmentAbility は装備品ごとの能力一覧のうち、target を持つものの数（重ね数）を返す。
+// 同じ能力の指輪を2つ装備すると2になる。1つの装備品に同じ ID が重複していても1と数える。
+func countEquipmentAbility(target EquipmentAbilityID, abilityLists ...[]EquipmentAbilityID) int {
+	count := 0
+	for _, abilities := range abilityLists {
+		if hasEquipmentAbility(abilities, target) {
+			count++
+		}
+	}
+	return count
+}
+
+// uniqueEquipmentAbilities は装備品ごとの能力一覧を、最初に現れた順に重複なく並べる。
+// 装備能力のフックを1つの能力につき1回（重ね数つき）だけ呼ぶために使う。
+func uniqueEquipmentAbilities(abilityLists ...[]EquipmentAbilityID) []EquipmentAbilityID {
+	var result []EquipmentAbilityID
+	for _, abilities := range abilityLists {
+		for _, ability := range abilities {
+			if !hasEquipmentAbility(result, ability) {
+				result = append(result, ability)
+			}
+		}
+	}
+	return result
+}
+
+// accessoryPowerBonus は指輪を装備したときのパワーと最大パワーの増減量を返す（外すときは符号を反転して使う）。
+// 鼓舞の指輪は +3、呪われていると -3。
+func accessoryPowerBonus(abilities []EquipmentAbilityID, cursed bool) int {
+	if !hasEquipmentAbility(abilities, AbilityPowerBoost) {
+		return 0
+	}
+	if cursed {
+		return -powerRingBonus
+	}
+	return powerRingBonus
+}
+
+// StatusKind は装備能力で無効化できる状態異常・悪い効果の種類。
+type StatusKind string
+
+const (
+	StatusConfusion StatusKind = "confusion"
+	StatusSleep     StatusKind = "sleep"
+	StatusBlind     StatusKind = "blind"
+	StatusSlow      StatusKind = "slow"
+	StatusBearTrap  StatusKind = "bear_trap"
+	StatusPoison    StatusKind = "poison" // 毒によるパワー低下（g.drainPlayerPower）
+	// 状態異常ではないが、同じ問い合わせで防ぐ悪い効果。
+	StatusCurse         StatusKind = "curse"          // 持ち物が呪われる（ノロイガニ系）
+	StatusRust          StatusKind = "rust"           // 装備中の武器・盾の強化値が下がる（さびの罠）
+	StatusFoodTransform StatusKind = "food_transform" // 持ち物をウインナーに変えられる（にぎりエビ系）
+	StatusManipulation  StatusKind = "manipulation"   // 道具を使わされる・歩かされる（あやつりクラゲ系）
+)
+
+// statusImmunities は能力 ID ごとの、確実に無効化する状態異常の一覧。
+// 混乱よけ・睡眠よけ・毒消しなどの指輪は、能力 ID をここへ追加するだけで
+// g.playerImmuneTo と各状態異常の付与箇所に反映される。
+var statusImmunities = map[EquipmentAbilityID][]StatusKind{}
+
+// statusKindLabel は「〜を防いだ」のメッセージに使う状態異常の名前を返す。
+func statusKindLabel(kind StatusKind) string {
+	switch kind {
+	case StatusConfusion:
+		return "混乱"
+	case StatusSleep:
+		return "睡眠"
+	case StatusBlind:
+		return "目潰し"
+	case StatusSlow:
+		return "鈍足"
+	case StatusBearTrap:
+		return "トラバサミ"
+	case StatusPoison:
+		return "毒"
+	case StatusCurse:
+		return "呪い"
+	case StatusRust:
+		return "さび"
+	case StatusFoodTransform:
+		return "食料への変化"
+	case StatusManipulation:
+		return "あやつり"
+	default:
+		return string(kind)
+	}
+}
+
+// itemResistsRust は装備品1つがさび（強化値の低下）を受けないかを返す（さび止め済みか、AbilityRustImmune）。
+func itemResistsRust(rustProof bool, abilities []EquipmentAbilityID) bool {
+	return rustProof || hasEquipmentAbility(abilities, AbilityRustImmune)
+}
+
+// abilitiesGrantImmunity は能力一覧のどれかが kind を無効化するかを返す。
+func abilitiesGrantImmunity(abilities []EquipmentAbilityID, kind StatusKind) bool {
+	for _, ability := range abilities {
+		for _, immune := range statusImmunities[ability] {
+			if immune == kind {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func satietyLossInterval(armorAbilities []EquipmentAbilityID) int {
@@ -120,6 +254,11 @@ type ShieldDefenseResult struct {
 	Reflected     bool
 	CounterDamage int
 	WearArmor     bool
+	// Guard は回避などのメッセージに使う装備品の名前（空なら装備中の盾の名前）。
+	Guard string
+	// Effects は装備能力のフック（ModifyIncomingDamage）が積んだ、ダメージを受けるときの処理。
+	// 構造体を == で比べられるようポインタで持つ（無ければ nil）。
+	Effects *[]func(g *Game)
 }
 
 func hasDamageResistance(abilities []EquipmentAbilityID, kind EnemyDamageKind) bool {
@@ -207,10 +346,15 @@ func playerAttackDeltas(dx, dy int, abilities []EquipmentAbilityID) []Coordinate
 
 // rollPlayerAttackHit は通常武器の90%命中と必中能力の100%命中を判定する。
 func rollPlayerAttackHit(abilities []EquipmentAbilityID, intn func(int) int) bool {
-	if hasEquipmentAbility(abilities, AbilitySureHit) {
+	return rollPlayerAttackHitChance(basePlayerAttackAccuracy, hasEquipmentAbility(abilities, AbilitySureHit), intn)
+}
+
+// rollPlayerAttackHitChance は命中率 accuracy（%）で命中を判定する。必中なら乱数を使わず命中する。
+func rollPlayerAttackHitChance(accuracy int, sureHit bool, intn func(int) int) bool {
+	if sureHit {
 		return true
 	}
-	return intn(100) < basePlayerAttackAccuracy
+	return intn(100) < accuracy
 }
 
 // nextDisposableWeaponAttackPower は攻撃後の使い捨て武器の基礎攻撃力を返す。

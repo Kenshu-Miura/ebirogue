@@ -9,6 +9,10 @@ type randHooks struct {
 	attackHit        func(int) int // プレイヤー攻撃の命中判定
 	shieldDefense    func(int) int // 盾の回避・反撃判定
 	statusResistance func(int) int // 盾の状態異常耐性判定
+	ability          func(int) int // 装備能力のフック内の判定（g.abilityIntn）
+	enemyCritical    func(int) int // 敵の痛恨の一撃の判定
+	enemyEvasion     func(int) int // 敵が通常攻撃をかわす判定
+	displacement     func(int) int // 持ち物を落とす処理の対象・位置の抽選
 }
 
 func (g *Game) hookOrRandIntn(hook func(int) int) func(int) int {
@@ -27,3 +31,12 @@ func (g *Game) shieldDefenseIntn() func(int) int { return g.hookOrRandIntn(g.ran
 func (g *Game) statusResistanceIntn() func(int) int {
 	return g.hookOrRandIntn(g.randHooks.statusResistance)
 }
+
+// abilityIntn は装備能力のフックの中で使う乱数源。
+func (g *Game) abilityIntn() func(int) int { return g.hookOrRandIntn(g.randHooks.ability) }
+
+func (g *Game) enemyCriticalIntn() func(int) int { return g.hookOrRandIntn(g.randHooks.enemyCritical) }
+
+func (g *Game) enemyEvasionIntn() func(int) int { return g.hookOrRandIntn(g.randHooks.enemyEvasion) }
+
+func (g *Game) displacementIntn() func(int) int { return g.hookOrRandIntn(g.randHooks.displacement) }

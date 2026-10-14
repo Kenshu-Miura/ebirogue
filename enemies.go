@@ -130,6 +130,28 @@ type MonsterDefinition struct {
 	Disguise                 EnemyDisguise
 	Traits                   []EnemyTrait
 	IsBoss                   bool // ボスはランダム出現と上位種化の対象外
+	// 通常攻撃が痛恨の一撃（ダメージ×enemyCriticalMultiplier）になる確率（%、F4）。封印中は0
+	CriticalPercent int
+	// プレイヤーの通常攻撃をかわす確率（%、F4）。必中・封印・睡眠・金縛り中は0
+	EvasionPercent int
+}
+
+// enemyCriticalPercent は敵の通常攻撃が痛恨の一撃になる確率（%）を返す。
+// 確率は ID の定義から引く（上位種化・セーブ復元で自動的に追従する）。
+func enemyCriticalPercent(enemy *Enemy) int {
+	if enemy.StatusAilments.Seal {
+		return 0
+	}
+	return MonsterDefinitions[enemy.ID].CriticalPercent
+}
+
+// enemyEvasionPercent は敵がプレイヤーの通常攻撃をかわす確率（%）を返す。
+// 封印・睡眠・金縛り中はかわさない。
+func enemyEvasionPercent(enemy *Enemy) int {
+	if enemy.StatusAilments.Seal || enemy.StatusAilments.Sleep != 0 || enemy.StatusAilments.Paralysis {
+		return 0
+	}
+	return MonsterDefinitions[enemy.ID].EvasionPercent
 }
 
 // upperMonsterDefinition は基本種の固有能力を引き継ぎ、上位種の能力値と表示情報を設定する。
@@ -145,7 +167,15 @@ func upperMonsterDefinition(base MonsterDefinition, id int, monsterType, name st
 	return base
 }
 
+// withTraits は定義へ属性を加えた写しを返す。
+func withTraits(definition MonsterDefinition, traits ...EnemyTrait) MonsterDefinition {
+	definition.Traits = append(append([]EnemyTrait(nil), definition.Traits...), traits...)
+	return definition
+}
+
 // baseMonsterDefinitions は各系統の基本種を定義する。
+// 属性（Traits）は上位種へそのまま引き継がれる。甲殻＝カニ・ヤドカリ・貝、爆発＝ウニ、浮遊＝クラゲ、
+// 竜＝海竜、霊＝ユウレイエビ、一つ目・吸い取りはそれぞれの特効武器の対象。
 var baseMonsterDefinitions = map[int]MonsterDefinition{
 	0: {
 		ID:                       0,
@@ -211,10 +241,10 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 			if g.state.Player.StatusAilments.Blind > 0 {
 				enemyName = "何者"
 			}
-			resisted := g.playerResistsStatus()
+			guard, resisted := g.playerStatusGuard(StatusSlow)
 			message := fmt.Sprintf("%sのくねくね踊り。海老さんは鈍足になった。", enemyName)
 			if resisted {
-				message = fmt.Sprintf("%sのくねくね踊り。しかし%sが鈍足を防いだ。", enemyName, g.state.Player.EquippedArmor.Name)
+				message = fmt.Sprintf("%sのくねくね踊り。しかし%sが鈍足を防いだ。", enemyName, guard)
 			}
 			g.Enqueue(Action{
 				Duration: 0.5,
@@ -250,6 +280,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:             "Ishigani",
 		Name:             "イシガニ",
 		Char:             'C',
+		Traits:           []EnemyTrait{EnemyTraitShell},
 		Health:           32,
 		MaxHealth:        32,
 		AttackPower:      7,
@@ -267,6 +298,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:             "BombUrchin",
 		Name:             "バクダンウニ",
 		Char:             'U',
+		Traits:           []EnemyTrait{EnemyTraitExplosive},
 		Health:           45,
 		MaxHealth:        45,
 		AttackPower:      10,
@@ -285,6 +317,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:                     "ThiefHermitCrab",
 		Name:                     "コソドロヤドカリ",
 		Char:                     'T',
+		Traits:                   []EnemyTrait{EnemyTraitShell},
 		Health:                   26,
 		MaxHealth:                26,
 		AttackPower:              5,
@@ -311,6 +344,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:                     "CurseCrab",
 		Name:                     "ノロイガニ",
 		Char:                     'C',
+		Traits:                   []EnemyTrait{EnemyTraitShell},
 		Health:                   38,
 		MaxHealth:                38,
 		AttackPower:              8,
@@ -324,6 +358,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:                     "PuppeteerJellyfish",
 		Name:                     "あやつりクラゲ",
 		Char:                     'J',
+		Traits:                   []EnemyTrait{EnemyTraitFloating},
 		Health:                   42,
 		MaxHealth:                42,
 		AttackPower:              9,
@@ -362,6 +397,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:             "WarpJellyfish",
 		Name:             "ワープクラゲ",
 		Char:             'W',
+		Traits:           []EnemyTrait{EnemyTraitFloating},
 		Health:           30,
 		MaxHealth:        30,
 		AttackPower:      8,
@@ -386,6 +422,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:             "TrapHermitCrab",
 		Name:             "ワナシヤドカリ",
 		Char:             'R',
+		Traits:           []EnemyTrait{EnemyTraitShell},
 		Health:           40,
 		MaxHealth:        40,
 		AttackPower:      8,
@@ -398,6 +435,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:             "MimicClam",
 		Name:             "化け貝",
 		Char:             'Q',
+		Traits:           []EnemyTrait{EnemyTraitShell},
 		Health:           34,
 		MaxHealth:        34,
 		AttackPower:      10,
@@ -410,6 +448,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:             "MimicClam",
 		Name:             "化け貝",
 		Char:             'Q',
+		Traits:           []EnemyTrait{EnemyTraitShell},
 		Health:           42,
 		MaxHealth:        42,
 		AttackPower:      12,
@@ -451,6 +490,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		Type:             "MagicJellyfish",
 		Name:             "マホウクラゲ",
 		Char:             'J',
+		Traits:           []EnemyTrait{EnemyTraitFloating},
 		Health:           52,
 		MaxHealth:        52,
 		AttackPower:      11,
@@ -520,6 +560,7 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 
 	// 仮のボス（wave1-C で本物のボスに置き換える）。既存の強い敵を基に能力値を上げたもの。
 	definitions[42] = bossDefinition(42, "鉄壁ガニ王", "BossCrab", 110, 12, 7, 300, nil)
+	definitions[42] = withTraits(definitions[42], EnemyTraitShell)
 	definitions[43] = bossDefinition(43, "深海ダコ将軍", "BossOctopus", 180, 18, 8, 500, nil)
 	definitions[44] = bossDefinition(44, "海竜王アカツキ", "BossDragon", 210, 16, 9, 800, nil)
 

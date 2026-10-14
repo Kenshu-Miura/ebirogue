@@ -516,20 +516,32 @@ func (aq *ActionQueue) Enqueue(action Action) {
 }
 
 // enqueueEnemyNormalAttack は敵の通常攻撃（ダメージ計算・攻撃アニメーション・死亡チェック）をキューへ追加する。
+// 痛恨の一撃（F4）の判定は確率が0より大きいときだけ乱数を使う。
 func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	enemy := &g.state.Enemies[enemyIndex]
 
-	netDamage := rollEnemyAttackDamage(enemy.AttackPower, g.state.Player.DefensePower, g.damageIntn())
-	defense := g.resolvePlayerShieldDefense(netDamage, EnemyDamageNormal, EnemyAttackMelee)
+	attack := EnemyAttack{Enemy: enemy, CriticalPercent: enemyCriticalPercent(enemy), Multiplier: 1.0}
+	g.runBeforeEnemyAttackHooks(&attack)
+	critical := attack.CriticalPercent > 0 && g.enemyCriticalIntn()(100) < attack.CriticalPercent
+	multiplier := attack.Multiplier
+	if critical {
+		multiplier *= enemyCriticalMultiplier
+	}
+	netDamage := rollEnemyAttackDamageWith(enemy.AttackPower, g.state.Player.DefensePower, multiplier, g.damageIntn())
+	defense := g.resolvePlayerDefense(netDamage, EnemyDamageNormal, EnemyAttackMelee, enemy, critical)
 	enemyName := g.enemyDisplayName(enemy.Name)
 	enemyID, enemyX, enemyY := enemy.ID, enemy.X, enemy.Y
 	source := enemyAttackSource(enemy.ID, enemy.Name)
+	message := g.shieldDefenseMessage(enemyName, defense)
+	if critical && !defense.Evaded && !defense.Reflected {
+		message = "痛恨の一撃！" + message
+	}
 
 	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
 
 	action := Action{
 		Duration: 0.5,
-		Message:  g.shieldDefenseMessage(enemyName, defense),
+		Message:  message,
 		Execute: func(g *Game) {
 			enemy.AttackTimer = 0.5 // AttackTimerを設定することで敵の攻撃アニメーションが実行される
 			if MonsterDefinitions[enemyID].IsBoss && g.livingBossIndex(enemyID) < 0 {
@@ -695,37 +707,71 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	g.enqueueDisposableWeaponWear(weapon)
 	// 攻撃時に前方の罠を発見する
 	g.checkTrapInFront()
+	g.runAfterPlayerSwingHooks(PlayerSwing{DX: sign(x), DY: sign(y), HitEnemy: g.isFrontEnemy})
 	return true
 }
 
 // enqueuePlayerAttack は対象1体への命中判定とダメージをキューへ追加する。
 // 実行時に座標から敵を引き直し、三方向攻撃で先の敵を倒してもスライスのずれを起こさない。
+// 装備能力のフック BeforePlayerAttack は命中判定の前、AfterPlayerMiss・AfterPlayerHit は
+// メッセージを表示する Action の Execute 内で呼ぶ。
+// 乱数は 命中 → 敵の回避（回避率があるときだけ）→ 会心 → 乱数係数 の順で使う。
 func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAbilityID) {
-	enemy := g.state.Enemies[enemyIndex]
+	enemy := &g.state.Enemies[enemyIndex]
 	targetX, targetY := enemy.X, enemy.Y
-	hit := rollPlayerAttackHit(weaponAbilities, g.attackHitIntn())
-	if !hit {
+	multiplier, slayerEffective := slayerMultiplier(weaponAbilities, enemy.Traits)
+	attack := &PlayerAttack{
+		Weapon:              g.state.Player.EquippedWeapon,
+		Target:              enemy,
+		Accuracy:            basePlayerAttackAccuracy,
+		SureHit:             hasEquipmentAbility(weaponAbilities, AbilitySureHit),
+		EnemyEvasion:        enemyEvasionPercent(enemy),
+		Multiplier:          multiplier,
+		CriticalDenominator: playerCriticalDenominator,
+	}
+	if slayerEffective {
+		attack.MessagePrefix = "特効！"
+	}
+	g.runBeforePlayerAttackHooks(attack)
+
+	enemyName := g.enemyDisplayName(enemy.Name)
+	hit := rollPlayerAttackHitChance(attack.Accuracy, attack.SureHit, g.attackHitIntn())
+	evaded := hit && !attack.SureHit && attack.EnemyEvasion > 0 && g.enemyEvasionIntn()(100) < attack.EnemyEvasion
+	if !hit || evaded {
+		message := fmt.Sprintf("%sへの攻撃は外れた。", enemyName)
+		if evaded {
+			message = fmt.Sprintf("%sは攻撃をかわした。", enemyName)
+		}
 		g.Enqueue(Action{
 			Duration: 0.5,
-			Message:  fmt.Sprintf("%sへの攻撃は外れた。", g.enemyDisplayName(enemy.Name)),
+			Message:  message,
 			Execute: func(g *Game) {
 				g.isActioned = true
+				attack.Target = nil // 実行時の敵を引き直す（倒れていれば nil）
+				if i := g.enemyIndexAt(targetX, targetY); i >= 0 {
+					attack.Target = &g.state.Enemies[i]
+				}
+				g.runAfterPlayerMissHooks(attack)
 			},
 		})
 		return
 	}
 
-	multiplier, slayerEffective := slayerMultiplier(weaponAbilities, enemy.Traits)
-	attack := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level)
-	result := rollPlayerAttackDamage(attack, enemy.DefensePower, multiplier, g.damageIntn())
+	total := playerAttackTotal(g.state.Player.AttackPower, g.state.Player.Power, g.state.Player.Level) + attack.AttackBonus
+	result := rollDamage(DamageParams{
+		Attack:              total,
+		Defense:             enemy.DefensePower,
+		Multiplier:          attack.Multiplier,
+		MinDamage:           minAttackDamage,
+		CriticalDenominator: attack.CriticalDenominator,
+		ForceCritical:       attack.ForceCritical,
+	}, g.damageIntn())
 	netDamage := result.Damage
-	message := fmt.Sprintf("%sに%dダメージを与えた。", g.enemyDisplayName(enemy.Name), netDamage)
-	if slayerEffective {
-		message = "特効！" + message
-	}
+	message := attack.MessagePrefix + fmt.Sprintf("%sに%dダメージを与えた。", enemyName, netDamage)
 	if result.Critical {
 		message = "会心の一撃！" + message
 	}
+	weapon := attack.Weapon
 
 	g.Enqueue(Action{
 		Duration: 0.5,
@@ -735,9 +781,13 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 			if currentIndex < 0 {
 				return
 			}
+			target := g.state.Enemies[currentIndex]
+			hitResult := PlayerAttackHit{Weapon: weapon, EnemyID: target.ID, Enemy: target, Damage: netDamage,
+				Critical: result.Critical, Defeated: target.Health-netDamage <= 0}
 			g.WakeUpSleepingEnemyByAttack(currentIndex)
 			g.applyDamageToEnemy(currentIndex, netDamage)
 			g.isActioned = true
+			g.runAfterPlayerHitHooks(hitResult)
 		},
 	})
 }

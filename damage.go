@@ -21,6 +21,8 @@ const (
 	criticalMultiplier = 1.5
 	// 特効武器の倍率。
 	slayerDamageMultiplier = 1.5
+	// 敵の痛恨の一撃（F4）の倍率。防御力による軽減はそのまま受ける。
+	enemyCriticalMultiplier = 1.5
 	// 命中した攻撃の最低保証ダメージ。
 	minAttackDamage = 1
 )
@@ -33,6 +35,7 @@ type DamageParams struct {
 	Multiplier          float64 // 特効などの追加倍率。0以下は1.0扱い
 	MinDamage           int     // 命中時の最低保証ダメージ
 	CriticalDenominator int     // 1/N で会心の一撃。0なら会心なし
+	ForceCritical       bool    // 必ず会心の一撃にする（会心判定の乱数は通常どおり消費する）
 }
 
 // DamageResult はダメージ計算の結果。
@@ -58,6 +61,7 @@ func damageRandomFactor(intn func(int) int) float64 {
 // 乱数は会心判定 → 乱数係数の順で消費する。
 func rollDamage(params DamageParams, intn func(int) int) DamageResult {
 	critical := params.CriticalDenominator > 0 && intn(params.CriticalDenominator) == 0
+	critical = critical || params.ForceCritical
 	value := float64(params.Attack)
 	if critical {
 		value *= criticalMultiplier
@@ -93,10 +97,16 @@ func rollPlayerAttackDamage(attack, defense int, multiplier float64, intn func(i
 
 // rollEnemyAttackDamage は敵の通常攻撃・遠距離攻撃のダメージを算出する。会心なし。
 func rollEnemyAttackDamage(attack, defense int, intn func(int) int) int {
+	return rollEnemyAttackDamageWith(attack, defense, 1.0, intn)
+}
+
+// rollEnemyAttackDamageWith は倍率（痛恨の一撃など）付きで敵の攻撃のダメージを算出する。
+func rollEnemyAttackDamageWith(attack, defense int, multiplier float64, intn func(int) int) int {
 	return rollDamage(DamageParams{
-		Attack:    attack,
-		Defense:   defense,
-		MinDamage: minAttackDamage,
+		Attack:     attack,
+		Defense:    defense,
+		Multiplier: multiplier,
+		MinDamage:  minAttackDamage,
 	}, intn).Damage
 }
 

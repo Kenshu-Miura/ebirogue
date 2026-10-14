@@ -62,6 +62,10 @@ var pitfallTrapEffect = func(g *Game) {
 }
 
 var bearTrapEffect = func(g *Game) {
+	if message, immune := g.playerImmunityMessage(StatusBearTrap); immune {
+		g.EnqueueMessage(message, 0.5)
+		return
+	}
 	g.Enqueue(Action{Duration: 0.5, Message: "トラバサミに足を挟まれた", Execute: func(g *Game) {
 		g.state.Player.StatusAilments.BearTrap = max(g.state.Player.StatusAilments.BearTrap, 6)
 	}})
