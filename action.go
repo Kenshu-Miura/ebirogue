@@ -622,6 +622,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 			}
 			target := &g.state.Enemies[targetIndex]
 			target.Health -= netDamage
+			g.WakeUpSleepingEnemyByAttack(targetIndex)
 
 			// ダメージを受けた敵の金縛り状態を解除
 			target.StatusAilments.Paralysis = false

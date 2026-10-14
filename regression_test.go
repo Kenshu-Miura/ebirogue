@@ -7,6 +7,51 @@ import (
 	"testing"
 )
 
+func TestPlaytestCloseDescriptions(t *testing.T) {
+	for _, ground := range []bool{true, false} {
+		g, v := newHeadlessGame(1, DifficultyAdvanced)
+		item := buildItemFromTemplate(1, g.state.Player.X, g.state.Player.Y)
+		g.state.Items = []Item{item}
+		g.state.Player.Inventory = []Item{item}
+		g.ShowGroundItem = ground
+		g.currentGroundItem = item
+		g.showInventory = !ground
+		g.showItemActions = !ground
+		if ground {
+			g.selectedGroundActionIndex = 4
+			g.executeGroundItemAction()
+		} else {
+			g.selectedActionIndex = 3
+			g.executeAction()
+		}
+		if ground && !g.showGroundItemDescription || !ground && !g.showItemDescription {
+			t.Fatal("description did not open")
+		}
+		v.Press(KeyC)
+		v.Update()
+		if err := g.handleInventoryInput(); err != nil {
+			t.Fatal(err)
+		}
+		g.HandleGroundItemInput()
+		if g.ShowGroundItem || g.showInventory || g.showMenu || g.showItemActions || g.showItemDescription || g.showGroundItemDescription || g.groundItemDescriptionText != "" || g.itemdescriptionText != "" || g.groundMenuJustOpened {
+			t.Fatal("C left description/menu state")
+		}
+		v.ReleaseAll()
+		v.Update()
+		g.showMenu = true
+		g.menuSelectedRow = 0
+		g.menuSelectedCol = 1
+		v.Press(KeyZ)
+		v.Update()
+		if err := g.handleMenuInput(); err != nil {
+			t.Fatal(err)
+		}
+		if !g.ShowGroundItem || g.showGroundItemDescription || g.selectedGroundActionIndex != 0 || g.GroundItemActioned || g.groundItemDescriptionText != "" {
+			t.Fatal("reopened ground menu retained description")
+		}
+	}
+}
+
 // BOT のテストプレイ（TestSimSmoke / TestSimBatch）で見つかった不具合の回帰テスト。
 
 // 所持品が1個だけのときに「使う」と、空になった所持品を参照して panic していた。

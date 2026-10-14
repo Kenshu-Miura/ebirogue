@@ -30,6 +30,9 @@ func (g *Game) DrawStairsPrompt(screen *ebiten.Image) {
 }
 
 func (g *Game) UpdateAndDrawMiniMap(screen *ebiten.Image) {
+	if _, _, preview := g.trajectoryPreviewSpec(); preview {
+		return // 射線と右端の行動メニューを隠さない。
+	}
 	// 設定でミニマップ表示がOFFの場合は描画しない
 	if !g.settings.ShowMiniMap {
 		return

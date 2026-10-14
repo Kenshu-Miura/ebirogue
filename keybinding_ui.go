@@ -34,8 +34,7 @@ func (g *Game) handleKeyConfigFrame(physical string, held bool) {
 		g.keyConfigSelected = (g.keyConfigSelected + 1) % count
 	}
 	if g.keys().JustPressed(KeyC) {
-		g.showKeyConfig = false
-		g.showSettings = false
+		g.closeAllMenus()
 		g.saveSettings()
 		return
 	}

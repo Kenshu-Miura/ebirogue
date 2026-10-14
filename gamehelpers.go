@@ -186,6 +186,7 @@ func (g *Game) dropEnemyHeldItem(index int) {
 // applyDamageToEnemy は敵へダメージを与えて金縛りを解除し、倒した場合は撃破処理を行う。
 // 倒れなかったときは系統の被弾時の処理（MonsterDefinition.OnDamaged）を呼ぶ。
 func (g *Game) applyDamageToEnemy(index, damage int) {
+	g.WakeUpSleepingEnemyByAttack(index)
 	if enemyMasquerading(g.state.Enemies[index]) {
 		g.revealEnemy(index) // 別の敵に化けている敵は攻撃を受けると正体を現す
 	}

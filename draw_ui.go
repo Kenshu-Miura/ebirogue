@@ -145,7 +145,7 @@ func (g *Game) drawItemDescription(screen *ebiten.Image) {
 }
 
 func (g *Game) drawGroundItemDescription(screen *ebiten.Image) {
-	if g.showGroundItemDescription {
+	if g.ShowGroundItem && g.showGroundItemDescription {
 		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 		descriptionWindowWidth, descriptionWindowHeight := 500, 120
 		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
@@ -164,6 +164,15 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 		itemwindowX, itemwindowY := (screenWidth-itemWindowWidth)/2, (screenHeight-itemWindowHeight)/2
 		actionWindowWidth, actionWindowHeight := 100, 110
 		actionWindowX, actionWindowY := (screenWidth-actionWindowWidth)/2, (screenHeight-actionWindowHeight)/2
+		_, _, preview := g.trajectoryPreviewSpec()
+		if preview {
+			nameRect := previewItemNameRect(screenWidth)
+			itemwindowX, itemwindowY = nameRect.Min.X, nameRect.Min.Y
+			itemWindowWidth, itemWindowHeight = nameRect.Dx(), nameRect.Dy()
+			r := actionMenuRect(screenWidth, screenHeight, len(g.currentGroundItemActions()), true)
+			actionWindowWidth, actionWindowHeight = r.Dx(), r.Dy()
+			actionWindowX, actionWindowY = r.Min.X, r.Min.Y-r.Dy()
+		}
 
 		// Draw item name window
 		drawWindowWithBorder(screen, itemwindowX, itemwindowY, itemWindowWidth, itemWindowHeight, 127)
@@ -197,20 +206,15 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 			x += (bounds.Max.X - bounds.Min.X).Ceil() + 5 // 5ピクセルのスペースを追加
 
 			// 「が落ちている」の部分を描画
-			text.Draw(screen, "が落ちている", mplusNormalFont, x, y, color.White)
+			if !preview {
+				text.Draw(screen, "が落ちている", mplusNormalFont, x, y, color.White)
+			}
 			// Draw actions window
 			drawWindowWithBorder(screen, actionWindowX, actionWindowY+actionWindowHeight, actionWindowWidth, actionWindowHeight, 127)
 			// Draw cursor
 			text.Draw(screen, "→", mplusNormalFont, actionWindowX+10, actionWindowY+actionWindowHeight+20+(g.selectedGroundActionIndex*20), color.White)
 			// Draw actions
-			var actions []string
-			// g.currentGroundItemがequipableItemであるかどうかをチェック
-			if _, ok := g.currentGroundItem.(Equipable); ok {
-				// Assume function isEquipped returns true if the item is equipped, false otherwise
-				actions = []string{"拾う", "交換", "装備", "投げる", "説明"}
-			} else {
-				actions = []string{"拾う", "交換", "使う", "投げる", "説明"}
-			}
+			actions := g.currentGroundItemActions()
 			for index, action := range actions {
 				text.Draw(screen, action, mplusNormalFont, actionWindowX+30, actionWindowY+actionWindowHeight+20+(index*20), color.White)
 			}
@@ -224,8 +228,10 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 func (g *Game) drawActionMenu(screen *ebiten.Image) {
 	if g.showItemActions {
 		// Define menu window parameters
-		menuWidth, menuHeight := 200, 100
-		menuX, menuY := (screen.Bounds().Dx()-menuWidth)/2, (screen.Bounds().Dy()-menuHeight)/2
+		_, _, preview := g.trajectoryPreviewSpec()
+		r := actionMenuRect(screen.Bounds().Dx(), screen.Bounds().Dy(), len(g.currentItemActions()), preview)
+		menuWidth, menuHeight := r.Dx(), r.Dy()
+		menuX, menuY := r.Min.X, r.Min.Y
 
 		drawWindowWithBorder(screen, menuX, menuY, menuWidth, menuHeight, 255)
 
@@ -253,6 +259,17 @@ func (g *Game) drawUseIdentifyItemWindow(screen *ebiten.Image) {
 }
 
 func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
+	if _, _, preview := g.trajectoryPreviewSpec(); preview {
+		r := previewItemNameRect(screen.Bounds().Dx())
+		drawWindowWithBorder(screen, r.Min.X, r.Min.Y, r.Dx(), r.Dy(), 127)
+		label, unidentified := g.inventoryItemLabel(g.state.Player.Inventory[g.selectedItemIndex])
+		var c color.Color = color.White
+		if unidentified {
+			c = color.RGBA{255, 255, 0, 255}
+		}
+		text.Draw(screen, label, mplusNormalFont, r.Min.X+10, r.Min.Y+20, c)
+		return nil
+	}
 
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
 	windowWidth, windowHeight := 400, 300
