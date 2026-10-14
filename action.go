@@ -772,6 +772,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 		message = "会心の一撃！" + message
 	}
 	weapon := attack.Weapon
+	hitEffects := attack.HitEffects
 
 	g.Enqueue(Action{
 		Duration: 0.5,
@@ -787,6 +788,9 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 			g.WakeUpSleepingEnemyByAttack(currentIndex)
 			g.applyDamageToEnemy(currentIndex, netDamage)
 			g.isActioned = true
+			for _, effect := range hitEffects {
+				effect(g)
+			}
 			g.runAfterPlayerHitHooks(hitResult)
 		},
 	})

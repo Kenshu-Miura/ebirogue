@@ -24,6 +24,9 @@ type PlayerAttack struct {
 	CriticalDenominator int     // 1/N で会心の一撃。小さいほど出やすい
 	ForceCritical       bool    // 必ず会心の一撃にする
 	MessagePrefix       string  // 命中時のメッセージの先頭に付ける文（「特効！」など）
+	// HitEffects は命中したときだけ、ダメージを与えた直後（Execute 内、AfterPlayerHit の前）に実行する処理。
+	// 小銭や満腹度を代価に威力を上げる能力は、BeforePlayerAttack で倍率を上げ、代価の支払いをここに積む。
+	HitEffects []func(g *Game)
 }
 
 // PlayerAttackHit は命中した通常攻撃の結果。AfterPlayerHit・AfterEnemyDefeated に渡す。
