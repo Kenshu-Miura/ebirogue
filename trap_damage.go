@@ -13,9 +13,10 @@ const (
 	largeMineHealthDenominator = 4
 )
 
-// 毒状態で毎ターン減るHP。現在の毒の付与元は毒矢の罠（5ダメージ＋毒8ターン）だけで、
-// 初期HP40に対して合計13（約3割）になる。
-const poisonDamagePerTurn = 1
+// 毒で下がるパワー。毒は状態異常ではなく即時の効果で、毒矢の罠（5ダメージ＋パワー低下）と
+// 腐った食料が使う（毒ヘビ系の毒攻撃も1）。HPは減らさないので毒で倒れることは無い。
+// 下がったパワーはパワーアップのカードなど（boostPower）で戻す。
+const poisonPowerDrain = 1
 
 // 大型地雷は現在HPの3/4（切り上げ）。HP1でも危険が残る。
 func largeMineTrapDamage(health int) int {

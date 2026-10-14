@@ -14,7 +14,7 @@ const (
 	DamageSourceEnemyRanged  DamageSourceKind = "enemy_ranged"  // 敵の遠距離・特殊攻撃
 	DamageSourceTrap         DamageSourceKind = "trap"          // 罠
 	DamageSourceStarvation   DamageSourceKind = "starvation"    // 餓死
-	DamageSourcePoison       DamageSourceKind = "poison"        // 毒
+	DamageSourcePoison       DamageSourceKind = "poison"        // 毒（毒の状態異常は廃止済み。過去の冒険の記録を表示するために残す）
 	DamageSourceSelfDestruct DamageSourceKind = "self_destruct" // 自爆系カード
 	DamageSourceWind         DamageSourceKind = "wind"          // フロア滞在時間切れの突風
 	DamageSourceOther        DamageSourceKind = "other"         // その他

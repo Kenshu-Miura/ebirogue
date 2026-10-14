@@ -85,19 +85,12 @@ func TestDeathCauseTrap(t *testing.T) {
 	}
 }
 
-func TestDeathCauseStarvationAndPoison(t *testing.T) {
+func TestDeathCauseStarvation(t *testing.T) {
 	starving := newDeathTestGame(t, 1)
 	starving.state.Player.Satiety = 0
 	starving.IncrementMoveCount()
 	if result := finishDeath(t, starving); result.DeathCause.Kind != DamageSourceStarvation {
 		t.Fatalf("starvation cause = %+v", result.DeathCause)
-	}
-
-	poisoned := newDeathTestGame(t, poisonDamagePerTurn)
-	poisoned.state.Player.StatusAilments.Poison = 5
-	poisoned.IncrementMoveCount()
-	if result := finishDeath(t, poisoned); result.DeathCause.Kind != DamageSourcePoison {
-		t.Fatalf("poison cause = %+v", result.DeathCause)
 	}
 }
 

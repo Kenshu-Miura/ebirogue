@@ -899,7 +899,7 @@ func fullHealResult(health, maxHealth int) (newHealth, newMaxHealth int) {
 	return maxHealth, maxHealth
 }
 
-// 完全回復のカードはHPを全回復する。毒状態なら毒も治り、満タンなら最大HPが上がる。
+// 完全回復のカードはHPを全回復する。満タンなら最大HPが上がる（パワーは戻らない）。
 var fullHealCard = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
 	g.Enqueue(Action{
@@ -914,10 +914,6 @@ var fullHealCard = func(g *Game) {
 				g.EnqueueMessage(fmt.Sprintf("最大HPが%d上昇した", fullHealMaxHealthBonus), 0.4)
 			} else {
 				g.EnqueueMessage(fmt.Sprintf("HPが%d回復した", healed), 0.4)
-			}
-			if player.StatusAilments.Poison > 0 {
-				player.StatusAilments.Poison = 0
-				g.EnqueueMessage("毒も治った", 0.4)
 			}
 			g.isActioned = true
 		},

@@ -216,6 +216,7 @@ func TestRottenSausageEffect(t *testing.T) {
 		for _, satiety := range []int{50, 95, 100} {
 			g := newItemTrapTestGame()
 			g.state.Player.Satiety = satiety
+			g.state.Player.Power, g.state.Player.MaxPower = 8, 8
 			food := buildItemFromTemplate(71, 3, 3)
 			if ground {
 				g.state.Items = []Item{food}
@@ -224,22 +225,22 @@ func TestRottenSausageEffect(t *testing.T) {
 				g.state.Player.Inventory = []Item{food}
 			}
 			food.Use(g)
-			if g.state.Player.Satiety != satiety || g.state.Player.StatusAilments.Poison != 0 {
+			if g.state.Player.Satiety != satiety || g.state.Player.Power != 8 {
 				t.Fatal("food side effects not deferred")
 			}
 			executeMoveTrapActions(g)
-			if g.state.Player.Satiety != min(100, satiety+10) || g.state.Player.MaxSatiety != 100 || g.state.Player.StatusAilments.Poison != 8 || len(g.state.Items)+len(g.state.Player.Inventory) != 0 {
-				t.Fatal("rotten food recovery/poison/consumption")
+			if g.state.Player.Satiety != min(100, satiety+10) || g.state.Player.MaxSatiety != 100 || g.state.Player.Power != 7 || len(g.state.Items)+len(g.state.Player.Inventory) != 0 {
+				t.Fatal("rotten food recovery/power drain/consumption")
 			}
 		}
 	}
 	g := newItemTrapTestGame()
 	g.state.Player.Inventory = []Item{buildItemFromTemplate(71, 0, 0)}
-	g.state.Player.StatusAilments.Poison = 12
+	g.state.Player.Power = 0
 	eatRottenSausage(g)
 	executeMoveTrapActions(g)
-	if g.state.Player.StatusAilments.Poison != 12 {
-		t.Fatal("poison duration shortened")
+	if g.state.Player.Power != 0 || g.state.Player.Satiety != 60 {
+		t.Fatalf("power 0: power %d satiety %d, want 0/60", g.state.Player.Power, g.state.Player.Satiety)
 	}
 }
 
@@ -363,8 +364,9 @@ func TestRottenSausageMenuConsumesTurn(t *testing.T) {
 	g, b := newTurnTestGame(t)
 	g.state.Player.Inventory = []Item{buildItemFromTemplate(71, 0, 0)}
 	g.state.Player.Satiety = 50
+	power := g.state.Player.Power
 	expectTurns(t, g, 1, func() error { return useOrFail(b, 0, "使う") })
-	if len(g.state.Player.Inventory) != 0 || g.state.Player.Satiety != 60 || g.state.Player.StatusAilments.Poison != 7 {
+	if len(g.state.Player.Inventory) != 0 || g.state.Player.Satiety != 60 || g.state.Player.Power != max(power-1, 0) {
 		t.Fatal("menu food consumption/turn decrement failed")
 	}
 }

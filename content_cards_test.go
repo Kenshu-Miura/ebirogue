@@ -695,14 +695,14 @@ func TestFullHealResult(t *testing.T) {
 	}
 }
 
-func TestFullHealCardCuresPoison(t *testing.T) {
+func TestFullHealCardDoesNotRestorePower(t *testing.T) {
 	card := buildItemFromTemplate(44, 0, 0)
 	g := &Game{
 		state: GameState{
 			Player: Player{
 				Health: 40, MaxHealth: 100,
-				Inventory:      []Item{card},
-				StatusAilments: StatusAilments{Poison: 4},
+				Power: 3, MaxPower: 8,
+				Inventory: []Item{card},
 			},
 		},
 	}
@@ -713,8 +713,8 @@ func TestFullHealCardCuresPoison(t *testing.T) {
 	if g.state.Player.Health != 100 || g.state.Player.MaxHealth != 100 {
 		t.Fatalf("health = %d/%d, want 100/100", g.state.Player.Health, g.state.Player.MaxHealth)
 	}
-	if g.state.Player.StatusAilments.Poison != 0 {
-		t.Fatal("毒も治るはず")
+	if g.state.Player.Power != 3 || g.state.Player.MaxPower != 8 {
+		t.Fatalf("power = %d/%d, want 3/8 (完全回復はパワーを戻さない)", g.state.Player.Power, g.state.Player.MaxPower)
 	}
 }
 

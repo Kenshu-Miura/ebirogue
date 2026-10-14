@@ -24,7 +24,6 @@ type StatusAilments struct {
 	Confusion   int
 	Sleep       int
 	Blind       int
-	Poison      int
 	Slow        int
 	Haste       int
 	MouthSeal   int

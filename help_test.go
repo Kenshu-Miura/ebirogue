@@ -20,7 +20,7 @@ func TestHelpPagesContent(t *testing.T) {
 	}
 
 	// 状態異常ページは formatPlayerStatus が表示する全ての状態異常を説明する
-	ailments := []string{"毒", "鈍足", "倍速", "睡眠", "混乱", "目潰し", "金縛り", "封印"}
+	ailments := []string{"鈍足", "倍速", "睡眠", "混乱", "目潰し", "金縛り", "封印"}
 	statusPage := strings.Join(pages[1].Lines, "\n")
 	for _, ailment := range ailments {
 		if !strings.Contains(statusPage, ailment) {

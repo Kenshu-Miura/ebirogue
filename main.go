@@ -50,7 +50,6 @@ type StatusAilments struct {
 	Confusion   int  // 混乱の残りターン数
 	Sleep       int  // 睡眠の残りターン数
 	Blind       int  // 目潰しの残りターン数
-	Poison      int  // 毒の残りターン数
 	Slow        int  // 鈍足の残りターン数
 	Haste       int  // 倍速の残りターン数
 	MouthSeal   int  // 口封じの残りターン数（カード・薬・食料を口にできない）

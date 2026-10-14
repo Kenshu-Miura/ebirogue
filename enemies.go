@@ -177,32 +177,13 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 		ExperiencePoints: 10,
 		Traits:           []EnemyTrait{EnemyTraitDrainer},
 		SpecialAttack: func(e *Enemy, g *Game) {
-			var message string
-			if g.state.Player.Power > 0 {
-				message = fmt.Sprintf("%sの毒攻撃。海老さんのパワーが1下がった。", func() string {
-					if g.state.Player.StatusAilments.Blind > 0 {
-						return "何者"
-					}
-					return e.Name
-				}())
-			} else {
-				message = fmt.Sprintf("%sの毒攻撃。しかし海老さんのパワーはこれ以上下がらない", func() string {
-					if g.state.Player.StatusAilments.Blind > 0 {
-						return "何者"
-					}
-					return e.Name
-				}())
-			}
-			action := Action{
+			g.Enqueue(Action{
 				Duration: 0.5,
-				Message:  message,
+				Message:  fmt.Sprintf("%sの毒攻撃。", g.enemyDisplayName(e.Name)),
 				Execute: func(g *Game) {
-					if g.state.Player.Power > 0 {
-						g.state.Player.Power--
-					}
+					g.drainPlayerPower(1)
 				},
-			}
-			g.Enqueue(action)
+			})
 		},
 		SpecialAttackProbability: 0.3,
 	},
