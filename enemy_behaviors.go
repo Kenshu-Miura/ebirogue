@@ -139,6 +139,7 @@ func (g *Game) summonMonstersAround(centerX, centerY, radius, count int, exclude
 		position := free[k]
 		free = append(free[:k], free[k+1:]...)
 		enemy := CreateEnemyByID(id, position.X, position.Y)
+		prepareSpawnedEnemy(&enemy, g.Floor, g.randIntn)
 		enemy.PlayerDiscovered = true
 		g.state.Enemies = append(g.state.Enemies, enemy)
 		summoned++
@@ -231,6 +232,7 @@ func (g *Game) spawnPendingEnemy(spawn PendingEnemySpawn) bool {
 			continue
 		}
 		enemy := CreateEnemyByID(spawn.MonsterID, x, y)
+		prepareSpawnedEnemy(&enemy, g.Floor, g.randIntn)
 		enemy.PlayerDiscovered = true
 		g.state.Enemies = append(g.state.Enemies, enemy)
 		g.miniMapDirty = true
@@ -280,6 +282,9 @@ func (g *Game) splitEnemy(index int) int {
 	clone := CreateEnemyByID(source.ID, position.X, position.Y)
 	clone.Health = source.Health
 	clone.PlayerDiscovered = true
+	if enemyMasquerading(source) {
+		disguiseEnemyAs(&clone, source.DisguiseID) // 化けている敵の分身は同じ姿
+	}
 	g.state.Enemies = append(g.state.Enemies, clone)
 	g.miniMapDirty = true
 	g.EnqueueMessage(fmt.Sprintf("%sが分裂した！", g.enemyDisplayName(source.Name)), 0.4)

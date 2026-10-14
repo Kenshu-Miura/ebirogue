@@ -206,6 +206,11 @@ func enemyToSaved(enemy *Enemy) SavedEnemy {
 		StatusAilments:   enemy.StatusAilments,
 		Fleeing:          enemy.Fleeing,
 		Revealed:         enemy.Revealed,
+		Counter:          enemy.Counter,
+		Timer:            enemy.Timer,
+		Flag:             enemy.Flag,
+		Alerted:          enemy.Alerted,
+		DisguiseID:       enemy.DisguiseID,
 	}
 	if enemy.HeldItem != nil {
 		heldItem := itemToSaved(enemy.HeldItem)
@@ -230,6 +235,12 @@ func savedToEnemy(s SavedEnemy) Enemy {
 	enemy.StatusAilments = s.StatusAilments
 	enemy.Fleeing = s.Fleeing
 	enemy.Revealed = s.Revealed
+	enemy.Counter = s.Counter
+	enemy.Timer = s.Timer
+	enemy.Flag = s.Flag
+	enemy.Alerted = s.Alerted
+	enemy.DisguiseID = s.DisguiseID
+	syncEnemyAppearance(&enemy)
 	if s.HeldItem != nil {
 		if heldItem, err := savedToItem(*s.HeldItem); err == nil {
 			enemy.HeldItem = heldItem

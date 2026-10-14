@@ -395,6 +395,7 @@ func generateEnemies(rooms []Room, playerRoom Room, player *Player, floor int, r
 		// （ジェノサイドで封じた系統はフロア移動時のremoveGenocidedEnemiesで取り除かれる）
 		enemyID := selectMonsterForFloor(floor, nil, rng.Intn)
 		enemy := CreateEnemyByID(enemyID, enemyX, enemyY)
+		prepareSpawnedEnemy(&enemy, floor, rng.Intn)
 		if rng.Float64() < 0.5 {
 			enemy.StatusAilments.Sleep = -1 // -1で仮眠状態を表現（通常の睡眠と区別）
 		}

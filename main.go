@@ -253,6 +253,7 @@ type Game struct {
 	ThrownItemDestination     Coordinate
 	rangedAttackEffect        RangedAttackEffect
 	TargetEnemy               *Enemy
+	thrownItemHitPlayer       bool // 飛んでいる道具が海老さんに当たって消える（打ち返し）。着地で床に置かない
 	TargetEnemyIndex          int
 	playerDead                bool    // プレイヤーが死亡したかどうか
 	deathMessageAdded         bool    // 死亡メッセージが追加済みかどうか

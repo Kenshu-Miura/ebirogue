@@ -315,8 +315,11 @@ func (g *Game) MovePlayer(dx, dy int) bool {
 	for i, enemy := range g.state.Enemies {
 		if enemy.X == newPX && enemy.Y == newPY {
 			g.state.Player.Direction = determineDirection(dx, dy)
-			if g.revealEnemy(i) {
+			if isEnemyDisguised(enemy) && g.revealEnemy(i) {
 				g.isActioned = true
+				return true
+			}
+			if g.trySwapPlacesWithEnemy(i, dx, dy) {
 				return true
 			}
 			return false

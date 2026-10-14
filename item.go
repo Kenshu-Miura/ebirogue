@@ -66,7 +66,7 @@ func (g *Game) UpdateThrownItem() {
 					// 壺は着地・命中時に割れて中身が散らばる
 					g.EnqueueMessage(fmt.Sprintf("%sは割れた！", pot.GetName()), 0.5)
 					g.scatterPotContents(pot, g.ThrownItemDestination.X, g.ThrownItemDestination.Y)
-				} else if itemExists && g.TargetEnemy == nil {
+				} else if itemExists && g.TargetEnemy == nil && !g.thrownItemHitPlayer {
 					// Check surrounding tiles for placement
 					directions := []Coordinate{{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}}
 					placed := false
@@ -99,7 +99,7 @@ func (g *Game) UpdateThrownItem() {
 					// g.ThrownItemがCane型かつTypeが"Effect"の場合、g.state.Itemsにg.ThrownItem.Itemを追加する処理を行わない
 					if caneItem, ok := g.ThrownItem.Item.(*Cane); ok && caneItem.BaseItem.Type == "Effect" {
 						// Do nothing
-					} else if g.TargetEnemy == nil {
+					} else if g.TargetEnemy == nil && !g.thrownItemHitPlayer {
 						// Place the item normally if no item exists at the destination
 						g.state.Items = append(g.state.Items, g.ThrownItem.Item)
 					}
@@ -111,6 +111,7 @@ func (g *Game) UpdateThrownItem() {
 				g.ThrownItem = ThrownItem{}
 				g.ThrownItemDestination = Coordinate{}
 				g.TargetEnemy = nil
+				g.thrownItemHitPlayer = false
 			}
 		}
 	}

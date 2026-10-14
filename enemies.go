@@ -45,6 +45,9 @@ const (
 	EnemyDisguiseNone EnemyDisguise = iota
 	EnemyDisguiseItem
 	EnemyDisguiseStairs
+	// EnemyDisguiseEnemy はその階に出る別の敵の姿で現れる（ミミックダコ系、enemy_mimic.go）。
+	// 化けている間も普通の敵として行動し、攻撃を受けると正体を現す。
+	EnemyDisguiseEnemy
 )
 
 type Enemy struct {
@@ -78,10 +81,20 @@ type Enemy struct {
 	BossShellTurns           int            // 殻による防御上昇の残りターン
 	BossMinion               bool           // ボスが召喚した手下
 	Fleeing                  bool           // 盗品を持ってプレイヤーから逃走中かどうか
+
+	// 以下は系統固有の行動が自由に使う汎用の状態（段4の共通基盤）。中断セーブに含まれ、上位種化では消えない。
+	// 意味は系統ごとに決め、その系統のファイルの先頭に書く（例: 被弾した回数・膨らんでいるか・帯電の残りターン）。
+	Counter    int  // 汎用の数値（回数など）
+	Timer      int  // 汎用の残りターン。自動では減らないので、行動（Behavior）の中で減らす
+	Flag       bool // 汎用のフラグ
+	Alerted    bool // 「近づくまで追ってこない」敵が追い始めたか（g.enemyHoldsUntilNear）
+	DisguiseID int  // 別の敵に化けている敵（EnemyDisguiseEnemy）の見た目の敵 ID（enemy_mimic.go）
 }
 
+// isEnemyDisguised は敵が道具・階段に化けて隠れている（自分から動かず、見えない敵として扱う）かを返す。
+// 別の敵に化けている敵（EnemyDisguiseEnemy）は普通の敵として見え、動くので含めない（enemyMasquerading）。
 func isEnemyDisguised(enemy Enemy) bool {
-	return enemy.Disguise != EnemyDisguiseNone && !enemy.Revealed && !enemy.StatusAilments.Seal
+	return enemy.Disguise != EnemyDisguiseNone && enemy.Disguise != EnemyDisguiseEnemy && !enemy.Revealed && !enemy.StatusAilments.Seal
 }
 
 func (g *Game) updateEnemyVisibility() {
@@ -141,6 +154,9 @@ type MonsterDefinition struct {
 	OnDefeated EnemyDefeatedFunc
 	// OnDamaged はダメージを受けて倒れなかったときの処理（分裂など）。g.applyDamageToEnemy が呼ぶ
 	OnDamaged EnemyDamagedFunc
+	// ProjectileReturnPercent は飛んできた矢・投げた道具・杖の魔法弾を打ち返す確率（%、段4）。
+	// 封印・睡眠・金縛り中は0（enemyProjectileReturnPercent、projectile.go）
+	ProjectileReturnPercent int
 }
 
 // enemyCriticalPercent は敵の通常攻撃が痛恨の一撃になる確率（%）を返す。
@@ -668,6 +684,11 @@ func (g *Game) levelUpEnemy(index int) bool {
 	enemy.SpecialMovement = definition.SpecialMovement
 	enemy.Disguise = definition.Disguise
 	enemy.Traits = append([]EnemyTrait(nil), definition.Traits...)
+	syncEnemyAppearance(enemy) // 別の敵に化けている敵は、上位種になっても同じ姿のまま
+	if enemyMasquerading(*enemy) {
+		g.EnqueueMessage(fmt.Sprintf("%sはレベルアップした。", oldName), 0.5)
+		return true
+	}
 	g.EnqueueMessage(fmt.Sprintf("%sは%sにレベルアップした。", oldName, enemy.Name), 0.5)
 	return true
 }
@@ -698,8 +719,9 @@ func CreateEnemyByID(id, x, y int) Enemy {
 		SpecialMovement:          def.SpecialMovement,
 		Disguise:                 def.Disguise,
 		Traits:                   append([]EnemyTrait(nil), def.Traits...),
-		Revealed:                 def.Disguise == EnemyDisguiseNone,
-		ShowOnMiniMap:            true,
+		// 別の敵に化ける敵は、出現時の準備（prepareSpawnedEnemy）で姿を決めるまでは正体のまま
+		Revealed:      def.Disguise == EnemyDisguiseNone || def.Disguise == EnemyDisguiseEnemy,
+		ShowOnMiniMap: true,
 	}
 }
 

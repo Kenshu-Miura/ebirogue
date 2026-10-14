@@ -121,6 +121,7 @@ func (g *Game) TrySpawnMonster() {
 		return
 	}
 	enemy := CreateEnemyByID(monsterID, spawnPos.X, spawnPos.Y)
+	prepareSpawnedEnemy(&enemy, g.Floor, g.randIntn)
 
 	// ゲーム状態に追加
 	g.state.Enemies = append(g.state.Enemies, enemy)

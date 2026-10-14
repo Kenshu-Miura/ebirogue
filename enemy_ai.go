@@ -453,14 +453,12 @@ func (g *Game) revealEnemy(enemyIndex int) bool {
 	if enemy.Disguise == EnemyDisguiseNone || enemy.Revealed {
 		return false
 	}
-	disguiseName := "道具"
-	if enemy.Disguise == EnemyDisguiseStairs {
-		disguiseName = "階段"
-	}
+	message := revealMessage(*enemy)
 	enemy.Revealed = true
 	enemy.PlayerDiscovered = true
+	syncEnemyAppearance(enemy)
 	g.miniMapDirty = true
-	g.EnqueueMessage(fmt.Sprintf("%sの正体は%sだった", disguiseName, enemy.Name), 0.5)
+	g.EnqueueMessage(message, 0.5)
 	return true
 }
 

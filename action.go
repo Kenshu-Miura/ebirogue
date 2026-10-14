@@ -852,13 +852,11 @@ func (g *Game) enqueueWallDig(dx, dy int, weaponAbilities []EquipmentAbilityID) 
 		Duration: 0.5,
 		Message:  "壁を掘った。",
 		Execute: func(g *Game) {
-			tile := &g.state.Map[y][x]
-			tile.Type = "corridor"
-			tile.Blocked = false
-			tile.BlockSight = false
-			tile.Visited = true
-			tile.Brightness = 1.0
-			g.miniMapDirty = true
+			if g.digWallAt(x, y) {
+				// 海老さんが掘った隣のマスは必ず見えている
+				g.state.Map[y][x].Visited = true
+				g.state.Map[y][x].Brightness = 1.0
+			}
 			g.isActioned = true
 		},
 	})

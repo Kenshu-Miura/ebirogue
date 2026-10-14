@@ -10,6 +10,8 @@ import "fmt"
 // flyProjectile が1マスずつ進め、壁・敵・射程の端で止まる。能力で変える項目（貫通・跳ね返り・
 // 命中率・本数）は Projectile のフィールドで、装備能力は AbilityHooks.ModifyProjectile で書き換える。
 // 1マスごとの処理は OnTile、敵に当たるかどうかの判定は BeforeHit に関数を積む。
+// 敵が打ち返す（MonsterDefinition.ProjectileReturnPercent、段4）と、向きを反転して海老さんへ飛んで戻る
+// （returnProjectile / hitPlayerWithReturnedProjectile）。
 
 // ProjectileKind は飛ぶものの種類。
 type ProjectileKind int
@@ -40,8 +42,14 @@ type Projectile struct {
 	// OnTile は1マス進むたびに、進んだ先のマスで呼ばれる（壁を通り抜けている途中も呼ぶ）。
 	// p.Stop() で飛ぶのをやめ、そのマス（壁の中なら最後に通った床）に落ちる。
 	OnTile []func(g *Game, p *Projectile, x, y int)
-	// BeforeHit は敵に当たる判定の前に呼ばれ、hit.HitPercent を変えられる（打ち返す敵など）。
+	// BeforeHit は敵に当たる判定の前に呼ばれ、hit.HitPercent を変えられる。
+	// 打ち返しはこれより前に判定する（打ち返された道具は当たらない）。
 	BeforeHit []func(g *Game, p *Projectile, hit *ProjectileHit)
+
+	// Returned は敵に打ち返されて戻ってくる途中か。打ち返されたものは二度と打ち返されない。
+	Returned bool
+	// 打ち返した敵（死因・盾の反射の相手）。ID・座標は打ち返した時点のもの
+	ReturnerID, ReturnerX, ReturnerY int
 
 	traveled int
 	stopped  bool
@@ -194,6 +202,9 @@ func (g *Game) flyProjectile(p *Projectile) {
 		}
 
 		if index := g.enemyIndexAt(p.X, p.Y); index >= 0 {
+			if g.tryReturnProjectile(p, index) {
+				continue
+			}
 			if !g.projectileHitsEnemy(p, index) {
 				itemName, _ := projectileItemLabel(p.Item)
 				g.EnqueueMessage(fmt.Sprintf("%sは%sに当たらなかった", itemName, g.enemyDisplayName(g.state.Enemies[index].Name)), 0.3)
@@ -207,10 +218,16 @@ func (g *Game) flyProjectile(p *Projectile) {
 			}
 			continue
 		}
-		// 海老さんが飛ばした道具は、跳ね返って戻ってきても海老さんには当たらない
+		// 海老さんが飛ばした道具は、跳ね返って戻ってきても海老さんには当たらない（打ち返されたものは当たる）
 		if !p.FromPlayer && p.X == g.state.Player.X && p.Y == g.state.Player.Y {
 			removeFromSource()
 			g.ThrownItemDestination = Coordinate{X: p.X, Y: p.Y}
+			if p.Returned {
+				g.TargetEnemy = nil
+				g.thrownItemHitPlayer = true
+				g.hitPlayerWithReturnedProjectile(p)
+				return
+			}
 			g.onTargetHit(&g.state.Player, p.Item, g.selectedItemIndex)
 			return
 		}
@@ -306,4 +323,106 @@ func (g *Game) removeLaunchedItem(p *Projectile) {
 		return
 	}
 	g.removeThrownItemFromSource(p.Item)
+}
+
+// --- 打ち返し（段4の共通基盤。ウチカエシエビ系） ---
+
+// enemyProjectileReturnPercent は敵が飛んできた道具を打ち返す確率（%）を返す。
+// 確率は ID の定義（MonsterDefinition.ProjectileReturnPercent）から引く。封印・睡眠・金縛り中は0。
+func enemyProjectileReturnPercent(enemy Enemy) int {
+	if enemy.StatusAilments.Seal || enemy.StatusAilments.Sleep != 0 || enemy.StatusAilments.Paralysis {
+		return 0
+	}
+	return MonsterDefinitions[enemy.ID].ProjectileReturnPercent
+}
+
+// tryReturnProjectile は敵 index が p を打ち返すかを判定し、打ち返したら true を返す。
+// 打ち返しは命中判定より前に起こるので、百発百中（必ず当たる）・ヘタ投げ（必ず外れる）でも打ち返される。
+// 一度打ち返されたものは打ち返さない。乱数は飛ぶ道具の命中判定と同じ randHooks.projectile。
+func (g *Game) tryReturnProjectile(p *Projectile, index int) bool {
+	if p.Returned {
+		return false
+	}
+	percent := enemyProjectileReturnPercent(g.state.Enemies[index])
+	if percent <= 0 || (percent < 100 && g.projectileIntn()(100) >= percent) {
+		return false
+	}
+	g.returnProjectile(p, index)
+	return true
+}
+
+// returnProjectile は p を敵 index が打ち返したことにし、向きを反転して海老さんの側へ飛ばし直す。
+// 戻る道のりは来た道のりと同じマス数。装備能力で付いた貫通・跳ね返り・必中は消え、命中率は基本に戻る
+// （戻る途中の敵には基本の命中率で当たる）。海老さんのマスに着くと hitPlayerWithReturnedProjectile。
+func (g *Game) returnProjectile(p *Projectile, index int) {
+	enemy := &g.state.Enemies[index]
+	if enemyMasquerading(*enemy) {
+		g.revealEnemy(index)
+	}
+	itemName, _ := projectileItemLabel(p.Item)
+	g.EnqueueMessage(fmt.Sprintf("%sは%sを打ち返した！", g.enemyDisplayName(enemy.Name), itemName), 0.4)
+	enemy.AttackTimer = 0.5
+	enemy.AttackDirection = determineDirection(-p.DX, -p.DY)
+	enemy.Direction = enemy.AttackDirection
+	enemy.PlayerDiscovered = true
+
+	p.Returned = true
+	p.ReturnerID, p.ReturnerX, p.ReturnerY = enemy.ID, enemy.X, enemy.Y
+	p.FromPlayer = false
+	p.DX, p.DY = -p.DX, -p.DY
+	p.Range = p.traveled * 2
+	p.PierceWalls, p.PierceTargets, p.Bounces, p.SureHit = false, false, 0, false
+	p.HitPercent = projectileBaseHitPercent(p.Kind)
+	// アニメーションは打ち返した地点から描き直す
+	g.ThrownItem.X, g.ThrownItem.Y, g.ThrownItem.DX, g.ThrownItem.DY = p.X, p.Y, p.DX, p.DY
+}
+
+// hitPlayerWithReturnedProjectile は打ち返された道具が海老さんに当たったときの処理。
+//   - 杖の魔法弾: 海老さんには効果が無い。
+//   - 薬: 投げ当てたときと同じ効果を海老さんが受ける（状態異常の無効化は効く）。
+//   - そのほか（矢・投げた道具）: 打ち返した敵の遠距離攻撃として扱う。ダメージは敵に当てたときと同じ式
+//     （射撃は海老さんの総攻撃力＋矢の攻撃力、投擲は固定の範囲）で海老さんの防御力で減り、会心は出ない。
+//     盾の回避・反射（打ち返した敵へダメージを返す）・カメの甲羅などの被ダメージのフックが効く。
+//     死因は「<打ち返した敵>の打ち返し」。
+func (g *Game) hitPlayerWithReturnedProjectile(p *Projectile) {
+	itemName, _ := projectileItemLabel(p.Item)
+	if p.Kind == ProjectileBolt {
+		g.EnqueueMessage(fmt.Sprintf("%sは海老さんに当たったが、何も起きなかった", itemName), 0.4)
+		g.isActioned = true
+		return
+	}
+	if _, ok := p.Item.(*Potion); ok {
+		g.onTargetHit(&g.state.Player, p.Item, -1)
+		return
+	}
+	player := &g.state.Player
+	var damage int
+	if p.Kind == ProjectileShot {
+		attack := playerAttackTotal(player.AttackPower, player.Power, player.Level)
+		if arrow, ok := p.Item.(*Arrow); ok {
+			attack += arrow.AttackPower
+		}
+		damage = rollEnemyAttackDamage(attack, player.DefensePower, g.damageIntn())
+	} else {
+		damage = rollThrownItemDamage(g.damageIntn())
+	}
+	var returner *Enemy
+	returnerName := MonsterDefinitions[p.ReturnerID].Name
+	displayName := returnerName
+	if index := g.findEnemyForDefense(p.ReturnerID, p.ReturnerX, p.ReturnerY); index >= 0 {
+		returner = &g.state.Enemies[index]
+		displayName = returner.Name
+	}
+	displayName = g.enemyDisplayName(displayName)
+	defense := g.resolvePlayerDefense(damage, EnemyDamageNormal, EnemyAttackRanged, returner, false)
+	source := enemyRangedSource(p.ReturnerID, returnerName, "打ち返し")
+	returnerID, returnerX, returnerY := p.ReturnerID, p.ReturnerX, p.ReturnerY
+	g.Enqueue(Action{
+		Duration: 0.5,
+		Message:  fmt.Sprintf("打ち返された%sが飛んできた。", itemName) + g.shieldDefenseMessage(displayName, defense),
+		Execute: func(g *Game) {
+			g.applyPlayerShieldDefense(defense, source, returnerID, returnerX, returnerY)
+			g.isActioned = true
+		},
+	})
 }

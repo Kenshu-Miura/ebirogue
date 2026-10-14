@@ -20,7 +20,18 @@ func (g *Game) damagePlayer(damage int, source DamageSource) {
 		minHealth = 1 // 装備能力のフック PreventDeath（根性の盾など）で倒れる直前に踏みとどまった
 	}
 	g.state.Player.Health = max(minHealth, g.state.Player.Health-damage)
-	g.lastDamageSource = source
+	g.lastDamageSource = trueEnemySource(source)
+}
+
+// trueEnemySource は敵による死因の名前を正体の名前にする（別の敵に化けた敵の攻撃でも、化けた姿の名前を記録しない）。
+func trueEnemySource(source DamageSource) DamageSource {
+	if source.Kind != DamageSourceEnemyAttack && source.Kind != DamageSourceEnemyRanged {
+		return source
+	}
+	if definition, ok := MonsterDefinitions[source.EnemyID]; ok {
+		source.EnemyName = definition.Name
+	}
+	return source
 }
 
 // buildRunResult は現在の状態から冒険の結果を作る。
