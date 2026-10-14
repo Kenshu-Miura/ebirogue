@@ -175,7 +175,7 @@ func (g *Game) enqueueEnemyFixedAttack(enemyIndex, damage int, kind EnemyDamageK
 	enemyName := g.enemyDisplayName(enemy.Name)
 	enemyID, enemyX, enemyY := enemy.ID, enemy.X, enemy.Y
 	source := enemyRangedSource(enemy.ID, enemy.Name, attackName)
-	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
+	dx, dy := sign(g.state.Player.X-enemy.X), sign(g.state.Player.Y-enemy.Y)
 	g.Enqueue(Action{
 		Duration: 0.5,
 		Message:  message + g.shieldDefenseMessage(enemyName, defense),

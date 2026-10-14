@@ -537,7 +537,8 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 		message = "痛恨の一撃！" + message
 	}
 
-	dx, dy := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
+	// 2マス先へ届く攻撃（テッポウエビ系）でも向きが合うよう符号だけを使う
+	dx, dy := sign(g.state.Player.X-enemy.X), sign(g.state.Player.Y-enemy.Y)
 
 	action := Action{
 		Duration: 0.5,
