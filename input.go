@@ -1049,6 +1049,11 @@ func (g *Game) handleBlankCardInput() error {
 	if !g.showBlankCardMenu {
 		return nil
 	}
+	// 開いたフレームは、開くのに使った Z を書き込みの決定として扱わない
+	if g.blankCardJustOpened {
+		g.blankCardJustOpened = false
+		return nil
+	}
 
 	ids := blankCardOptionIDs()
 

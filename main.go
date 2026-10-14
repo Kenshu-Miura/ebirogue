@@ -291,6 +291,7 @@ type Game struct {
 	pickupBanned bool // 拾得禁止のカードの効果中かどうか（フロア移動で解除）
 	// 特殊カードシステム
 	showBlankCardMenu   bool         // 白紙のカードの書き込み先選択ウィンドウの表示フラグ
+	blankCardJustOpened bool         // 書き込み先選択ウィンドウを開いたフレームか（開いた Z で書き込まない）
 	blankCardIndex      int          // 書き込み先リストで選択中の位置
 	blankCardTarget     *Card        // 書き込み対象の白紙のカード
 	genocidedMonsterIDs map[int]bool // ジェノサイドのカードで封じられた敵ID（冒険中は出現しない）

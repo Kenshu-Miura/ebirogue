@@ -106,16 +106,14 @@ func TestExpertSausageCardWhenStarving(t *testing.T) {
 }
 
 // 白紙のカードは、近くに敵がいなければ書き込む（回復の道具が無ければ完全回復を選ぶ）。
-// 今のゲームでは「使う」を決めた Z が書き込み画面でも処理され、一覧の先頭（黒炎弾）が書き込まれる
-// （docs/agents/done/bot-tactics.md）。どちらでも白紙のまま持ち歩かないことを確かめる。
 func TestExpertWritesBlankCard(t *testing.T) {
 	g, b := newBotFoodTestGame(t, personaExpert)
 	g.state.Player.Inventory = []Item{buildItemFromTemplate(cardBlankID, 0, 0)}
 	if err := b.step(); err != nil {
 		t.Fatal(err)
 	}
-	if countInventoryID(g, cardBlankID) != 0 || len(g.state.Player.Inventory) != 1 || b.windowOpen() {
-		t.Fatalf("blank card not written: act=%s", b.act)
+	if countInventoryID(g, 44) != 1 || len(g.state.Player.Inventory) != 1 || b.windowOpen() {
+		t.Fatalf("full-heal card not written: id=%d act=%s", g.state.Player.Inventory[0].GetID(), b.act)
 	}
 }
 

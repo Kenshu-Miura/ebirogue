@@ -567,16 +567,5 @@ func (b *bot) expertSwapHere() (bool, error) {
 			return false, err
 		}
 	}
-	if err := b.closeWindows(); err != nil {
-		return true, err
-	}
-	// 今のゲームは交換の後も「足元の道具を操作中」の状態が残り、次に持ち物を使うと床の道具を参照してしまう
-	// （docs/agents/done/bot-tactics.md）。メニューを開いて閉じると C キーの処理で元に戻る
-	if g.GroundItemActioned {
-		if err := b.tap(KeyC); err != nil {
-			return true, err
-		}
-		return true, b.closeWindows()
-	}
-	return true, nil
+	return true, b.closeWindows()
 }

@@ -30,7 +30,6 @@
 - **ウインナー化**: 満腹度20以下で食料（壺の中も含む）が無いとき、価値の一番低い道具をウインナーにする。
 - **大部屋**: 満腹度15以下で食料が無く、階段が見つかっていないか20歩より遠く、近くに敵がいない、ボス階でないとき。
 - **白紙のカード**: 近くに敵がいなければすぐ書き込む（回復の道具が無ければ完全回復、あれば全滅を選ぶ）。
-  ただし下の「ゲームの不具合」のとおり、今は必ず黒炎弾が書き込まれる。
 - **保存の壺**: 食料を2つ以上持っていれば1つを残して壺へ入れ、満腹度20以下で持ち物に食料が無ければ壺から出す。
   階段を降りる・休む判断の食料の見積もりに壺の中身も数える。壺拡大のカードは保存の壺を持っていれば読む。中身のある壺は手放さない。
 
@@ -112,16 +111,17 @@
 expert 以外は改善前と同じ結果。expert は 初級 50.0% → 92.9%、中級 1.2% → 32.1%、上級 0.0% → 1.2%。
 全体のクリア 64 → 127、違反 0 → 0（BOT 行き詰まり7件はどちらも random）。
 
-## ゲームの不具合（BOT とは別。ゲーム本体は直していない）
+## ゲームの不具合（BOT の作業の後にゲーム側で修正済み）
 
-1. **白紙のカード**: 持ち物の行動メニューで「使う」を Z で決めると、同じフレームで書き込み画面の Z も処理され（`main.go` の
-   `Update` が `handleInventoryInput` の後に `handleBlankCardInput` を呼ぶ）、一覧の先頭の**黒炎弾が必ず書き込まれる**。
-   人も同じ。書き込み画面を開いたフレームでは Z を受け付けないようにする（足元メニューの `groundMenuJustOpened` と同じ形）とよい。
-   BOT のテスト `TestExpertWritesBlankCard` は、直ったときにも通るように「白紙のまま残らない」ことだけを確かめている。
-2. **足元の「交換」の後に状態が残る**: `executeItemSwap` の後も `GroundItemActioned` が true のままになり、次に持ち物の食料・薬・
-   カードを使うと `determineItemSource` が床の道具を参照して panic する（床に道具が無いと index out of range）。人も「交換」の
-   直後に持ち物を使えば起きる。BOT は交換の後にメニューを開いて閉じ（C キーの処理で false に戻る）避けている。
-   `executeItemSwap` の最後で `GroundItemActioned = false` に戻し、回帰テストを足すとよい。
+BOT の作業中に見つけ、BOT 側で回避していた2件。ゲーム側で直し、BOT の回避は外した。回帰テストは `regression_test.go`。
+
+1. **白紙のカード**: 持ち物の行動メニューで「使う」を Z で決めると、同じフレームで書き込み画面の Z も処理され
+   （`main.go` の `Update` が `handleInventoryInput` の後に `handleBlankCardInput` を呼ぶ）、一覧の先頭の黒炎弾が必ず
+   書き込まれていた。書き込み画面を開いたフレームは Z を受け付けない（`blankCardJustOpened`）ようにした
+   （`TestBlankCardMenuIgnoresOpeningKey`）。BOT のテスト `TestExpertWritesBlankCard` は完全回復が書かれることを確かめる。
+2. **足元の「交換」の後に状態が残る**: `executeItemSwap` の後も `GroundItemActioned` が true のままになり、次に持ち物の
+   食料・薬・カードを使うと `determineItemSource` が床の道具を参照して panic していた。`executeItemSwap` の最後で false に
+   戻すようにした（`TestUsingInventoryItemAfterGroundSwap`）。
 
 ## 残り・次の作業
 
