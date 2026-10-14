@@ -35,5 +35,5 @@ ebirogue_results.json
 # Local git worktrees for parallel agent work
 /.worktrees/
 
-# 画像生成の原画（大きいので master に入れない。原画は画像ブランチに残す。docs/agents/img-content-expansion.md）
+# 画像生成の原画（大きいのでコミットしない。docs/agents/img-content-expansion.md）
 tools/*-originals/

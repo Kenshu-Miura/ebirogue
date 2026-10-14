@@ -34,7 +34,7 @@
   - F4 敵の痛恨の一撃（×1.5）と回避の確率（`MonsterDefinition.CriticalPercent` / `EvasionPercent`）。
   - 段1の準備: 呪い・さび・食料化・あやつりも無効化の対象に追加（`StatusCurse` など。ノロイガニ系・さびの罠・にぎりエビ系・あやつりクラゲ系に配線）、自分だけさびない `AbilityRustImmune`、攻撃のたびのフック `AfterPlayerSwing`、`PlayerAttack.AttackBonus` / `HitEffects`、被弾を丸ごとかわす `IncomingDamage.Evaded`、遠距離攻撃でも攻撃した敵をフックへ渡す。アイテムの表を種類ごとのファイル（`items_weapons.go`・`items_shields.go`・`items_cards.go`・`items_rings.go`）に分け、`mergeItemTemplates` でまとめる（並列の担当が同じ表を触らないため）。追加後も BOT の結果はベースラインと完全一致。
   - F5 床のアイテムをカテゴリ別の重み（`itemCategorySpawnWeights`）で抽選。割合は導入前と同じ。1500冒険の比較で、到着時の床の道具の割合はカード 41.2→41.1%・盾 18.4→18.7%・武器 16.1→15.5%・薬 9.4→9.8%・食料 5.4→5.6%、餓死 155→165（ばらつきの範囲）。F1〜F4 だけの段階では 1512 冒険すべてが変更前と完全に一致（乱数の消費を変えていない）。BOT のレポートに「床の道具（各階の到着時、種類別）」を追加。
-- 画像 img-1（武器21・盾15・敵24の60枚、`agent/img-content-1`）を統合済み。統合時の変更: 生成の原画44枚（約30MB）は master に入れず、ブランチの `d9dbc42` に残した（`tools/*-originals/` は `.gitignore`）。取り出し方は `docs/agents/done/img-content-1.md`。
+- 画像 img-1（武器21・盾15・敵24の60枚、`agent/img-content-1`）を統合済み。統合時の変更: 生成の原画44枚（約30MB）は作業ツリーから外した（履歴には `d9dbc42` 経由で残る。`tools/*-originals/` は `.gitignore`、img-2 からは原画をコミットしない）。取り出し方は `docs/agents/done/img-content-1.md`。
 - wave2-C（キー設定）を統合済み。16役割の割り当て変更・入れ替え・初期化、設定への保存、ヘルプと画面案内の追従（`keybinding.go`・`keybinding_ui.go`）。報告は `docs/agents/done/wave2-C.md`。
 - 毒をパワー低下に置き換え（`agent/poison-power`）: `StatusAilments.Poison` とターン経過のダメージ・HUD の「毒(n)」表示を削除、旧セーブの Poison は無視して読み込む（`TestDecodeSaveDataIgnoresLegacyPoison`）。テストは `content_poison_test.go`。
 
