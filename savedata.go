@@ -62,6 +62,12 @@ type SavedEnemy struct {
 	HeldItem         *SavedItem
 	Fleeing          bool
 	Revealed         bool
+	// 系統固有の行動の汎用の状態（段4）。古いセーブには無く、0 として読む
+	Counter    int  `json:",omitempty"`
+	Timer      int  `json:",omitempty"`
+	Flag       bool `json:",omitempty"`
+	Alerted    bool `json:",omitempty"`
+	DisguiseID int  `json:",omitempty"`
 }
 
 // SavedMapTrap はマップ上の罠のセーブ用表現

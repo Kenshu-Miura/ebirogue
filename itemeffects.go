@@ -628,6 +628,7 @@ var summonMonsterHouse = func(g *Game) {
 						continue
 					}
 					enemy := CreateEnemyByID(monsterID, cell.X, cell.Y)
+					prepareSpawnedEnemy(&enemy, g.Floor, g.randIntn)
 					enemy.PlayerDiscovered = true
 					enemy.ShowOnMiniMap = true
 					g.state.Enemies = append(g.state.Enemies, enemy)
