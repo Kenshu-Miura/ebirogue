@@ -224,6 +224,7 @@ func troubleCard(g *Game) {
 			message += "悪い状態異常がすべて解けた。"
 		case troubleHunger:
 			p.Satiety = min(50, p.MaxSatiety)
+			g.capSatietyForSatori() // 悟りの盾を装備中は満腹度1まで
 			message += "満腹度が回復した。"
 		case troubleCurse:
 			uncursePlayerBelongings(p)

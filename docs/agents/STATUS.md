@@ -35,11 +35,19 @@
   - 段1の準備: 呪い・さび・食料化・あやつりも無効化の対象に追加（`StatusCurse` など。ノロイガニ系・さびの罠・にぎりエビ系・あやつりクラゲ系に配線）、自分だけさびない `AbilityRustImmune`、攻撃のたびのフック `AfterPlayerSwing`、`PlayerAttack.AttackBonus` / `HitEffects`、被弾を丸ごとかわす `IncomingDamage.Evaded`、遠距離攻撃でも攻撃した敵をフックへ渡す。アイテムの表を種類ごとのファイル（`items_weapons.go`・`items_shields.go`・`items_cards.go`・`items_rings.go`）に分け、`mergeItemTemplates` でまとめる（並列の担当が同じ表を触らないため）。追加後も BOT の結果はベースラインと完全一致。
   - F5 床のアイテムをカテゴリ別の重み（`itemCategorySpawnWeights`）で抽選。割合は導入前と同じ。1500冒険の比較で、到着時の床の道具の割合はカード 41.2→41.1%・盾 18.4→18.7%・武器 16.1→15.5%・薬 9.4→9.8%・食料 5.4→5.6%、餓死 155→165（ばらつきの範囲）。F1〜F4 だけの段階では 1512 冒険すべてが変更前と完全に一致（乱数の消費を変えていない）。BOT のレポートに「床の道具（各階の到着時、種類別）」を追加。
 - 段2の共通基盤と指示書（`agent/content-plan-2`）を統合済み。敵の系統（基本種・第2・第3段階）を担当別のファイル（`enemies_expansion_a1.go`・`a2.go`）の表 `monsterFamily` に書けば、`enemy_expansion.go` が定義・上位種化・画像・出現階を登録する（並列の担当が `enemies.go`・`monster_spawn.go`・`main.go` を触らない）。`enemy_behaviors.go`: 系統固有の行動 `Behavior`（共通の状態処理の後に呼ぶ、封印で止まる）、撃破時の `OnDefeated`（敵が倒れる6つの経路すべてから呼ぶ）、`stepEnemyToward`（`MoveTowardsPlayer` を一般化）、`injuredAllyNear` / `healEnemy`、`summonMonstersAround`、`enqueueEnemyFixedAttack`、遅れて現れる敵の予約（`scheduleEnemySpawn`、中断セーブの `PendingEnemySpawns`）。ヘルプは担当ごとに `expansionHelpPages` へページを加える。敵の通常攻撃の向きを2マス先でも正しくした。新しい敵はまだ無く、BOT の結果は変わらない（乱数の使い方を変えていない）。指輪の 189〜193（投擲・射撃）は投擲の処理の共通化が要るので段3へ回した。
+- 段1（wave3-A 武器 126〜146・wave3-B 盾 148〜162・wave3-C カード 167〜173）を統合済み。統合時の修正: `help.go` の衝突解消と、盾の追加行が「操作方法」ページに入っていたのを「道具：追加の盾」ページへ移動。悟りの盾の満腹度上限をかつおぶし（かじる）と困った時のカード（空腹の解消）にも接続（`content_wave3_integration_test.go`）。各報告は `docs/agents/done/wave3-A/B/C.md`。
 - 画像 img-1（武器21・盾15・敵24の60枚、`agent/img-content-1`）を統合済み。統合時の変更: 生成の原画44枚（約30MB）は作業ツリーから外した（履歴には `d9dbc42` 経由で残る。`tools/*-originals/` は `.gitignore`、img-2 からは原画をコミットしない）。取り出し方は `docs/agents/done/img-content-1.md`。
 - wave2-C（キー設定）を統合済み。16役割の割り当て変更・入れ替え・初期化、設定への保存、ヘルプと画面案内の追従（`keybinding.go`・`keybinding_ui.go`）。報告は `docs/agents/done/wave2-C.md`。
 - 毒をパワー低下に置き換え（`agent/poison-power`）: `StatusAilments.Poison` とターン経過のダメージ・HUD の「毒(n)」表示を削除、旧セーブの Poison は無視して読み込む（`TestDecodeSaveDataIgnoresLegacyPoison`）。テストは `content_poison_test.go`。
 
-## 最新のシミュレーション結果（`reports/baseline.json`、2026-10-14、共通基盤 F5 の後に更新）
+## 最新のシミュレーション結果（`reports/baseline.json`、2026-10-14、段1 統合後に更新）
+
+- `-sim.runs=1500 -sim.difficulty=all`（1512冒険）。クリア 40/1512（初級 expert 35/84＝41.7%、**中級 expert 2/84 が初めてクリア**、初級の aggressive・cautious・diver 各1）。違反・ソフトロック・panic 0。
+- 段1の前（共通基盤 F5 後）との差: クリア 44→40、初級 expert 41→35、餓死 165→192。床の道具のカテゴリ割合は変わっていない（食料 5.6%）。武器・盾・カードの候補が増えて既存の道具の出る頻度が変わったため。1区分84冒険なので初級 expert の差（約1.3標準誤差）は誤差の範囲を出ないが、餓死の増加は段2以降も見ていく。
+- expert の平均到達階: 初級 8.6・中級 10.7・上級 10.8（前は 8.8・9.5・10.0）。
+
+### 以前の結果
+
 
 - F5 で床のアイテムの抽選の乱数の使い方が変わったため、同じ条件（`-sim.runs=1500 -sim.difficulty=all`）でベースラインを取り直した。クリア 44/1512（初級 expert 41/84＝48.8%）、違反 0。死因の上位は餓死 165、エビ 155、イシガニの投石 125、毒ヘビ 115。expert の10階到着時レベル 17.8〜19.0。以下は wave1-C 統合後の分析（傾向は同じ）。
 
@@ -63,7 +71,7 @@
 | 5c | 序盤（1〜5階）の数値の見直し | Claude Code | `early-game-analysis.md` | **完了**（自然回復・投石・毒ヘビ・パワーアップのカード）。到着時レベルが目標を超えたので、経験値か回復量での合わせ方を**開発者が決める** |
 | 5d | （敵・アイテムの追加の後）11〜20階の死亡分析（中級・上級で expert が20階に届かない原因） | Claude Code | — | 到着時レベルの合わせ方（5c）の後 |
 | 7 | キー設定 | Codex | `wave2-C-key-config.md` | **完了**（統合済み） |
-| **8** | **敵・武器・盾・カード・指輪の追加（開発者が最優先に指定、2026-10-14）** | 両方 | `content-expansion-plan.md` | 共通基盤 F1〜F5・画像 img-1（60枚）・段2の共通基盤と指示書は**統合済み**。**段1**（`wave3-A-weapons.md`・`wave3-B-shields.md`・`wave3-C-cards.md`）は Codex が実装中。**段2**（`wave4-A-rings.md`・`wave4-B-enemies.md`・`wave4-C-enemies.md`、Codex 3本並列）は段1と触るファイルが重ならないので、段1の統合を待たずに始めてよい（並列の本数は README の目安2〜3本を守る）。画像 img-2 は段1の後。段3の前に Claude Code が投擲の処理を共通化する |
+| **8** | **敵・武器・盾・カード・指輪の追加（開発者が最優先に指定、2026-10-14）** | 両方 | `content-expansion-plan.md` | 共通基盤・画像 img-1・**段1（武器・盾・カード）は統合済み**。**次は段2**（`wave4-A-rings.md`・`wave4-B-enemies.md`・`wave4-C-enemies.md`、Codex 3本並列）。画像 img-2 は段2と並列で可 |
 | 6 | 状態異常の共通化 → 新状態異常 | — | `wave2-backlog.md` | 後日 |
 
 ## ID の使用状況

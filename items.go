@@ -27,6 +27,8 @@ type Weapon struct {
 	Identified  bool                 // 武器が識別されているかどうか
 	RustProof   bool                 // さび止め済みで強化値が下がらないかどうか
 	Abilities   []EquipmentAbilityID // 装備名に依存しない能力ID
+
+	AbilityCounter int // 溜め打ち・連続命中の蓄積
 }
 
 type Armor struct {
