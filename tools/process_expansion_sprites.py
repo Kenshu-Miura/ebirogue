@@ -1,9 +1,11 @@
-"""img-1 原画の加工。Pillow: python tools/process_expansion_sprites.py
+"""追加画像原画の加工。Pillow: python tools/process_expansion_sprites.py
 
-tools/img1-originals/<name>.png を保持し、切り抜き・縮小・32色化・
+--originals と --count で原画フォルダと枚数を指定可能（既定は img-1）。
+原画 <name>.png から切り抜き・縮小・32色化・
 外周のアルファ除去・1px輪郭を決定的に再生成する。
 """
 from pathlib import Path
+import argparse
 from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,9 +39,13 @@ def process(path):
 
 
 if __name__ == "__main__":
-    paths = sorted((ROOT / "tools" / "img1-originals").glob("*.png"))
-    if len(paths) != 44:
-        raise ValueError(f"expected 44 originals, found {len(paths)}")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--originals", type=Path, default=ROOT / "tools" / "img1-originals")
+    parser.add_argument("--count", type=int, default=44)
+    args = parser.parse_args()
+    paths = sorted(args.originals.glob("*.png"))
+    if len(paths) != args.count:
+        raise ValueError(f"expected {args.count} originals, found {len(paths)}")
     for path in paths:
         process(path)
     print(f"processed {len(paths)} originals")

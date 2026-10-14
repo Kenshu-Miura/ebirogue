@@ -21,7 +21,8 @@ subprocess.run(["go", "run", "tools/expansion_enemy_images.go"], cwd=ROOT, check
 assert before == hashes(), "rebuild changed final sprites"
 
 table = (ROOT / "tools/expansion_enemy_images.go").read_text(encoding="utf-8")
-pairs = re.findall(r'\{"([^"]+)", "([^"]+)", ([\d.]+)\}', table)
+names = {p.stem for p in paths}
+pairs = [p for p in re.findall(r'\{"([^"]+)", "([^"]+)", ([\d.]+)\}', table) if p[0] in names]
 assert len(pairs) == 16, "expected 16 hue conversions"
 for src, dst, _ in pairs:
     a = Image.open(ROOT / "img" / (src + ".png")).convert("RGBA")
