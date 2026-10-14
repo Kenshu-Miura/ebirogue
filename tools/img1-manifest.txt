@@ -1,0 +1,44 @@
+hibana_umiushi enemy Red orange sea slug with flame shaped dorsal projections, big expressive eyes
+teppou_ebi enemy Teal pistol shrimp with one enormous cannon-mouth claw held forward
+nige_haze enemy Small violet goby running away on fins, startled eyes, energetic fleeing pose
+yobikomi_bora enemy Living spiral conch shell blowing a musical note and ripple from mouth, expressive eyes
+iyashi_namako enemy Round pale green sea cucumber with visible eyes and tiny glowing heart above head
+zenigata_azarashi enemy Bright blue seal holding a gold coin in mouth, full body and flippers
+sunamoguri enemy Yellow tan burrowing crustacean emerging upper body from sand, throwing sand with claw
+yoroi_ebi enemy Shrimp warrior wearing turquoise samurai helmet and segmented armor, eyes visible
+katana weapon slender curved silver katana, blue handle
+gouken weapon very broad thick silver greatsword, red handle
+gold_sword weapon gold blade sword with blue handle
+shell_cutter weapon heavy saw-toothed silver sword with orange hilt
+uni_breaker weapon crescent curved blade sword, purple grip
+sky_blade weapon translucent cyan sword blade, white and blue guard
+double_strike_sword weapon katana with second offset blade afterimage, violet handle
+great_axe weapon large double bladed steel axe, brown wood handle
+healing_sword weapon green sword blade with cross shaped gold guard
+koban_club weapon brown wooden club inset with large gold oval coins
+iron_mass_sword weapon heavy black iron slab greatsword with bright silver edge and red grip
+hungry_knife weapon large rectangular meat cleaver, silver steel and brown handle
+charge_sword weapon blue sword with large yellow lightning motif in blade
+four_prong_harpoon weapon harpoon with exactly four clearly separated sharp prongs, teal metal wood grip
+lucky_rake weapon Japanese lucky bamboo rake with colorful red gold festive charms
+mallet weapon wooden mallet with large cylindrical brown wood head
+trap_probe weapon slender wooden probing staff with forked two-prong tip
+katsuobushi weapon brown dried bonito shaped like curved sword with distinct woodgrain fish texture
+cursed_knife weapon triangular Japanese deba knife surrounded by few bold purple curse wisps
+golden_pickaxe weapon gold pickaxe, brown diagonal handle, crescent perpendicular head matching traditional mining pick
+kajin_tachi weapon curved katana surrounded by bright orange red flame blade
+bronze_shield shield bronze teal shield with bronze rim, simple central boss
+taikai_shield shield large blue shield with unmistakable bright white curling wave emblem
+gold_shield shield gold shield with bright gold rim and central gold raised boss
+dragon_scale_shield shield red dragon scale shield, overlapping large scales, gold edge
+nigiri_guard_shield shield green shield with white triangular rice ball emblem and large red X across it
+puppet_guard_shield shield purple shield with single large eye emblem crossed by red X
+koban_shield shield shield made of three big golden oval coins, brown rim
+iron_mass_shield shield huge black iron rectangular plate shield, thick silver rim and rivets
+hungry_shield shield round silver dinner plate as shield, blue rim
+guts_shield shield red shield with bold gold clenched fist emblem
+peak_shield shield cyan shield with bright yellow sun emblem
+satori_shield shield dark indigo round shield with bold white zen ensō circle
+lucky_charm shield red Japanese omamori cloth amulet bag, golden knot and trim, no letters
+cursed_pot_lid shield round pot lid with central knob and purple curse wisps
+turtle_shell shield green sea turtle carapace with distinct large hexagonal plates and golden rim
