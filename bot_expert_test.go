@@ -254,6 +254,10 @@ func (b *bot) bestEquipment() (int, bool) {
 				return i, true
 			}
 		case *Armor:
+			// 満腹度を使う盾・空腹用の盾・悟りの盾は自動で選ばない。
+			if v.GetID() == 155 || v.GetID() == 156 || v.GetID() == 159 {
+				continue
+			}
 			// 重甲の盾は満腹度の減りが速くなるため選ばない
 			if v.Sharpness < 0 || v.GetID() == 69 || !usable(v) {
 				continue

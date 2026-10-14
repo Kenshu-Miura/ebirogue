@@ -170,6 +170,7 @@ func (g *Game) executeGroundItemAction() {
 						message = fmt.Sprintf("%sを装備できない。", itemName)
 					} else {
 						message = equipMessage
+						g.capSatietyForSatori()
 						g.stats.counts(itemKind(item)).Equipped++
 					}
 					g.PickUpItem(item, i)
@@ -290,6 +291,7 @@ func (g *Game) executeAction() {
 					message = fmt.Sprintf("%sを装備できない。", itemName)
 				} else {
 					message = equipMessage
+					g.capSatietyForSatori()
 					g.stats.counts(itemKind(equipableItem)).Equipped++
 				}
 			}

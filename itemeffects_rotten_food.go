@@ -17,6 +17,7 @@ var eatRottenSausage = func(g *Game) {
 			recovery = food.Satiety
 		}
 		player.Satiety = recoveredValue(player.Satiety, player.MaxSatiety, recovery, false)
+		g.capSatietyForSatori()
 		// 実行までに並びが変わっても、所持品か足元から同じオブジェクトを消費する。
 		g.removeThrownItemFromSource(item)
 		g.selectedItemIndex = 0

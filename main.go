@@ -871,6 +871,21 @@ var specialArmorImagePaths = map[string]string{
 	"CounterShield":     "img/counter_shield.png",
 	"HeavyShield":       "img/heavy_shield.png",
 	"DisposableShield":  "img/disposable_shield.png",
+	"BronzeShield":      "img/bronze_shield.png",
+	"TaikaiShield":      "img/taikai_shield.png",
+	"GoldShield":        "img/gold_shield.png",
+	"DragonScaleShield": "img/dragon_scale_shield.png",
+	"NigiriGuardShield": "img/nigiri_guard_shield.png",
+	"PuppetGuardShield": "img/puppet_guard_shield.png",
+	"KobanShield":       "img/koban_shield.png",
+	"IronMassShield":    "img/iron_mass_shield.png",
+	"HungryShield":      "img/hungry_shield.png",
+	"GutsShield":        "img/guts_shield.png",
+	"PeakShield":        "img/peak_shield.png",
+	"SatoriShield":      "img/satori_shield.png",
+	"LuckyCharm":        "img/lucky_charm.png",
+	"CursedPotLid":      "img/cursed_pot_lid.png",
+	"TurtleShell":       "img/turtle_shell.png",
 }
 
 func loadUpperEnemyImages() map[string]*ebiten.Image {

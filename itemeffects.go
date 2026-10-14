@@ -46,17 +46,20 @@ var restoreSatiety = func(g *Game) {
 			Execute: func(g *Game) {
 				g.state.Player.MaxSatiety += foodItem.MaxStatBonus
 				g.state.Player.Satiety = g.state.Player.MaxSatiety
+				g.capSatietyForSatori()
 			},
 		}
 		g.Enqueue(action)
 	} else {
 		if foodItem, ok := item.(*Food); ok {
 			recovered := recoveredValue(g.state.Player.Satiety, g.state.Player.MaxSatiety, foodItem.Satiety, foodItem.FullRecovery)
+			recovered = satoriSatietyCap(recovered, g.playerHasAbility(AbilitySatori))
 			action := Action{
 				Duration: 0.4,
 				Message:  fmt.Sprintf("満腹度が%d回復した。", recovered-g.state.Player.Satiety),
 				Execute: func(g *Game) {
 					g.state.Player.Satiety = recovered
+					g.capSatietyForSatori()
 				},
 			}
 			g.Enqueue(action)
