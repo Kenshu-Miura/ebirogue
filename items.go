@@ -939,11 +939,24 @@ func rollItemFromTemplate(id, x, y int, intn func(int) int) Item {
 	return item
 }
 
-// randomItemTemplateIDs は床のランダム生成で一様に抽選するアイテム ID の一覧（昇順）。
+// randomItemTemplateIDs は床のランダム生成の対象になるアイテム ID の一覧（昇順、重複なし）。
 var randomItemTemplateIDs = sortedTemplateIDs(itemTemplates, nil)
 
+// powerUpCardSpawnWeight はパワーアップのカード（ID 43）の床での出現の重み（ほかのアイテムは1）。
+// 毒（毒ヘビ系・毒矢の罠・腐った食料）で下がったパワーを戻せるよう多めに出す。
+// 根拠は docs/agents/early-game-analysis.md の「採用した変更」。
+const powerUpCardSpawnWeight = 4
+
+// itemSpawnWeights は床のランダム生成での出現の重み（書いていない ID は1）。
+var itemSpawnWeights = map[int]int{
+	43: powerUpCardSpawnWeight,
+}
+
+// itemSpawnPool は重みの回数だけ ID を並べた床の抽選用の一覧。
+var itemSpawnPool = weightedTemplateIDs(randomItemTemplateIDs, itemSpawnWeights)
+
 func createItem(x, y int, intn func(int) int) Item {
-	return rollItemFromTemplate(pickTemplateID(randomItemTemplateIDs, intn, 0), x, y, intn)
+	return rollItemFromTemplate(pickTemplateID(itemSpawnPool, intn, 0), x, y, intn)
 }
 
 // 特定のIDのアイテムを冒険の乱数系列で生成する関数

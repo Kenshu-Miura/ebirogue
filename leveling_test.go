@@ -63,3 +63,12 @@ func TestLevelHealthBonus(t *testing.T) {
 		}
 	}
 }
+
+func TestNaturalRegenPerTurn(t *testing.T) {
+	cases := []struct{ level, want int }{{1, 1}, {9, 1}, {10, 2}, {19, 2}, {20, 3}, {99, 3}}
+	for _, c := range cases {
+		if got := naturalRegenPerTurn(c.level); got != c.want {
+			t.Errorf("naturalRegenPerTurn(%d) = %d, want %d", c.level, got, c.want)
+		}
+	}
+}

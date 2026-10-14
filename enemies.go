@@ -185,7 +185,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 				},
 			})
 		},
-		SpecialAttackProbability: 0.3,
+		SpecialAttackProbability: 0.15, // パワー低下が重なりすぎないよう低め（early-game-analysis.md の案5）
 	},
 	2: {
 		ID:                       2,
@@ -264,7 +264,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 			Kind:        RangedAttackRock,
 			MinRange:    2,
 			MaxRange:    5,
-			AttackPower: 12,
+			AttackPower: 8, // 壁越しに届くため通常攻撃並みに抑える（docs/agents/early-game-analysis.md の案2）
 		},
 	},
 	6: {

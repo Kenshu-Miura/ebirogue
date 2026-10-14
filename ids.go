@@ -23,3 +23,19 @@ func pickTemplateID(ids []int, intn func(int) int, fallback int) int {
 	}
 	return ids[intn(len(ids))]
 }
+
+// weightedTemplateIDs は ids の各 ID を weights の回数だけ並べた抽選用の一覧を返す
+// （weights に無い ID は1回、0以下なら出さない）。pickTemplateID と組み合わせて重み付きで抽選する。
+func weightedTemplateIDs(ids []int, weights map[int]int) []int {
+	pool := make([]int, 0, len(ids))
+	for _, id := range ids {
+		n, ok := weights[id]
+		if !ok {
+			n = 1
+		}
+		for i := 0; i < n; i++ {
+			pool = append(pool, id)
+		}
+	}
+	return pool
+}
