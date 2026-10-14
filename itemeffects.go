@@ -267,22 +267,10 @@ var suckOutPotsCard = func(g *Game) {
 	removeUsedItem(g, isInventoryItem)
 }
 
+// 真実の眼のカード: 対象を選ぶ画面を開く。カードの消費と全識別の判定は対象を確定したとき
+// （executeItemIdentify）に行うので、選択を取り消しても判定を振り直せない。
 var identifyItem = func(g *Game) {
-	item, isInventoryItem := determineItemSource(g)
-
-	// 低確率で持ち物すべてを識別する（識別の巻物相当）
-	if rollIdentifyAll(g.randIntn) {
-		g.Enqueue(Action{
-			Duration: 0.5,
-			Message:  fmt.Sprintf("%sが強く輝いた。持ち物すべての正体が明らかになった", item.GetName()),
-			Execute: func(g *Game) {
-				identifyAllInventory(g)
-			},
-		})
-		removeUsedItem(g, isInventoryItem)
-		return
-	}
-
+	_, isInventoryItem := determineItemSource(g)
 	if isInventoryItem {
 		g.tmpSelectedItemIndex = g.selectedItemIndex
 	} else {
@@ -1142,49 +1130,60 @@ var annihilateEnemiesInRoom = func(g *Game) {
 	removeUsedItem(g, isInventoryItem)
 }
 
+// executeItemIdentify は真実の眼のカードの対象を確定する。低確率で持ち物すべてを識別し
+// （識別の巻物相当）、外れれば選んだ道具だけを識別する。どちらでもカードを消費して1ターン進む。
 func (g *Game) executeItemIdentify() {
 	g.showInventory = false
-	item, _ := determineItemSource(g)
-
-	if identifiableItem, ok := item.(Identifiable); ok {
-
-		action := Action{
-			Duration: 0.5,
-			ItemName: identifiableItem.GetName(),
-			Message:  fmt.Sprintf("%sを識別した。", identifiableItem.GetName()),
-			Execute: func(g *Game) {
-			},
-			IsIdentified: identifiableItem.GetIdentified(),
-		}
-		g.Enqueue(action)
-
-		identifiableItem.SetIdentified(true)
-
-	}
-
-	action := Action{
-		Duration: 0.5,
-		ItemName: getItemNameWithSharpness(item),
-		Message:  fmt.Sprintf("アイテムの正体は%sだった。", getItemNameWithSharpness(item)),
-		Execute: func(g *Game) {
-		},
-		IsIdentified: true,
-	}
-	g.Enqueue(action)
-
-	_, isInventoryItem := determineItemSource(g)
-
-	if isInventoryItem {
-		// インベントリからアイテムを削除
-		g.state.Player.Inventory = append(g.state.Player.Inventory[:g.tmpSelectedItemIndex], g.state.Player.Inventory[g.tmpSelectedItemIndex+1:]...)
+	cardIndex := g.tmpSelectedItemIndex
+	fromInventory := !g.GroundItemActioned
+	var card Item
+	if fromInventory {
+		card = g.state.Player.Inventory[cardIndex]
 	} else {
-		// 地面からアイテムを削除
-		g.state.Items = append(g.state.Items[:g.tmpSelectedItemIndex], g.state.Items[g.tmpSelectedItemIndex+1:]...)
+		card = g.state.Items[cardIndex]
+	}
+	item := g.state.Player.Inventory[g.selectedItemIndex]
+
+	if rollIdentifyAll(g.randIntn) {
+		g.Enqueue(Action{
+			Duration: 0.5,
+			Message:  fmt.Sprintf("%sが強く輝いた。持ち物すべての正体が明らかになった", card.GetName()),
+			Execute: func(g *Game) {
+				identifyAllInventory(g)
+			},
+		})
+	} else {
+		if identifiableItem, ok := item.(Identifiable); ok {
+			g.Enqueue(Action{
+				Duration:     0.5,
+				ItemName:     identifiableItem.GetName(),
+				Message:      fmt.Sprintf("%sを識別した。", identifiableItem.GetName()),
+				Execute:      func(g *Game) {},
+				IsIdentified: identifiableItem.GetIdentified(),
+			})
+			identifiableItem.SetIdentified(true)
+		}
+
+		g.Enqueue(Action{
+			Duration:     0.5,
+			ItemName:     getItemNameWithSharpness(item),
+			Message:      fmt.Sprintf("アイテムの正体は%sだった。", getItemNameWithSharpness(item)),
+			Execute:      func(g *Game) {},
+			IsIdentified: true,
+		})
+	}
+
+	if fromInventory {
+		g.state.Player.Inventory = append(g.state.Player.Inventory[:cardIndex], g.state.Player.Inventory[cardIndex+1:]...)
+	} else {
+		g.state.Items = append(g.state.Items[:cardIndex], g.state.Items[cardIndex+1:]...)
 	}
 
 	g.tmpSelectedItemIndex = -1
 	g.selectedItemIndex = 0
 	g.useIdentifyItem = false
+	g.GroundItemActioned = false
+	g.isActioned = true
 }
 
 // 睡眠効果関数 - 部屋内では同じ部屋の敵全員、通路では周囲1マスの敵を睡眠状態にする

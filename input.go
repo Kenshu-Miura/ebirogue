@@ -192,7 +192,7 @@ func (g *Game) handleInventoryNavigationInput() error {
 				g.selectedGroundActionIndex = 0
 				g.showInventory = false
 			}
-		} else if g.useIdentifyItem && g.tmpSelectedItemIndex != g.selectedItemIndex {
+		} else if g.useIdentifyItem && (g.GroundItemActioned || g.tmpSelectedItemIndex != g.selectedItemIndex) {
 			g.executeItemIdentify()
 		} else if g.usePotInsert && g.tmpSelectedItemIndex != g.selectedItemIndex {
 			g.executePotInsertSelection()
@@ -205,6 +205,7 @@ func (g *Game) handleInventoryNavigationInput() error {
 		g.tmpSelectedItemIndex = -1
 		g.useIdentifyItem = false
 		g.usePotInsert = false
+		g.GroundItemActioned = false
 	}
 
 	// Fキー: カテゴリ絞り込みの切り替え（所持しているカテゴリだけを巡回）
