@@ -98,9 +98,21 @@ type simOutcome struct {
 	Result             *RunResult     `json:",omitempty"`
 	Violations         []simViolation `json:",omitempty"`
 	Death              *deathTrace    `json:",omitempty"` // Trace のときだけ。最後の数十ターンと各階の床の道具
+	// FloorItemKinds は各階に初めて着いたときの床の道具の種類別の数（床出現の割合の確認用）
+	FloorItemKinds map[string]int `json:",omitempty"`
 }
 
 const maxViolationsPerRun = 20
+
+// countFloorItemKinds は着いたばかりの階の床の道具を種類別に数える。
+func countFloorItemKinds(g *Game, out *simOutcome) {
+	if out.FloorItemKinds == nil {
+		out.FloorItemKinds = map[string]int{}
+	}
+	for _, item := range g.state.Items {
+		out.FloorItemKinds[itemKind(item)]++
+	}
+}
 
 // runSimCase は BOT で1回の冒険を遊び、結果と不変条件違反を返す。panic しても recover して記録する。
 func runSimCase(c simCase) (out simOutcome) {
@@ -170,6 +182,9 @@ func runSimCase(c simCase) (out simOutcome) {
 		}
 		for len(out.FloorLevels) < g.Floor {
 			out.FloorLevels = append(out.FloorLevels, g.state.Player.Level)
+			if len(out.FloorLevels) == g.Floor {
+				countFloorItemKinds(g, &out)
+			}
 		}
 		if g.RunEnded() {
 			out.Ended = "died"
@@ -488,9 +503,11 @@ type simSummary struct {
 	FloorDeaths map[int]int               // 階層別の死亡数
 	FloorReach  map[int]int               // 階層別の到達数
 	DeathCauses map[string]int
-	Violations  int
-	SoftLocks   int
-	Panics      int
+	// FloorItemKinds は各階の到着時の床の道具の種類別の合計（F5 の床出現の割合の確認用）
+	FloorItemKinds map[string]int `json:",omitempty"`
+	Violations     int
+	SoftLocks      int
+	Panics         int
 }
 
 type simBaselineFile struct {
@@ -524,6 +541,12 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 		}
 		for f := 1; f <= o.Floor; f++ {
 			s.FloorReach[f]++
+		}
+		for kind, n := range o.FloorItemKinds {
+			if s.FloorItemKinds == nil {
+				s.FloorItemKinds = map[string]int{}
+			}
+			s.FloorItemKinds[kind] += n
 		}
 		switch o.Ended {
 		case "cleared":
@@ -698,6 +721,22 @@ func renderLevelCurve(b *strings.Builder, s simSummary) {
 	}
 }
 
+// renderFloorItemKinds は各階に着いたときの床の道具の種類別の数と割合を書く。
+func renderFloorItemKinds(b *strings.Builder, s simSummary) {
+	total := 0
+	for _, n := range s.FloorItemKinds {
+		total += n
+	}
+	if total == 0 {
+		return
+	}
+	fmt.Fprintf(b, "\n## 床の道具（各階の到着時、種類別）\n\n| 種類 | 数 | 割合 |\n|---|---:|---:|\n")
+	for _, kind := range sortedKeys(s.FloorItemKinds) {
+		n := s.FloorItemKinds[kind]
+		fmt.Fprintf(b, "| %s | %d | %.1f%% |\n", kind, n, float64(n)/float64(total)*100)
+	}
+}
+
 func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary, elapsed time.Duration) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# BOT シミュレーションレポート\n\n")
@@ -717,6 +756,7 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 	}
 
 	renderLevelCurve(&b, s)
+	renderFloorItemKinds(&b, s)
 
 	fmt.Fprintf(&b, "\n## 性格別の死因の上位（判断ミス死は種類で数える）\n\n")
 	personaCauses := map[string]map[string]int{}

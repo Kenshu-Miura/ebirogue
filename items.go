@@ -73,7 +73,8 @@ type Money struct {
 type Accessory struct {
 	BaseItem
 	Cursed     bool
-	Identified bool // アクセサリが識別されているかどうか
+	Identified bool                 // アクセサリが識別されているかどうか
+	Abilities  []EquipmentAbilityID // 装備名に依存しない能力ID（テンプレートから生成し、セーブしない）
 }
 
 type Cane struct {
@@ -102,12 +103,12 @@ type ItemTemplate struct {
 	Description  string
 	Char         rune
 	UseActions   map[string]UseAction
-	AttackPower  int // 武器・矢の基礎攻撃力
-	DefensePower int // 防具の基礎防御力
-	Abilities    []EquipmentAbilityID
-	Recovery     int  // 満腹度またはHPの回復量
-	FullRecovery bool // 現在の最大値まで回復するか
-	MaxStatBonus int  // 満タン時に使った場合の最大値上昇量
+	AttackPower  int                  // 武器・矢の基礎攻撃力
+	DefensePower int                  // 防具の基礎防御力
+	Abilities    []EquipmentAbilityID // 武器・盾・指輪の能力ID
+	Recovery     int                  // 満腹度またはHPの回復量
+	FullRecovery bool                 // 現在の最大値まで回復するか
+	MaxStatBonus int                  // 満タン時に使った場合の最大値上昇量
 }
 
 // アイテムデータテーブル
@@ -219,6 +220,7 @@ var itemTemplates = map[int]ItemTemplate{
 		Description: "アクセサリ。パワーの最大値が3上昇する。",
 		Char:        '!',
 		UseActions:  map[string]UseAction{"AccessoryEffect": func(g *Game) {}},
+		Abilities:   []EquipmentAbilityID{AbilityPowerBoost},
 	},
 	11: {
 		ID:          11,
@@ -927,6 +929,7 @@ func rollItemFromTemplate(id, x, y int, intn func(int) int) Item {
 			BaseItem:   baseItem,
 			Cursed:     false,
 			Identified: false,
+			Abilities:  append([]EquipmentAbilityID(nil), template.Abilities...),
 		}
 	default:
 		// デフォルトは混乱薬
@@ -942,21 +945,43 @@ func rollItemFromTemplate(id, x, y int, intn func(int) int) Item {
 // randomItemTemplateIDs は床のランダム生成の対象になるアイテム ID の一覧（昇順、重複なし）。
 var randomItemTemplateIDs = sortedTemplateIDs(itemTemplates, nil)
 
-// powerUpCardSpawnWeight はパワーアップのカード（ID 43）の床での出現の重み（ほかのアイテムは1）。
+// powerUpCardSpawnWeight はパワーアップのカード（ID 43）のカード内での出現の重み（ほかのカードは1）。
 // 毒（毒ヘビ系・毒矢の罠・腐った食料）で下がったパワーを戻せるよう多めに出す。
 // 根拠は docs/agents/early-game-analysis.md の「採用した変更」。
 const powerUpCardSpawnWeight = 4
 
-// itemSpawnWeights は床のランダム生成での出現の重み（書いていない ID は1）。
+// itemSpawnWeights はカテゴリ内での出現の重み（書いていない ID は1）。
 var itemSpawnWeights = map[int]int{
 	43: powerUpCardSpawnWeight,
 }
 
-// itemSpawnPool は重みの回数だけ ID を並べた床の抽選用の一覧。
-var itemSpawnPool = weightedTemplateIDs(randomItemTemplateIDs, itemSpawnWeights)
+// itemCategorySpawnWeights は床に出るアイテムのカテゴリ（ItemTemplate.ItemType）ごとの出現の重み。
+// 全カテゴリの合計に対する割合がそのカテゴリの出現率になり、カテゴリ内は itemSpawnWeights で抽選する。
+// 値は導入時（2026-10-14、アイテム ID 0〜71）に全テンプレートが同じ重みだったときの割合と同じになるよう、
+// 当時のカテゴリ内の重みの合計にしてある（カードはパワーアップのカードの重み4を含めて31）。
+// 新しいアイテムを追加してもカテゴリの割合は変わらない（同じカテゴリのほかの道具が少し出にくくなる）。
+// 割合を変えるときは TestSimBatch の「床の道具」と餓死の数をベースラインと比べる。
+var itemCategorySpawnWeights = map[string]int{
+	"Card":      31,
+	"Armor":     14,
+	"Weapon":    12,
+	"Potion":    7,
+	"Food":      4,
+	"Cane":      2,
+	"Accessory": 1,
+	"Arrow":     1,
+	"Money":     1,
+	"Pot":       1,
+	"Trap":      1,
+}
 
+// itemSpawnCategories は床の抽選用のカテゴリ別の一覧。
+var itemSpawnCategories = buildSpawnCategories(randomItemTemplateIDs,
+	func(id int) string { return itemTemplates[id].ItemType }, itemCategorySpawnWeights, itemSpawnWeights)
+
+// createItem は床に置くアイテムを、カテゴリ → カテゴリ内のテンプレートの順に重み付きで抽選して作る。
 func createItem(x, y int, intn func(int) int) Item {
-	return rollItemFromTemplate(pickTemplateID(itemSpawnPool, intn, 0), x, y, intn)
+	return rollItemFromTemplate(pickFromSpawnCategories(itemSpawnCategories, intn, 0), x, y, intn)
 }
 
 // 特定のIDのアイテムを冒険の乱数系列で生成する関数

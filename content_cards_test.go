@@ -201,7 +201,7 @@ func TestEquipmentCardTemplates(t *testing.T) {
 
 func TestUncursePlayerBelongings(t *testing.T) {
 	weapon := &Weapon{BaseItem: BaseItem{Name: "こん棒", Type: "Weapon"}, AttackPower: 2, Sharpness: -1, Cursed: true}
-	accessory := &Accessory{BaseItem: BaseItem{Name: "鼓舞の指輪", Type: "Accessory"}, Cursed: true}
+	accessory := &Accessory{BaseItem: BaseItem{Name: "鼓舞の指輪", Type: "Accessory"}, Cursed: true, Abilities: []EquipmentAbilityID{AbilityPowerBoost}}
 	plainArmor := &Armor{BaseItem: BaseItem{Name: "木甲の盾", Type: "Armor"}, DefensePower: 2}
 	player := &Player{Inventory: []Item{weapon, accessory, plainArmor}}
 	player.EquipItem(weapon)

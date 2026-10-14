@@ -34,6 +34,11 @@ func (g *Game) IncrementMoveCount() {
 			g.state.Player.Satiety = 0
 		}
 	}
+
+	// 装備能力の毎ターンの処理（回復・しあわせの指輪など、フック OnTurn）
+	if !g.playerDead {
+		g.runTurnHooks()
+	}
 }
 
 // プレイヤーが混乱状態の時のランダム移動処理

@@ -39,3 +39,55 @@ func weightedTemplateIDs(ids []int, weights map[int]int) []int {
 	}
 	return pool
 }
+
+// spawnCategory は床出現のカテゴリ1つ（カテゴリの重みと、カテゴリ内の抽選用の ID 一覧）。
+type spawnCategory struct {
+	Name   string
+	Weight int
+	Pool   []int // カテゴリ内の重みの回数だけ ID を並べたもの
+}
+
+// buildSpawnCategories はテンプレート ID をカテゴリへ振り分け、カテゴリごとの抽選表を作る。
+// categoryOf は ID のカテゴリ名、categoryWeights はカテゴリの重み、itemWeights はカテゴリ内の重み
+// （書いていない ID は1）。重みが0以下のカテゴリと、ID が1つも無いカテゴリは入れない。並びはカテゴリ名の昇順。
+func buildSpawnCategories(ids []int, categoryOf func(int) string, categoryWeights map[string]int, itemWeights map[int]int) []spawnCategory {
+	members := map[string][]int{}
+	for _, id := range ids {
+		name := categoryOf(id)
+		members[name] = append(members[name], id)
+	}
+	names := make([]string, 0, len(members))
+	for name := range members {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	categories := []spawnCategory{}
+	for _, name := range names {
+		pool := weightedTemplateIDs(members[name], itemWeights)
+		if categoryWeights[name] <= 0 || len(pool) == 0 {
+			continue
+		}
+		categories = append(categories, spawnCategory{Name: name, Weight: categoryWeights[name], Pool: pool})
+	}
+	return categories
+}
+
+// pickFromSpawnCategories はカテゴリを重みで選び、そのカテゴリ内から ID を選ぶ（乱数を2回使う）。
+// カテゴリが無ければ fallback を返す。
+func pickFromSpawnCategories(categories []spawnCategory, intn func(int) int, fallback int) int {
+	total := 0
+	for _, category := range categories {
+		total += category.Weight
+	}
+	if total <= 0 {
+		return fallback
+	}
+	r := intn(total)
+	for _, category := range categories {
+		if r < category.Weight {
+			return pickTemplateID(category.Pool, intn, fallback)
+		}
+		r -= category.Weight
+	}
+	return fallback
+}

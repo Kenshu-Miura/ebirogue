@@ -13,8 +13,30 @@ func equippedArmorAbilities(player *Player) []EquipmentAbilityID {
 	return player.EquippedArmor.Abilities
 }
 
+// resolvePlayerShieldDefense は攻撃者を渡さない被ダメージ（罠・遠距離攻撃など）を解決する。
 func (g *Game) resolvePlayerShieldDefense(damage int, kind EnemyDamageKind, delivery EnemyAttackDelivery) ShieldDefenseResult {
-	return resolveShieldDefense(damage, kind, delivery, equippedArmorAbilities(&g.state.Player), g.shieldDefenseIntn())
+	return g.resolvePlayerDefense(damage, kind, delivery, nil, false)
+}
+
+// resolvePlayerDefense は盾の能力（回避→反射→属性軽減→カウンター）を解決した後、
+// 残ったダメージへ装備能力のフック ModifyIncomingDamage を適用する。
+// attacker は攻撃した敵（無ければ nil）、critical は敵の痛恨の一撃かどうか。
+// カウンターのダメージはフックで軽減する前のダメージから決まる。
+func (g *Game) resolvePlayerDefense(damage int, kind EnemyDamageKind, delivery EnemyAttackDelivery, attacker *Enemy, critical bool) ShieldDefenseResult {
+	result := resolveShieldDefense(damage, kind, delivery, equippedArmorAbilities(&g.state.Player), g.shieldDefenseIntn())
+	if result.Damage <= 0 {
+		return result
+	}
+	incoming := IncomingDamage{Damage: result.Damage, Kind: kind, Delivery: delivery, Attacker: attacker, Critical: critical}
+	g.runModifyIncomingDamageHooks(&incoming)
+	result.Damage = incoming.Damage
+	if len(incoming.Effects) > 0 {
+		result.Effects = &incoming.Effects
+	}
+	if result.Damage == 0 {
+		result.WearArmor = false
+	}
+	return result
 }
 
 func (g *Game) playerResistsStatus() bool {
@@ -57,6 +79,11 @@ func (g *Game) findEnemyForDefense(id, x, y int) int {
 // applyPlayerShieldDefense は遅延Actionの実行時にダメージ、反射・カウンター、盾劣化を適用する。
 // source は死因の記録に使うダメージの原因。
 func (g *Game) applyPlayerShieldDefense(result ShieldDefenseResult, source DamageSource, attackerID, attackerX, attackerY int) {
+	if result.Effects != nil {
+		for _, effect := range *result.Effects {
+			effect(g)
+		}
+	}
 	if result.Damage > 0 {
 		g.damagePlayer(result.Damage, source)
 	}

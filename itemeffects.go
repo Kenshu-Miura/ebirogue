@@ -1379,19 +1379,25 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 // 睡眠ポーション効果関数 - プレイヤーを睡眠状態にする
 var sleepPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
+	guardMessage, immune := g.playerImmunityMessage(StatusSleep)
 
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
 		Execute: func(g *Game) {
-			g.state.Player.StatusAilments.Sleep = 10 // 10ターン睡眠
+			if !immune {
+				g.state.Player.StatusAilments.Sleep = 10 // 10ターン睡眠
+			}
 		},
 	}
 	g.Enqueue(action)
 
+	if !immune {
+		guardMessage = "海老さんは眠った"
+	}
 	action = Action{
 		Duration: 0.4,
-		Message:  "海老さんは眠った",
+		Message:  guardMessage,
 		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)
@@ -1403,19 +1409,25 @@ var sleepPotion = func(g *Game) {
 // 混乱ポーション効果関数 - プレイヤーを混乱状態にする
 var confusionPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
+	guardMessage, immune := g.playerImmunityMessage(StatusConfusion)
 
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
 		Execute: func(g *Game) {
-			g.state.Player.StatusAilments.Confusion = 10 // 10ターン混乱
+			if !immune {
+				g.state.Player.StatusAilments.Confusion = 10 // 10ターン混乱
+			}
 		},
 	}
 	g.Enqueue(action)
 
+	if !immune {
+		guardMessage = "海老さんは混乱した"
+	}
 	action = Action{
 		Duration: 0.4,
-		Message:  "海老さんは混乱した",
+		Message:  guardMessage,
 		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)
@@ -1427,19 +1439,25 @@ var confusionPotion = func(g *Game) {
 // 目潰しポーション効果関数 - プレイヤーを目潰し状態にする
 var blindPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
+	guardMessage, immune := g.playerImmunityMessage(StatusBlind)
 
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
 		Execute: func(g *Game) {
-			g.state.Player.StatusAilments.Blind = 30 // 30ターン目潰し状態
+			if !immune {
+				g.state.Player.StatusAilments.Blind = 30 // 30ターン目潰し状態
+			}
 		},
 	}
 	g.Enqueue(action)
 
+	if !immune {
+		guardMessage = "海老さんは目が見えなくなった"
+	}
 	action = Action{
 		Duration: 0.4,
-		Message:  "海老さんは目が見えなくなった",
+		Message:  guardMessage,
 		Execute:  func(g *Game) {},
 	}
 	g.Enqueue(action)

@@ -163,30 +163,13 @@ func (ar *Arrow) UpdatePlayerStats(player *Player, equip bool) {
 }
 
 func (ac *Accessory) UpdatePlayerStats(player *Player, equip bool) {
-	// Accessories might affect various stats
-	// Implement logic accordingly
-	// もし鼓舞の指輪を装備した場合は、プレイヤーのパワーとパワーの最大値を3上昇させる
-	if ac.Name == "鼓舞の指輪" {
-		if equip {
-			// もし鼓舞の指輪が呪われている場合は、プレイヤーのパワーとパワーの最大値を3減少させる
-			if ac.Cursed {
-				player.Power -= 3
-				player.MaxPower -= 3
-			} else {
-				player.Power += 3
-				player.MaxPower += 3
-			}
-		} else {
-			// もし鼓舞の指輪が呪われている場合は、プレイヤーのパワーとパワーの最大値を3上昇させる
-			if ac.Cursed {
-				player.Power += 3
-				player.MaxPower += 3
-			} else {
-				player.Power -= 3
-				player.MaxPower -= 3
-			}
-		}
+	// 鼓舞の指輪（AbilityPowerBoost）はパワーと最大パワーを上げる。呪われていると下げる。
+	bonus := accessoryPowerBonus(ac.Abilities, ac.Cursed)
+	if !equip {
+		bonus = -bonus
 	}
+	player.Power += bonus
+	player.MaxPower += bonus
 }
 
 func (bi BaseItem) GetID() int {

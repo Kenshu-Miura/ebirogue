@@ -405,8 +405,8 @@ func (g *Game) trySwapEnemyWithPlayer(enemyIndex int, intn func(int) int) bool {
 	if distance < 2 || distance > 5 || !isSameRoom(enemy.X, enemy.Y, g.state.Player.X, g.state.Player.Y, g.rooms) {
 		return false
 	}
-	// 聖域のカードの上にいるプレイヤーとは場所を入れ替えられない
-	if g.playerOnSanctuary() {
+	// 聖域のカードの上にいるプレイヤー・不動の能力を持つプレイヤーとは場所を入れ替えられない
+	if g.playerOnSanctuary() || g.playerImmovable() {
 		return false
 	}
 

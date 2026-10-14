@@ -16,6 +16,8 @@ func (g *Game) damagePlayer(damage int, source DamageSource) {
 	minHealth := 0
 	if g.immortal {
 		minHealth = 1 // 計測用の不死モード（BOT のレベル曲線を深い階まで測る）
+	} else if g.state.Player.Health-damage <= 0 && g.runPreventDeathHooks(damage, source) {
+		minHealth = 1 // 装備能力のフック PreventDeath（根性の盾など）で倒れる直前に踏みとどまった
 	}
 	g.state.Player.Health = max(minHealth, g.state.Player.Health-damage)
 	g.lastDamageSource = source
