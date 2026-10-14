@@ -222,7 +222,7 @@ ID は系統ごとに「基本種・第2段階・第3段階」の順に3つず�
 | 1 | Codex ×2〜3 | 武器 A（126〜146）／盾 A（148〜162）／カード A（167〜173） | 3本 | 0a・0b |
 | 2 | Codex ×2〜3 | 指輪 A（175〜188・194〜199、`wave4-A-rings.md`）／敵 A 前半（66〜77、`wave4-B-enemies.md`）／敵 A 後半（78〜89、`wave4-C-enemies.md`）。共通基盤（敵の系統の表の分割・行動と撃破時のフック・回復・仲間呼び・固定ダメージ・遅れて現れる敵・担当ごとのヘルプのページ）は Claude Code が先に作成済み（`enemy_expansion.go`・`enemy_behaviors.go`） | 3本 | 1（衝突しないので段1と並行してよい） |
 | 3 | Codex ×3 | 敵 B 前半（90〜98、`wave5-A-enemies.md`）／敵 B 後半（99〜107、`wave5-B-enemies.md`）／アイテム B（147・163〜166・174・189〜193・200〜202・204、`wave5-C-items.md`）。共通基盤（投擲の共通化 `projectile.go`、強化値を下げる・装備を弾く・持ち物を投げ捨てる `equipment_harm.go`、被弾時のフックと分裂・一直線上の判定・敵の状態ゾワゾワ、空の表 `enemies_expansion_b1.go`・`b2.go`）は Claude Code が先に作成済み | 3本 | 2・img-2 |
-| 4 | Codex ×3 | 敵 C: フクレフグ 108〜110・シビレエイ 114〜116（`wave6-A-enemies.md`）／アナジャコ 111〜113・コバンザメ 120〜122（`wave6-B-enemies.md`）／ミミックダコ 117〜119・ウチカエシエビ 123〜125（`wave6-C-enemies.md`）。共通基盤（敵ごとの汎用の状態とセーブ、敵の範囲爆発 `enemy_explosion.go`、壁掘りと近づくまで追わない `enemy_dig.go`、別の敵に化ける `enemy_mimic.go`、打ち返し `projectile.go`、空の表 `enemies_expansion_c1〜c3.go`）と**すれちがいの指輪 203（移動の中心部を触るため Claude Code が完成させた、`ring_swap.go`）**は `agent/content-plan-4` で作成済み | 3本 | 3・img-2 |
+| 4 | Codex ×3（**統合済み**） | 敵 C: フクレフグ 108〜110・シビレエイ 114〜116（`wave6-A-enemies.md`）／アナジャコ 111〜113・コバンザメ 120〜122（`wave6-B-enemies.md`）／ミミックダコ 117〜119・ウチカエシエビ 123〜125（`wave6-C-enemies.md`）。共通基盤（敵ごとの汎用の状態とセーブ、敵の範囲爆発 `enemy_explosion.go`、壁掘りと近づくまで追わない `enemy_dig.go`、別の敵に化ける `enemy_mimic.go`、打ち返し `projectile.go`、空の表 `enemies_expansion_c1〜c3.go`）と**すれちがいの指輪 203（移動の中心部を触るため Claude Code が完成させた、`ring_swap.go`）**は `agent/content-plan-4` で作成済み | 3本 | 3・img-2 |
 
 各段の統合時に Claude Code が `TestSimBatch` を回し、死因の上位に新しい敵が極端に偏っていないか、餓死が増えていないかを確認する（バランスの細かい調整はしない。明らかに壊れたものだけ直す）。
 

@@ -16,9 +16,11 @@ func init() {
 	updateMonsterDefinitions(func(d *MonsterDefinition) { d.ProjectileReturnPercent = 60 }, 124)
 	updateMonsterDefinitions(func(d *MonsterDefinition) { d.ProjectileReturnPercent = 80 }, 125)
 	expansionHelpPages = append(expansionHelpPages, HelpPage{Title: "新しい敵（7）", Lines: []string{
-		"ミミックダコ：その階に出る別の敵の姿で現れる。攻撃すると正体を現す。",
+		"ミミックダコ：その階に出る別の敵の姿で現れる。",
+		"攻撃すると正体を現す。",
 		"ヘンゲダコ以上：正体を現してもしばらくすると化け直す。",
-		"ウチカエシエビ：投げた物・矢・魔法弾を打ち返す。上位種ほどよく打ち返す。",
+		"ウチカエシエビ：投げた物・矢・魔法弾を打ち返す。",
+		"上位種ほどよく打ち返す。",
 		"上位種も同じ能力を持つ。",
 	}})
 }
