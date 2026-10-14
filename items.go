@@ -954,7 +954,7 @@ func rollItemFromTemplate(id, x, y int, intn func(int) int) Item {
 	case "Accessory":
 		item = &Accessory{
 			BaseItem:   baseItem,
-			Cursed:     false,
+			Cursed:     hasEquipmentAbility(template.Abilities, AbilityAlwaysCursed),
 			Identified: false,
 			Abilities:  append([]EquipmentAbilityID(nil), template.Abilities...),
 		}
@@ -995,7 +995,7 @@ var itemCategorySpawnWeights = map[string]int{
 	"Potion":    7,
 	"Food":      4,
 	"Cane":      2,
-	"Accessory": 1,
+	"Accessory": 3,
 	"Arrow":     1,
 	"Money":     1,
 	"Pot":       1,

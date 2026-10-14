@@ -664,8 +664,8 @@ func TestItemCategorySpawnWeights(t *testing.T) {
 			t.Errorf("category weight %q has no item templates", name)
 		}
 	}
-	// 導入時の割合（全テンプレートが同じ重み、パワーアップのカードだけ4）と一致する
-	want := map[string]int{"Card": 31, "Armor": 14, "Weapon": 12, "Potion": 7, "Food": 4, "Cane": 2, "Accessory": 1, "Arrow": 1, "Money": 1, "Pot": 1, "Trap": 1}
+	// 導入時の割合を維持し、wave4-A で指輪だけ重みを1から3へ増やす。
+	want := map[string]int{"Card": 31, "Armor": 14, "Weapon": 12, "Potion": 7, "Food": 4, "Cane": 2, "Accessory": 3, "Arrow": 1, "Money": 1, "Pot": 1, "Trap": 1}
 	for _, category := range itemSpawnCategories {
 		if category.Weight != want[category.Name] {
 			t.Errorf("category %s weight = %d, want %d", category.Name, category.Weight, want[category.Name])

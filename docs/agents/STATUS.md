@@ -36,13 +36,22 @@
   - 段1の準備: 呪い・さび・食料化・あやつりも無効化の対象に追加（`StatusCurse` など。ノロイガニ系・さびの罠・にぎりエビ系・あやつりクラゲ系に配線）、自分だけさびない `AbilityRustImmune`、攻撃のたびのフック `AfterPlayerSwing`、`PlayerAttack.AttackBonus` / `HitEffects`、被弾を丸ごとかわす `IncomingDamage.Evaded`、遠距離攻撃でも攻撃した敵をフックへ渡す。アイテムの表を種類ごとのファイル（`items_weapons.go`・`items_shields.go`・`items_cards.go`・`items_rings.go`）に分け、`mergeItemTemplates` でまとめる（並列の担当が同じ表を触らないため）。追加後も BOT の結果はベースラインと完全一致。
   - F5 床のアイテムをカテゴリ別の重み（`itemCategorySpawnWeights`）で抽選。割合は導入前と同じ。1500冒険の比較で、到着時の床の道具の割合はカード 41.2→41.1%・盾 18.4→18.7%・武器 16.1→15.5%・薬 9.4→9.8%・食料 5.4→5.6%、餓死 155→165（ばらつきの範囲）。F1〜F4 だけの段階では 1512 冒険すべてが変更前と完全に一致（乱数の消費を変えていない）。BOT のレポートに「床の道具（各階の到着時、種類別）」を追加。
 - 段2の共通基盤と指示書（`agent/content-plan-2`）を統合済み。敵の系統（基本種・第2・第3段階）を担当別のファイル（`enemies_expansion_a1.go`・`a2.go`）の表 `monsterFamily` に書けば、`enemy_expansion.go` が定義・上位種化・画像・出現階を登録する（並列の担当が `enemies.go`・`monster_spawn.go`・`main.go` を触らない）。`enemy_behaviors.go`: 系統固有の行動 `Behavior`（共通の状態処理の後に呼ぶ、封印で止まる）、撃破時の `OnDefeated`（敵が倒れる6つの経路すべてから呼ぶ）、`stepEnemyToward`（`MoveTowardsPlayer` を一般化）、`injuredAllyNear` / `healEnemy`、`summonMonstersAround`、`enqueueEnemyFixedAttack`、遅れて現れる敵の予約（`scheduleEnemySpawn`、中断セーブの `PendingEnemySpawns`）。ヘルプは担当ごとに `expansionHelpPages` へページを加える。敵の通常攻撃の向きを2マス先でも正しくした。新しい敵はまだ無く、BOT の結果は変わらない（乱数の使い方を変えていない）。指輪の 189〜193（投擲・射撃）は投擲の処理の共通化が要るので段3へ回した。
+- 段2（wave4-A 指輪 175〜188・194〜199、wave4-B 敵 66〜77、wave4-C 敵 78〜89）を統合済み。衝突なし。ヘルプのテストのページ番号の固定は wave4-A がタイトルで探す形に直していた。各報告は `docs/agents/done/wave4-A/B/C.md`。
 - 段1（wave3-A 武器 126〜146・wave3-B 盾 148〜162・wave3-C カード 167〜173）を統合済み。統合時の修正: `help.go` の衝突解消と、盾の追加行が「操作方法」ページに入っていたのを「道具：追加の盾」ページへ移動。悟りの盾の満腹度上限をかつおぶし（かじる）と困った時のカード（空腹の解消）にも接続（`content_wave3_integration_test.go`）。各報告は `docs/agents/done/wave3-A/B/C.md`。
 - 段3の共通基盤と指示書（`agent/content-plan-3`）を統合済み。投擲・射撃・杖の魔法弾の飛び方を `projectile.go` に共通化した（`Projectile` を1マスずつ進め、壁・敵の貫通、跳ね返り、命中率と外れ、射撃の本数、1マスごとの処理 `OnTile`、命中判定の差し込み `BeforeHit`。装備能力は `ModifyProjectile` のフックで変える）。共通化の前に今の挙動をテストで固定し（`content_projectile_test.go`）、共通化の後も `TestSimBatch` 1512冒険の結果はベースラインと完全一致。敵 B・アイテム B 用に、強化値を下げる・装備を弾き飛ばす・持ち物を投げ捨てる（`equipment_harm.go`。さびの罠も同じ処理に移した）、被弾時のフック `OnDamaged` と分裂 `splitEnemy`、一直線上の判定 `straightLineToPlayer`、敵の状態ゾワゾワ（`StatusAilments.Backward`、反対向きの攻撃）を追加。防ぐ能力用に `StatusKnockOff`・`StatusItemToss`。段3の敵の担当用に空の表 `enemies_expansion_b1.go`・`b2.go` を用意した。これを使う敵・道具はまだ無く、BOT の結果も変わらない。
 - 画像 img-1（武器21・盾15・敵24の60枚、`agent/img-content-1`）を統合済み。統合時の変更: 生成の原画44枚（約30MB）は作業ツリーから外した（履歴には `d9dbc42` 経由で残る。`tools/*-originals/` は `.gitignore`、img-2 からは原画をコミットしない）。取り出し方は `docs/agents/done/img-content-1.md`。
 - wave2-C（キー設定）を統合済み。16役割の割り当て変更・入れ替え・初期化、設定への保存、ヘルプと画面案内の追従（`keybinding.go`・`keybinding_ui.go`）。報告は `docs/agents/done/wave2-C.md`。
 - 毒をパワー低下に置き換え（`agent/poison-power`）: `StatusAilments.Poison` とターン経過のダメージ・HUD の「毒(n)」表示を削除、旧セーブの Poison は無視して読み込む（`TestDecodeSaveDataIgnoresLegacyPoison`）。テストは `content_poison_test.go`。
 
-## 最新のシミュレーション結果（`reports/baseline.json`、2026-10-14、投擲の命中率85%の後に更新）
+## 最新のシミュレーション結果（`reports/baseline.json`、2026-10-14、段2 統合後に更新）
+
+- `-sim.runs=1500 -sim.difficulty=all`（1512冒険）。クリア 54/1512（初級 expert 47/84＝56.0%、中級 expert 1、初級の diver 3・aggressive 2・itemUser 1）。違反・ソフトロック・panic 0。
+- 段2の前（投擲の命中率85%の後）との差: クリア 47→54、expert の平均到達階 初級 8.6→9.0・中級 10.2→10.6・上級 10.3→10.8、餓死 192→193（横ばい）。
+- 新しい敵（ID 66〜89）が直接の死因になったのは死亡1451件中50件（3.4%）。多い順にテッポウエビ12、ゼニガタアザラシ11、スナモグリ5、カエンウミウシ4（＋炎3）、ヨビコミボラ4。死因の上位15位には入っていない。
+- 指輪の床出現の重みを1→3にしたため、到着時に床にある指輪は約3倍（960→2806）。ほかのカテゴリの割合はほぼ同じ。
+
+### 投擲の命中率85%の後の結果
+
 
 - 投げた道具・矢の命中率を100%→85%にしたため、同じ条件（`-sim.runs=1500 -sim.difficulty=all`）でベースラインを取り直した。クリア 47/1512（初級 expert 42/84＝50.0%、中級 expert 1/84）、違反 0。前のベースラインとの差は、初級 expert +8.3pt・中級 expert −1.2pt・expert の平均到達階 −0.5（中級・上級）で、1区分84冒険のばらつきの範囲。外れの影響を受けるのは主に道具を投げる expert と itemUser。
 
@@ -77,7 +86,7 @@
 | 5c | 序盤（1〜5階）の数値の見直し | Claude Code | `early-game-analysis.md` | **完了**（自然回復・投石・毒ヘビ・パワーアップのカード）。到着時レベルが目標を超えたので、経験値か回復量での合わせ方を**開発者が決める** |
 | 5d | （敵・アイテムの追加の後）11〜20階の死亡分析（中級・上級で expert が20階に届かない原因） | Claude Code | — | 到着時レベルの合わせ方（5c）の後 |
 | 7 | キー設定 | Codex | `wave2-C-key-config.md` | **完了**（統合済み） |
-| **8** | **敵・武器・盾・カード・指輪の追加（開発者が最優先に指定、2026-10-14）** | 両方 | `content-expansion-plan.md` | 共通基盤・画像 img-1・**段1（武器・盾・カード）は統合済み**。**段2**（`wave4-A-rings.md`・`wave4-B-enemies.md`・`wave4-C-enemies.md`）と画像 img-2 は Codex が実装中。**段3の共通基盤と指示書は統合済み**: 段3（`wave5-A-enemies.md` 敵 B 前半 90〜98・`wave5-B-enemies.md` 敵 B 後半 99〜107・`wave5-C-items.md` アイテム B、Codex 3本並列、触るファイルは重ならない）は段2と img-2 の統合後に始める |
+| **8** | **敵・武器・盾・カード・指輪の追加（開発者が最優先に指定、2026-10-14）** | 両方 | `content-expansion-plan.md` | 共通基盤・画像 img-1・段1（武器・盾・カード）・**段2（指輪 A・敵 A 前半・後半）**・段3の共通基盤と指示書は**統合済み**。**画像 img-2（`agent/img-content-2`）は 2026-10-14 16:40 時点で GitHub に無い**（Codex のプッシュ待ち）。段3（`wave5-A-enemies.md` 敵 B 前半 90〜98・`wave5-B-enemies.md` 敵 B 後半 99〜107・`wave5-C-items.md` アイテム B、Codex 3本並列）は img-2 の統合後に始める |
 | 6 | 状態異常の共通化 → 新状態異常 | — | `wave2-backlog.md` | 後日 |
 
 ## ID の使用状況
