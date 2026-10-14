@@ -53,8 +53,8 @@
 
 ## 仕様
 
-- `ModifyProjectile`（`equipment_hooks.go`）は海老さんが道具を投げる・矢を撃つ・杖を振るとき、飛ぶ前に1回呼ばれる。`p.Kind` で種類を見分ける。飛び方の項目（`PierceWalls`・`PierceTargets`・`Bounces`・`HitPercent`・`SureHit`・`Volley`）の意味は `projectile.go` の `Projectile` のコメントのとおり。命中率が100%以上なら乱数を使わない（今の BOT の結果を変えない）。
-- 投げた道具と矢は今も「必ず当たる」（命中率100%）。百発百中の指輪はヘタ投げの指輪と、`BeforeHit` で外れにする敵に対してだけ意味がある。投擲の基本の命中率を下げるかどうかは**開発者が決める**未決事項（完了報告に「百発百中の価値が小さい」ことを書く）。
+- `ModifyProjectile`（`equipment_hooks.go`）は海老さんが道具を投げる・矢を撃つ・杖を振るとき、飛ぶ前に1回呼ばれる。`p.Kind` で種類を見分ける。飛び方の項目（`PierceWalls`・`PierceTargets`・`Bounces`・`HitPercent`・`SureHit`・`Volley`）の意味は `projectile.go` の `Projectile` のコメントのとおり。命中率が100%以上なら乱数を使わない。
+- 投げた道具と矢の基本の命中率は85%（`thrownItemHitPercent`、開発者の決定）。杖の魔法弾は必ず当たる。百発百中は外れを無くし、ヘタ投げは必ず外す。
 - 外れたときは共通処理が「〜は〜に当たらなかった」と表示する。
 - 弾きよけ・いたずらよけは `statusImmunities` に登録するだけで、共通処理（`knockOffPlayerEquipment`・`tossPlayerItem`）が「〜が〜を防いだ」と表示して防ぐ。
 - 190・201 は生成時に必ず呪われている（wave4-A の `AbilityAlwaysCursed` の仕組み）。
@@ -79,12 +79,13 @@ expansionHelpPages = append(expansionHelpPages,
 
 ## テスト（`content_items_wave5c_test.go`、`//go:build !test`）
 
-`content_foundation_test.go` の `newFoundationTestGame`・`equip`・`testRing`・`testArmor`・`withTestImmunity`、`content_poison_test.go` の `runQueuedActions`、`content_projectile_test.go` の `newProjectileTestGame`・`finishThrow`・`floorItemsAt`、`content_enemy_foundation_test.go` の `addTestEnemy` を使ってよい。指輪は `buildItemFromTemplate(ID, 0, 0)` で作って `equip` する。乱数は `g.randHooks.ability`・`projectile`・`enemyCritical`・`damage` で固定する。
+`content_foundation_test.go` の `newFoundationTestGame`・`equip`・`testRing`・`testArmor`・`withTestImmunity`、`content_poison_test.go` の `runQueuedActions`、`content_projectile_test.go` の `newProjectileTestGame`・`finishThrow`・`floorItemsAt`、`content_enemy_foundation_test.go` の `addTestEnemy` を使ってよい。指輪は `buildItemFromTemplate(ID, 0, 0)` で作って `equip` する。乱数は `g.randHooks.ability`・`projectile`・`enemyCritical`・`damage` で固定する（`newProjectileTestGame` は命中判定を当たる側に固定済み。百発百中・ヘタ投げのテストでは `randHooks.projectile` を外れる値〔99〕・当たる値〔0〕に変えて確かめる）。
 
 - 16種のテンプレートが存在し、名前・攻撃力/防御力・能力 ID が表どおり。190・201 は生成すると必ず呪われていて、ほかの指輪は呪われていない。147・163〜166 の画像が登録されている（`specialWeaponImagePaths`・`specialArmorImagePaths`）。
 - 能力ごとに**正常系と、効かない条件**（外す・別の指輪・種類が違う）:
   - 遠投: 壁の向こうの床に落ちる／一直線の敵2体に当たって道具が消える／杖の魔法弾は壁で止まる。
   - ヘタ投げ: 隣の敵にも当たらず後ろへ飛ぶ／矢も外れる。百発百中と両方なら当たる。
+  - 百発百中: `randHooks.projectile` が 99（基本の85%なら外れる値）でも当たる／外すと外れる。
   - 反射: 壁で跳ね返って後ろの敵に当たる／海老さんには当たらない／2つで6回まで跳ね返る。
   - 連射: 矢が2本減って2回ダメージ／2つで3本／残り1本なら1本だけ／投げたときは1つ。
   - 弾きよけ・いたずらよけ: `g.knockOffPlayerEquipment`・`g.tossPlayerItem` が何もせず「防いだ」と表示する。
@@ -100,5 +101,5 @@ expansionHelpPages = append(expansionHelpPages,
 
 - `gofmt -w`、`go test -tags test ./...`、`go test ./...`、`go test -run TestSimSmoke -count=1 .` がすべて成功する。
 - `go test -run TestSimBatch -count=1 -timeout 0 . -args -sim.runs=1500 -sim.difficulty=all -sim.out=reports` を1回実行し、`reports/baseline.json` との差分（床の道具の割合・餓死の数・expert のクリア率）を完了報告に書く（ベースラインは更新しない）。
-- `docs/agents/done/wave5-C.md` に、変更概要、IMPLEMENTED_FEATURES.md への追記案（アイテムの一覧と効果）、仕様の判断、未決事項（投擲の基本の命中率・確率・数値の妥当性・ゲーム内で確認してほしい見た目〔跳ね返った道具の飛ぶ様子〕）を書く。
+- `docs/agents/done/wave5-C.md` に、変更概要、IMPLEMENTED_FEATURES.md への追記案（アイテムの一覧と効果）、仕様の判断、未決事項（確率・数値の妥当性・ゲーム内で確認してほしい見た目〔跳ね返った道具の飛ぶ様子〕）を書く。
 - ブランチにコミットしてプッシュする（master へは直接プッシュしない）。

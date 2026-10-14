@@ -72,10 +72,21 @@ func (g *Game) newPlayerProjectile(item Item, kind ProjectileKind, throwRange in
 		Item: item, Kind: kind,
 		X: player.X, Y: player.Y, DX: dx, DY: dy,
 		Range: throwRange, FromPlayer: true,
-		HitPercent: 100, Volley: 1,
+		HitPercent: projectileBaseHitPercent(kind), Volley: 1,
 	}
 	g.runModifyProjectileHooks(&p)
 	return p
+}
+
+// thrownItemHitPercent は投げた道具・撃った矢が敵に当たる基本の確率（%）。杖の魔法弾は必ず当たる。
+const thrownItemHitPercent = 85
+
+// projectileBaseHitPercent は種類ごとの基本の命中率を返す。
+func projectileBaseHitPercent(kind ProjectileKind) int {
+	if kind == ProjectileBolt {
+		return 100
+	}
+	return thrownItemHitPercent
 }
 
 // projectileKindFor は海老さんが道具を飛ばしたときの種類を返す（魔法弾・射撃・投擲）。

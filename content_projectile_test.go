@@ -4,6 +4,7 @@ package main
 
 // 投擲・射撃・杖の魔法弾の飛び方（projectile.go）のテスト。
 // 前半は共通化の前の ThrowItem の挙動をそのまま固定したもの（共通化で挙動を変えていないことの確認）。
+// その後、投げた道具・矢の基本の命中率を85%にした（開発者の決定）。
 
 import (
 	"strings"
@@ -11,9 +12,11 @@ import (
 )
 
 // newProjectileTestGame は 9x9 の部屋（外周が壁）の (4, 4) に右向きの海老さんを置く。
+// 投げた道具・矢の命中判定（基本85%）は当たる側に固定する。
 func newProjectileTestGame() *Game {
 	g := newFoundationTestGame()
 	g.state.Player.Inventory = nil
+	g.randHooks.projectile = func(int) int { return 0 } // 命中判定は必ず当たる側に固定する
 	return g
 }
 
@@ -273,5 +276,74 @@ func TestCaneBoltSealsEnemy(t *testing.T) {
 	}
 	if len(g.state.Player.Inventory) != 1 || len(g.state.Items) != 0 {
 		t.Fatalf("inventory = %v, items = %v", g.state.Player.Inventory, g.state.Items)
+	}
+}
+
+func TestThrownItemBaseHitPercent(t *testing.T) {
+	for _, tc := range []struct {
+		roll    int
+		wantHit bool
+	}{{roll: 84, wantHit: true}, {roll: 85, wantHit: false}} {
+		g := newProjectileTestGame()
+		index := addTestEnemy(g, 0, 6, 4)
+		g.state.Enemies[index].Health = 20
+		var asked []int
+		g.randHooks.projectile = func(n int) int {
+			asked = append(asked, n)
+			return tc.roll
+		}
+		food := buildItemFromTemplate(1, 0, 0)
+		g.state.Player.Inventory = []Item{food}
+
+		g.throwWithCallbacks(food, 10)
+		messages := finishThrow(t, g)
+
+		if hit := g.state.Enemies[index].Health < 20; hit != tc.wantHit {
+			t.Fatalf("roll %d: hit = %v, want %v (messages %q)", tc.roll, hit, tc.wantHit, messages)
+		}
+		if len(asked) != 1 || asked[0] != 100 {
+			t.Fatalf("hit roll calls = %v, want one roll of 100", asked)
+		}
+		if !tc.wantHit {
+			if !strings.Contains(messages, "当たらなかった") || len(floorItemsAt(g, 7, 4)) != 1 {
+				t.Fatalf("a missed item should fly past and land at (7,4): items %v, messages %q", g.state.Items, messages)
+			}
+		}
+	}
+}
+
+func TestShotArrowCanMiss(t *testing.T) {
+	g := newProjectileTestGame()
+	index := addTestEnemy(g, 0, 6, 4)
+	g.state.Enemies[index].Health = 99
+	g.randHooks.projectile = func(int) int { return 99 }
+	arrow := buildItemFromTemplate(6, 0, 0).(*Arrow)
+	arrow.ShotCount = 3
+	equip(g, arrow)
+
+	g.shootArrow(arrow, 10)
+	finishThrow(t, g)
+
+	if g.state.Enemies[index].Health != 99 || len(floorItemsAt(g, 7, 4)) != 1 {
+		t.Fatalf("health = %d, items = %v; the missed arrow should land behind the enemy", g.state.Enemies[index].Health, g.state.Items)
+	}
+}
+
+func TestCaneBoltAlwaysHits(t *testing.T) {
+	g := newProjectileTestGame()
+	index := addTestEnemy(g, 0, 6, 4)
+	g.randHooks.projectile = func(int) int {
+		t.Fatal("a cane bolt should not roll to hit")
+		return 0
+	}
+	cane := buildItemFromTemplate(16, 0, 0).(*Cane)
+	cane.Uses = 1
+	g.state.Player.Inventory = []Item{cane}
+
+	g.useCane(cane)
+	finishThrow(t, g)
+
+	if !g.state.Enemies[index].StatusAilments.Seal {
+		t.Fatal("the bolt should hit")
 	}
 }
