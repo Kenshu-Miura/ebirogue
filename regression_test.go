@@ -310,3 +310,119 @@ func TestUsingInventoryItemAfterGroundSwap(t *testing.T) {
 		t.Fatalf("sausage not eaten: satiety=%d inventory=%d", g.state.Player.Satiety, len(g.state.Player.Inventory))
 	}
 }
+
+// 真実の眼のカード（11）は、全識別に外れたあと対象選択を取り消すとカードもターンも消費されず、
+// 使い直して全識別の判定（1/5）を何度でも振り直せた。判定は対象を確定したときだけ行う。
+func newIdentifyCardTestGame(seed int64) (*Game, Item, Item) {
+	g, _ := newHeadlessGame(seed, DifficultyAdvanced)
+	weapon := g.createItemByID(20, 0, 0)
+	cane := g.createItemByID(9, 0, 0)
+	g.state.Player.Inventory = []Item{weapon, cane, g.createItemByID(11, 0, 0)}
+	return g, weapon, cane
+}
+
+func useIdentifyCardFromInventory(g *Game) {
+	g.showInventory, g.showItemActions = true, true
+	g.selectedItemIndex, g.selectedActionIndex = 2, 0
+	g.executeAction()
+}
+
+func TestIdentifyCardCancelCannotReroll(t *testing.T) {
+	g, weapon, cane := newIdentifyCardTestGame(1)
+	before, err := g.rng.MarshalState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 20; i++ {
+		useIdentifyCardFromInventory(g)
+		if !g.useIdentifyItem || g.isActioned || len(g.ActionQueue.Queue) != 0 {
+			t.Fatalf("use %d: selection must open without a turn or message", i)
+		}
+		wave3Press(t, g, KeyX)
+		if g.useIdentifyItem || g.isActioned || len(g.state.Player.Inventory) != 3 {
+			t.Fatalf("cancel %d consumed the card or a turn", i)
+		}
+	}
+	after, err := g.rng.MarshalState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Fatal("取り消しても全識別の判定の乱数が進んではいけない")
+	}
+	if weapon.(Identifiable).GetIdentified() || cane.(Identifiable).GetIdentified() {
+		t.Fatal("取り消しで識別されてはいけない")
+	}
+
+	// 取り消しを挟んでも、確定したときの結果は取り消さずに使った場合と同じになる。
+	useIdentifyCardFromInventory(g)
+	g.selectedItemIndex = 0
+	wave3Press(t, g, KeyZ)
+	ref, refWeapon, refCane := newIdentifyCardTestGame(1)
+	useIdentifyCardFromInventory(ref)
+	ref.selectedItemIndex = 0
+	wave3Press(t, ref, KeyZ)
+	if got, want := runQueuedActions(g), runQueuedActions(ref); got != want {
+		t.Fatalf("messages = %q, want %q", got, want)
+	}
+	if weapon.(Identifiable).GetIdentified() != refWeapon.(Identifiable).GetIdentified() ||
+		cane.(Identifiable).GetIdentified() != refCane.(Identifiable).GetIdentified() {
+		t.Fatal("identification result differs after cancelling")
+	}
+	if !g.isActioned || g.useIdentifyItem || len(g.state.Player.Inventory) != 2 {
+		t.Fatal("confirming must consume the card and a turn")
+	}
+}
+
+func TestIdentifyCardConfirmRollsOnce(t *testing.T) {
+	sawAll, sawOne := false, false
+	for seed := int64(1); seed <= 200 && !(sawAll && sawOne); seed++ {
+		g, weapon, cane := newIdentifyCardTestGame(seed)
+		useIdentifyCardFromInventory(g)
+		g.selectedItemIndex = 0
+		wave3Press(t, g, KeyZ)
+		runQueuedActions(g)
+		if !weapon.(Identifiable).GetIdentified() {
+			t.Fatalf("seed %d: the chosen item must be identified", seed)
+		}
+		if cane.(Identifiable).GetIdentified() {
+			sawAll = true
+		} else {
+			sawOne = true
+		}
+	}
+	if !sawAll || !sawOne {
+		t.Fatalf("both outcomes must occur: all=%v one=%v", sawAll, sawOne)
+	}
+}
+
+func TestIdentifyCardFromGround(t *testing.T) {
+	g, weapon, cane := newIdentifyCardTestGame(1)
+	g.state.Player.Inventory = []Item{weapon, cane}
+	card := buildItemFromTemplate(11, g.state.Player.X, g.state.Player.Y)
+	g.state.Items = []Item{card}
+	g.selectedGroundItemIndex = 0
+	g.GroundItemActioned = true
+	g.selectedGroundActionIndex = 2
+	g.executeGroundItemAction()
+	if !g.useIdentifyItem || g.isActioned || !g.GroundItemActioned {
+		t.Fatal("ground card must open the selection without a turn")
+	}
+	wave3Press(t, g, KeyX)
+	if g.useIdentifyItem || g.isActioned || g.GroundItemActioned || len(g.state.Items) != 1 {
+		t.Fatal("cancel must keep the ground card")
+	}
+
+	g.GroundItemActioned = true
+	g.selectedGroundActionIndex = 2
+	g.executeGroundItemAction()
+	g.selectedItemIndex = 1
+	wave3Press(t, g, KeyZ)
+	runQueuedActions(g)
+	if len(g.state.Items) != 0 || len(g.state.Player.Inventory) != 2 || !g.isActioned {
+		t.Fatalf("ground card must be consumed instead of an inventory item: items=%d inv=%d actioned=%v", len(g.state.Items), len(g.state.Player.Inventory), g.isActioned)
+	}
+	if !cane.(Identifiable).GetIdentified() {
+		t.Fatal("the chosen inventory item must be identified")
+	}
+}

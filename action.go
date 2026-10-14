@@ -196,7 +196,7 @@ func (g *Game) executeGroundItemAction() {
 
 				g.closeGroundItemMenu()
 				g.isActioned = true
-				if g.itemTargetEffect != nil {
+				if g.itemTargetEffect != nil || g.useIdentifyItem {
 					g.GroundItemActioned = true
 					g.showInventory = true
 					g.isActioned = false
