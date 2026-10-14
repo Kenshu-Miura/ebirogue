@@ -993,12 +993,14 @@ var blankCard = func(g *Game) {
 	g.blankCardTarget = card
 	g.blankCardIndex = 0
 	g.showBlankCardMenu = true
+	g.blankCardJustOpened = true
 	g.showInventory = false
 }
 
 // closeBlankCardMenu は白紙のカードの選択ウィンドウを閉じて状態をリセットする。
 func (g *Game) closeBlankCardMenu() {
 	g.showBlankCardMenu = false
+	g.blankCardJustOpened = false
 	g.blankCardTarget = nil
 	g.blankCardIndex = 0
 }

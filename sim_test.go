@@ -100,6 +100,15 @@ type simOutcome struct {
 	Death              *deathTrace    `json:",omitempty"` // Trace のときだけ。最後の数十ターンと各階の床の道具
 	// FloorItemKinds は各階に初めて着いたときの床の道具の種類別の数（床出現の割合の確認用）
 	FloorItemKinds map[string]int `json:",omitempty"`
+	// 食料と滞在の計測。FoodPicked は拾った食料の数（敵が落とした食料も含む）、
+	// FloorFood[i] は i+1 階に初めて着いたときに床にあった食料の数
+	FoodPicked int   `json:",omitempty"`
+	FloorFood  []int `json:",omitempty"`
+	// FloorStays は階段・落とし穴で離れた階の滞在ターン（終了した階は含まない）
+	FloorStays []int `json:",omitempty"`
+	// StarveTurns は終了時に満腹度0が続いていたターン数、InventoryFull は終了時に所持品が満杯だったか
+	StarveTurns   int  `json:",omitempty"`
+	InventoryFull bool `json:",omitempty"`
 }
 
 const maxViolationsPerRun = 20
@@ -109,9 +118,14 @@ func countFloorItemKinds(g *Game, out *simOutcome) {
 	if out.FloorItemKinds == nil {
 		out.FloorItemKinds = map[string]int{}
 	}
+	food := 0
 	for _, item := range g.state.Items {
 		out.FloorItemKinds[itemKind(item)]++
+		if isFoodItem(item) {
+			food++
+		}
 	}
+	out.FloorFood = append(out.FloorFood, food)
 }
 
 // runSimCase は BOT で1回の冒険を遊び、結果と不変条件違反を返す。panic しても recover して記録する。
@@ -125,6 +139,7 @@ func runSimCase(c simCase) (out simOutcome) {
 		tracer = &traceRecorder{}
 	}
 	turns, lastTurn := 0, 0
+	arrivalFloor, arrivalTurn := g.Floor, 0
 	seen := map[string]bool{}
 	record := func(vs []simViolation) {
 		for _, v := range vs {
@@ -146,6 +161,10 @@ func runSimCase(c simCase) (out simOutcome) {
 			out.Death = tracer.trace()
 		}
 		out.Floor, out.Turns, out.Level = g.Floor, turns, g.state.Player.Level
+		if c := g.stats.Items["Food"]; c != nil {
+			out.FoodPicked = c.Picked
+		}
+		out.InventoryFull = len(g.state.Player.Inventory) >= g.state.Player.MaxInventory
 		if result := g.LastRunResult(); result != nil {
 			out.Result = result
 			if !result.Cleared {
@@ -163,7 +182,17 @@ func runSimCase(c simCase) (out simOutcome) {
 	for {
 		g := b.g
 		if g.turnCount >= lastTurn {
-			turns += g.turnCount - lastTurn
+			elapsed := g.turnCount - lastTurn
+			turns += elapsed
+			if g.state.Player.Satiety > 0 {
+				out.StarveTurns = 0
+			} else {
+				out.StarveTurns += elapsed
+			}
+		}
+		if g.Floor != arrivalFloor {
+			out.FloorStays = append(out.FloorStays, turns-arrivalTurn)
+			arrivalFloor, arrivalTurn = g.Floor, turns
 		}
 		if tracer != nil && (g.turnCount != lastTurn || len(tracer.ring) == 0) {
 			tracer.record(b)
@@ -494,6 +523,14 @@ type simGroupStats struct {
 	FloorLevelSums    map[int]int     `json:",omitempty"` // 階ごとの到着時レベルの合計
 	FloorLevelRuns    map[int]int     `json:",omitempty"` // 階ごとの到着数
 	AvgFloorLevel     map[int]float64 `json:",omitempty"` // 階ごとの到着時の平均レベル
+	// 食料と滞在（食料の扱いの計測）
+	FloorFood      int // 到着した各階の床にあった食料の合計
+	FoodPicked     int // 拾った食料の合計
+	FloorStaySum   int // 離れた階の滞在ターンの合計
+	FloorStayCount int // 離れた階の数
+	Starved        int // 餓死の数
+	StarveTurnsSum int // 餓死した冒険の、死亡時に満腹度0が続いていたターン数の合計
+	StarvedFull    int // 餓死した冒険のうち、死亡時に所持品が満杯だった数
 }
 
 type simSummary struct {
@@ -505,9 +542,11 @@ type simSummary struct {
 	DeathCauses map[string]int
 	// FloorItemKinds は各階の到着時の床の道具の種類別の合計（F5 の床出現の割合の確認用）
 	FloorItemKinds map[string]int `json:",omitempty"`
-	Violations     int
-	SoftLocks      int
-	Panics         int
+	// Stage4Deaths は段4の敵（ID 108〜125）による死亡の数（死因の名前ごと）
+	Stage4Deaths map[string]int `json:",omitempty"`
+	Violations   int
+	SoftLocks    int
+	Panics       int
 }
 
 type simBaselineFile struct {
@@ -542,6 +581,12 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 		for f := 1; f <= o.Floor; f++ {
 			s.FloorReach[f]++
 		}
+		g.FloorFood += o.FloorItemKinds["Food"]
+		g.FoodPicked += o.FoodPicked
+		for _, stay := range o.FloorStays {
+			g.FloorStaySum += stay
+			g.FloorStayCount++
+		}
 		for kind, n := range o.FloorItemKinds {
 			if s.FloorItemKinds == nil {
 				s.FloorItemKinds = map[string]int{}
@@ -565,6 +610,19 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 				cause = "（判断ミス）" + o.Mistake
 			}
 			g.Causes[cause]++
+			if o.Result != nil && o.Result.DeathCause.Kind == DamageSourceStarvation {
+				g.Starved++
+				g.StarveTurnsSum += o.StarveTurns
+				if o.InventoryFull {
+					g.StarvedFull++
+				}
+			}
+			if o.Result != nil && isStage4EnemyID(o.Result.DeathCause.EnemyID) {
+				if s.Stage4Deaths == nil {
+					s.Stage4Deaths = map[string]int{}
+				}
+				s.Stage4Deaths[o.DeathCause]++
+			}
 			if o.Result != nil {
 				levelSums[key] += o.Result.Level
 				satietySums[key] += o.Result.Satiety
@@ -620,6 +678,9 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 	}
 	return s
 }
+
+// isStage4EnemyID は追加計画の段4の敵（フクレフグ〜ウチカエシエビの6系統）かどうか。
+func isStage4EnemyID(id int) bool { return id >= 108 && id <= 125 }
 
 func (s simSummary) oneLine() string {
 	cleared, died, stuck := 0, 0, 0
@@ -721,6 +782,55 @@ func renderLevelCurve(b *strings.Builder, s simSummary) {
 	}
 }
 
+// renderFoodStats は性格ごと（全難易度の合計）の食料の扱いと階の滞在ターン、段4の敵による死亡を書く。
+func renderFoodStats(b *strings.Builder, s simSummary) {
+	rows := map[string]*simGroupStats{}
+	floors := map[string]int{}
+	for key, g := range s.Groups {
+		name := key[strings.Index(key, "/")+1:]
+		r := rows[name]
+		if r == nil {
+			r = &simGroupStats{}
+			rows[name] = r
+		}
+		r.Runs += g.Runs
+		r.Cleared += g.Cleared
+		r.Died += g.Died
+		floors[name] += int(g.AvgFloor*float64(g.Runs) + 0.5)
+		r.FloorFood += g.FloorFood
+		r.FoodPicked += g.FoodPicked
+		r.FloorStaySum += g.FloorStaySum
+		r.FloorStayCount += g.FloorStayCount
+		r.Starved += g.Starved
+		r.StarveTurnsSum += g.StarveTurnsSum
+		r.StarvedFull += g.StarvedFull
+	}
+	ratio := func(a, b int) float64 { return float64(a) / float64(max(1, b)) }
+	fmt.Fprintf(b, "\n## 食料と滞在（性格別、全難易度）\n\n")
+	fmt.Fprintf(b, "拾った割合 = 拾った食料（敵が落とした分を含む）/ 到着した各階の床にあった食料。滞在は降りた階だけで数える。\n\n")
+	fmt.Fprintf(b, "| 性格 | 回数 | クリア率 | 平均到達階 | 餓死 | 床の食料 | 拾った | 拾った割合 | 1階あたりの滞在ターン | 餓死時の満腹度0の継続ターン | 餓死時に所持品が満杯 |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	for _, name := range sortedKeys(rows) {
+		r := rows[name]
+		fmt.Fprintf(b, "| %s | %d | %.1f%% | %.2f | %d | %d | %d | %.2f | %.0f | %.0f | %d (%.0f%%) |\n", name, r.Runs, ratio(r.Cleared, r.Runs)*100, ratio(floors[name], r.Runs),
+			r.Starved, r.FloorFood, r.FoodPicked, ratio(r.FoodPicked, r.FloorFood), ratio(r.FloorStaySum, r.FloorStayCount),
+			ratio(r.StarveTurnsSum, r.Starved), r.StarvedFull, ratio(r.StarvedFull, r.Starved)*100)
+	}
+	fmt.Fprintf(b, "\n## 段4の敵（ID 108〜125）による死亡\n\n")
+	if len(s.Stage4Deaths) == 0 {
+		fmt.Fprintf(b, "なし\n")
+		return
+	}
+	total := 0
+	causes := sortedKeys(s.Stage4Deaths)
+	sort.SliceStable(causes, func(i, j int) bool { return s.Stage4Deaths[causes[i]] > s.Stage4Deaths[causes[j]] })
+	var parts []string
+	for _, cause := range causes {
+		total += s.Stage4Deaths[cause]
+		parts = append(parts, fmt.Sprintf("%s %d", cause, s.Stage4Deaths[cause]))
+	}
+	fmt.Fprintf(b, "合計 %d: %s\n", total, strings.Join(parts, "、"))
+}
+
 // renderFloorItemKinds は各階に着いたときの床の道具の種類別の数と割合を書く。
 func renderFloorItemKinds(b *strings.Builder, s simSummary) {
 	total := 0
@@ -756,6 +866,7 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 	}
 
 	renderLevelCurve(&b, s)
+	renderFoodStats(&b, s)
 	renderFloorItemKinds(&b, s)
 
 	fmt.Fprintf(&b, "\n## 性格別の死因の上位（判断ミス死は種類で数える）\n\n")

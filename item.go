@@ -397,6 +397,8 @@ func getItemNameWithSharpness(item Item) string {
 
 func (g *Game) executeItemSwap() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y
+	// 足元メニューの操作はここで終わる。残すと次に持ち物を使ったとき床の道具を参照してしまう
+	defer func() { g.GroundItemActioned = false }()
 
 	for i, item := range g.state.Items {
 		itemX, itemY := item.GetPosition()

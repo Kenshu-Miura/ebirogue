@@ -188,13 +188,13 @@ func (b *bot) enemyInLine(dx, dy, maxRange int) (Enemy, bool) {
 	return Enemy{}, false
 }
 
-// targetInLine は8方向のうち、直線上に敵がいる方向とその敵を返す（近い敵を優先）。
-func (b *bot) targetInLine(maxRange int) (int, int, Enemy, bool) {
+// targetInLine は8方向のうち、直線上で最初に当たる敵が accept を満たす方向とその敵を返す（近い敵を優先）。
+func (b *bot) targetInLine(maxRange int, accept func(Enemy) bool) (int, int, Enemy, bool) {
 	bestDX, bestDY, best, found := 0, 0, Enemy{}, false
 	bestDistance := maxRange + 1
 	p := b.g.state.Player
 	for _, s := range botSteps {
-		if enemy, ok := b.enemyInLine(s[0], s[1], maxRange); ok {
+		if enemy, ok := b.enemyInLine(s[0], s[1], maxRange); ok && accept(enemy) {
 			if d := max(abs(enemy.X-p.X), abs(enemy.Y-p.Y)); d < bestDistance {
 				bestDX, bestDY, best, found, bestDistance = s[0], s[1], enemy, true, d
 			}
@@ -241,7 +241,20 @@ func (b *bot) pathStepAvoiding(goal func(x, y int) bool, avoid func(x, y int) bo
 func (b *bot) bestEquipment() (int, bool) {
 	p := &b.g.state.Player
 	weaponScore := func(w *Weapon) int { return w.AttackPower + w.Sharpness }
-	armorScore := func(a *Armor) int { return a.DefensePower + a.Sharpness }
+	armorScore := func(a *Armor) int {
+		// 使い捨ての盾は被弾ごとに弱るので、ボス戦のときだけ使う
+		if botFeature("shield") && a.GetID() == disposableShieldID && !b.bossAlive() {
+			return -100
+		}
+		return a.DefensePower + a.Sharpness
+	}
+	// 能力のある盾から乗り換えるのは、強化値込みの防御力が2以上上がるときだけ
+	armorMargin := func(cur *Armor) int {
+		if botFeature("shield") && len(cur.Abilities) > 0 && cur.GetID() != disposableShieldID {
+			return 2
+		}
+		return 1
+	}
 	usable := func(item Equipable) bool {
 		return !isCursedEquipment(item) && !p.IsEquipped(item)
 	}
@@ -267,7 +280,10 @@ func (b *bot) bestEquipment() (int, bool) {
 			if v.Sharpness < 0 || v.GetID() == 69 || !usable(v) {
 				continue
 			}
-			if p.EquippedArmor == nil || (!p.EquippedArmor.Cursed && armorScore(v) > armorScore(p.EquippedArmor)) {
+			if botFeature("shield") && armorScore(v) < 0 {
+				continue
+			}
+			if p.EquippedArmor == nil || (!p.EquippedArmor.Cursed && armorScore(v) >= armorScore(p.EquippedArmor)+armorMargin(p.EquippedArmor)) {
 				return i, true
 			}
 		case *Arrow:
@@ -279,6 +295,9 @@ func (b *bot) bestEquipment() (int, bool) {
 	return -1, false
 }
 
+// disposableShieldID は使い捨ての盾（被弾ごとに強化値と防御力が1下がる）。
+const disposableShieldID = 70
+
 // expertWantsToDescend は階段を降りるかどうか。探索し尽くすまでは降りず、レベルを上げる。
 func (b *bot) expertWantsToDescend() bool {
 	g := b.g
@@ -288,8 +307,11 @@ func (b *bot) expertWantsToDescend() bool {
 	if g.floorTurns > 700 { // 風（1200ターン）よりかなり前に降りる
 		return true
 	}
+	if _, _, ok := b.pathStep(b.visibleFoodGoal); ok {
+		return false // 見えている食料を拾ってから降りる
+	}
 	// 食料の残りから、この階にいられるターン数を見積もる（満腹度は10ターンで1減る）
-	food := 0
+	food := b.potFood() * 50
 	for _, item := range g.state.Player.Inventory {
 		if f, ok := item.(*Food); ok {
 			food += max(f.Satiety, 50)
@@ -298,11 +320,19 @@ func (b *bot) expertWantsToDescend() bool {
 	if g.state.Player.Satiety+food <= 50 {
 		return true // 食料が乏しければ探索を切り上げて先へ急ぐ（次の階で食料を探す）
 	}
-	if _, _, ok := b.pathStep(b.itemGoal); ok {
+	if _, _, ok := b.pathStep(b.expertItemGoalFunc()); ok {
 		return false
 	}
 	_, _, unexplored := b.pathStep(b.unexploredGoal)
 	return !unexplored
+}
+
+// expertItemGoalFunc は expert が向かう床の道具の判定（入れ替えを切ったときは従来の pickableItemGoal）。
+func (b *bot) expertItemGoalFunc() func(x, y int) bool {
+	if botFeature("swap") {
+		return b.expertItemGoal
+	}
+	return b.pickableItemGoal
 }
 
 // useByID は所持品のうち ids のどれかを action で使う。
@@ -370,13 +400,30 @@ func (b *bot) expertStep() error {
 		}
 	}
 
-	// 2. 空腹
-	if player.Satiety <= 20 {
-		if i := b.findInventory(isFoodItem); i >= 0 {
-			if used, err := b.useInventoryItem(i, "使う"); used || err != nil {
-				b.act = "eat"
-				return err
-			}
+	// 1b. 聖域の上にいれば HP が戻るまで休む
+	if botFeature("sanctuary") && b.onSanctuaryRest() {
+		b.act = "sanctuaryRest"
+		return b.stepInPlace()
+	}
+
+	// 2. 空腹（持ち物に食料が無ければ保存の壺から出す。それも無ければウインナー化・大部屋のカード）
+	if botFeature("pot") {
+		if done, err := b.expertTakeFoodOut(20); done || err != nil {
+			return err
+		}
+	}
+	if used, err := b.eatIfStarving(20); used || err != nil {
+		b.act = "eat"
+		return err
+	}
+	if botFeature("sausage") {
+		if done, err := b.expertSausage(); done || err != nil {
+			return err
+		}
+	}
+	if botFeature("bigroom") {
+		if done, err := b.expertBigRoom(); done || err != nil {
+			return err
 		}
 	}
 
@@ -389,14 +436,30 @@ func (b *bot) expertStep() error {
 		}
 	}
 
-	// 4. 装備の持ち替え
+	if botFeature("pot") {
+		if _, pot := b.storagePot(); pot != nil {
+			if used, err := b.useByID("使う", 47); used || err != nil { // 壺拡大
+				return err
+			}
+		}
+	}
+
+	// 4. 装備の持ち替え・指輪
 	if i, ok := b.bestEquipment(); ok {
 		if used, err := b.useInventoryItem(i, "装備"); used || err != nil {
 			return err
 		}
 	}
+	if botFeature("rings") {
+		if done, err := b.expertEquipRing(); done || err != nil {
+			return err
+		}
+	}
 
-	// 5. 戦闘
+	// 5. 戦闘: 立ち回り（道具を早めに使う・通路へ下がる・先手を取る）
+	if done, err := b.expertTactics(adjacent); done || err != nil {
+		return err
+	}
 	if len(adjacent) >= 3 {
 		if used, err := b.useByID("使う", 56, 31); used || err != nil { // 囲まれたら全滅・真空斬り
 			b.act = "attackItem"
@@ -404,14 +467,46 @@ func (b *bot) expertStep() error {
 		}
 	}
 	if len(adjacent) > 0 {
-		target := adjacent[0]
+		// 膨らんだフクレフグ系・帯電したシビレエイ系は、一撃で倒せないなら殴らずに離れる。
+		// 破裂・放電が今の HP に比べて小さいとき、離れても道をふさがれて戻ってしまうときは殴る
+		var targets []Enemy
 		for _, enemy := range adjacent {
+			if !b.avoidHazard(enemy) {
+				targets = append(targets, enemy)
+			}
+		}
+		if len(targets) == 0 {
+			if fx, fy, ok := b.fleeStep(); ok {
+				b.act = "avoidHazard"
+				b.hazardAvoided++
+				return b.move(fx, fy)
+			}
+			targets = adjacent
+		}
+		b.hazardAvoided = 0
+		// 角を挟んで殴れない斜めの敵は狙わない（殴れる敵がいなければ従来どおり）
+		var reachable []Enemy
+		for _, enemy := range targets {
+			if b.canStep(player.X, player.Y, enemy.X-player.X, enemy.Y-player.Y) {
+				reachable = append(reachable, enemy)
+			}
+		}
+		if len(reachable) > 0 {
+			targets = reachable
+		}
+		target := targets[0]
+		for _, enemy := range targets {
 			if b.isStrongEnemy(enemy) {
 				target = enemy
 			}
 		}
 		dx, dy := target.X-player.X, target.Y-player.Y
 		if b.isStrongEnemy(target) {
+			if botFeature("canes") {
+				if done, err := b.expertSeal(); done || err != nil {
+					return err
+				}
+			}
 			if done, err := b.expertFightStrong(target, dx, dy); done || err != nil {
 				b.act = "strongItem"
 				return err
@@ -423,7 +518,14 @@ func (b *bot) expertStep() error {
 		}
 	}
 	// 直線上の敵を矢で撃つ・状態異常の薬を投げる
-	if dx, dy, enemy, ok := b.targetInLine(8); ok && len(adjacent) == 0 {
+	// ウチカエシエビ系には撃たない・投げない（打ち返される）
+	notReflector := func(e Enemy) bool { return !isReflectorEnemy(e) }
+	if botFeature("canes") && len(adjacent) == 0 {
+		if done, err := b.expertSeal(); done || err != nil {
+			return err
+		}
+	}
+	if dx, dy, enemy, ok := b.targetInLine(8, notReflector); ok && len(adjacent) == 0 {
 		if b.isStrongEnemy(enemy) {
 			if i := b.findInventoryID(17, 18, 19, 54); i >= 0 {
 				if used, err := b.faceAndUse(dx, dy, i, "投げる"); used || err != nil {
@@ -438,6 +540,35 @@ func (b *bot) expertStep() error {
 				return err
 			}
 			return b.tap(KeyD)
+		}
+	}
+
+	// 5b. 食料: 満杯なら価値の低い道具を手放して空きを作り、足元の食料を拾う
+	if len(adjacent) == 0 {
+		if done, err := b.makeRoomForFood(); done || err != nil {
+			b.act = "discard"
+			return err
+		}
+		if done, err := b.pickUpHere(); done || err != nil {
+			b.act = "pickUp"
+			return err
+		}
+		if botFeature("swap") {
+			if done, err := b.expertSwapHere(); done || err != nil {
+				return err
+			}
+		}
+	}
+
+	// 5c. 落ち着いているうちに白紙のカードへ書き込み、予備の食料を保存の壺へ入れる
+	if len(adjacent) == 0 && botFeature("blank") {
+		if done, err := b.expertWriteBlank(); done || err != nil {
+			return err
+		}
+	}
+	if len(adjacent) == 0 && botFeature("pot") {
+		if done, err := b.expertStoreFood(); done || err != nil {
+			return err
 		}
 	}
 
@@ -472,8 +603,19 @@ func (b *bot) expertStep() error {
 	addGoal := func(label string, goal func(x, y int) bool) {
 		goals, labels = append(goals, goal), append(labels, label)
 	}
-	if b.bossAlive() && healthy {
+	// ボス階は倒すまで降りられないので、食料が尽きたら HP が減っていても挑む。
+	// 呼ばれた手下に道をふさがれていたら、手下を倒して進む
+	if b.bossAlive() && (healthy || b.hungry()) {
 		if boss, ok := b.nearestBoss(); ok {
+			if _, _, ok := b.expertPathStep(b.enemyGoal(boss)); !ok {
+				if dx, dy, ok := b.pathStepThrough(b.enemyGoal(boss), true); ok {
+					b.act = "toBossThrough"
+					if isOccupied(g, player.X+dx, player.Y+dy) {
+						return b.attack(dx, dy)
+					}
+					return b.move(dx, dy)
+				}
+			}
 			addGoal("toBoss", b.enemyGoal(boss))
 		}
 	}
@@ -483,12 +625,13 @@ func (b *bot) expertStep() error {
 			addGoal("toRanged", b.enemyGoal(enemy))
 		}
 	}
+	addGoal("toFood", b.visibleFoodGoal)
 	if healthy {
-		if enemy, ok := b.nearestEnemy(8); ok && !b.isStrongEnemy(enemy) {
+		if enemy, ok := b.nearestEnemy(8); ok && !b.isStrongEnemy(enemy) && !isHazardEnemy(enemy) {
 			addGoal("toEnemy", b.enemyGoal(enemy))
 		}
 	}
-	addGoal("toItem", b.itemGoal)
+	addGoal("toItem", b.expertItemGoalFunc())
 	addGoal("explore", b.unexploredGoal)
 	if b.expertWantsToDescend() {
 		goals = append([]func(x, y int) bool{b.stairsGoal}, goals...)
@@ -501,8 +644,12 @@ func (b *bot) expertStep() error {
 			return b.move(dx, dy)
 		}
 	}
-	// 通路を敵や罠にふさがれているときは、敵を倒し罠を踏んで進む
-	for _, goal := range []func(x, y int) bool{b.unexploredGoal, b.stairsGoal} {
+	// 通路を敵や罠にふさがれているときは、敵を倒し罠を踏んで進む（降りたいときは階段を先に）
+	throughGoals := []func(x, y int) bool{b.unexploredGoal, b.stairsGoal}
+	if b.expertWantsToDescend() {
+		throughGoals[0], throughGoals[1] = throughGoals[1], throughGoals[0]
+	}
+	for _, goal := range throughGoals {
 		if dx, dy, ok := b.pathStepThrough(goal, true); ok {
 			b.act = "forceThrough"
 			if isOccupied(g, player.X+dx, player.Y+dy) {
@@ -535,6 +682,9 @@ func (b *bot) expertEscape(adjacent []Enemy) (bool, error) {
 	}
 	p := b.g.state.Player
 	for _, enemy := range adjacent {
+		if isReflectorEnemy(enemy) {
+			continue // 投げた薬を打ち返される
+		}
 		if i := b.findInventoryID(17, 18, 19); i >= 0 {
 			return b.faceAndUse(enemy.X-p.X, enemy.Y-p.Y, i, "投げる")
 		}
@@ -581,7 +731,7 @@ func (b *bot) expertShouldRest() bool {
 		b.resting = false
 		return false
 	}
-	food := 0
+	food := b.potFood() * 50
 	for _, item := range p.Inventory {
 		if f, ok := item.(*Food); ok && item.GetID() != rottenSausageItemID {
 			food += f.Satiety
@@ -596,4 +746,46 @@ func (b *bot) expertShouldRest() bool {
 	}
 	b.resting = safe
 	return safe
+}
+
+// --- 段4の敵（ID 108〜125）への対処 ---
+// BOT はゲーム状態を直接読めるが、人の見え方に合わせて、化けたミミックダコは化けた姿（enemyAppearance）で判断する。
+
+// apparentEnemyID は人に見える姿の敵 ID。
+func apparentEnemyID(e Enemy) int { return enemyAppearance(e).ID }
+
+// isReflectorEnemy は矢・投げた道具・魔法弾を打ち返すウチカエシエビ系（123〜125）に見える敵かどうか。
+func isReflectorEnemy(e Enemy) bool {
+	id := apparentEnemyID(e)
+	return id >= 123 && id <= 125
+}
+
+// isHazardEnemy は隣で殴ると危ない状態の敵かどうか。膨らんだフクレフグ系（108〜110。さらに弱らせると
+// 周りを巻き込んで破裂する）と、帯電したシビレエイ系（114〜116。隣で殴ると放電で反撃する）。
+func isHazardEnemy(e Enemy) bool {
+	id := apparentEnemyID(e)
+	return e.Flag && ((id >= 108 && id <= 110) || (id >= 114 && id <= 116))
+}
+
+// expertHazardAvoidLimit は隣の危ない敵から続けて離れる上限のターン数（道をふさがれて行き来し続けないため）。
+const expertHazardAvoidLimit = 6
+
+// hazardDamage は危ない状態の敵を隣で殴ったときに受ける破裂・放電のダメージ。
+func hazardDamage(e Enemy) int {
+	id := apparentEnemyID(e)
+	if d, ok := fukureFuguExplosionDamage[id]; ok {
+		return d
+	}
+	return shibireEiDischargeDamage[id]
+}
+
+// avoidHazard は隣の敵を殴らずに離れるべきかどうか。
+func (b *bot) avoidHazard(e Enemy) bool {
+	return isHazardEnemy(e) && !b.oneHitKill(e) && hazardDamage(e)*4 > b.g.state.Player.Health &&
+		b.hazardAvoided < expertHazardAvoidLimit
+}
+
+// oneHitKill は通常攻撃1回（乱数の最小）で倒せそうかどうか。
+func (b *bot) oneHitKill(e Enemy) bool {
+	return b.expectedDamageToEnemy(e)*7/8 >= float64(e.Health)
 }

@@ -240,3 +240,73 @@ func TestPitfallWaitsForQueuedPickup(t *testing.T) {
 		t.Fatalf("pickup before falling failed: %v", g.state.Player.Inventory)
 	}
 }
+
+// tapReleased はキーを1フレーム押し、離したフレームも進めてから入力待ちまで進める（続けて同じキーを押せる）。
+func tapReleased(t *testing.T, g *Game, v *VirtualInput, k Key) {
+	t.Helper()
+	tapHeadless(t, g, v, k)
+	if err := g.StepFrame(); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.RunUntilInputReady(600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// 白紙のカードを持ち物の行動メニューの「使う」で使うと、決定の Z が同じフレームで書き込み画面にも渡り、
+// 一覧の先頭のカードが必ず書き込まれていた。expert BOT の改善（bot-tactics）で発見。
+func TestBlankCardMenuIgnoresOpeningKey(t *testing.T) {
+	g, v := newHeadlessGame(1, DifficultyAdvanced)
+	g.state.Enemies, g.state.Items, g.state.MapTraps = nil, nil, nil
+	card := buildItemFromTemplate(cardBlankID, 0, 0).(*Card)
+	g.state.Player.Inventory = []Item{card}
+	if err := g.RunUntilInputReady(600); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []Key{KeyC, KeyZ, KeyZ, KeyZ} { // メニュー → 道具 → 行動メニュー → 使う
+		tapReleased(t, g, v, k)
+	}
+	if !g.showBlankCardMenu || card.GetID() != cardBlankID {
+		t.Fatalf("menu open=%v, card id=%d; want the menu open and the card still blank", g.showBlankCardMenu, card.GetID())
+	}
+	tapReleased(t, g, v, KeyDown)
+	tapReleased(t, g, v, KeyZ)
+	if want := blankCardOptionIDs()[1]; card.GetID() != want || g.showBlankCardMenu {
+		t.Fatalf("card id=%d, menu open=%v; want %d written", card.GetID(), g.showBlankCardMenu, want)
+	}
+}
+
+// 足元の道具を「交換」した後も GroundItemActioned が残り、次に持ち物の道具を使うと床の道具を参照して
+// panic していた（床に道具が無いと index out of range）。expert BOT の改善（bot-tactics）で発見。
+func TestUsingInventoryItemAfterGroundSwap(t *testing.T) {
+	g, v := newHeadlessGame(1, DifficultyAdvanced)
+	g.state.Map = makeTestFloorMap(7, 5)
+	g.rooms = []Room{{ID: 0, X: 0, Y: 0, Width: 7, Height: 5}}
+	g.state.Enemies, g.state.MapTraps = nil, nil
+	g.state.Player.X, g.state.Player.Y, g.state.Player.Direction = 2, 2, Right
+	g.state.Player.Satiety = 50
+	sausage := buildItemFromTemplate(1, 0, 0)
+	g.state.Player.Inventory = []Item{buildItemFromTemplate(7, 0, 0), sausage} // 黒炎弾・ウインナー
+	g.state.Items = []Item{buildItemFromTemplate(2, 2, 2)}                     // 足元に回復の薬
+	if err := g.RunUntilInputReady(600); err != nil {
+		t.Fatal(err)
+	}
+	// メニュー → 足元 → 行動を開く → 交換 → 持ち物の先頭（黒炎弾）と交換
+	for _, k := range []Key{KeyC, KeyRight, KeyZ, KeyDown, KeyZ, KeyZ} {
+		tapReleased(t, g, v, k)
+	}
+	if countInventoryID(g, 2) != 1 || countInventoryID(g, 7) != 0 {
+		t.Fatalf("swap did not happen: inventory=%d ground=%d", len(g.state.Player.Inventory), len(g.state.Items))
+	}
+	if g.GroundItemActioned {
+		t.Fatal("GroundItemActioned left true after the swap")
+	}
+	g.state.Items = nil // 床に道具が無いと、残った状態で panic していた
+	// メニュー → 道具 → ウインナー（2番目）→ 行動メニュー → 食べる
+	for _, k := range []Key{KeyC, KeyZ, KeyDown, KeyZ, KeyZ} {
+		tapReleased(t, g, v, k)
+	}
+	if countInventoryID(g, 1) != 0 || g.state.Player.Satiety <= 50 {
+		t.Fatalf("sausage not eaten: satiety=%d inventory=%d", g.state.Player.Satiety, len(g.state.Player.Inventory))
+	}
+}
