@@ -56,6 +56,7 @@ type StatusAilments struct {
 	Paralysis   bool // かなしばり状態
 	Seal        bool // 封印状態
 	HasteOnWake bool // 睡眠から目覚めた時に倍速化するかどうか
+	Backward    int  // ゾワゾワ（敵）: 通常攻撃を反対向きに出す残りターン数
 }
 
 type Player struct {

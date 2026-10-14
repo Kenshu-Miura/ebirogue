@@ -51,6 +51,7 @@ func normalizeBossStatus(e *Enemy) {
 	}
 	e.StatusAilments.Sleep = min(e.StatusAilments.Sleep, limit)
 	e.StatusAilments.Confusion = min(e.StatusAilments.Confusion, limit)
+	e.StatusAilments.Backward = min(e.StatusAilments.Backward, limit)
 }
 
 func advanceBossState(e *Enemy) {

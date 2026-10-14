@@ -119,30 +119,7 @@ var rustTrapEffect = func(g *Game) {
 		Message:  "赤茶けた液体が噴き出した",
 		Execute: func(g *Game) {
 			player := &g.state.Player
-			switch rollRustTarget(player.EquippedWeapon != nil, player.EquippedArmor != nil, g.randIntn) {
-			case rustWeapon:
-				weapon := player.EquippedWeapon
-				if itemResistsRust(weapon.RustProof, weapon.Abilities) || g.playerImmuneTo(StatusRust) {
-					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", weapon.GetName()), 0.4)
-					return
-				}
-				weapon.Sharpness--
-				// 装備中の武器の強化値低下を攻撃力へ即時反映する
-				player.AttackPower--
-				g.EnqueueMessage(fmt.Sprintf("%sが錆びてしまった", weapon.GetName()), 0.4)
-			case rustArmor:
-				armor := player.EquippedArmor
-				if itemResistsRust(armor.RustProof, armor.Abilities) || g.playerImmuneTo(StatusRust) {
-					g.EnqueueMessage(fmt.Sprintf("しかし%sは錆びなかった", armor.GetName()), 0.4)
-					return
-				}
-				armor.Sharpness--
-				// 装備中の盾の強化値低下を防御力へ即時反映する
-				player.DefensePower--
-				g.EnqueueMessage(fmt.Sprintf("%sが錆びてしまった", armor.GetName()), 0.4)
-			default:
-				g.EnqueueMessage("しかし何も起こらなかった", 0.4)
-			}
+			g.rustPlayerEquipment(rollRustTarget(player.EquippedWeapon != nil, player.EquippedArmor != nil, g.randIntn), 1)
 		},
 	})
 }

@@ -86,6 +86,9 @@ type AbilityHooks struct {
 	PreventDeath func(g *Game, damage int, source DamageSource, stacks int) bool
 	// OnTurn はプレイヤーのターン経過（IncrementMoveCount）の最後に毎ターン呼ばれる。
 	OnTurn func(g *Game, stacks int)
+	// ModifyProjectile は海老さんが道具を投げる・矢を撃つ・杖を振るとき、飛ぶ前に1回呼ばれる
+	// （projectile.go）。p.Kind で種類を見分け、貫通・跳ね返り・命中率・本数・1マスごとの処理を変える。
+	ModifyProjectile func(g *Game, p *Projectile, stacks int)
 }
 
 // equipmentAbilityHooks は能力 ID ごとのフック。新しい能力は init() で registerAbilityHooks する。
@@ -204,6 +207,14 @@ func (g *Game) runPreventDeathHooks(damage int, source DamageSource) bool {
 		}
 	})
 	return prevented
+}
+
+func (g *Game) runModifyProjectileHooks(p *Projectile) {
+	g.forEachEquippedAbilityHook(func(h AbilityHooks, stacks int) {
+		if h.ModifyProjectile != nil {
+			h.ModifyProjectile(g, p, stacks)
+		}
+	})
 }
 
 func (g *Game) runTurnHooks() {

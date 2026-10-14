@@ -38,6 +38,8 @@ func allMonsterFamilies() []monsterFamily {
 	var families []monsterFamily
 	families = append(families, expansionA1MonsterFamilies...)
 	families = append(families, expansionA2MonsterFamilies...)
+	families = append(families, expansionB1MonsterFamilies...)
+	families = append(families, expansionB2MonsterFamilies...)
 	return families
 }
 
