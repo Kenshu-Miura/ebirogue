@@ -36,11 +36,14 @@ go test -run TestSimSmoke -count=1 .        # 20シード×5性格×500ターン
 go test -run TestSimBatch -count=1 -timeout 0 . -args -sim.runs=1000 -sim.difficulty=all -sim.out=reports
 go test -run TestSimReplay -count=1 . -args -sim.seed=<シード> -sim.persona=<性格> -sim.difficulty=<beginner|intermediate|advanced>
 go test -fuzz=FuzzInputSequence -fuzztime=30m .   # 入力列のファジング
+go test -run TestEarlyDeathAnalysis -count=1 -timeout 0 . -args -sim.early=2000 -sim.out=reports   # 序盤の死亡分析（expert・上級）
+go test -run TestEarlyDeathDump -count=1 . -v -args -sim.earlydump=<シード>                        # 1件の死亡直前のターンを表示
 ```
 
 - BOT（`bot_test.go`）はゲーム状態を直接読み、仮想入力（`VirtualInput`）で本物のメニュー経路を操作する。性格は `aggressive` / `cautious` / `itemUser` / `diver` / `random` / `expert`。`expert`（`bot_expert_test.go`）はカード・杖・薬をテンプレート ID ごとの分類表 `itemRoles`（攻撃・逃走・強化・回復・不利）で使い分け、強化値込みで装備を持ち替え、矢を撃ち、遠距離の敵の射線を避けて探索してから降りる。バランス評価には主に `expert` の結果を使い、ほかの性格は比較用に残す。**新しいカード・杖・薬を追加したら `itemRoles` にも分類を追加する。**
 - 毎行動で不変条件（`invariants_test.go`: 壁の中・重なり・HP/満腹度/所持品の範囲・座標・倒れた敵の残留）、ソフトロック（`RunUntilInputReady` が上限フレームで戻らない）、panic を検査し、ランダムなターンで中断セーブ→再開の一致も確かめる。
 - `TestSimBatch` は `reports/sim-<日時>.json`（全結果）と `.md`（難易度×性格のクリア率・到達階・ターン、判断ミス死〔回復薬を持ったまま死亡・食料を持ったまま餓死・自分に不利なカードによる被害〕と死亡時のレベル・満腹度、性格別の到着時平均レベル〔主要な階〕と死亡時にレベル上限だった割合、性格別の死因上位、道具の操作回数、階層別死亡率、違反一覧、`reports/baseline.json` との差分）を出力する。`-sim.writebaseline` でベースラインを更新する。主なフラグ: `-sim.runs` `-sim.difficulty` `-sim.persona` `-sim.turns` `-sim.seedbase` `-sim.parallel` `-sim.out`、`-sim.immortal`（計測用の不死モード。HP が1未満にならず、BOT が死なずに深い階まで進むので1〜30階のレベル曲線を測れる。`Game.immortal`、`damagePlayer` で適用）。
+- `TestEarlyDeathAnalysis`（`sim_early_test.go`）は expert の死亡直前40ターン（HP・行動 `bot.act`・隣の敵・遠距離攻撃が届くか・所持品など）を記録し、1〜`-sim.earlyfloor`（既定5）階の死亡を「BOT の判断ミス」と「避けにくい死」に分類した `reports/early-<日時>.md` を出力する。分類基準は `docs/agents/early-game-analysis.md`。expert は敵がいなければ HP 60% 未満で休憩し（`expertShouldRest`）、投石は直線でなくても届くと判断する。
 - `reports/` は `baseline.json` 以外を `.gitignore` 済み。
 - ファジングで見つかった入力は `testdata/fuzz/FuzzInputSequence/` に保存され、以後の `go test ./...` で毎回再生される（修正後もコミットして残す）。
 - BOT やファジングが見つけた不具合は修正し、`regression_test.go` に回帰テストを追加する。

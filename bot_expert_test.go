@@ -105,7 +105,11 @@ func (b *bot) findInventoryID(ids ...int) int {
 
 // expectedDamageToPlayer は敵の通常攻撃1回の目安のダメージ。
 func (b *bot) expectedDamageToPlayer(enemy Enemy) float64 {
-	return float64(enemy.AttackPower) * pow1516(b.g.state.Player.DefensePower)
+	damage := float64(enemy.AttackPower) * pow1516(b.g.state.Player.DefensePower)
+	if enemy.SpecialMovement == SpecialMovementDoubleSpeed || enemy.StatusAilments.Haste > 0 {
+		damage *= 2 // 1ターンに2回攻撃してくる
+	}
+	return damage
 }
 
 // expectedDamageToEnemy はプレイヤーの通常攻撃1回の目安のダメージ。
@@ -192,7 +196,8 @@ func (b *bot) inRangedFire(x, y int) bool {
 		if d <= 1 || d < attack.MinRange || d > attack.MaxRange {
 			continue
 		}
-		if dx == 0 || dy == 0 || abs(dx) == abs(dy) {
+		// 投石は山なりに投げるので、直線上でなくても壁越しに届く
+		if attack.Kind == RangedAttackRock || dx == 0 || dy == 0 || abs(dx) == abs(dy) {
 			return true
 		}
 	}
@@ -317,15 +322,18 @@ func (b *bot) expertStep() error {
 		return b.move(s[0], s[1])
 	}
 	adjacent := b.adjacentEnemies()
+	b.act = ""
 
 	// 1. 回復: HP 40% 未満で回復薬・完全回復のカード
 	if player.Health*100 < player.MaxHealth*40 {
 		if used, err := b.useByID("使う", 2, 28, 3, 29, 44); used || err != nil {
+			b.act = "heal"
 			return err
 		}
 		// 回復手段が無く敵に囲まれているなら、動きを止める
 		if len(adjacent) > 0 {
 			if done, err := b.expertEscape(adjacent); done || err != nil {
+				b.act = "escape"
 				return err
 			}
 		}
@@ -335,6 +343,7 @@ func (b *bot) expertStep() error {
 	if player.Satiety <= 20 {
 		if i := b.findInventory(isFoodItem); i >= 0 {
 			if used, err := b.useInventoryItem(i, "使う"); used || err != nil {
+				b.act = "eat"
 				return err
 			}
 		}
@@ -359,6 +368,7 @@ func (b *bot) expertStep() error {
 	// 5. 戦闘
 	if len(adjacent) >= 3 {
 		if used, err := b.useByID("使う", 56, 31); used || err != nil { // 囲まれたら全滅・真空斬り
+			b.act = "attackItem"
 			return err
 		}
 	}
@@ -372,10 +382,12 @@ func (b *bot) expertStep() error {
 		dx, dy := target.X-player.X, target.Y-player.Y
 		if b.isStrongEnemy(target) {
 			if done, err := b.expertFightStrong(target, dx, dy); done || err != nil {
+				b.act = "strongItem"
 				return err
 			}
 		}
 		if b.canStep(player.X, player.Y, dx, dy) {
+			b.act = "melee"
 			return b.attack(dx, dy)
 		}
 	}
@@ -384,11 +396,13 @@ func (b *bot) expertStep() error {
 		if b.isStrongEnemy(enemy) {
 			if i := b.findInventoryID(17, 18, 19, 54); i >= 0 {
 				if used, err := b.faceAndUse(dx, dy, i, "投げる"); used || err != nil {
+					b.act = "throw"
 					return err
 				}
 			}
 		}
 		if player.EquippedArrow != nil && player.EquippedArrow.ShotCount > 0 {
+			b.act = "shoot"
 			if err := b.tap(append([]Key{KeyA}, directionKeys(dx, dy)...)...); err != nil {
 				return err
 			}
@@ -398,47 +412,75 @@ func (b *bot) expertStep() error {
 
 	// 6. 階段の上で降りたくなったら確認を開き直す
 	if g.state.Map[player.Y][player.X].Type == "stairs" && b.expertWantsToDescend() {
+		b.act = "descend"
 		return b.tap(KeyS)
+	}
+
+	// 6b. HP が少ないのに遠距離攻撃の射程にいたら、部屋の敵を止めるカードを使うか射程の外へ下がる
+	if player.Health*100 < player.MaxHealth*40 && b.inRangedFire(player.X, player.Y) {
+		if used, err := b.useByID("使う", 12, 13, 14); used || err != nil {
+			b.act = "escape"
+			return err
+		}
+		if dx, dy, ok := b.pathStep(func(x, y int) bool { return !b.inRangedFire(x, y) }); ok {
+			b.act = "leaveFire"
+			return b.move(dx, dy)
+		}
+	}
+
+	// 6c. 周りに敵がいなければ、足踏みで HP の自然回復を待つ
+	if b.expertShouldRest() {
+		b.act = "rest"
+		return b.stepInPlace()
 	}
 
 	// 7. 移動: ボス > 経験値になる敵 > 道具 > 未探索 > 階段
 	healthy := player.Health*100 >= player.MaxHealth*60
 	var goals []func(x, y int) bool
+	var labels []string
+	addGoal := func(label string, goal func(x, y int) bool) {
+		goals, labels = append(goals, goal), append(labels, label)
+	}
 	if b.bossAlive() && healthy {
 		if boss, ok := b.nearestBoss(); ok {
-			goals = append(goals, b.enemyGoal(boss))
+			addGoal("toBoss", b.enemyGoal(boss))
 		}
 	}
 	// 射程内から撃ってくる遠距離の敵（特に障害物越しの投石）は、離れるより詰めて倒す
 	if player.Health*100 >= player.MaxHealth*40 {
 		if enemy, ok := b.rangedThreat(); ok {
-			goals = append(goals, b.enemyGoal(enemy))
+			addGoal("toRanged", b.enemyGoal(enemy))
 		}
 	}
 	if healthy {
 		if enemy, ok := b.nearestEnemy(8); ok && !b.isStrongEnemy(enemy) {
-			goals = append(goals, b.enemyGoal(enemy))
+			addGoal("toEnemy", b.enemyGoal(enemy))
 		}
 	}
-	goals = append(goals, b.itemGoal, b.unexploredGoal)
+	addGoal("toItem", b.itemGoal)
+	addGoal("explore", b.unexploredGoal)
 	if b.expertWantsToDescend() {
 		goals = append([]func(x, y int) bool{b.stairsGoal}, goals...)
+		labels = append([]string{"toStairs"}, labels...)
 	}
-	goals = append(goals, b.stairsGoal)
-	for _, goal := range goals {
+	addGoal("toStairs", b.stairsGoal)
+	for i, goal := range goals {
 		if dx, dy, ok := b.expertPathStep(goal); ok {
+			b.act = labels[i]
 			return b.move(dx, dy)
 		}
 	}
 	// 通路を敵や罠にふさがれているときは、敵を倒し罠を踏んで進む
 	for _, goal := range []func(x, y int) bool{b.unexploredGoal, b.stairsGoal} {
 		if dx, dy, ok := b.pathStepThrough(goal, true); ok {
+			b.act = "forceThrough"
 			if isOccupied(g, player.X+dx, player.Y+dy) {
 				return b.attack(dx, dy)
 			}
 			return b.move(dx, dy)
 		}
 	}
+	b.act = "wait"
 	return b.stepInPlace()
 }
 
@@ -452,7 +494,7 @@ func (b *bot) expertFightStrong(target Enemy, dx, dy int) (bool, error) {
 	if i := b.findInventoryID(7); i >= 0 { // 黒炎弾は正面の敵へ
 		return b.faceAndUse(dx, dy, i, "使う")
 	}
-	return false, nil
+	return b.useByID("使う", 31) // 真空斬り（部屋の敵全員）
 }
 
 // expertEscape は隣の敵の動きを止める（金縛り・睡眠・混乱・目潰しのカード、状態異常の薬を投げる）。
@@ -488,4 +530,39 @@ func (b *bot) rangedThreat() (Enemy, bool) {
 		}
 	}
 	return best, found
+}
+
+// 休憩の判断に使う値。休憩は HP が restStartRate 未満で始め、restStopRate 以上になるか敵が来るまで続ける。
+const (
+	expertRestStartRate   = 60  // 休憩を始める HP（最大HP比 %）
+	expertRestStopRate    = 90  // 休憩をやめる HP（最大HP比 %）
+	expertRestEnemyRange  = 6   // この距離以内に敵がいたら休まない
+	expertRestFloorTurns  = 900 // この階に長く居たら休まない（1200ターンの風より前に降りる）
+	expertRestSatietyNeed = 30  // 満腹度と手持ちの食料の合計がこれ以下なら休まない
+)
+
+// expertShouldRest は足踏みで HP の自然回復を待つかどうか。
+func (b *bot) expertShouldRest() bool {
+	g := b.g
+	p := &g.state.Player
+	rate := p.Health * 100 / max(1, p.MaxHealth)
+	if rate >= expertRestStopRate || (!b.resting && rate >= expertRestStartRate) {
+		b.resting = false
+		return false
+	}
+	food := 0
+	for _, item := range p.Inventory {
+		if f, ok := item.(*Food); ok && item.GetID() != rottenSausageItemID {
+			food += f.Satiety
+		}
+	}
+	safe := g.floorTurns < expertRestFloorTurns && p.Satiety+food > expertRestSatietyNeed && p.Satiety > 0 &&
+		!b.inRangedFire(p.X, p.Y) && !b.bossAlive()
+	if safe {
+		if _, ok := b.nearestEnemy(expertRestEnemyRange); ok {
+			safe = false
+		}
+	}
+	b.resting = safe
+	return safe
 }

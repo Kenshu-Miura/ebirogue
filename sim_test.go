@@ -78,6 +78,7 @@ type simCase struct {
 	Difficulty Difficulty
 	MaxTurns   int
 	Immortal   bool // 計測用の不死モード
+	Trace      bool // 直前のターンの記録を残す（序盤の死亡分析、sim_early_test.go）
 }
 
 // simOutcome は1回の冒険の結果。
@@ -95,6 +96,7 @@ type simOutcome struct {
 	Mistake     string         `json:",omitempty"` // 判断ミス死の種類（mistakeKind 参照）
 	Result      *RunResult     `json:",omitempty"`
 	Violations  []simViolation `json:",omitempty"`
+	Death       *deathTrace    `json:",omitempty"` // Trace のときだけ。最後の数十ターンと各階の床の道具
 }
 
 const maxViolationsPerRun = 20
@@ -105,6 +107,10 @@ func runSimCase(c simCase) (out simOutcome) {
 	g, in := newHeadlessGame(c.Seed, c.Difficulty)
 	g.immortal = c.Immortal
 	b := newBot(g, in, c.Persona, c.Seed)
+	var tracer *traceRecorder
+	if c.Trace {
+		tracer = &traceRecorder{}
+	}
 	turns, lastTurn := 0, 0
 	seen := map[string]bool{}
 	record := func(vs []simViolation) {
@@ -123,6 +129,9 @@ func runSimCase(c simCase) (out simOutcome) {
 			record([]simViolation{newViolation(b.g, "panic", "%v\n%s", r, debug.Stack())})
 		}
 		g := b.g
+		if tracer != nil {
+			out.Death = tracer.trace()
+		}
 		out.Floor, out.Turns, out.Level = g.Floor, turns, g.state.Player.Level
 		if result := g.LastRunResult(); result != nil {
 			out.Result = result
@@ -142,6 +151,9 @@ func runSimCase(c simCase) (out simOutcome) {
 		g := b.g
 		if g.turnCount >= lastTurn {
 			turns += g.turnCount - lastTurn
+		}
+		if tracer != nil && (g.turnCount != lastTurn || len(tracer.ring) == 0) {
+			tracer.record(b)
 		}
 		lastTurn = g.turnCount // 「再挑戦」でターン数が戻っても累計で数える
 		for len(out.FloorLevels) < g.Floor {

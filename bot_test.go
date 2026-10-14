@@ -47,6 +47,8 @@ type bot struct {
 	rng      *rand.Rand
 	idle     int // ターンが進まなかった行動の連続回数
 	lastTurn int
+	act      string // 直前に選んだ行動の分類（序盤の死亡分析の記録用。expert だけが設定する）
+	resting  bool   // expert が自然回復を待っている（回復しきるか敵が来るまで続ける）
 }
 
 func newBot(g *Game, in *VirtualInput, p persona, seed int64) *bot {
