@@ -697,3 +697,142 @@ func TestItemCategorySpawnWeights(t *testing.T) {
 		}
 	}
 }
+
+// --- 段1の準備: 攻撃のたびのフック・総攻撃力の加算・命中時の処理・被弾の回避・追加の無効化 ---
+
+func TestSwingHookAttackBonusAndHitEffects(t *testing.T) {
+	var swings []PlayerSwing
+	paid := 0
+	withTestAbilityHooks(t, "test_swing", AbilityHooks{
+		AfterPlayerSwing: func(g *Game, s PlayerSwing, stacks int) { swings = append(swings, s) },
+		BeforePlayerAttack: func(g *Game, a *PlayerAttack, stacks int) {
+			a.AttackBonus += 10
+			a.HitEffects = append(a.HitEffects, func(g *Game) { paid++ })
+		},
+	})
+	attack := func(abilities ...EquipmentAbilityID) (int, *Game) {
+		g := newFoundationTestGame()
+		equip(g, testWeapon(abilities...))
+		g.state.Enemies = []Enemy{CreateEnemyByID(0, 5, 4)}
+		g.state.Enemies[0].Health = 1000
+		g.CheckForEnemies(1, 0)
+		runQueuedActions(g)
+		return 1000 - g.state.Enemies[0].Health, g
+	}
+	plain, _ := attack()
+	bonus, _ := attack("test_swing")
+	if bonus <= plain || paid != 1 {
+		t.Fatalf("attack bonus damage %d (plain %d), hit effects %d", bonus, plain, paid)
+	}
+	if len(swings) != 1 || swings[0] != (PlayerSwing{DX: 1, DY: 0, HitEnemy: true}) {
+		t.Fatalf("swings = %+v", swings)
+	}
+
+	// 空振りでもフックは呼ばれ、外れたら命中時の処理は呼ばれない
+	g := newFoundationTestGame()
+	equip(g, testWeapon("test_swing"))
+	g.CheckForEnemies(0, -1)
+	runQueuedActions(g)
+	if len(swings) != 2 || swings[1].HitEnemy || swings[1].DY != -1 {
+		t.Fatalf("empty swing = %+v", swings)
+	}
+	g = newFoundationTestGame()
+	g.randHooks.attackHit = func(int) int { return 99 }
+	equip(g, testWeapon("test_swing"))
+	g.state.Enemies = []Enemy{CreateEnemyByID(0, 5, 4)}
+	g.CheckForEnemies(1, 0)
+	runQueuedActions(g)
+	if paid != 1 {
+		t.Fatalf("hit effects ran on a miss: %d", paid)
+	}
+}
+
+func TestIncomingDamageEvadedByHook(t *testing.T) {
+	withTestAbilityHooks(t, "test_dodge", AbilityHooks{
+		ModifyIncomingDamage: func(g *Game, in *IncomingDamage, stacks int) {
+			in.Evaded, in.EvadedBy = true, "試験の甲羅"
+		},
+	})
+	g := newFoundationTestGame()
+	g.randHooks.shieldDefense = func(int) int { return 99 }
+	equip(g, testArmor(AbilityCounter, "test_dodge"))
+	g.state.Enemies = []Enemy{CreateEnemyByID(18, 5, 4)}
+	g.state.Enemies[0].Health = 100
+	g.enqueueEnemyNormalAttack(0)
+	msg := runQueuedActions(g)
+	if g.state.Player.Health != 40 || g.state.Enemies[0].Health != 100 || !strings.Contains(msg, "試験の甲羅で") || !strings.Contains(msg, "かわした") {
+		t.Fatalf("evaded: HP %d, enemy HP %d, %q", g.state.Player.Health, g.state.Enemies[0].Health, msg)
+	}
+}
+
+func TestExtraImmunitiesAndRust(t *testing.T) {
+	withTestImmunity(t, "test_ward", StatusCurse, StatusFoodTransform, StatusManipulation, StatusRust)
+	newGame := func(warded bool) *Game {
+		g := newFoundationTestGame()
+		g.state.Player.Inventory = []Item{testWeapon(), buildItemFromTemplate(18, 0, 0)}
+		if warded {
+			equip(g, testRing("test_ward"))
+		}
+		g.state.Enemies = []Enemy{CreateEnemyByID(0, 5, 4)}
+		return g
+	}
+	attacks := map[string]func(g *Game){
+		"curse":      func(g *Game) { enqueueCurseAttack(&g.state.Enemies[0], g, func(int) int { return 0 }) },
+		"food":       func(g *Game) { enqueueFoodTransformationAttack(&g.state.Enemies[0], g, func(int) int { return 0 }) },
+		"manipulate": func(g *Game) { enqueueManipulationAttack(&g.state.Enemies[0], g, func(int) int { return 0 }) },
+	}
+	for name, apply := range attacks {
+		g := newGame(true)
+		apply(g)
+		if msg := runQueuedActions(g); !strings.Contains(msg, "防いだ") {
+			t.Errorf("%s: warded messages = %q", name, msg)
+		}
+		g = newGame(false)
+		apply(g)
+		if msg := runQueuedActions(g); strings.Contains(msg, "防いだ") {
+			t.Errorf("%s: unwarded messages = %q", name, msg)
+		}
+	}
+
+	// さび: 自分だけさびない能力（金の剣など）と、装備全体を守る無効化
+	rust := func(weapon *Weapon, ring bool) int {
+		g := newFoundationTestGame()
+		g.randHooks = randHooks{}
+		equip(g, weapon)
+		if ring {
+			equip(g, testRing("test_ward"))
+		}
+		rustTrapEffect(g)
+		runQueuedActions(g)
+		return weapon.Sharpness
+	}
+	if got := rust(testWeapon(), false); got != -1 {
+		t.Fatalf("plain weapon sharpness after rust = %d, want -1", got)
+	}
+	if got := rust(testWeapon(AbilityRustImmune), false); got != 0 {
+		t.Fatalf("rust-immune weapon sharpness = %d, want 0", got)
+	}
+	if got := rust(testWeapon(), true); got != 0 {
+		t.Fatalf("rust-warded weapon sharpness = %d, want 0", got)
+	}
+}
+
+func TestMergeItemTemplatesRejectsDuplicates(t *testing.T) {
+	merged := mergeItemTemplates(map[int]ItemTemplate{1: {ID: 1}}, map[int]ItemTemplate{2: {ID: 2}})
+	if len(merged) != 2 {
+		t.Fatalf("merged = %v", merged)
+	}
+	for name, tables := range map[string][]map[int]ItemTemplate{
+		"duplicate": {{1: {ID: 1}}, {1: {ID: 1}}},
+		"wrong ID":  {{3: {ID: 4}}},
+	} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("%s: mergeItemTemplates should panic", name)
+				}
+			}()
+			mergeItemTemplates(tables...)
+		}()
+	}
+}

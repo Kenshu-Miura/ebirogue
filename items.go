@@ -2,7 +2,10 @@
 
 package main
 
-import "math/rand"
+import (
+	"fmt"
+	"math/rand"
+)
 
 type BaseItem struct {
 	Entity
@@ -111,8 +114,30 @@ type ItemTemplate struct {
 	MaxStatBonus int                  // 満タン時に使った場合の最大値上昇量
 }
 
-// アイテムデータテーブル
-var itemTemplates = map[int]ItemTemplate{
+// itemTemplates はアイテムのデータテーブル（全種類）。ID 0〜71 は baseItemTemplates、
+// 追加計画（content-expansion-plan.md）の武器・盾・カード・指輪は種類ごとのファイルの表に書く
+// （items_weapons.go・items_shields.go・items_cards.go・items_rings.go）。並列の担当が同じ表を触らないため。
+var itemTemplates = mergeItemTemplates(baseItemTemplates, weaponItemTemplates, shieldItemTemplates, cardItemTemplates, ringItemTemplates)
+
+// mergeItemTemplates は複数の表を1つにまとめる。ID が重なっていたら起動時に止める。
+func mergeItemTemplates(tables ...map[int]ItemTemplate) map[int]ItemTemplate {
+	merged := map[int]ItemTemplate{}
+	for _, table := range tables {
+		for id, template := range table {
+			if _, exists := merged[id]; exists {
+				panic(fmt.Sprintf("アイテム ID %d が重複している", id))
+			}
+			if template.ID != id {
+				panic(fmt.Sprintf("アイテム ID %d のテンプレートの ID が %d になっている", id, template.ID))
+			}
+			merged[id] = template
+		}
+	}
+	return merged
+}
+
+// baseItemTemplates は ID 0〜71 のアイテム。
+var baseItemTemplates = map[int]ItemTemplate{
 	0: {
 		ID:          0,
 		ItemType:    "Money",
