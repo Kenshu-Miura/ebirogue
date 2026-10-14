@@ -241,7 +241,20 @@ func (b *bot) pathStepAvoiding(goal func(x, y int) bool, avoid func(x, y int) bo
 func (b *bot) bestEquipment() (int, bool) {
 	p := &b.g.state.Player
 	weaponScore := func(w *Weapon) int { return w.AttackPower + w.Sharpness }
-	armorScore := func(a *Armor) int { return a.DefensePower + a.Sharpness }
+	armorScore := func(a *Armor) int {
+		// 使い捨ての盾は被弾ごとに弱るので、ボス戦のときだけ使う
+		if botFeature("shield") && a.GetID() == disposableShieldID && !b.bossAlive() {
+			return -100
+		}
+		return a.DefensePower + a.Sharpness
+	}
+	// 能力のある盾から乗り換えるのは、強化値込みの防御力が2以上上がるときだけ
+	armorMargin := func(cur *Armor) int {
+		if botFeature("shield") && len(cur.Abilities) > 0 && cur.GetID() != disposableShieldID {
+			return 2
+		}
+		return 1
+	}
 	usable := func(item Equipable) bool {
 		return !isCursedEquipment(item) && !p.IsEquipped(item)
 	}
@@ -267,7 +280,10 @@ func (b *bot) bestEquipment() (int, bool) {
 			if v.Sharpness < 0 || v.GetID() == 69 || !usable(v) {
 				continue
 			}
-			if p.EquippedArmor == nil || (!p.EquippedArmor.Cursed && armorScore(v) > armorScore(p.EquippedArmor)) {
+			if botFeature("shield") && armorScore(v) < 0 {
+				continue
+			}
+			if p.EquippedArmor == nil || (!p.EquippedArmor.Cursed && armorScore(v) >= armorScore(p.EquippedArmor)+armorMargin(p.EquippedArmor)) {
 				return i, true
 			}
 		case *Arrow:
@@ -278,6 +294,9 @@ func (b *bot) bestEquipment() (int, bool) {
 	}
 	return -1, false
 }
+
+// disposableShieldID は使い捨ての盾（被弾ごとに強化値と防御力が1下がる）。
+const disposableShieldID = 70
 
 // expertWantsToDescend は階段を降りるかどうか。探索し尽くすまでは降りず、レベルを上げる。
 func (b *bot) expertWantsToDescend() bool {
@@ -292,7 +311,7 @@ func (b *bot) expertWantsToDescend() bool {
 		return false // 見えている食料を拾ってから降りる
 	}
 	// 食料の残りから、この階にいられるターン数を見積もる（満腹度は10ターンで1減る）
-	food := 0
+	food := b.potFood() * 50
 	for _, item := range g.state.Player.Inventory {
 		if f, ok := item.(*Food); ok {
 			food += max(f.Satiety, 50)
@@ -301,11 +320,19 @@ func (b *bot) expertWantsToDescend() bool {
 	if g.state.Player.Satiety+food <= 50 {
 		return true // 食料が乏しければ探索を切り上げて先へ急ぐ（次の階で食料を探す）
 	}
-	if _, _, ok := b.pathStep(b.pickableItemGoal); ok {
+	if _, _, ok := b.pathStep(b.expertItemGoalFunc()); ok {
 		return false
 	}
 	_, _, unexplored := b.pathStep(b.unexploredGoal)
 	return !unexplored
+}
+
+// expertItemGoalFunc は expert が向かう床の道具の判定（入れ替えを切ったときは従来の pickableItemGoal）。
+func (b *bot) expertItemGoalFunc() func(x, y int) bool {
+	if botFeature("swap") {
+		return b.expertItemGoal
+	}
+	return b.pickableItemGoal
 }
 
 // useByID は所持品のうち ids のどれかを action で使う。
@@ -373,10 +400,31 @@ func (b *bot) expertStep() error {
 		}
 	}
 
-	// 2. 空腹
+	// 1b. 聖域の上にいれば HP が戻るまで休む
+	if botFeature("sanctuary") && b.onSanctuaryRest() {
+		b.act = "sanctuaryRest"
+		return b.stepInPlace()
+	}
+
+	// 2. 空腹（持ち物に食料が無ければ保存の壺から出す。それも無ければウインナー化・大部屋のカード）
+	if botFeature("pot") {
+		if done, err := b.expertTakeFoodOut(20); done || err != nil {
+			return err
+		}
+	}
 	if used, err := b.eatIfStarving(20); used || err != nil {
 		b.act = "eat"
 		return err
+	}
+	if botFeature("sausage") {
+		if done, err := b.expertSausage(); done || err != nil {
+			return err
+		}
+	}
+	if botFeature("bigroom") {
+		if done, err := b.expertBigRoom(); done || err != nil {
+			return err
+		}
 	}
 
 	// 3. 強化のカードはすぐ使う
@@ -388,14 +436,30 @@ func (b *bot) expertStep() error {
 		}
 	}
 
-	// 4. 装備の持ち替え
+	if botFeature("pot") {
+		if _, pot := b.storagePot(); pot != nil {
+			if used, err := b.useByID("使う", 47); used || err != nil { // 壺拡大
+				return err
+			}
+		}
+	}
+
+	// 4. 装備の持ち替え・指輪
 	if i, ok := b.bestEquipment(); ok {
 		if used, err := b.useInventoryItem(i, "装備"); used || err != nil {
 			return err
 		}
 	}
+	if botFeature("rings") {
+		if done, err := b.expertEquipRing(); done || err != nil {
+			return err
+		}
+	}
 
-	// 5. 戦闘
+	// 5. 戦闘: 立ち回り（道具を早めに使う・通路へ下がる・先手を取る）
+	if done, err := b.expertTactics(adjacent); done || err != nil {
+		return err
+	}
 	if len(adjacent) >= 3 {
 		if used, err := b.useByID("使う", 56, 31); used || err != nil { // 囲まれたら全滅・真空斬り
 			b.act = "attackItem"
@@ -420,6 +484,16 @@ func (b *bot) expertStep() error {
 			targets = adjacent
 		}
 		b.hazardAvoided = 0
+		// 角を挟んで殴れない斜めの敵は狙わない（殴れる敵がいなければ従来どおり）
+		var reachable []Enemy
+		for _, enemy := range targets {
+			if b.canStep(player.X, player.Y, enemy.X-player.X, enemy.Y-player.Y) {
+				reachable = append(reachable, enemy)
+			}
+		}
+		if len(reachable) > 0 {
+			targets = reachable
+		}
 		target := targets[0]
 		for _, enemy := range targets {
 			if b.isStrongEnemy(enemy) {
@@ -428,6 +502,11 @@ func (b *bot) expertStep() error {
 		}
 		dx, dy := target.X-player.X, target.Y-player.Y
 		if b.isStrongEnemy(target) {
+			if botFeature("canes") {
+				if done, err := b.expertSeal(); done || err != nil {
+					return err
+				}
+			}
 			if done, err := b.expertFightStrong(target, dx, dy); done || err != nil {
 				b.act = "strongItem"
 				return err
@@ -441,6 +520,11 @@ func (b *bot) expertStep() error {
 	// 直線上の敵を矢で撃つ・状態異常の薬を投げる
 	// ウチカエシエビ系には撃たない・投げない（打ち返される）
 	notReflector := func(e Enemy) bool { return !isReflectorEnemy(e) }
+	if botFeature("canes") && len(adjacent) == 0 {
+		if done, err := b.expertSeal(); done || err != nil {
+			return err
+		}
+	}
 	if dx, dy, enemy, ok := b.targetInLine(8, notReflector); ok && len(adjacent) == 0 {
 		if b.isStrongEnemy(enemy) {
 			if i := b.findInventoryID(17, 18, 19, 54); i >= 0 {
@@ -467,6 +551,23 @@ func (b *bot) expertStep() error {
 		}
 		if done, err := b.pickUpHere(); done || err != nil {
 			b.act = "pickUp"
+			return err
+		}
+		if botFeature("swap") {
+			if done, err := b.expertSwapHere(); done || err != nil {
+				return err
+			}
+		}
+	}
+
+	// 5c. 落ち着いているうちに白紙のカードへ書き込み、予備の食料を保存の壺へ入れる
+	if len(adjacent) == 0 && botFeature("blank") {
+		if done, err := b.expertWriteBlank(); done || err != nil {
+			return err
+		}
+	}
+	if len(adjacent) == 0 && botFeature("pot") {
+		if done, err := b.expertStoreFood(); done || err != nil {
 			return err
 		}
 	}
@@ -530,7 +631,7 @@ func (b *bot) expertStep() error {
 			addGoal("toEnemy", b.enemyGoal(enemy))
 		}
 	}
-	addGoal("toItem", b.pickableItemGoal)
+	addGoal("toItem", b.expertItemGoalFunc())
 	addGoal("explore", b.unexploredGoal)
 	if b.expertWantsToDescend() {
 		goals = append([]func(x, y int) bool{b.stairsGoal}, goals...)
@@ -630,7 +731,7 @@ func (b *bot) expertShouldRest() bool {
 		b.resting = false
 		return false
 	}
-	food := 0
+	food := b.potFood() * 50
 	for _, item := range p.Inventory {
 		if f, ok := item.(*Food); ok && item.GetID() != rottenSausageItemID {
 			food += f.Satiety

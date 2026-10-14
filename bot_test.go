@@ -53,6 +53,8 @@ type bot struct {
 	discarded map[discardKey]bool
 	// hazardAvoided は expert が隣の危ない敵（膨らんだフグ・帯電したエイ）から続けて離れたターン数
 	hazardAvoided int
+	// chokeWait・ambushWait は expert が通路の入口・距離2の敵を足踏みで待ったターン数（bot_tactics_test.go）
+	chokeWait, ambushWait int
 }
 
 func newBot(g *Game, in *VirtualInput, p persona, seed int64) *bot {
@@ -136,18 +138,30 @@ func (b *bot) closeWindows() error {
 // useInventoryItem は本物のメニュー経路（C→道具→アイテム選択→行動選択）で所持品 index に actionName を行う。
 // 行動が見つからなければ何もせずメニューを閉じて false を返す。
 func (b *bot) useInventoryItem(index int, actionName string) (bool, error) {
+	if err := b.openItemActions(index); err != nil {
+		return false, err
+	}
+	if ok, err := b.chooseItemAction(actionName); !ok || err != nil {
+		return false, err
+	}
+	// 識別・壺・白紙のカードなど、続けて対象を選ぶ画面が開いたら取り消す
+	return true, b.closeWindows()
+}
+
+// openItemActions は C→道具→所持品 index を選んで行動メニューを開く（開けなければ閉じる）。
+func (b *bot) openItemActions(index int) error {
 	g := b.g
 	if err := b.tap(KeyC); err != nil { // メニューを開く（初期位置は「道具」）
-		return false, err
+		return err
 	}
 	if !g.showMenu {
-		return false, b.closeWindows()
+		return b.closeWindows()
 	}
 	if err := b.tap(KeyZ); err != nil {
-		return false, err
+		return err
 	}
 	if !g.showInventory {
-		return false, b.closeWindows()
+		return b.closeWindows()
 	}
 	for i := 0; i < 2*g.state.Player.MaxInventory && g.selectedItemIndex != index; i++ {
 		key := KeyDown
@@ -155,15 +169,18 @@ func (b *bot) useInventoryItem(index int, actionName string) (bool, error) {
 			key = KeyUp
 		}
 		if err := b.tap(key); err != nil {
-			return false, err
+			return err
 		}
 	}
 	if g.selectedItemIndex != index {
-		return false, b.closeWindows()
+		return b.closeWindows()
 	}
-	if err := b.tap(KeyZ); err != nil { // 行動メニュー
-		return false, err
-	}
+	return b.tap(KeyZ) // 行動メニュー
+}
+
+// chooseItemAction は開いた行動メニューで actionName を選んで実行する。見つからなければ閉じて false。
+func (b *bot) chooseItemAction(actionName string) (bool, error) {
+	g := b.g
 	actionIndex := -1
 	for i, name := range g.currentItemActions() {
 		if name == actionName {
@@ -185,8 +202,7 @@ func (b *bot) useInventoryItem(index int, actionName string) (bool, error) {
 	if err := b.tap(KeyZ); err != nil {
 		return false, err
 	}
-	// 識別・壺・白紙のカードなど、続けて対象を選ぶ画面が開いたら取り消す
-	return true, b.closeWindows()
+	return true, nil
 }
 
 func (b *bot) findInventory(match func(Item) bool) int {
@@ -665,6 +681,9 @@ func (b *bot) discardPriority(item Item) (int, bool) {
 	}
 	if isFoodItem(item) || isHealingItem(item) {
 		return 0, false
+	}
+	if pot, ok := item.(*Pot); ok && len(pot.Contents) > 0 {
+		return 0, false // 中身（保存した食料など）ごと手放さない
 	}
 	switch item.(type) {
 	case *Weapon, *Armor: // 予備の武器・盾
