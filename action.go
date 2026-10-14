@@ -188,6 +188,12 @@ func (g *Game) executeGroundItemAction() {
 
 				g.closeGroundItemMenu()
 				g.isActioned = true
+				if g.itemTargetEffect != nil {
+					g.GroundItemActioned = true
+					g.showInventory = true
+					g.isActioned = false
+					return
+				}
 			}
 		}
 	}
@@ -301,6 +307,11 @@ func (g *Game) executeAction() {
 		}
 
 		// 識別・白紙の書き込みは選択ウィンドウで確定するまでターンを消費しない
+		if g.itemTargetEffect != nil {
+			g.showItemActions = false
+			g.selectedItemIndex = 0
+			return
+		}
 		if !g.useIdentifyItem && !g.showBlankCardMenu {
 			g.showInventory = false
 			g.isActioned = true

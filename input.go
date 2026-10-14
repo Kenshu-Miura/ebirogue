@@ -162,6 +162,20 @@ func (g *Game) handleItemActionsInput() error {
 func (g *Game) handleInventoryNavigationInput() error {
 	// 絞り込み後の表示リストを取得し、選択位置を表示リスト内へ合わせる
 	indices := g.normalizeInventoryView()
+	// 対象選択中は確定・取消以外の道具操作（整頓など）を禁止する。
+	if g.itemTargetEffect != nil {
+		if g.keys().JustPressed(KeyZ) && len(g.state.Player.Inventory) > 0 {
+			g.itemTargetEffect(g, g.selectedItemIndex)
+			return nil
+		}
+		if g.keys().JustPressed(KeyX) {
+			g.itemTargetEffect = nil
+			g.tmpSelectedItemIndex = -1
+			g.GroundItemActioned = false
+			g.selectedItemIndex = 0
+			return nil
+		}
+	}
 
 	if g.keys().JustPressed(KeyUp) {
 		g.selectedItemIndex = moveSelection(indices, g.selectedItemIndex, -1)
@@ -194,6 +208,9 @@ func (g *Game) handleInventoryNavigationInput() error {
 	}
 
 	// Fキー: カテゴリ絞り込みの切り替え（所持しているカテゴリだけを巡回）
+	if g.itemTargetEffect != nil {
+		return nil
+	}
 	if g.keys().JustPressed(KeyF) && !g.useIdentifyItem && !g.usePotInsert {
 		g.inventoryFilter = nextFilter(g.inventoryFilter, g.presentCategories())
 		if indices := g.normalizeInventoryView(); len(indices) > 0 {
@@ -301,6 +318,8 @@ func (g *Game) handleInventoryInput() error {
 			g.showItemDescription = false
 			g.useIdentifyItem = false
 			g.usePotInsert = false
+			g.itemTargetEffect = nil
+			g.GroundItemActioned = false
 			g.tmpSelectedItemIndex = -1
 			return nil
 		}
@@ -319,6 +338,14 @@ func (g *Game) handleInventoryInput() error {
 	}
 
 	xPressed := g.keys().JustPressed(KeyX)
+	if xPressed && g.itemTargetEffect != nil {
+		g.itemTargetEffect = nil
+		g.tmpSelectedItemIndex = -1
+		g.GroundItemActioned = false
+		g.selectedItemIndex = 0
+		g.selectedActionIndex = 0
+		return nil
+	}
 
 	if xPressed && g.showInventory && !g.showItemActions && !g.useIdentifyItem && !g.usePotInsert {
 		g.selectedItemIndex = 0

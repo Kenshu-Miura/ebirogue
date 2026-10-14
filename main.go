@@ -272,6 +272,7 @@ type Game struct {
 	enemyYOffset              int
 	enemyYOffsetTimer         int
 	useIdentifyItem           bool
+	itemTargetEffect          func(g *Game, targetIndex int) // カードの対象を選択中。保存しない。
 	tmpSelectedItemIndex      int
 	usePotInsert              bool // 壺へ入れるアイテムを選択中かどうか
 	potInsertIndex            int  // 入れる対象の壺のインベントリ位置
@@ -703,6 +704,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	if g.useIdentifyItem || g.usePotInsert {
+		g.drawUseIdentifyItemWindow(screen)
+	}
+	if g.itemTargetEffect != nil {
 		g.drawUseIdentifyItemWindow(screen)
 	}
 

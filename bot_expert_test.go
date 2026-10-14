@@ -50,12 +50,30 @@ var itemRoles = map[int]itemRole{
 	40: roleHarmful, // 罠
 	41: roleHarmful, // 自爆（HP が半分になる）
 	42: roleHarmful, // 口封じ
+
+	167: roleNone, 168: roleHarmful, 169: roleBuff, 170: roleHarmful,
+	171: roleBuff, 172: roleNone, 173: roleHeal,
 }
 
 // 強化のカードのうち「すぐ使う」もの（使える条件は expertBuffUsable で判定する）。
 func (b *bot) expertBuffUsable(id int) bool {
 	p := &b.g.state.Player
 	switch id {
+	case 169:
+		for _, trap := range b.g.state.MapTraps {
+			if trap.Discovered {
+				return true
+			}
+		}
+		return false
+	case 171:
+		for _, item := range b.g.state.Items {
+			x, y := item.GetPosition()
+			if gatherDistance(Coordinate{X: x, Y: y}, Coordinate{X: p.X, Y: p.Y}) > 3 {
+				return true
+			}
+		}
+		return false
 	case 33:
 		return p.EquippedWeapon != nil
 	case 34:
@@ -326,6 +344,10 @@ func (b *bot) expertStep() error {
 
 	// 1. 回復: HP 40% 未満で回復薬・完全回復のカード
 	if player.Health*100 < player.MaxHealth*40 {
+		if used, err := b.useByID("使う", 173); used || err != nil {
+			b.act = "heal"
+			return err
+		}
 		if used, err := b.useByID("使う", 2, 28, 3, 29, 44); used || err != nil {
 			b.act = "heal"
 			return err

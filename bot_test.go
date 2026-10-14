@@ -104,6 +104,9 @@ func (b *bot) attack(dx, dy int) error {
 // windowOpen は行動入力を受け付けないウィンドウが開いているかどうか。
 func (b *bot) windowOpen() bool {
 	g := b.g
+	if g.itemTargetEffect != nil {
+		return true
+	}
 	return g.showInventory || g.ShowGroundItem || g.showMenu || g.showEmptyInventoryMessage ||
 		g.showMessageLog || g.showSettings || g.showSuspendPrompt || g.showHelp || g.showBlankCardMenu ||
 		g.showDifficultySelect || g.showClearScreen || g.showRunHistory || g.showNameInput || g.showItemActions || g.showItemDescription || g.useIdentifyItem || g.usePotInsert
