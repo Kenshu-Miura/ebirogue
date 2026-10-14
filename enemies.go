@@ -138,6 +138,8 @@ type MonsterDefinition struct {
 	Behavior EnemyBehavior
 	// OnDefeated は倒れたときの処理（遅れて別の敵が現れるなど）。enemy_behaviors.go の onEnemyDefeated が呼ぶ
 	OnDefeated EnemyDefeatedFunc
+	// OnDamaged はダメージを受けて倒れなかったときの処理（分裂など）。g.applyDamageToEnemy が呼ぶ
+	OnDamaged EnemyDamagedFunc
 }
 
 // enemyCriticalPercent は敵の通常攻撃が痛恨の一撃になる確率（%）を返す。

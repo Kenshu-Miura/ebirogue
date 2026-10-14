@@ -644,6 +644,11 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 }
 
 func (g *Game) AttackFromEnemy(enemyIndex int) {
+	// ゾワゾワの敵は海老さんと反対の向きへ攻撃する（特技も使わない）
+	if g.state.Enemies[enemyIndex].StatusAilments.Backward > 0 {
+		g.enemyAttackBackward(enemyIndex)
+		return
+	}
 	// 聖域のカードの上にいるプレイヤーは敵から攻撃されない
 	if g.playerOnSanctuary() {
 		return

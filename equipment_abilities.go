@@ -165,6 +165,8 @@ const (
 	StatusRust          StatusKind = "rust"           // 装備中の武器・盾の強化値が下がる（さびの罠）
 	StatusFoodTransform StatusKind = "food_transform" // 持ち物をウインナーに変えられる（にぎりエビ系）
 	StatusManipulation  StatusKind = "manipulation"   // 道具を使わされる・歩かされる（あやつりクラゲ系）
+	StatusKnockOff      StatusKind = "knock_off"      // 装備中の武器・盾を弾き飛ばされる（g.knockOffPlayerEquipment）
+	StatusItemToss      StatusKind = "item_toss"      // 持ち物を投げ捨てられる（g.tossPlayerItem）
 )
 
 // statusImmunities は能力 ID ごとの、確実に無効化する状態異常の一覧。
@@ -195,6 +197,10 @@ func statusKindLabel(kind StatusKind) string {
 		return "食料への変化"
 	case StatusManipulation:
 		return "あやつり"
+	case StatusKnockOff:
+		return "装備の弾き飛ばし"
+	case StatusItemToss:
+		return "持ち物の投げ捨て"
 	default:
 		return string(kind)
 	}

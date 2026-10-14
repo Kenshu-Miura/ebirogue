@@ -425,6 +425,9 @@ func (g *Game) decrementStatusAilments() {
 		if g.state.Enemies[i].StatusAilments.Slow > 0 {
 			g.state.Enemies[i].StatusAilments.Slow--
 		}
+		if g.state.Enemies[i].StatusAilments.Backward > 0 {
+			g.state.Enemies[i].StatusAilments.Backward--
+		}
 		if g.state.Enemies[i].StatusAilments.Sleep > 0 {
 			g.state.Enemies[i].StatusAilments.Sleep--
 			// 睡眠のカードで眠らされた敵は目覚めた時に倍速化する

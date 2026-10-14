@@ -239,3 +239,105 @@ func (g *Game) spawnPendingEnemy(spawn PendingEnemySpawn) bool {
 	}
 	return false
 }
+
+// --- 被弾時の処理と分裂 ---
+
+// EnemyDamagedFunc はダメージを受けて倒れなかった敵の処理。i は g.state.Enemies の添字。
+// 範囲攻撃のループの中からも呼ばれるので、敵を増やすときは末尾への追加（append）だけにし、取り除かない。
+type EnemyDamagedFunc func(g *Game, i int, damage int)
+
+// onEnemyDamaged は敵 index の被弾時の処理を呼ぶ。封印中・ダメージ0なら呼ばない。
+// g.applyDamageToEnemy を通るダメージ（海老さんの攻撃・射撃・投擲・杖・カード・罠・吹き飛ばしの衝突・
+// 盾の反撃）で呼ばれる。敵どうしの攻撃では呼ばれない。
+func (g *Game) onEnemyDamaged(index, damage int) {
+	enemy := g.state.Enemies[index]
+	onDamaged := MonsterDefinitions[enemy.ID].OnDamaged
+	if onDamaged == nil || damage <= 0 || enemy.StatusAilments.Seal {
+		return
+	}
+	onDamaged(g, index, damage)
+}
+
+// splitEnemy は敵 index と同じ種類の分身を、隣の空いたマスのどれか（g.randIntn）に1体出す。
+// 分身は今の HP を引き継ぎ、状態異常・持ち物は持たず、海老さんを発見済み。出した分身の添字を返す。
+// 隣に空きが無い・フロアの敵が上限（MaxEnemiesOnFloor）なら出さずに -1。ボスは分裂しない。
+func (g *Game) splitEnemy(index int) int {
+	source := g.state.Enemies[index]
+	if MonsterDefinitions[source.ID].IsBoss || len(g.state.Enemies) >= MaxEnemiesOnFloor {
+		return -1
+	}
+	var free []Coordinate
+	for _, offset := range nearestFreeOffsets(1)[1:] {
+		x, y := source.X+offset.X, source.Y+offset.Y
+		if g.canPlaceEnemyAt(x, y) {
+			free = append(free, Coordinate{X: x, Y: y})
+		}
+	}
+	if len(free) == 0 {
+		return -1
+	}
+	position := free[g.randIntn(len(free))]
+	clone := CreateEnemyByID(source.ID, position.X, position.Y)
+	clone.Health = source.Health
+	clone.PlayerDiscovered = true
+	g.state.Enemies = append(g.state.Enemies, clone)
+	g.miniMapDirty = true
+	g.EnqueueMessage(fmt.Sprintf("%sが分裂した！", g.enemyDisplayName(source.Name)), 0.4)
+	return len(g.state.Enemies) - 1
+}
+
+// --- 直線上の海老さん ---
+
+// straightLineToPlayer は海老さんが敵 i から縦・横・斜めの一直線上 maxDistance マス以内にいて、
+// 間のマスがすべて通れて敵もいないとき、海老さんへの向き (dx, dy) と距離を返す。
+// 隣（距離1）も含む。斜めの角の壁は見ない（引き寄せる・弾き飛ばすなど、届くかだけを見る処理用）。
+func (g *Game) straightLineToPlayer(i, maxDistance int) (dx, dy, distance int, ok bool) {
+	enemy := g.state.Enemies[i]
+	offsetX, offsetY := g.state.Player.X-enemy.X, g.state.Player.Y-enemy.Y
+	if offsetX == 0 && offsetY == 0 {
+		return 0, 0, 0, false
+	}
+	if offsetX != 0 && offsetY != 0 && abs(offsetX) != abs(offsetY) {
+		return 0, 0, 0, false
+	}
+	dx, dy = sign(offsetX), sign(offsetY)
+	distance = max(abs(offsetX), abs(offsetY))
+	if distance > maxDistance {
+		return 0, 0, 0, false
+	}
+	for step := 1; step < distance; step++ {
+		x, y := enemy.X+dx*step, enemy.Y+dy*step
+		if !g.terrainOpenAt(x, y) || g.enemyIndexAt(x, y) >= 0 {
+			return 0, 0, 0, false
+		}
+	}
+	return dx, dy, distance, true
+}
+
+// --- ゾワゾワ（敵の状態） ---
+
+// enemyAttackBackward はゾワゾワの敵 i が、海老さんと反対の向きの隣のマスへ通常攻撃を出す。
+// そこに別の敵がいればその敵を攻撃し（倒すと上位種になる）、いなければ空振りする。
+// AttackFromEnemy が StatusAilments.Backward > 0 の敵のときに呼ぶ（特技・痛恨は出さない）。
+func (g *Game) enemyAttackBackward(i int) {
+	enemy := g.state.Enemies[i]
+	dx, dy := sign(enemy.X-g.state.Player.X), sign(enemy.Y-g.state.Player.Y)
+	if dx == 0 && dy == 0 {
+		return
+	}
+	if target := g.enemyIndexAt(enemy.X+dx, enemy.Y+dy); target >= 0 {
+		g.AttackEnemyFromBlindEnemy(i, target)
+		return
+	}
+	enemyID, enemyX, enemyY := enemy.ID, enemy.X, enemy.Y
+	g.Enqueue(Action{
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sはゾワゾワして反対を向いて攻撃した", g.enemyDisplayName(enemy.Name)),
+		Execute: func(g *Game) {
+			if index := g.findEnemyForDefense(enemyID, enemyX, enemyY); index >= 0 {
+				g.state.Enemies[index].AttackTimer = 0.5
+				g.state.Enemies[index].AttackDirection = determineDirection(dx, dy)
+			}
+		},
+	})
+}

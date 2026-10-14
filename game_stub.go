@@ -30,6 +30,7 @@ type StatusAilments struct {
 	Paralysis   bool
 	Seal        bool
 	HasteOnWake bool
+	Backward    int
 }
 
 type Player struct {

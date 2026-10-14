@@ -184,12 +184,15 @@ func (g *Game) dropEnemyHeldItem(index int) {
 }
 
 // applyDamageToEnemy は敵へダメージを与えて金縛りを解除し、倒した場合は撃破処理を行う。
+// 倒れなかったときは系統の被弾時の処理（MonsterDefinition.OnDamaged）を呼ぶ。
 func (g *Game) applyDamageToEnemy(index, damage int) {
 	g.state.Enemies[index].Health -= damage
 	g.state.Enemies[index].StatusAilments.Paralysis = false
 	if g.state.Enemies[index].Health <= 0 {
 		g.defeatEnemy(index)
+		return
 	}
+	g.onEnemyDamaged(index, damage)
 }
 
 // defeatEnemyByEnemy は敵に倒された敵を取り除き、撃破した敵を上位種へ変化させる。
