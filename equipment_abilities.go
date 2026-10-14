@@ -218,6 +218,10 @@ func abilitiesGrantImmunity(abilities []EquipmentAbilityID, kind StatusKind) boo
 }
 
 func satietyLossInterval(armorAbilities []EquipmentAbilityID) int {
+	// AbilitySatori は !test 側で定義されるため、共有コードでは保存された能力 ID で判定する。
+	if hasEquipmentAbility(armorAbilities, "satori") {
+		return 0 // 時間経過による減少なし
+	}
 	if hasEquipmentAbility(armorAbilities, AbilitySatietyHunger) {
 		return hungrySatietyLossInterval
 	}
@@ -329,7 +333,8 @@ func nextDisposableArmorSharpness(sharpness int, abilities []EquipmentAbilityID)
 }
 
 func shouldReduceSatiety(moveCount int, armorAbilities []EquipmentAbilityID) bool {
-	return moveCount > 0 && moveCount%satietyLossInterval(armorAbilities) == 0
+	interval := satietyLossInterval(armorAbilities)
+	return interval > 0 && moveCount > 0 && moveCount%interval == 0
 }
 
 // playerAttackDeltas は武器能力に応じた攻撃対象方向を返す。
