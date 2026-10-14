@@ -10,6 +10,9 @@ func (g *Game) damagePlayer(damage int, source DamageSource) {
 	if damage <= 0 {
 		return
 	}
+	if g.headless {
+		g.headlessDamageTaken += damage
+	}
 	minHealth := 0
 	if g.immortal {
 		minHealth = 1 // 計測用の不死モード（BOT のレベル曲線を深い階まで測る）

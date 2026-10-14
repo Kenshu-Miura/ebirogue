@@ -75,6 +75,8 @@ type Enemy struct {
 	ShowOnMiniMap            bool
 	StatusAilments           StatusAilments // 状態異常
 	HeldItem                 Item           // 盗賊系の敵が持ち去ったアイテム
+	BossShellTurns           int            // 殻による防御上昇の残りターン
+	BossMinion               bool           // ボスが召喚した手下
 	Fleeing                  bool           // 盗品を持ってプレイヤーから逃走中かどうか
 }
 
@@ -128,13 +130,6 @@ type MonsterDefinition struct {
 	Disguise                 EnemyDisguise
 	Traits                   []EnemyTrait
 	IsBoss                   bool // ボスはランダム出現と上位種化の対象外
-}
-
-// provisionalBossDefinition は基にした敵の固有能力と画像（Type）を引き継いだボスを作る。
-func provisionalBossDefinition(base MonsterDefinition, id int, name string, health, attack, defense, experience int) MonsterDefinition {
-	boss := upperMonsterDefinition(base, id, base.Type, name, health, attack, defense, experience)
-	boss.IsBoss = true
-	return boss
 }
 
 // upperMonsterDefinition は基本種の固有能力を引き継ぎ、上位種の能力値と表示情報を設定する。
@@ -543,9 +538,9 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 	definitions[65] = upperMonsterDefinition(definitions[41], 65, "SageJellyfish", "ケンジャクラゲ", 160, 36, 12, 205)
 
 	// 仮のボス（wave1-C で本物のボスに置き換える）。既存の強い敵を基に能力値を上げたもの。
-	definitions[42] = provisionalBossDefinition(definitions[23], 42, "ヌシガンセキガニ", 160, 20, 13, 300)
-	definitions[43] = provisionalBossDefinition(definitions[32], 43, "ヌシトッカエダコ", 240, 25, 15, 500)
-	definitions[44] = provisionalBossDefinition(definitions[37], 44, "ヌシ蒼海竜", 340, 30, 17, 800)
+	definitions[42] = bossDefinition(42, "鉄壁ガニ王", "BossCrab", 110, 12, 7, 300, nil)
+	definitions[43] = bossDefinition(43, "深海ダコ将軍", "BossOctopus", 180, 18, 8, 500, nil)
+	definitions[44] = bossDefinition(44, "海竜王アカツキ", "BossDragon", 210, 16, 9, 800, nil)
 
 	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24, 40: 22, 41: 24, 49: 20, 50: 26, 51: 34, 64: 32, 65: 34} {
 		definition := definitions[id]

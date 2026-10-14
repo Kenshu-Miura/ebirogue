@@ -531,7 +531,10 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 		Duration: 0.5,
 		Message:  g.shieldDefenseMessage(enemyName, defense),
 		Execute: func(g *Game) {
-			enemy.AttackTimer = 0.5                            // AttackTimerを設定することで敵の攻撃アニメーションが実行される
+			enemy.AttackTimer = 0.5 // AttackTimerを設定することで敵の攻撃アニメーションが実行される
+			if MonsterDefinitions[enemyID].IsBoss && g.livingBossIndex(enemyID) < 0 {
+				return
+			}
 			enemy.AttackDirection = determineDirection(dx, dy) // 敵の攻撃方向を計算
 			g.applyPlayerShieldDefense(defense, source, enemyID, enemyX, enemyY)
 		},
@@ -611,6 +614,16 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 		// 罠は1回で消費する。同じ敵ターンに攻撃してくる別の敵では発動しない
 		g.state.Player.SetTrap = nil
 		enemyID, enemyX, enemyY, experience := enemy.ID, enemy.X, enemy.Y, enemy.ExperiencePoints
+		// ボスは炸裂装甲による即死に耐えるが、威力50の反撃ダメージは受ける。
+		if MonsterDefinitions[enemyID].IsBoss {
+			damage := rollEnemyAttackDamage(50, enemy.DefensePower, g.damageIntn())
+			g.Enqueue(Action{Duration: 0.5, Message: fmt.Sprintf("%sは即死を耐え、%dダメージを受けた。", enemy.Name, damage), Execute: func(g *Game) {
+				if index := g.findEnemyForDefense(enemyID, enemyX, enemyY); index >= 0 {
+					g.applyDamageToEnemy(index, damage)
+				}
+			}})
+			return
+		}
 		defeatAction := Action{
 			Duration: 0.5,
 			Message:  fmt.Sprintf("%sを倒した。", enemy.Name),

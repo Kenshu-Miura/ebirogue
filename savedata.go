@@ -45,6 +45,8 @@ type SavedItem struct {
 // SavedEnemy は敵1体のセーブ用表現。
 // MonsterDefinitionsのIDから再生成し、可変フィールドだけを上書きする。
 type SavedEnemy struct {
+	BossShellTurns   int  `json:",omitempty"`
+	BossMinion       bool `json:",omitempty"`
 	ID               int
 	X, Y             int
 	Health           int
