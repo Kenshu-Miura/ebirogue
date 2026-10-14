@@ -49,6 +49,10 @@ type bot struct {
 	lastTurn int
 	act      string // 直前に選んだ行動の分類（序盤の死亡分析の記録用。expert だけが設定する）
 	resting  bool   // expert が自然回復を待っている（回復しきるか敵が来るまで続ける）
+	// discarded は食料のために手放した道具（同じ階では拾い直さない）
+	discarded map[discardKey]bool
+	// hazardAvoided は expert が隣の危ない敵（膨らんだフグ・帯電したエイ）から続けて離れたターン数
+	hazardAvoided int
 }
 
 func newBot(g *Game, in *VirtualInput, p persona, seed int64) *bot {
@@ -351,6 +355,12 @@ func (b *bot) wantsToDescend() bool {
 	if b.persona == personaDiver || b.g.floorTurns > botFloorTurnLimit {
 		return true
 	}
+	if _, _, ok := b.pathStep(b.visibleFoodGoal); ok {
+		return false // 見えている食料を拾ってから降りる
+	}
+	if b.hungry() {
+		return true // 食料が無く空腹なら、探索より次の階で食料を探す
+	}
 	_, _, unexplored := b.pathStep(b.unexploredGoal)
 	return !unexplored
 }
@@ -391,12 +401,8 @@ func (b *bot) step() error {
 	}
 
 	player := &g.state.Player
-	if player.Satiety <= 15 {
-		if i := b.findInventory(isFoodItem); i >= 0 {
-			if used, err := b.useInventoryItem(i, "使う"); used || err != nil {
-				return err
-			}
-		}
+	if used, err := b.eatIfStarving(15); used || err != nil {
+		return err
 	}
 	lowHP := player.Health*100 < player.MaxHealth*40
 	if b.persona == personaCautious && lowHP {
@@ -434,12 +440,20 @@ func (b *bot) step() error {
 		}
 	}
 
+	// 食料: 満杯なら価値の低い道具を手放して空きを作り、足元の食料を拾う
+	if done, err := b.makeRoomForFood(); done || err != nil {
+		return err
+	}
+	if done, err := b.pickUpHere(); done || err != nil {
+		return err
+	}
+
 	// 階段の上で確認を閉じた後でも、降りたくなったら S で確認を開き直す
 	if g.state.Map[player.Y][player.X].Type == "stairs" && !b.bossAlive() && b.wantsToDescend() {
 		return b.tap(KeyS)
 	}
 
-	// 目的地: ボス > （性格に応じて）敵 > アイテム > 未探索 > 階段
+	// 目的地: ボス > 見えている食料 > （長居・空腹なら）階段 > （性格に応じて）敵 > アイテム > 未探索 > 階段
 	var goals []func(x, y int) bool
 	if b.bossAlive() {
 		if boss, ok := b.nearestBoss(); ok {
@@ -449,19 +463,29 @@ func (b *bot) step() error {
 	switch b.persona {
 	case personaDiver:
 		goals = append(goals, b.stairsGoal, b.unexploredGoal)
-	case personaAggressive, personaItemUser:
-		if enemy, ok := b.nearestEnemy(10); ok {
-			goals = append(goals, b.enemyGoal(enemy))
-		}
-		fallthrough
 	default:
-		if g.floorTurns > botFloorTurnLimit {
+		goals = append(goals, b.visibleFoodGoal)
+		if g.floorTurns > botFloorTurnLimit || b.hungry() {
 			goals = append(goals, b.stairsGoal)
 		}
-		goals = append(goals, b.itemGoal, b.unexploredGoal, b.stairsGoal)
+		if b.persona == personaAggressive || b.persona == personaItemUser {
+			if enemy, ok := b.nearestEnemy(10); ok {
+				goals = append(goals, b.enemyGoal(enemy))
+			}
+		}
+		goals = append(goals, b.pickableItemGoal, b.unexploredGoal, b.stairsGoal)
 	}
 	for _, goal := range goals {
 		if dx, dy, ok := b.pathStep(goal); ok {
+			return b.move(dx, dy)
+		}
+	}
+	// 通路を敵や発見済みの罠にふさがれているときは、敵を倒し罠を踏んで進む（同じ階に閉じ込められない）
+	for _, goal := range []func(x, y int) bool{b.stairsGoal, b.unexploredGoal} {
+		if dx, dy, ok := b.pathStepThrough(goal, true); ok {
+			if isOccupied(g, player.X+dx, player.Y+dy) {
+				return b.attack(dx, dy)
+			}
 			return b.move(dx, dy)
 		}
 	}
@@ -506,6 +530,9 @@ func (b *bot) fleeStep() (int, int, bool) {
 func (b *bot) equipUpgrades() (bool, error) {
 	player := &b.g.state.Player
 	for i, item := range player.Inventory {
+		if satietyHarmfulEquipment(item.GetID()) {
+			continue
+		}
 		switch item.(type) {
 		case *Weapon:
 			if player.EquippedWeapon != nil {
@@ -559,4 +586,185 @@ func (b *bot) randomInput() error {
 		keys = append(keys, randomInputKeys[b.rng.IntN(len(randomInputKeys))])
 	}
 	return b.tap(keys...)
+}
+
+// --- 食料の扱い（全性格で共通。random は使わない） ---
+
+// botHungrySatiety は満腹度がこれ以下で手持ちの食料が無ければ、探索より食料と階段を優先する目安。
+const botHungrySatiety = 30
+
+// discardKey は食料のために手放した道具を、同じ階で拾い直さないための記録。
+type discardKey struct{ floor, id int }
+
+func (b *bot) wasDiscarded(item Item) bool {
+	return b.discarded[discardKey{b.g.Floor, item.GetID()}]
+}
+
+// foodCarried は手持ちの食料の数（腐ったウインナーを含む）。
+func (b *bot) foodCarried() int {
+	n := 0
+	for _, item := range b.g.state.Player.Inventory {
+		if isFoodItem(item) {
+			n++
+		}
+	}
+	return n
+}
+
+// hungry は満腹度が低く、手持ちの食料も無いかどうか。
+func (b *bot) hungry() bool {
+	return b.g.state.Player.Satiety <= botHungrySatiety && b.foodCarried() == 0
+}
+
+// inventoryFull は所持品が満杯かどうか。
+func (b *bot) inventoryFull() bool {
+	p := &b.g.state.Player
+	return len(p.Inventory) >= p.MaxInventory
+}
+
+// visibleFoodGoal は (x, y) に見えている（ミニマップに表示されている）食料があるかどうか。
+// 所持品が満杯でも食料は目標にする（着く前に makeRoomForFood で空きを作る）。
+func (b *bot) visibleFoodGoal(x, y int) bool {
+	for _, item := range b.g.state.Items {
+		if ix, iy := item.GetPosition(); ix == x && iy == y && isFoodItem(item) && item.GetShowOnMiniMap() && !isStuckSanctuaryItem(item) {
+			return true
+		}
+	}
+	return false
+}
+
+// pickableItemGoal は itemGoal から、食料のために手放した道具を除いたもの。
+func (b *bot) pickableItemGoal(x, y int) bool {
+	if !b.itemGoal(x, y) {
+		return false
+	}
+	for _, item := range b.g.state.Items {
+		if ix, iy := item.GetPosition(); ix == x && iy == y && !b.wasDiscarded(item) {
+			return true
+		}
+	}
+	return false
+}
+
+// itemUnderPlayer は足元の道具を返す。
+func (b *bot) itemUnderPlayer() Item {
+	p := b.g.state.Player
+	for _, item := range b.g.state.Items {
+		if x, y := item.GetPosition(); x == p.X && y == p.Y {
+			return item
+		}
+	}
+	return nil
+}
+
+// discardPriority は所持品が満杯のとき、食料のために手放す順（小さいほど先に手放す）。手放さないものは false。
+func (b *bot) discardPriority(item Item) (int, bool) {
+	p := &b.g.state.Player
+	if equipable, ok := item.(Equipable); ok && p.IsEquipped(equipable) {
+		return 0, false
+	}
+	if isFoodItem(item) || isHealingItem(item) {
+		return 0, false
+	}
+	switch item.(type) {
+	case *Weapon, *Armor: // 予備の武器・盾
+		return 1, true
+	case *Accessory, *Arrow:
+		return 2, true
+	case *Card, *Cane, *Potion:
+		switch itemRoles[item.GetID()] {
+		case roleHarmful:
+			return 0, true
+		case roleHeal:
+			return 0, false
+		case roleBuff:
+			return 4, true
+		case roleAttack, roleEscape:
+			return 5, true
+		}
+	}
+	return 3, true
+}
+
+// makeRoomForFood は所持品が満杯で、見えている食料へ行けるとき、価値の低い道具を足元に置く
+// （足元がふさがっていれば投げる）。手放したら true。
+func (b *bot) makeRoomForFood() (bool, error) {
+	if !b.inventoryFull() {
+		return false, nil
+	}
+	if _, _, ok := b.pathStep(b.visibleFoodGoal); !ok {
+		return false, nil
+	}
+	best, bestPriority := -1, 1<<30
+	for i, item := range b.g.state.Player.Inventory {
+		if priority, ok := b.discardPriority(item); ok && priority < bestPriority {
+			best, bestPriority = i, priority
+		}
+	}
+	// 食料を2つ以上持っていれば、強化・攻撃・逃走の道具までは手放さない
+	if best < 0 || (bestPriority >= 4 && b.foodCarried() >= 2) {
+		return false, nil
+	}
+	p := b.g.state.Player
+	action := "置く"
+	if b.itemUnderPlayer() != nil || b.g.state.Map[p.Y][p.X].Type == "stairs" {
+		action = "投げる"
+	}
+	if b.discarded == nil {
+		b.discarded = map[discardKey]bool{}
+	}
+	b.discarded[discardKey{b.g.Floor, p.Inventory[best].GetID()}] = true
+	return b.useInventoryItem(best, action)
+}
+
+// pickUpHere は足元の食料を本物のメニュー経路（C→足元→拾う）で拾う。拾おうとしたら true。
+// 所持品が満杯で拾えなかった食料の上で、空きを作った後に使う。
+func (b *bot) pickUpHere() (bool, error) {
+	item := b.itemUnderPlayer()
+	if item == nil || !isFoodItem(item) || b.inventoryFull() || isStuckSanctuaryItem(item) || b.g.pickupBanned {
+		return false, nil
+	}
+	if err := b.tap(KeyC); err != nil {
+		return false, err
+	}
+	if !b.g.showMenu {
+		return false, b.closeWindows()
+	}
+	if err := b.tap(KeyRight); err != nil { // 右隣の「足元」
+		return false, err
+	}
+	for _, key := range []Key{KeyZ, KeyZ, KeyZ, KeyZ} { // 足元を開く → 「拾う」を選ぶ → 実行
+		if err := b.tap(key); err != nil {
+			return false, err
+		}
+		if !b.g.ShowGroundItem {
+			break
+		}
+	}
+	return true, b.closeWindows()
+}
+
+// eatIfStarving は満腹度が limit 以下なら手持ちの食料を食べる。腐ったウインナーは最後に回す。
+func (b *bot) eatIfStarving(limit int) (bool, error) {
+	if b.g.state.Player.Satiety > limit {
+		return false, nil
+	}
+	i := b.findInventory(func(item Item) bool { return isFoodItem(item) && item.GetID() != rottenSausageItemID })
+	if i < 0 {
+		i = b.findInventory(isFoodItem)
+	}
+	if i < 0 {
+		return false, nil
+	}
+	return b.useInventoryItem(i, "使う")
+}
+
+// satietyHarmfulEquipment は満腹度を余計に減らす・消費する装備（BOT は装備しない）。
+// 136・137 は満腹度を使う武器、155・156・159 は満腹度を使う盾・空腹用の盾・悟りの盾、69 は重甲の盾。
+func satietyHarmfulEquipment(id int) bool {
+	switch id {
+	case 69, 136, 137, 155, 156, 159:
+		return true
+	}
+	return false
 }
