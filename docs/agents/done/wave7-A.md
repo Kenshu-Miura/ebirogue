@@ -85,9 +85,9 @@
 ## 検証
 
 - `gofmt -l .` で差分なし。
-- `go test -tags test ./...`・`go test ./...`: 成功。
-- `TestSimBatch -sim.runs=1500 -sim.difficulty=all`: SIM1500_RESULT
-- `TestSimBatch -sim.runs=300 -sim.difficulty=all`: SIM300_RESULT
+- `go test -tags test ./...`・`go test ./...`: 成功（クラウドの Linux では `xvfb-run -a` で実行。ディスプレイが無いと Ebiten の初期化で止まる）。
+- `TestSimBatch -sim.runs=1500 -sim.difficulty=all`: 1512冒険すべてが共通化の前のコード（master と同じ HEAD `b3224c9`）と冒険ごとに完全一致し、集計も `reports/baseline.json` と完全一致（クリア 155・死亡 1348・BOT 行き詰まり 9、違反・ソフトロック・panic 0）。乱数の消費は変わっていない。
+- `TestSimBatch -sim.runs=300 -sim.difficulty=all`: 306冒険でクリア 33・死亡 272・BOT 行き詰まり 1、違反・ソフトロック・panic 0。
 
 ## 未決事項
 
