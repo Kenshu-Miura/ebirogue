@@ -506,7 +506,7 @@ func (g *Game) drawEmptyInventoryMessage(screen *ebiten.Image) {
 // 設定ウィンドウを描画する
 func (g *Game) drawSettingsWindow(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-	windowWidth, windowHeight := 580, 235
+	windowWidth, windowHeight := 580, 270
 	windowX := (screenWidth - windowWidth) / 2
 	windowY := (screenHeight - windowHeight) / 2
 
@@ -550,6 +550,17 @@ func (g *Game) drawSettingsWindow(screen *ebiten.Image) {
 		keyColor = color.NRGBA{255, 255, 0, 255}
 	}
 	text.Draw(screen, "キー設定", mplusNormalFont, windowX+45, windowY+140, keyColor)
+	replayLabel := "入力の記録を保存する: OFF"
+	if replayEnabled(g.settings) {
+		replayLabel = "入力の記録を保存する: ON"
+		if g.replaySuppressed {
+			replayLabel = "入力の記録を保存する: 次の冒険から"
+		}
+	}
+	if g.settingsSelectedIndex == 3 {
+		replayLabel = "→ " + replayLabel
+	}
+	text.Draw(screen, replayLabel, mplusNormalFont, windowX+45, windowY+175, color.White)
 	text.Draw(screen, g.keyGuide("↑/↓:選択  ←/→:切替  Z:キー設定  X:戻る"), mplusSmallFont, windowX+15, windowY+windowHeight-20, color.NRGBA{200, 200, 200, 255})
 }
 

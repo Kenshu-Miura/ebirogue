@@ -104,6 +104,7 @@ type SavedPlayer struct {
 
 // SaveData は中断セーブ全体
 type SaveData struct {
+	Replay            *ReplayData `json:",omitempty"`
 	Version           int
 	Seed              int64  // 冒険のシード（フロア生成に使う）
 	RNGState          []byte // ターン進行用乱数源（gameRNG）の内部状態
@@ -205,10 +206,11 @@ func inMapBounds(x, y, width, height int) bool {
 
 // GameSettings はゲーム設定
 type GameSettings struct {
-	LastDifficulty Difficulty        `json:"lastDifficulty"`
-	Fullscreen     bool              `json:"fullscreen"`
-	ShowMiniMap    bool              `json:"showMinimap"`
-	KeyBindings    map[string]string `json:"keyBindings"`
+	SaveInputReplay *bool             `json:"saveInputReplay,omitempty"`
+	LastDifficulty  Difficulty        `json:"lastDifficulty"`
+	Fullscreen      bool              `json:"fullscreen"`
+	ShowMiniMap     bool              `json:"showMinimap"`
+	KeyBindings     map[string]string `json:"keyBindings"`
 }
 
 // defaultSettings は設定の初期値を返す
