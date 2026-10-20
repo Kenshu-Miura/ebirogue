@@ -28,7 +28,7 @@ var sleepGasTrapEffect = func(g *Game) {
 		Message:  message,
 		Execute: func(g *Game) {
 			if !resisted {
-				g.state.Player.StatusAilments.Sleep = 10 // 10ターン睡眠
+				g.setPlayerStatus(StatusSleep, 10) // 10ターン睡眠
 			}
 		},
 	})
@@ -65,7 +65,7 @@ var slowTrapEffect = func(g *Game) {
 		Message:  message,
 		Execute: func(g *Game) {
 			if !resisted {
-				g.state.Player.StatusAilments.Slow = 10
+				g.setPlayerStatus(StatusSlow, 10)
 			}
 		},
 	})

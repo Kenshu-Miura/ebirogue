@@ -218,9 +218,7 @@ func troubleCard(g *Game) {
 		message := "HPが全回復した。"
 		switch troubleToFix(p.StatusAilments, p.Satiety, playerHasCursedBelongings(p), p.Power, p.MaxPower) {
 		case troubleStatus:
-			s := &p.StatusAilments
-			s.Confusion, s.Sleep, s.Blind, s.Slow, s.MouthSeal, s.BearTrap = 0, 0, 0, 0, 0, 0
-			s.Paralysis, s.Seal, s.HasteOnWake = false, false, false
+			g.clearPlayerBadStatuses()
 			message += "悪い状態異常がすべて解けた。"
 		case troubleHunger:
 			p.Satiety = min(50, p.MaxSatiety)

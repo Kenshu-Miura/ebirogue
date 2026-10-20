@@ -143,7 +143,7 @@ func sandMoguriAttack(enemy *Enemy, g *Game) {
 			g.EnqueueMessage(fmt.Sprintf("%sが目潰しを防いだ。", guard), 0.5)
 			return
 		}
-		g.state.Player.StatusAilments.Blind = 5
+		g.setPlayerStatus(StatusBlind, 5)
 		g.EnqueueMessage("海老さんは目が見えなくなった。", 0.5)
 	})
 }

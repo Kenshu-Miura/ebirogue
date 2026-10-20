@@ -116,8 +116,8 @@ func (g *Game) explodeEnemiesAround(explosion EnemyExplosion, bomberID, bomberX,
 			g.revealEnemy(i)
 		}
 		target.Health -= damage
-		target.StatusAilments.Sleep = 0
-		target.StatusAilments.Paralysis = false
+		clearStatus(&target.StatusAilments, StatusSleep)
+		clearStatus(&target.StatusAilments, StatusParalysis)
 		if target.Health <= 0 {
 			defeated := *target
 			g.EnqueueMessage(fmt.Sprintf("%sは爆発に巻き込まれて倒れた", g.enemyDisplayName(defeated.Name)), 0.4)

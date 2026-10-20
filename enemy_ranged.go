@@ -169,8 +169,8 @@ func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targ
 					continue
 				}
 				target.Health -= rollEnemyAttackDamage(attack.AttackPower, target.DefensePower, g.damageIntn())
-				target.StatusAilments.Sleep = 0
-				target.StatusAilments.Paralysis = false
+				clearStatus(&target.StatusAilments, StatusSleep)
+				clearStatus(&target.StatusAilments, StatusParalysis)
 				if target.Health <= 0 {
 					defeated := *target
 					g.dropEnemyHeldItem(i)

@@ -67,6 +67,6 @@ var bearTrapEffect = func(g *Game) {
 		return
 	}
 	g.Enqueue(Action{Duration: 0.5, Message: "トラバサミに足を挟まれた", Execute: func(g *Game) {
-		g.state.Player.StatusAilments.BearTrap = max(g.state.Player.StatusAilments.BearTrap, 6)
+		g.setPlayerStatus(StatusBearTrap, 6) // 表の規則（長い方を残す）
 	}})
 }

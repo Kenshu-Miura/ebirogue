@@ -273,8 +273,8 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 				Duration: 0.5,
 				Message:  message,
 				Execute: func(g *Game) {
-					if !resisted && g.state.Player.StatusAilments.Slow < 8 {
-						g.state.Player.StatusAilments.Slow = 8
+					if !resisted {
+						g.stackPlayerStatus(StatusSlow, 8, StackLonger)
 					}
 				},
 			})
