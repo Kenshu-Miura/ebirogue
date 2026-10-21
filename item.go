@@ -151,7 +151,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 					Duration: 0.5,
 					Message:  fmt.Sprintf("%sを封印状態にした", target.GetName()),
 					Execute: func(g *Game) {
-						g.state.Enemies[index].StatusAilments.Seal = true
+						g.applyEnemyStatus(index, StatusSeal, 1)
 						g.isActioned = true
 					},
 				}
@@ -180,11 +180,11 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 					if _, ok := target.(*Player); ok {
 						// If target is of type *Player（装備能力で無効なら眠らない）
 						if !immune {
-							g.state.Player.StatusAilments.Sleep = 10
+							g.setPlayerStatus(StatusSleep, 10)
 						}
 					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 						// If target is of type *Enemy
-						g.state.Enemies[index].StatusAilments.Sleep = 10
+						g.applyEnemyStatus(index, StatusSleep, 10)
 					}
 					g.isActioned = true
 				},
@@ -208,11 +208,11 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 					if _, ok := target.(*Player); ok {
 						// If target is of type *Player（装備能力で無効なら混乱しない）
 						if !immune {
-							g.state.Player.StatusAilments.Confusion = 10
+							g.setPlayerStatus(StatusConfusion, 10)
 						}
 					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 						// If target is of type *Enemy
-						g.state.Enemies[index].StatusAilments.Confusion = 10
+						g.applyEnemyStatus(index, StatusConfusion, 10)
 					}
 					g.isActioned = true
 				},
@@ -226,7 +226,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				if guardMessage, immune := g.playerImmunityMessage(StatusBlind); immune {
 					message = guardMessage // 装備能力で無効なら目潰しにならない
 				} else {
-					g.state.Player.StatusAilments.Blind = 30
+					g.setPlayerStatus(StatusBlind, 30)
 				}
 				// ミニマップを更新するためのフラグを設定
 				g.miniMapDirty = true
@@ -236,7 +236,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 				}
 			} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 				// If target is of type *Enemy - 永続的な目潰し状態にする
-				g.state.Enemies[index].StatusAilments.Blind = 999
+				g.applyEnemyStatus(index, StatusBlind, 999)
 			}
 
 			action := Action{

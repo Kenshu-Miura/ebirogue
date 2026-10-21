@@ -109,7 +109,7 @@ func backwardCard(g *Game) {
 			enemy := &g.state.Enemies[i]
 			dx, dy := enemy.X-g.state.Player.X, enemy.Y-g.state.Player.Y
 			if abs(dx) <= 1 && abs(dy) <= 1 && (dx != 0 || dy != 0) {
-				enemy.StatusAilments.Backward = 20
+				g.applyEnemyStatus(i, StatusBackward, 20)
 				count++
 				g.EnqueueMessage(fmt.Sprintf("%sはゾワゾワした！", g.enemyDisplayName(enemy.Name)), 0.4)
 			}

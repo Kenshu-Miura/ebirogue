@@ -398,7 +398,7 @@ func generateEnemies(rooms []Room, playerRoom Room, player *Player, floor int, r
 		enemy := CreateEnemyByID(enemyID, enemyX, enemyY)
 		prepareSpawnedEnemy(&enemy, floor, rng.Intn)
 		if rng.Float64() < 0.5 {
-			enemy.StatusAilments.Sleep = -1 // -1で仮眠状態を表現（通常の睡眠と区別）
+			setStatusTurns(&enemy.StatusAilments, StatusSleep, enemyNapSleep) // 仮眠（通常の睡眠と区別）
 		}
 
 		enemies = append(enemies, enemy)

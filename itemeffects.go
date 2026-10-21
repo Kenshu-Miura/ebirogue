@@ -200,7 +200,7 @@ var sealEnemy = func(g *Game) {
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを封印状態にした", g.state.Enemies[g.TargetEnemyIndex].GetName()),
 		Execute: func(g *Game) {
-			g.state.Enemies[g.TargetEnemyIndex].StatusAilments.Seal = true
+			g.applyEnemyStatus(g.TargetEnemyIndex, StatusSeal, 1)
 			g.TargetEnemyIndex = -1
 		},
 	}
@@ -504,7 +504,7 @@ var vacuumSlash = func(g *Game) {
 
 				enemy.Health -= damage
 				wakeFromSleep(&enemy.StatusAilments)
-				enemy.StatusAilments.Paralysis = false
+				clearStatus(&enemy.StatusAilments, StatusParalysis)
 				if enemy.Health <= 0 {
 					defeatedExperience += enemy.ExperiencePoints
 					g.EnqueueMessage(fmt.Sprintf("%sを倒した。", enemy.Name), 0.4)
@@ -647,7 +647,7 @@ var hasteAllEnemies = func(g *Game) {
 				return
 			}
 			for i := range g.state.Enemies {
-				g.state.Enemies[i].StatusAilments.Haste = enemyHasteCardTurns
+				g.applyEnemyStatus(i, StatusHaste, enemyHasteCardTurns)
 			}
 			g.EnqueueMessage("フロアの敵たちの動きが速くなった！", 0.5)
 			g.isActioned = true
@@ -837,7 +837,7 @@ var sealPlayerMouth = func(g *Game) {
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを使用した。口が封じられて開かなくなった", item.GetName()),
 		Execute: func(g *Game) {
-			g.state.Player.StatusAilments.MouthSeal = mouthSealCardTurns
+			g.setPlayerStatus(StatusMouthSeal, mouthSealCardTurns)
 			g.isActioned = true
 		},
 	})
@@ -1205,8 +1205,8 @@ var sleepAllEnemiesInRoom = func(g *Game) {
 				for i := range g.state.Enemies {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
-						g.state.Enemies[i].StatusAilments.Sleep = 10         // 10ターン睡眠
-						g.state.Enemies[i].StatusAilments.HasteOnWake = true // 目覚めた時に倍速化する
+						g.applyEnemyStatus(i, StatusSleep, 10)              // 10ターン睡眠
+						markHasteOnWake(&g.state.Enemies[i].StatusAilments) // 目覚めた時に倍速化する
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
@@ -1223,8 +1223,8 @@ var sleepAllEnemiesInRoom = func(g *Game) {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					// 周囲1マス以内の判定
 					if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 {
-						g.state.Enemies[i].StatusAilments.Sleep = 10         // 10ターン睡眠
-						g.state.Enemies[i].StatusAilments.HasteOnWake = true // 目覚めた時に倍速化する
+						g.applyEnemyStatus(i, StatusSleep, 10)              // 10ターン睡眠
+						markHasteOnWake(&g.state.Enemies[i].StatusAilments) // 目覚めた時に倍速化する
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
@@ -1261,7 +1261,7 @@ var confuseAllEnemiesInRoom = func(g *Game) {
 				for i := range g.state.Enemies {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
-						g.state.Enemies[i].StatusAilments.Confusion = 10 // 10ターン混乱
+						g.applyEnemyStatus(i, StatusConfusion, 10) // 10ターン混乱
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
@@ -1278,7 +1278,7 @@ var confuseAllEnemiesInRoom = func(g *Game) {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					// 周囲1マス以内の判定
 					if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 {
-						g.state.Enemies[i].StatusAilments.Confusion = 10 // 10ターン混乱
+						g.applyEnemyStatus(i, StatusConfusion, 10) // 10ターン混乱
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
@@ -1315,7 +1315,7 @@ var blindAllEnemiesInRoom = func(g *Game) {
 				for i := range g.state.Enemies {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
-						g.state.Enemies[i].StatusAilments.Blind = 10 // 10ターン目潰し状態
+						g.applyEnemyStatus(i, StatusBlind, 10) // 10ターン目潰し状態
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
@@ -1332,7 +1332,7 @@ var blindAllEnemiesInRoom = func(g *Game) {
 					enemyX, enemyY := g.state.Enemies[i].GetPosition()
 					// 周囲1マス以内の判定
 					if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 {
-						g.state.Enemies[i].StatusAilments.Blind = 10 // 10ターン目潰し状態
+						g.applyEnemyStatus(i, StatusBlind, 10) // 10ターン目潰し状態
 						// 個別の敵に対してメッセージを追加
 						action := Action{
 							Duration: 0.4,
@@ -1368,7 +1368,7 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 				enemyX, enemyY := g.state.Enemies[i].GetPosition()
 				// 周囲8マス以内の判定（8方向）
 				if abs(enemyX-playerX) <= 1 && abs(enemyY-playerY) <= 1 && !(enemyX == playerX && enemyY == playerY) {
-					g.state.Enemies[i].StatusAilments.Paralysis = true // 金縛り状態
+					g.applyEnemyStatus(i, StatusParalysis, 1) // 金縛り状態（最終ボスは受け付けない）
 					enemiesParalyzed++
 				}
 			}
@@ -1396,7 +1396,7 @@ var sleepPotion = func(g *Game) {
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
 		Execute: func(g *Game) {
 			if !immune {
-				g.state.Player.StatusAilments.Sleep = 10 // 10ターン睡眠
+				g.setPlayerStatus(StatusSleep, 10) // 10ターン睡眠
 			}
 		},
 	}
@@ -1426,7 +1426,7 @@ var confusionPotion = func(g *Game) {
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
 		Execute: func(g *Game) {
 			if !immune {
-				g.state.Player.StatusAilments.Confusion = 10 // 10ターン混乱
+				g.setPlayerStatus(StatusConfusion, 10) // 10ターン混乱
 			}
 		},
 	}
@@ -1456,7 +1456,7 @@ var blindPotion = func(g *Game) {
 		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
 		Execute: func(g *Game) {
 			if !immune {
-				g.state.Player.StatusAilments.Blind = 30 // 30ターン目潰し状態
+				g.setPlayerStatus(StatusBlind, 30) // 30ターン目潰し状態
 			}
 		},
 	}

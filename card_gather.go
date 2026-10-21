@@ -69,7 +69,7 @@ const (
 
 // troubleToFix は回復の優先順位だけを決める。状態異常は悪いものだけを対象にする。
 func troubleToFix(s StatusAilments, satiety int, cursed bool, power, maxPower int) troubleKind {
-	if s.Confusion > 0 || s.Sleep > 0 || s.Blind > 0 || s.Slow > 0 || s.MouthSeal > 0 || s.BearTrap > 0 || s.Paralysis || s.Seal {
+	if hasBadStatus(s) {
 		return troubleStatus
 	}
 	if satiety == 0 {

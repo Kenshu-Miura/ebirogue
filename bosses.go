@@ -30,10 +30,32 @@ func bossDefinition(id int, name, kind string, hp, attack, defense, exp int, spe
 		SpecialAttack: special, SpecialAttackProbability: 0.35}
 }
 
-// ボスの妨害は短時間だけ有効。封印・鈍足・目潰しは通常どおり有効。
-// 最終ボスだけ金縛りに耐性を持つ。仮眠（-1）は通常の起床処理に任せる。
+// bossStatusImmunities はボスが受け付けない状態。最終ボスだけ金縛りに耐性を持つ。
+var bossStatusImmunities = map[int][]StatusKind{
+	44: {StatusParalysis},
+}
+
+func isBossEnemy(e Enemy) bool {
+	return e.Type == "BossCrab" || e.Type == "BossOctopus" || e.Type == "BossDragon"
+}
+
+// bossStatusImmune はボス e が状態 kind を受け付けないかを返す（applyEnemyStatus が使う）。
+func bossStatusImmune(e Enemy, kind StatusKind) bool {
+	if !isBossEnemy(e) {
+		return false
+	}
+	for _, immune := range bossStatusImmunities[e.ID] {
+		if immune == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// ボスの妨害は短時間だけ有効（状態の表の BossShortened）。封印・鈍足・目潰しは通常どおり有効。
+// 受け付けない状態（bossStatusImmunities）はここでも解く。仮眠（-1）は通常の起床処理に任せる。
 func normalizeBossStatus(e *Enemy) {
-	if e.Type != "BossCrab" && e.Type != "BossOctopus" && e.Type != "BossDragon" {
+	if !isBossEnemy(*e) {
 		return
 	}
 	limit := 0
@@ -44,14 +66,18 @@ func normalizeBossStatus(e *Enemy) {
 		limit = bossOctopusControlTurns
 	case 44:
 		limit = bossDragonControlTurns
-		e.StatusAilments.Paralysis = false
+	}
+	for _, kind := range bossStatusImmunities[e.ID] {
+		clearStatus(&e.StatusAilments, kind)
 	}
 	if limit == 0 {
 		return
 	}
-	e.StatusAilments.Sleep = min(e.StatusAilments.Sleep, limit)
-	e.StatusAilments.Confusion = min(e.StatusAilments.Confusion, limit)
-	e.StatusAilments.Backward = min(e.StatusAilments.Backward, limit)
+	for _, def := range statusDefs {
+		if def.BossShortened {
+			def.SetTurns(&e.StatusAilments, min(def.Turns(&e.StatusAilments), limit))
+		}
+	}
 }
 
 func advanceBossState(e *Enemy) {
@@ -135,7 +161,7 @@ func octopusBossSpecial(e *Enemy, g *Game) {
 		g.Enqueue(Action{Duration: 0.5, Message: "深海ダコ将軍が墨を吐いた！", Execute: func(g *Game) {
 			i := g.livingBossIndex(id)
 			if i >= 0 && !g.state.Enemies[i].StatusAilments.Seal && !g.playerOnSanctuary() && !g.playerBlocksStatus(StatusBlind) {
-				g.state.Player.StatusAilments.Blind = max(g.state.Player.StatusAilments.Blind, bossInkDuration)
+				g.stackPlayerStatus(StatusBlind, bossInkDuration, StackLonger)
 			}
 		}})
 		return

@@ -191,7 +191,7 @@ func (g *Game) applyDamageToEnemy(index, damage int) {
 		g.revealEnemy(index) // 別の敵に化けている敵は攻撃を受けると正体を現す
 	}
 	g.state.Enemies[index].Health -= damage
-	g.state.Enemies[index].StatusAilments.Paralysis = false
+	g.clearEnemyStatus(index, StatusParalysis)
 	if g.state.Enemies[index].Health <= 0 {
 		g.defeatEnemy(index)
 		return

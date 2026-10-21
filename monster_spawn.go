@@ -299,7 +299,7 @@ func (g *Game) CheckSleepingEnemyWakeUp() {
 		// プレイヤーが同じ部屋に入った場合
 		if isSameRoom(playerX, playerY, enemyX, enemyY, g.rooms) {
 			if g.random().Float64() < 0.5 { // 50%の確率で起床
-				enemy.StatusAilments.Sleep = 0
+				clearStatus(&enemy.StatusAilments, StatusSleep)
 			}
 		}
 	}
@@ -335,7 +335,7 @@ func (g *Game) WakeUpSleepingEnemyByProximity(enemyIndex int) {
 	// プレイヤーが隣接している場合
 	adjacent := (abs(playerX-enemyX) <= 1 && abs(playerY-enemyY) <= 1)
 	if adjacent && g.random().Float64() < 0.5 { // 50%の確率で起床
-		enemy.StatusAilments.Sleep = 0
+		clearStatus(&enemy.StatusAilments, StatusSleep)
 	}
 }
 
@@ -345,7 +345,7 @@ func (g *Game) WakeUpSleepingEnemyByAttack(enemyIndex int) {
 
 	// 仮眠状態の敵は攻撃を受けると必ず起床
 	if enemy.StatusAilments.Sleep == -1 {
-		enemy.StatusAilments.Sleep = 0
+		clearStatus(&enemy.StatusAilments, StatusSleep)
 	}
 }
 

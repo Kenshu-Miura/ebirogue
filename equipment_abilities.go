@@ -176,17 +176,10 @@ var statusImmunities = map[EquipmentAbilityID][]StatusKind{}
 
 // statusKindLabel は「〜を防いだ」のメッセージに使う状態異常の名前を返す。
 func statusKindLabel(kind StatusKind) string {
+	if def, ok := statusDefOf(kind); ok {
+		return def.Name
+	}
 	switch kind {
-	case StatusConfusion:
-		return "混乱"
-	case StatusSleep:
-		return "睡眠"
-	case StatusBlind:
-		return "目潰し"
-	case StatusSlow:
-		return "鈍足"
-	case StatusBearTrap:
-		return "トラバサミ"
 	case StatusPoison:
 		return "毒"
 	case StatusCurse:
