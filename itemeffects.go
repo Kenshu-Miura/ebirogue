@@ -188,6 +188,10 @@ var setTrap = func(g *Game) {
 
 var shiftChange = func(g *Game) {
 	//プレイヤーとインデックスの敵の位置を入れ替える
+	if g.TargetEnemyIndex >= 0 && g.TargetEnemyIndex < len(g.state.Enemies) && g.state.Enemies[g.TargetEnemyIndex].ID == shopkeeperMonsterID {
+		g.EnqueueMessage("店主は入れ替わらなかった", 0.4) // 店主は場所替えを受けない（wave10-B）
+		return
+	}
 	action := Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sと入れ替わった", g.state.Enemies[g.TargetEnemyIndex].GetName()),

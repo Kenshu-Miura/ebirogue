@@ -11,7 +11,7 @@ func (g *Game) specialEnemyTarget(i int) int {
 	target, distance := -2, int(^uint(0)>>1)
 	decoy := false
 	for j, other := range g.state.Enemies {
-		if j == i || other.Health <= 0 {
+		if j == i || other.Health <= 0 || peacefulShopkeeper(other) {
 			continue
 		}
 		isDecoy := statusActive(other.StatusAilments, StatusDecoy)

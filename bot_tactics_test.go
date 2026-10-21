@@ -52,7 +52,7 @@ func (b *bot) enemiesWithin(r int) []Enemy {
 	p := b.g.state.Player
 	var out []Enemy
 	for _, e := range b.g.state.Enemies {
-		if activeEnemy(e) && max(abs(e.X-p.X), abs(e.Y-p.Y)) <= r {
+		if activeEnemy(e) && !botIgnoresEnemy(e) && max(abs(e.X-p.X), abs(e.Y-p.Y)) <= r {
 			out = append(out, e)
 		}
 	}
@@ -121,6 +121,7 @@ func (b *bot) pathStepWithin(goal func(x, y int) bool, maxSteps int) (int, int, 
 			blocked[trap.Y*width+trap.X] = true
 		}
 	}
+	b.blockShopItems(blocked, width, height)
 	start := g.state.Player.Y*width + g.state.Player.X
 	first := make([]int, width*height)
 	dist := make([]int, width*height)

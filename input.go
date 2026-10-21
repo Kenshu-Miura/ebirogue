@@ -61,7 +61,7 @@ func (g *Game) OpenDoor() {
 
 func (g *Game) processDKeyPress() {
 
-	if g.keys().JustPressed(KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt {
+	if g.keys().JustPressed(KeyD) && !g.showInventory && !g.isCombatActive && !g.ShowGroundItem && !g.showStairsPrompt && g.shopPrompt == nil {
 		equippedArrow := g.state.Player.EquippedArrow
 		if !g.shootArrow(equippedArrow, 10) {
 			g.dPressed = false
@@ -303,7 +303,7 @@ func (g *Game) handleInventoryInput() error {
 		}
 
 		// 何もメニューが開いていない場合はメニューを開く（メッセージ履歴・設定・中断確認・ヘルプの表示中は除く）
-		if !g.showStairsPrompt && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp {
+		if !g.showStairsPrompt && g.shopPrompt == nil && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp {
 			// 睡眠状態の場合はメニューを開けない
 			if g.state.Player.StatusAilments.Sleep > 0 {
 				return nil
@@ -976,7 +976,7 @@ func (g *Game) handleMessageLogInput() error {
 	// 他のウィンドウが開いていない時だけLキーで履歴を開く
 	if g.keys().JustPressed(KeyL) &&
 		!g.showInventory && !g.ShowGroundItem && !g.showMenu &&
-		!g.showStairsPrompt && !g.showEmptyInventoryMessage &&
+		!g.showStairsPrompt && g.shopPrompt == nil && !g.showEmptyInventoryMessage &&
 		!g.showSettings && !g.showSuspendPrompt && !g.showHelp &&
 		!g.showBlankCardMenu &&
 		g.state.Player.StatusAilments.Sleep == 0 {

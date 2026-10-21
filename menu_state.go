@@ -33,6 +33,7 @@ func (g *Game) closeAllMenus() {
 	g.returnToMenuFromHelp = false
 	g.showRunHistory = false
 	g.showStairsPrompt = false
+	g.shopPrompt = nil
 	g.showNameInput = false
 	g.showKeyConfig = false
 	g.keyConfigCapturing = false

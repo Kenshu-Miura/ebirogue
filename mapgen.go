@@ -10,6 +10,7 @@ type Room struct {
 	X, Y          int
 	Width, Height int
 	Center        Coordinate
+	Role          RoomRole // 特別な部屋の用途（special_rooms.go。通常の部屋は空）
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {

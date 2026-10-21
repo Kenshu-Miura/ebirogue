@@ -267,6 +267,9 @@ func selectMonsterForFloor(floor int, banned map[int]bool, intn func(int) int) i
 func (g *Game) SetNextSpawnInterval() {
 	g.spawnInterval = MinSpawnInterval + g.randIntn(MaxSpawnInterval-MinSpawnInterval+1)
 	g.spawnInterval = ringSpawnInterval(g.spawnInterval, g.playerAbilityCount(AbilityMonsterCall))
+	if g.shopAlarm {
+		g.spawnInterval = shopAlarmSpawnInterval(g.spawnInterval) // 泥棒をした階は敵が湧きやすい（wave10-B）
+	}
 }
 
 // 初期化時の湧き設定

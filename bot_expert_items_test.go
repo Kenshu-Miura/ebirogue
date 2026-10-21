@@ -505,7 +505,7 @@ func (b *bot) worstInventoryItem() (int, int) {
 
 // worthPicking は床の道具を拾う（満杯なら入れ替える）価値があるかどうか。不利なカードは拾わない。
 func (b *bot) worthPicking(item Item) bool {
-	if isStuckSanctuaryItem(item) || b.wasDiscarded(item) || !item.GetShowOnMiniMap() {
+	if isStuckSanctuaryItem(item) || b.wasDiscarded(item) || !item.GetShowOnMiniMap() || botAvoidsItem(item) {
 		return false
 	}
 	v := b.keepValue(item)

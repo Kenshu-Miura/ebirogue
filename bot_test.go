@@ -115,14 +115,15 @@ func (b *bot) windowOpen() bool {
 	}
 	return g.showInventory || g.ShowGroundItem || g.showMenu || g.showEmptyInventoryMessage ||
 		g.showMessageLog || g.showSettings || g.showSuspendPrompt || g.showHelp || g.showBlankCardMenu ||
-		g.showDifficultySelect || g.showClearScreen || g.showRunHistory || g.showNameInput || g.showItemActions || g.showItemDescription || g.useIdentifyItem || g.usePotInsert
+		g.showDifficultySelect || g.showClearScreen || g.showRunHistory || g.showNameInput || g.showItemActions || g.showItemDescription || g.useIdentifyItem || g.usePotInsert ||
+		g.shopPrompt != nil
 }
 
 // closeWindows は開いているウィンドウを閉じる（C で全て閉じ、閉じない種類は X で戻る）。
 func (b *bot) closeWindows() error {
 	for i := 0; i < 8 && b.windowOpen(); i++ {
 		key := KeyC
-		if b.g.showNameInput || b.g.showMessageLog || b.g.showHelp || b.g.showSettings || b.g.showSuspendPrompt || b.g.showBlankCardMenu || i%2 == 1 {
+		if b.g.showNameInput || b.g.showMessageLog || b.g.showHelp || b.g.showSettings || b.g.showSuspendPrompt || b.g.showBlankCardMenu || b.g.shopPrompt != nil || i%2 == 1 {
 			key = KeyX
 		}
 		if b.g.showDifficultySelect || b.g.showClearScreen {
@@ -240,6 +241,9 @@ func (b *bot) adjacentEnemy() (int, int, bool) {
 	p := b.g.state.Player
 	for _, enemy := range b.g.state.Enemies {
 		dx, dy := enemy.X-p.X, enemy.Y-p.Y
+		if botIgnoresEnemy(enemy) {
+			continue
+		}
 		if abs(dx) <= 1 && abs(dy) <= 1 && (dx != 0 || dy != 0) && b.canStep(p.X, p.Y, dx, dy) {
 			return dx, dy, true
 		}
@@ -252,6 +256,9 @@ func (b *bot) nearestEnemy(maxDistance int) (Enemy, bool) {
 	best, found := Enemy{}, false
 	bestDistance := maxDistance + 1
 	for _, enemy := range b.g.state.Enemies {
+		if botIgnoresEnemy(enemy) {
+			continue
+		}
 		if d := max(abs(enemy.X-p.X), abs(enemy.Y-p.Y)); d < bestDistance {
 			best, bestDistance, found = enemy, d, true
 		}
@@ -306,6 +313,7 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 			blocked[enemy.Y*width+enemy.X] = true
 		}
 	}
+	b.blockShopItems(blocked, width, height)
 	for _, trap := range g.state.MapTraps {
 		if through {
 			break
@@ -361,7 +369,7 @@ func (b *bot) itemGoal(x, y int) bool {
 		return false
 	}
 	for _, item := range b.g.state.Items {
-		if ix, iy := item.GetPosition(); ix == x && iy == y && !isStuckSanctuaryItem(item) {
+		if ix, iy := item.GetPosition(); ix == x && iy == y && !isStuckSanctuaryItem(item) && !botAvoidsItem(item) {
 			return true
 		}
 	}
@@ -418,6 +426,9 @@ func (b *bot) step() error {
 	}
 	if b.windowOpen() {
 		return b.closeWindows()
+	}
+	if done, err := b.returnUnpaidItem(); done || err != nil {
+		return err
 	}
 	// 何度も行動が空振りしたら、ランダムな方向へ動いて抜け出す
 	if b.idle > 20 && b.idle%5 == 0 {
@@ -542,6 +553,9 @@ func (b *bot) fleeStep() (int, int, bool) {
 		}
 		score := 1 << 30
 		for _, enemy := range b.g.state.Enemies {
+			if botIgnoresEnemy(enemy) {
+				continue
+			}
 			score = min(score, max(abs(enemy.X-p.X-s[0]), abs(enemy.Y-p.Y-s[1])))
 		}
 		if score > best {
@@ -652,7 +666,7 @@ func (b *bot) inventoryFull() bool {
 // 所持品が満杯でも食料は目標にする（着く前に makeRoomForFood で空きを作る）。
 func (b *bot) visibleFoodGoal(x, y int) bool {
 	for _, item := range b.g.state.Items {
-		if ix, iy := item.GetPosition(); ix == x && iy == y && isFoodItem(item) && item.GetShowOnMiniMap() && !isStuckSanctuaryItem(item) && !b.wasDiscarded(item) {
+		if ix, iy := item.GetPosition(); ix == x && iy == y && isFoodItem(item) && item.GetShowOnMiniMap() && !isStuckSanctuaryItem(item) && !b.wasDiscarded(item) && !botAvoidsItem(item) {
 			return true
 		}
 	}

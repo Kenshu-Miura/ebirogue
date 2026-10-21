@@ -233,7 +233,8 @@ func TestAdditionalPotEffects(t *testing.T) {
 					t.Fatal("bottomless retained item")
 				}
 			case 230:
-				if len(pot.Contents) != 0 || g.state.Player.Cash != 100 {
+				// 換金の額は店の売値（wave10-B）。金の剣 1500円×強化+2で 2100、呪いで半額 1050、売値はその半分
+				if len(pot.Contents) != 0 || g.state.Player.Cash != 525 {
 					t.Fatal("cash conversion")
 				}
 			}

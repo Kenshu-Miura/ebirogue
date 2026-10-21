@@ -883,8 +883,14 @@ func TestFloorItemsUseFloorTable(t *testing.T) {
 		for _, floor := range []int{1, 2, 3} {
 			player := newInitialPlayer()
 			_, _, items, _, _, traps := GenerateRandomMapFor(70, 70, floor-1, &player, newFloorRNG(seed, floor), DifficultyBeginner)
-			if len(items) != floorItemBaseCount {
-				t.Fatalf("seed %d floor %d: %d items", seed, floor, len(items))
+			floorItems := 0 // 店の商品（wave10-B）は数えない
+			for _, item := range items {
+				if itemShopPrice(item) == 0 {
+					floorItems++
+				}
+			}
+			if floorItems > floorItemBaseCount || (floorItems < floorItemBaseCount && floorItems == len(items)) {
+				t.Fatalf("seed %d floor %d: %d items", seed, floor, floorItems)
 			}
 			for _, item := range items {
 				if !floorTableHas(floor, item.GetID()) {

@@ -405,6 +405,9 @@ func (g *Game) DrawHUD(screen *ebiten.Image) {
 	// Player Cash
 	playerCashText := fmt.Sprintf("所持金：%5d円", g.state.Player.Cash)
 	text.Draw(screen, playerCashText, mplusNormalFont, screenWidth-130, 130, color.White)
+	if unpaid := g.shopUnpaidTotal(); unpaid > 0 && g.shopOpen() {
+		text.Draw(screen, fmt.Sprintf("未払い：%5d円", unpaid), mplusNormalFont, screenWidth-130, 150, color.RGBA{0xff, 0xc0, 0x40, 0xff})
+	}
 
 	yCoordinate := 110 // Initial Y-coordinate updated to position below the cash text
 

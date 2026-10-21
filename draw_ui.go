@@ -293,6 +293,9 @@ func (g *Game) drawInventoryWindow(screen *ebiten.Image) error {
 
 			// 表示名を取得（未識別で任意名があればそれを表示）
 			itemText, unidentified := g.inventoryItemLabel(item)
+			if itemShopPrice(item) > 0 {
+				itemText += "［未払い］" // 店の代金未払いの品（wave10-B）
+			}
 			var textColor color.Color = color.White
 			if unidentified {
 				textColor = color.RGBA{0xff, 0xff, 0x00, 0xff} // 未識別は黄色
@@ -757,6 +760,9 @@ func (g *Game) drawRunHistoryWindow(screen *ebiten.Image) {
 		if r.Cleared {
 			outcome = "クリア"
 			cause = "目標階のボスを撃破"
+		}
+		if r.Stats.ShopThefts > 0 {
+			outcome += "・泥棒" // 店で泥棒をした冒険（wave10-B）
 		}
 		y := 95 + (i-g.runHistoryScroll)*62
 		text.Draw(screen, fmt.Sprintf("%s  %s  %s  %d階", date, r.Difficulty, outcome, r.Floor), mplusNormalFont, 30, y, color.White)

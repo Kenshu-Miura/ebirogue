@@ -119,7 +119,8 @@ func (g *Game) applyEnemyStatus(index int, kind StatusKind, turns int) bool {
 // applyStatusToEnemy は applyEnemyStatus の、敵の値を直接受け取る版（添字の無い敵の写しなど）。
 func applyStatusToEnemy(e *Enemy, kind StatusKind, turns int) bool {
 	def, ok := statusDefOf(kind)
-	if !ok || def.Enemy == StatusNotApplicable || bossStatusImmune(*e, kind) || (kind == StatusDecoy && MonsterDefinitions[e.ID].IsBoss) {
+	if !ok || def.Enemy == StatusNotApplicable || bossStatusImmune(*e, kind) || (kind == StatusDecoy && MonsterDefinitions[e.ID].IsBoss) ||
+		(e.ID == shopkeeperMonsterID && (def.Bad || kind == StatusBackward)) { // 店主は悪い状態を受け付けない（wave10-B）
 		return false
 	}
 	addStatus(&e.StatusAilments, kind, turns, StackDefault)

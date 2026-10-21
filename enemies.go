@@ -586,6 +586,8 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 
 	// 追加計画の敵（ID 66〜）は系統ごとの表から加える（enemy_expansion.go）。
 	addMonsterFamilies(definitions, allMonsterFamilies())
+	// 店主・番犬（wave10-B、shop.go）。ランダム出現・上位種化の対象外
+	addShopMonsters(definitions)
 	return definitions
 }
 
@@ -717,7 +719,7 @@ func CreateEnemyByID(id, x, y int) Enemy {
 }
 
 // randomMonsterIDs はランダム出現の対象となる敵 ID の一覧（昇順、ボスを除く）。
-var randomMonsterIDs = sortedTemplateIDs(MonsterDefinitions, func(def MonsterDefinition) bool { return !def.IsBoss })
+var randomMonsterIDs = sortedTemplateIDs(MonsterDefinitions, func(def MonsterDefinition) bool { return !def.IsBoss && !isShopMonsterID(def.ID) })
 
 // createEnemy は階層に依らず、ランダム出現の対象から一様に敵を選んで生成する。
 func createEnemy(x, y int, intn func(int) int) Enemy {

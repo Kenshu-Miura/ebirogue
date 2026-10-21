@@ -45,6 +45,8 @@ func (g *Game) handleFadingOut() {
 	if g.fadeAlpha >= 1.0 {
 		g.fadeAlpha = 1.0
 		if g.frameCounter == 0 {
+			// 未払いのまま階を去ったら泥棒として記録し、店の状態を消す（wave10-B）
+			g.leaveShopFloor()
 			// マップ生成
 			mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMapFor(70, 70, g.Floor, &g.state.Player, newFloorRNG(g.seed, g.Floor+1), g.difficulty)
 			// 新しいマップ情報を設定
@@ -551,6 +553,8 @@ func GenerateRandomMapFor(width, height, currentFloor int, player *Player, rng *
 	traps := generateMapTrapsWith(rooms, rng, newFloor, spawnTuningFor(difficulty))
 
 	protect := map[Coordinate]bool{{X: playerX, Y: playerY}: true, {X: stairsX, Y: stairsY}: true}
+	// 店（wave10-B）。店の部屋の中には地形を置かない
+	enemies, items, traps = placeShop(mapGrid, rooms, enemies, items, traps, Coordinate{X: playerX, Y: playerY}, Coordinate{X: stairsX, Y: stairsY}, newFloor, difficulty, rng, protect)
 	for _, e := range enemies {
 		protect[Coordinate{X: e.X, Y: e.Y}] = true
 	}
