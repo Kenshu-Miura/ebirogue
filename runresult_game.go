@@ -10,6 +10,7 @@ func (g *Game) damagePlayer(damage int, source DamageSource) {
 	if damage <= 0 {
 		return
 	}
+	g.playSE("hurt")
 	if g.headless {
 		g.headlessDamageTaken += damage
 	}

@@ -506,7 +506,7 @@ func (g *Game) drawEmptyInventoryMessage(screen *ebiten.Image) {
 // 設定ウィンドウを描画する
 func (g *Game) drawSettingsWindow(screen *ebiten.Image) {
 	screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-	windowWidth, windowHeight := 580, 235
+	windowWidth, windowHeight := 580, 285
 	windowX := (screenWidth - windowWidth) / 2
 	windowY := (screenHeight - windowHeight) / 2
 
@@ -550,6 +550,18 @@ func (g *Game) drawSettingsWindow(screen *ebiten.Image) {
 		keyColor = color.NRGBA{255, 255, 0, 255}
 	}
 	text.Draw(screen, "キー設定", mplusNormalFont, windowX+45, windowY+140, keyColor)
+	for i, item := range []struct {
+		label string
+		value int
+	}{{"BGM の音量", g.settings.BGMVolume}, {"効果音の音量", g.settings.SEVolume}} {
+		y := windowY + 175 + i*35
+		if g.settingsSelectedIndex == i+3 {
+			text.Draw(screen, "→", mplusNormalFont, windowX+15, y, color.NRGBA{255, 255, 0, 255})
+		}
+		text.Draw(screen, item.label, mplusNormalFont, windowX+45, y, color.White)
+		text.Draw(screen, fmt.Sprintf("%d", item.value), mplusNormalFont, windowX+windowWidth-70, y, color.White)
+	}
+
 	text.Draw(screen, g.keyGuide("↑/↓:選択  ←/→:切替  Z:キー設定  X:戻る"), mplusSmallFont, windowX+15, windowY+windowHeight-20, color.NRGBA{200, 200, 200, 255})
 }
 

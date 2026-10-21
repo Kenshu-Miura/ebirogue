@@ -199,8 +199,9 @@ type Game struct {
 	offsetY                   int
 	moveCount                 int
 	Floor                     int
-	input                     InputSource  // キー入力の取得元（keys() 経由で使う）
-	headless                  bool         // 描画なしで動かす（BOT・テスト用）。死亡時に自動リスタートしない
+	input                     InputSource // キー入力の取得元（keys() 経由で使う）
+	headless                  bool        // 描画なしで動かす（BOT・テスト用）。死亡時に自動リスタートしない
+	audioState                *gameAudio
 	persistent                bool         // セーブ・設定・冒険の記録をストレージへ書き込む（通常のゲームのみ true）
 	lastDamageSource          DamageSource // 最後にプレイヤーへダメージを与えた原因（死因）
 	lastRunResult             *RunResult   // 直近に終了した冒険の結果
@@ -364,6 +365,7 @@ func (g *Game) IsEnemyAdjacent() bool {
 func (g *Game) Update() error {
 	// フレームの区切り（入力状態の更新）
 	g.keys().Update()
+	g.updateAudio()
 	g.inputFrame++
 	if g.showKeyConfig {
 		physical, held := capturePhysicalKey()
@@ -428,6 +430,8 @@ func (g *Game) Update() error {
 				Duration: 1.0, // 1秒間表示
 				Message:  deathMessage,
 				Execute: func(g *Game) {
+					g.stopBGM()
+					g.playSE("death")
 					g.debugf("DEBUG: Death message Execute function called")
 				},
 			}

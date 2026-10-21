@@ -13,6 +13,8 @@ func (g *Game) beginFloorDescent() {
 	if g.playerDead || g.cleared || !stairsUsable(g.Floor, g.bossDefeated) {
 		return
 	}
+	g.executeAudioCue("stairs")
+	g.stopBGM()
 	g.fadingOut = true
 	g.fadeAlpha = 0
 	g.frameCounter = 0
@@ -570,5 +572,7 @@ func (g *Game) clearRun() {
 	g.fadeOutProgress = 0.0
 	g.finishRun(true)
 	g.EnqueueMessage(fmt.Sprintf("%d階のボスを倒した！", g.Floor), 1.0)
+	start := len(g.ActionQueue.Queue)
 	g.EnqueueMessage(fmt.Sprintf("冒険クリア！（%s・%dターン）", g.difficulty, g.turnCount), 2.0)
+	g.soundFirstAction(start, "clear")
 }

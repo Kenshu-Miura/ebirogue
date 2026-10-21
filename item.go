@@ -509,6 +509,7 @@ func (g *Game) executeItemSwap() {
 }
 
 func (g *Game) PickUpItem(item Item, i int) {
+	g.playSE("pickup")
 	g.stats.counts(itemKind(item)).Picked++
 	if money, isMoney := item.(*Money); isMoney {
 		// itemがMoney型である場合、プレイヤーの所持金を増加させる

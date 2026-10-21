@@ -205,6 +205,8 @@ func inMapBounds(x, y, width, height int) bool {
 
 // GameSettings はゲーム設定
 type GameSettings struct {
+	BGMVolume      int               `json:"bgmVolume"`
+	SEVolume       int               `json:"seVolume"`
 	LastDifficulty Difficulty        `json:"lastDifficulty"`
 	Fullscreen     bool              `json:"fullscreen"`
 	ShowMiniMap    bool              `json:"showMinimap"`
@@ -214,6 +216,8 @@ type GameSettings struct {
 // defaultSettings は設定の初期値を返す
 func defaultSettings() GameSettings {
 	return GameSettings{
+		BGMVolume:      6,
+		SEVolume:       6,
 		LastDifficulty: DifficultyAdvanced,
 		Fullscreen:     false,
 		ShowMiniMap:    true,
@@ -231,6 +235,8 @@ func decodeSettings(data []byte) (GameSettings, error) {
 	if !settings.LastDifficulty.valid() {
 		settings.LastDifficulty = DifficultyAdvanced
 	}
+	settings.BGMVolume = clampVolume(settings.BGMVolume)
+	settings.SEVolume = clampVolume(settings.SEVolume)
 	settings.KeyBindings = normalizeKeyBindings(settings.KeyBindings)
 	return settings, nil
 }
