@@ -580,6 +580,7 @@ func (g *Game) applySaveData(save *SaveData) error {
 
 // saveSuspendData は中断データをファイルへ保存する
 func (g *Game) saveSuspendData() error {
+	g.saveCodex()
 	if g.replayFrameActive {
 		g.replaySavePending = true
 	}

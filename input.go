@@ -29,7 +29,7 @@ func (g *Game) framesSince(frame int) int {
 // isInputReady は次のキー入力が行動としてそのまま受け付けられる状態かどうかを返す
 // （行動・アニメーション・フェードの処理中や、方向キーのリピート待ちでないこと）。
 func (g *Game) isInputReady() bool {
-	if g.showDifficultySelect || g.showClearScreen || g.showRunHistory {
+	if g.showDifficultySelect || g.showClearScreen || g.showRunHistory || g.showCodex {
 		return true
 	}
 	return g.CanAcceptInput() && len(g.ActionQueue.Queue) == 0 && !g.Animating &&
@@ -800,6 +800,8 @@ func (g *Game) handleMenuInput() error {
 				g.suspendSelectedOption = 1 // 誤操作防止のため「やめる」を初期選択にする
 				g.suspendPromptJustOpened = true
 			}
+		} else if g.menuSelectedRow == 3 && g.menuSelectedCol == 1 && !g.headless {
+			g.openCodex()
 		} else if g.menuSelectedRow == 3 {
 			g.showMenu = false
 			g.openRunHistory()

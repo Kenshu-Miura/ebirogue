@@ -151,6 +151,7 @@ func createMapTrapByID(id, x, y int) MapTrap {
 // 罠を踏んだ時の処理
 func (g *Game) stepOnTrap(trapIndex int) {
 	trap := g.state.MapTraps[trapIndex]
+	g.recordCodex(2, trap.TemplateID, func(r *CodexRecord) { r.Seen = true; r.Stepped = true })
 
 	// デバッグログを追加
 	g.debugf("プレイヤーが罠を踏みました: %s 座標(%d, %d)", trap.Name, trap.X, trap.Y)

@@ -39,3 +39,5 @@ ebirogue_replays.json
 
 # 画像生成の原画（大きいのでコミットしない。docs/agents/img-content-expansion.md）
 tools/*-originals/
+
+ebirogue_codex.json

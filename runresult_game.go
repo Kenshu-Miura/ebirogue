@@ -81,6 +81,10 @@ func (g *Game) finishRun(cleared bool) {
 	if g.lastRunResult != nil {
 		return
 	}
+	if !cleared && (g.lastDamageSource.Kind == DamageSourceEnemyAttack || g.lastDamageSource.Kind == DamageSourceEnemyRanged) {
+		g.recordCodex(1, g.lastDamageSource.EnemyID, func(r *CodexRecord) { r.Seen = true; r.Deaths++ })
+	}
+	g.saveCodex()
 	result := g.buildRunResult(cleared)
 	if g.persistent {
 		result.EndedAt = time.Now().Format(time.RFC3339)
