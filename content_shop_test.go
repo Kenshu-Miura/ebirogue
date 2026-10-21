@@ -279,7 +279,7 @@ func TestShopBuyWithEnoughCash(t *testing.T) {
 	if !g.payShop() {
 		t.Fatal("payment failed")
 	}
-	if g.state.Player.Cash != 300 || itemShopPrice(product) != 0 || g.shopUnpaidTotal() != 0 || g.stats.ShopBought != 1 {
+	if g.state.Player.Cash != 300 || itemShopPrice(product) != 0 || g.shopUnpaidTotal() != 0 || g.stats.ShopBought != 1 || g.stats.ShopSpent != 200 {
 		t.Fatalf("cash %d price %d unpaid %d bought %d", g.state.Player.Cash, itemShopPrice(product), g.shopUnpaidTotal(), g.stats.ShopBought)
 	}
 	// 払った品を持って出ても泥棒にならない
@@ -385,7 +385,7 @@ func TestShopSell(t *testing.T) {
 	if !g.sellToShop(own, 160) {
 		t.Fatal("sale failed")
 	}
-	if g.state.Player.Cash != 160 || itemShopPrice(own) != 320 || g.stats.ShopSold != 1 {
+	if g.state.Player.Cash != 160 || itemShopPrice(own) != 320 || g.stats.ShopSold != 1 || g.stats.ShopEarned != 160 {
 		t.Fatalf("cash %d price %d", g.state.Player.Cash, itemShopPrice(own))
 	}
 	// 店の外では売れない

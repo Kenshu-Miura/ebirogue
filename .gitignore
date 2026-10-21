@@ -33,6 +33,7 @@ ebirogue_replays.json
 # BOT simulation reports (baseline only is tracked)
 /reports/*
 !/reports/baseline.json
+!/reports/baseline-expert.json
 
 # Local git worktrees for parallel agent work
 /.worktrees/

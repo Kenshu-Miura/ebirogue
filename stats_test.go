@@ -38,11 +38,15 @@ func TestRunStatsCountActions(t *testing.T) {
 	if items["Weapon"] == nil || items["Weapon"].Equipped != 1 || items["Arrow"] == nil || items["Arrow"].Shot != 1 {
 		t.Fatalf("weapon/arrow stats = %+v / %+v", items["Weapon"], items["Arrow"])
 	}
+	// テンプレート ID ごとの投げた回数（wave11-0）
+	if g.stats.ThrownIDs[2] != 1 {
+		t.Fatalf("thrown IDs %+v", g.stats.ThrownIDs)
+	}
 	if g.stats.UsedIDs[1] != 1 || len(g.stats.RecentUses) != 1 || g.stats.RecentUses[0].TemplateID != 1 {
 		t.Fatalf("used IDs %+v, recent %+v", g.stats.UsedIDs, g.stats.RecentUses)
 	}
 	restored, vs := saveRoundTrip(g)
-	if len(vs) > 0 || restored.stats.Items["Food"].Used != 1 {
+	if len(vs) > 0 || restored.stats.Items["Food"].Used != 1 || restored.stats.ThrownIDs[2] != 1 {
 		t.Fatalf("stats after save round trip: %+v (violations %+v)", restored.stats.Items, vs)
 	}
 	result := restored.buildRunResult(false)

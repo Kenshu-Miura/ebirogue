@@ -128,6 +128,20 @@ type RunStats struct {
 	ShopBought int `json:",omitempty"`
 	ShopSold   int `json:",omitempty"`
 	ShopThefts int `json:",omitempty"`
+	// テンプレート ID ごとの投げた回数と、壺（壺のテンプレート ID）に入れた回数（wave11-0。BOT のレポート用）
+	ThrownIDs    map[int]int `json:",omitempty"`
+	PotInsertIDs map[int]int `json:",omitempty"`
+	// 店で払った額と売って得た額（wave11-0）
+	ShopSpent  int `json:",omitempty"`
+	ShopEarned int `json:",omitempty"`
+}
+
+// countID は ID ごとの回数の表 m に1を足す（表が無ければ作る）。
+func countID(m *map[int]int, id int) {
+	if *m == nil {
+		*m = map[int]int{}
+	}
+	(*m)[id]++
 }
 
 func (s *RunStats) counts(kind string) *ItemActionCounts {
