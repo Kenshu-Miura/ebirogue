@@ -648,10 +648,11 @@ func (b *bot) inventoryFull() bool {
 }
 
 // visibleFoodGoal は (x, y) に見えている（ミニマップに表示されている）食料があるかどうか。
+// 自分で手放した食料は拾い直さないので目標にしない（足元で往復しないため）。
 // 所持品が満杯でも食料は目標にする（着く前に makeRoomForFood で空きを作る）。
 func (b *bot) visibleFoodGoal(x, y int) bool {
 	for _, item := range b.g.state.Items {
-		if ix, iy := item.GetPosition(); ix == x && iy == y && isFoodItem(item) && item.GetShowOnMiniMap() && !isStuckSanctuaryItem(item) {
+		if ix, iy := item.GetPosition(); ix == x && iy == y && isFoodItem(item) && item.GetShowOnMiniMap() && !isStuckSanctuaryItem(item) && !b.wasDiscarded(item) {
 			return true
 		}
 	}

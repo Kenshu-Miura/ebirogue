@@ -117,3 +117,78 @@ func generateTerrain(grid [][]Tile, rooms []Room, floor int, intn func(int) int,
 		}
 	}
 }
+
+// enemyPathMaxSteps は水路を回り込む経路探索の最大の歩数。
+const enemyPathMaxSteps = 40
+
+// waterBetween は (x0, y0) と (x1, y1) を対角とする長方形（両端を含む）に水路があるかどうか。
+func waterBetween(grid [][]Tile, x0, y0, x1, y1 int) bool {
+	for y := min(y0, y1); y <= max(y0, y1); y++ {
+		if y < 0 || y >= len(grid) {
+			continue
+		}
+		for x := min(x0, x1); x <= max(x0, x1); x++ {
+			if x >= 0 && x < len(grid[y]) && grid[y][x].Type == "water" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// enemyPathSteps は経路探索で試す向き（縦横を先、斜めを後）。順番は結果の決め方なので変えない。
+var enemyPathSteps = [8][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1}}
+
+// enemyPathStep は、traits の敵が通れるマスだけを通って (fx, fy) から (tx, ty) へ向かう最短経路の
+// 最初の1歩を返す（maxSteps 歩まで）。目標のマスは通れなくてもよい。blocked のマス（聖域など）は通らない。
+// 斜めは、ゲームの敵の移動と同じく、縦横の隣のどちらかが Blocked なら進まない。ほかの敵は考えない。
+// 乱数は使わない。
+func enemyPathStep(grid [][]Tile, fx, fy, tx, ty int, traits []EnemyTrait, maxSteps int, blocked func(x, y int) bool) (int, int, bool) {
+	if len(grid) == 0 || (fx == tx && fy == ty) {
+		return 0, 0, false
+	}
+	height, width := len(grid), len(grid[0])
+	inside := func(x, y int) bool { return x >= 0 && y >= 0 && y < height && x < width }
+	first := make([]int8, width*height) // 0: 未訪問、1〜8: 最初の1歩の向き+1、-1: 出発点
+	dist := make([]int, width*height)
+	start := fy*width + fx
+	first[start] = -1
+	queue := []int{start}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if dist[cur] >= maxSteps {
+			continue
+		}
+		x, y := cur%width, cur/width
+		for dir, s := range enemyPathSteps {
+			nx, ny := x+s[0], y+s[1]
+			if !inside(nx, ny) {
+				continue
+			}
+			next := ny*width + nx
+			if first[next] != 0 {
+				continue
+			}
+			if s[0] != 0 && s[1] != 0 && (grid[y][nx].Blocked || grid[ny][x].Blocked) {
+				continue
+			}
+			goal := nx == tx && ny == ty
+			if !goal && (!enemyTerrainPassable(grid[ny][nx], traits) || (blocked != nil && blocked(nx, ny))) {
+				continue
+			}
+			if cur == start {
+				first[next] = int8(dir + 1)
+			} else {
+				first[next] = first[cur]
+			}
+			if goal {
+				step := enemyPathSteps[first[next]-1]
+				return step[0], step[1], true
+			}
+			dist[next] = dist[cur] + 1
+			queue = append(queue, next)
+		}
+	}
+	return 0, 0, false
+}

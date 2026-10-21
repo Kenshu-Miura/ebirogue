@@ -179,3 +179,17 @@ func TestExpertDoesNotShootReflector(t *testing.T) {
 		t.Fatalf("shot at a reflector: shots=%d act=%s", arrow.ShotCount, b.act)
 	}
 }
+
+// 自分で手放した食料は目標にしない（足元の食料と往復して突風で倒れていた。段9の統合で追加）。
+func TestBotIgnoresDiscardedFood(t *testing.T) {
+	g, b := newBotFoodTestGame(t, personaExpert)
+	food := buildItemFromTemplate(rottenSausageItemID, 3, 3)
+	placeVisibleItem(g, food)
+	if !b.visibleFoodGoal(3, 3) {
+		t.Fatal("visible food is not a goal")
+	}
+	b.discarded = map[discardKey]bool{{g.Floor, rottenSausageItemID}: true}
+	if b.visibleFoodGoal(3, 3) {
+		t.Fatal("discarded food is still a goal")
+	}
+}

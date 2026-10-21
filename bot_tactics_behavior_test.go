@@ -157,3 +157,69 @@ func TestExpertSwapsForBetterItem(t *testing.T) {
 		t.Fatal("wants to pick the harmful card back up")
 	}
 }
+
+// 水路の向こうでたどり着けない敵は「近づいてくる敵」と数えず、通路へ下がらない（段9の統合で追加。
+// 以前は下がる→部屋へ出る→下がるを繰り返して突風で倒れていた）。
+func TestExpertIgnoresEnemiesAcrossWater(t *testing.T) {
+	g, b := newBotFoodTestGame(t, personaExpert)
+	m := makeTestFloorMap(12, 7)
+	for y := 0; y < 7; y++ {
+		for x := 8; x < 12; x++ {
+			if y != 3 || x == 11 {
+				m[y][x] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+			} else {
+				m[y][x] = Tile{Type: "corridor"}
+			}
+		}
+		if y > 0 && y < 6 {
+			m[y][4] = Tile{Type: "water", Blocked: true}
+		}
+	}
+	g.state.Map = m
+	g.state.Player.X, g.state.Player.Y = 6, 3
+	g.state.Enemies = []Enemy{newActiveEnemy(0, 3, 1), newActiveEnemy(0, 3, 5)}
+	if n := len(b.approachingEnemies(expertThreatRange)); n != 0 {
+		t.Fatalf("enemies across water counted as approaching: %d", n)
+	}
+	if err := b.step(); err != nil {
+		t.Fatal(err)
+	}
+	if b.act == "retreat" {
+		t.Fatal("retreated from enemies that cannot reach")
+	}
+}
+
+// 金縛りの敵が1マスの隙間をふさいでいれば、その後ろの敵も近づいてこない。
+func TestExpertIgnoresEnemiesBehindParalyzedBlocker(t *testing.T) {
+	g, b := newBotFoodTestGame(t, personaExpert)
+	for y := 1; y < 6; y++ {
+		if y != 3 {
+			g.state.Map[y][4] = Tile{Type: "wall", Blocked: true, BlockSight: true}
+		}
+	}
+	g.state.Player.X, g.state.Player.Y = 7, 3
+	blocker := newActiveEnemy(0, 4, 3)
+	blocker.StatusAilments.Paralysis = true
+	g.state.Enemies = []Enemy{blocker, newActiveEnemy(0, 3, 2), newActiveEnemy(0, 3, 4)}
+	if n := len(b.approachingEnemies(expertThreatRange)); n != 0 {
+		t.Fatalf("blocked enemies counted as approaching: %d", n)
+	}
+	g.state.Enemies = g.state.Enemies[1:] // 隙間が空けば近づいてくる
+	if n := len(b.approachingEnemies(expertThreatRange)); n != 2 {
+		t.Fatalf("approaching = %d, want 2", n)
+	}
+}
+
+// 隣に回復役（イヤシナマコ系）がいれば先に殴る。
+func TestExpertAttacksHealerFirst(t *testing.T) {
+	g, b := newBotFoodTestGame(t, personaExpert)
+	g.state.Player.X, g.state.Player.Y = 4, 3
+	g.state.Player.Health, g.state.Player.MaxHealth = 200, 200
+	g.state.Enemies = []Enemy{newActiveEnemy(10, 4, 2), newActiveEnemy(78, 4, 4)}
+	if err := b.step(); err != nil {
+		t.Fatal(err)
+	}
+	if b.act != "melee" || g.state.Player.Direction != determineDirection(0, 1) {
+		t.Fatalf("did not attack the healer: act=%s dir=%v", b.act, g.state.Player.Direction)
+	}
+}

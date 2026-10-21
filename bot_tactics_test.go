@@ -59,6 +59,37 @@ func (b *bot) enemiesWithin(r int) []Enemy {
 	return out
 }
 
+// approachingEnemies は距離 r 以内の起きている敵のうち、地形とほかの敵を避けて r+2 歩以内に
+// 海老さんへたどり着ける敵（隣の敵と壁抜けの敵はそのまま数える）。水路の向こうで回り込めない敵や、
+// 金縛りの敵に前をふさがれた敵を「近づいてくる敵」と数えて、通路へ下がるのと部屋へ出るのを
+// 繰り返さないため（段9の統合で追加）。
+func (b *bot) approachingEnemies(r int) []Enemy {
+	g := b.g
+	p := g.state.Player
+	var out []Enemy
+	for _, e := range b.enemiesWithin(r) {
+		if max(abs(e.X-p.X), abs(e.Y-p.Y)) <= 1 || e.SpecialMovement == SpecialMovementWallPass {
+			out = append(out, e)
+			continue
+		}
+		blocked := func(x, y int) bool {
+			if g.sanctuaryAt(x, y) {
+				return true
+			}
+			for _, other := range g.state.Enemies {
+				if other.X == x && other.Y == y && (other.X != e.X || other.Y != e.Y) {
+					return true
+				}
+			}
+			return false
+		}
+		if _, _, ok := enemyPathStep(g.state.Map, e.X, e.Y, p.X, p.Y, e.Traits, r+2, blocked); ok {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 // attackSlots は (x, y) へ隣から攻撃できるマスの数（部屋の中は最大8、通路は2）。
 func (b *bot) attackSlots(x, y int) int {
 	n := 0
@@ -139,7 +170,7 @@ func (b *bot) expertTactics(adjacent []Enemy) (bool, error) {
 			return done, err
 		}
 	}
-	threats := b.enemiesWithin(expertThreatRange)
+	threats := b.approachingEnemies(expertThreatRange)
 	if botFeature("retreat") && len(threats) >= 2 && b.chokeWait < expertChokeWaitMax && !b.isChoke(p.X, p.Y) && !b.inRangedFire(p.X, p.Y) {
 		limit := expertChokeRange
 		if len(adjacent) > 0 {

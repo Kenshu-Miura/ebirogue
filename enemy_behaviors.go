@@ -49,6 +49,14 @@ func (g *Game) stepEnemyToward(enemyIndex, targetX, targetY int) bool {
 	dy := targetY - enemy.Y
 	stepX, stepY := sign(dx), sign(dy)
 
+	// 間に自分が通れない水路があるときは、通れるマスで回り込む（段9の統合で追加）。
+	// 水路の無いところでは従来どおりの直進で、乱数の使い方も変わらない。
+	if !enemyTerrainPassable(Tile{Type: "water", Blocked: true}, enemy.Traits) && waterBetween(g.state.Map, enemy.X, enemy.Y, targetX, targetY) {
+		if px, py, ok := enemyPathStep(g.state.Map, enemy.X, enemy.Y, targetX, targetY, enemy.Traits, enemyPathMaxSteps, g.sanctuaryAt); ok && g.tryMoveEnemy(enemyIndex, px, py) {
+			return true
+		}
+	}
+
 	// 斜め移動が壁に阻まれる場合は縦か横だけの移動へ切り替える
 	if dx != 0 && dy != 0 {
 		blockUp, blockDown, blockLeft, blockRight := isBlocked(g, enemy.X, enemy.Y)

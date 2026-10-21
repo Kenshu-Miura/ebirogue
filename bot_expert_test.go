@@ -506,6 +506,13 @@ func (b *bot) expertStep() error {
 				target = enemy
 			}
 		}
+		// 回復役（イヤシナマコ系）が隣にいれば先に倒す。ほかの敵を殴っても毎ターン回復されて倒せないため
+		for _, enemy := range targets {
+			if isHealerEnemy(enemy) {
+				target = enemy
+				break
+			}
+		}
 		dx, dy := target.X-player.X, target.Y-player.Y
 		if b.isStrongEnemy(target) {
 			if botFeature("canes") {
@@ -794,4 +801,9 @@ func (b *bot) avoidHazard(e Enemy) bool {
 // oneHitKill は通常攻撃1回（乱数の最小）で倒せそうかどうか。
 func (b *bot) oneHitKill(e Enemy) bool {
 	return b.expectedDamageToEnemy(e)*7/8 >= float64(e.Health)
+}
+
+// isHealerEnemy はほかの敵を回復する敵（イヤシナマコ系 78〜80）かどうか。
+func isHealerEnemy(e Enemy) bool {
+	return e.ID >= 78 && e.ID <= 80
 }

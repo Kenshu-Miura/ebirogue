@@ -220,3 +220,25 @@ func TestTerrainWaterDestroysPotContentsAndDroppedLoot(t *testing.T) {
 		t.Fatal("loot survived water")
 	}
 }
+
+// 水路を挟んだ敵は、通れるマスを回り込んで海老さんの隣まで来る（段9の統合で追加）。
+// 以前は直進とその代わりの数方向だけを試したので、部屋を横切る水路の向こうで止まっていた。
+func TestTerrainEnemyWalksAroundWater(t *testing.T) {
+	g := newProjectileTestGame()
+	for x := 1; x <= 6; x++ {
+		g.state.Map[3][x] = Tile{Type: "water", Blocked: true}
+	}
+	g.state.Player.X, g.state.Player.Y = 4, 2
+	g.state.Enemies = []Enemy{CreateEnemyByID(0, 4, 5)}
+	for turn := 0; turn < 12; turn++ {
+		e := g.state.Enemies[0]
+		if max(abs(e.X-4), abs(e.Y-2)) <= 1 {
+			return
+		}
+		g.MoveTowardsPlayer(0)
+		if tile := g.state.Map[g.state.Enemies[0].Y][g.state.Enemies[0].X]; tile.Type == "water" {
+			t.Fatal("enemy entered water")
+		}
+	}
+	t.Fatalf("enemy did not reach the player: %+v", g.state.Enemies[0].Entity)
+}
