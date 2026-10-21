@@ -361,6 +361,13 @@ type Game struct {
 	helpPage             int  // ヘルプで表示中のページ番号
 	helpScroll           int  // ヘルプページのスクロール量（0で先頭）
 	returnToMenuFromHelp bool // ヘルプからメニューに戻るフラグ
+
+	// 店（wave10-B、shop.go）
+	shopAlarm        bool             // この階で泥棒をした（敵が湧きやすい）
+	shopDebt         int              // 未払いのまま使った・失った品の代金
+	shopCarried      []Item           // 未払いの品（ポインタで追う。保存せず持ち物の ShopPrice から作り直す）
+	shopPrompt       *shopPromptState // 支払い・売却の窓
+	shopExitPrompted bool             // 店の出口で支払いを持ちかけた（出口を離れるまで出さない）
 }
 
 func (g *Game) CanAcceptInput() bool {
@@ -520,7 +527,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	if !g.showInventory && g.CanAcceptInput() && !g.pendingFloorDescent && !g.ShowGroundItem && !g.showStairsPrompt && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
+	if !g.showInventory && g.CanAcceptInput() && !g.pendingFloorDescent && !g.ShowGroundItem && !g.showStairsPrompt && g.shopPrompt == nil && !g.showMenu && !g.showEmptyInventoryMessage && !g.showMessageLog && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
 		// 睡眠状態の場合は自動的にターンを進行させる
 		if g.state.Player.StatusAilments.Sleep > 0 {
 			// 睡眠時の処理: MovePlayer(0,0)を呼び出して睡眠メッセージを表示し、ターンを進行
@@ -637,6 +644,7 @@ func (g *Game) Update() error {
 		}
 
 		g.HandleGroundItemInput()
+		g.handleShopPromptInput()
 	}
 
 	g.HandleAnimationProgress()
@@ -658,6 +666,8 @@ func (g *Game) Update() error {
 	g.checkBossDefeated()
 
 	g.CheckCombatState()
+
+	g.updateShop()
 
 	g.updateTileBrightness()
 
@@ -754,6 +764,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	g.drawActionMenu(screen)
+
+	g.drawShopPrompt(screen)
 
 	g.drawItemDescription(screen)
 

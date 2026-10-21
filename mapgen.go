@@ -10,8 +10,8 @@ type Room struct {
 	X, Y          int
 	Width, Height int
 	Center        Coordinate
-	Role          RoomRole `json:",omitempty"`
-	Entered       bool     `json:",omitempty"`
+	Role          RoomRole `json:",omitempty"` // 特別な部屋の用途（special_rooms.go。通常の部屋は空）
+	Entered       bool     `json:",omitempty"` // モンスターハウスに入ったか（初回入室の起床・通知は1回だけ）
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {

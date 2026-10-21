@@ -16,6 +16,7 @@ type BaseItem struct {
 	UseActions       map[string]UseAction
 	ShowOnMiniMap    bool
 	PlayerDiscovered bool // プレイヤーによって発見されたかどうか
+	ShopPrice        int  // 店の値段（wave10-B）。床では商品、持ち物では代金未払い。0 は自分の物
 }
 
 type Weapon struct {

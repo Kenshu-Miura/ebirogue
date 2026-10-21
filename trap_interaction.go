@@ -90,6 +90,9 @@ func (g *Game) removeTrapEnemy(i int) {
 }
 
 func (g *Game) trapEnemyDamage(i, damage int, credit bool) {
+	if !credit && peacefulShopkeeper(g.state.Enemies[i]) {
+		return // 海老さんが起こしたのでない罠の爆発では、怒っていない店主は傷つかない（wave10-B）
+	}
 	if !credit && damage >= g.state.Enemies[i].Health {
 		g.removeTrapEnemy(i)
 		return

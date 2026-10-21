@@ -207,6 +207,7 @@ func (g *Game) startNewRun(seed int64) {
 	g.pendingFloorDescent = false
 	g.genocidedMonsterIDs = nil
 	g.pendingEnemySpawns = nil
+	g.resetShopState() // 店の状態（wave10-B）
 	g.showBlankCardMenu = false
 	g.blankCardTarget = nil
 	g.blankCardIndex = 0

@@ -124,6 +124,10 @@ type RunStats struct {
 	Items      map[string]*ItemActionCounts `json:",omitempty"` // キーはアイテムの種類（"Card" "Potion" など）
 	UsedIDs    map[int]int                  `json:",omitempty"` // テンプレート ID ごとの使用回数
 	RecentUses []ItemUseRecord              `json:",omitempty"`
+	// 店（wave10-B）: 買った品の数・売った回数・泥棒をした回数
+	ShopBought int `json:",omitempty"`
+	ShopSold   int `json:",omitempty"`
+	ShopThefts int `json:",omitempty"`
 }
 
 func (s *RunStats) counts(kind string) *ItemActionCounts {

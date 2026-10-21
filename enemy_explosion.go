@@ -110,8 +110,8 @@ func (g *Game) explodeEnemiesAround(explosion EnemyExplosion, bomberID, bomberX,
 		if target.ID == bomberID && target.X == bomberX && target.Y == bomberY {
 			continue
 		}
-		if !withinBlastRadius(explosion.CenterX, explosion.CenterY, target.X, target.Y, explosion.Radius) {
-			continue
+		if !withinBlastRadius(explosion.CenterX, explosion.CenterY, target.X, target.Y, explosion.Radius) || peacefulShopkeeper(*target) {
+			continue // 怒っていない店主は巻き込まれない（wave10-B）
 		}
 		damage := explosion.Damage
 		if MonsterDefinitions[target.ID].IsBoss {

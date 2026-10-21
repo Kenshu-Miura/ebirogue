@@ -171,7 +171,7 @@ func (b *bot) adjacentEnemies() []Enemy {
 	var out []Enemy
 	for _, enemy := range b.g.state.Enemies {
 		dx, dy := enemy.X-p.X, enemy.Y-p.Y
-		if abs(dx) <= 1 && abs(dy) <= 1 && (dx != 0 || dy != 0) {
+		if abs(dx) <= 1 && abs(dy) <= 1 && (dx != 0 || dy != 0) && !botIgnoresEnemy(enemy) {
 			out = append(out, enemy)
 		}
 	}
@@ -188,6 +188,9 @@ func (b *bot) enemyInLine(dx, dy, maxRange int) (Enemy, bool) {
 			return Enemy{}, false
 		}
 		if idx := g.enemyIndexAt(x, y); idx >= 0 {
+			if botIgnoresEnemy(g.state.Enemies[idx]) {
+				return Enemy{}, false // 怒っていない店主へは撃たない・投げない
+			}
 			return g.state.Enemies[idx], true
 		}
 	}
@@ -379,6 +382,9 @@ func (b *bot) expertStep() error {
 	}
 	if b.windowOpen() {
 		return b.closeWindows()
+	}
+	if done, err := b.returnUnpaidItem(); done || err != nil {
+		return err
 	}
 	if b.idle > 20 && b.idle%5 == 0 {
 		s := botSteps[b.rng.IntN(len(botSteps))]

@@ -229,7 +229,7 @@ func (g *Game) executeGroundItemAction() {
 
 	if g.selectedGroundActionIndex == 4 { // Assuming index 4 corresponds to '説明'
 		if g.currentGroundItem != nil {
-			g.groundItemDescriptionText = g.currentGroundItem.GetDescription()
+			g.groundItemDescriptionText = g.currentGroundItem.GetDescription() + g.shopPriceDescription(g.currentGroundItem)
 			g.showGroundItemDescription = true
 		}
 		// 説明の場合はメニューを閉じずに説明ウィンドウのみ表示
@@ -507,6 +507,7 @@ func (g *Game) executeAction() {
 						card.Stuck = true
 						g.EnqueueMessage(fmt.Sprintf("%sは床に貼りついた", card.Name), 0.5)
 					}
+					g.onItemPlacedInShop(selectedItem) // 店の床なら買い取り（wave10-B）
 
 					g.selectedItemIndex = 0
 					g.selectedActionIndex = 0
@@ -536,7 +537,7 @@ func (g *Game) executeAction() {
 
 	if actionIndex == 3 { // Assuming 0-based index and "説明" is at index 3 (adjusted for arrows)
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
-		g.itemdescriptionText = selectedItem.GetDescription()
+		g.itemdescriptionText = selectedItem.GetDescription() + g.shopPriceDescription(selectedItem)
 		g.showItemDescription = true
 	}
 
@@ -640,6 +641,9 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 			if attackerIndex >= 0 {
 				g.state.Enemies[attackerIndex].AttackTimer = 0.5
 				g.state.Enemies[attackerIndex].AttackDirection = determineDirection(dx, dy)
+			}
+			if g.isPeacefulShopkeeper(targetIndex) {
+				return // 怒っていない店主は敵どうしの攻撃を受けない
 			}
 			target := &g.state.Enemies[targetIndex]
 			target.Health -= netDamage
@@ -745,6 +749,11 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	}
 
 	g.state.Player.Direction = determineDirection(x, y)
+	// 正面の店主には攻撃せず話しかける（wave10-B。ターンは進まない）
+	if g.isPeacefulShopkeeper(g.enemyIndexAt(g.state.Player.X+sign(x), g.state.Player.Y+sign(y))) && (x != 0 || y != 0) {
+		g.talkToShopkeeper()
+		return false
+	}
 	g.attackTimer = 0.5
 
 	for _, delta := range playerAttackDeltas(x, y, weaponAbilities) {

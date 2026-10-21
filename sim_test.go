@@ -112,6 +112,8 @@ type simOutcome struct {
 	StarveTurns       int  `json:",omitempty"`
 	InventoryFull     bool `json:",omitempty"`
 	MonsterHouseDeath bool `json:",omitempty"`
+	// ShopFloors は店のある階に着いた回数（wave10-B）
+	ShopFloors int `json:",omitempty"`
 }
 
 const maxViolationsPerRun = 20
@@ -137,6 +139,9 @@ func countFloorItemKinds(g *Game, out *simOutcome) {
 		}
 	}
 	out.FloorFood = append(out.FloorFood, food)
+	if _, ok := g.shopRoom(); ok {
+		out.ShopFloors++
+	}
 }
 
 // runSimCase は BOT で1回の冒険を遊び、結果と不変条件違反を返す。panic しても recover して記録する。
@@ -561,6 +566,10 @@ type simSummary struct {
 	Violations   int
 	SoftLocks    int
 	Panics       int
+
+	// ShopFloors・ShopThefts は性格ごとの、店のある階に着いた回数と泥棒をした回数（wave10-B）
+	ShopFloors map[string]int `json:",omitempty"`
+	ShopThefts map[string]int `json:",omitempty"`
 }
 
 type simBaselineFile struct {
@@ -600,6 +609,13 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 		for _, stay := range o.FloorStays {
 			g.FloorStaySum += stay
 			g.FloorStayCount++
+		}
+		if s.ShopFloors == nil {
+			s.ShopFloors, s.ShopThefts = map[string]int{}, map[string]int{}
+		}
+		s.ShopFloors[string(o.Persona)] += o.ShopFloors
+		if o.Result != nil {
+			s.ShopThefts[string(o.Persona)] += o.Result.Stats.ShopThefts
 		}
 		for kind, n := range o.FloorItemKinds {
 			if s.FloorItemKinds == nil {
@@ -856,6 +872,17 @@ func renderFoodStats(b *strings.Builder, s simSummary) {
 	fmt.Fprintf(b, "合計 %d: %s\n", total, strings.Join(parts, "、"))
 }
 
+// renderShopStats は性格ごとの、店のある階に着いた回数と泥棒をした回数を書く（wave10-B。random 以外は0のはず）。
+func renderShopStats(b *strings.Builder, s simSummary) {
+	if len(s.ShopFloors) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "\n## 店（性格別、全難易度）\n\n| 性格 | 店のある階に着いた | 泥棒 |\n|---|---:|---:|\n")
+	for _, name := range sortedKeys(s.ShopFloors) {
+		fmt.Fprintf(b, "| %s | %d | %d |\n", name, s.ShopFloors[name], s.ShopThefts[name])
+	}
+}
+
 // renderFloorItemKinds は各階に着いたときの床の道具の種類別の数と割合を書く。
 func renderFloorItemKinds(b *strings.Builder, s simSummary) {
 	total := 0
@@ -931,6 +958,7 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 
 	renderLevelCurve(&b, s)
 	renderFoodStats(&b, s)
+	renderShopStats(&b, s)
 	renderFloorItemKinds(&b, s)
 
 	fmt.Fprintf(&b, "\n## 性格別の死因の上位（判断ミス死は種類で数える）\n\n")

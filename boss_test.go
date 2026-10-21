@@ -149,7 +149,7 @@ func TestBossesOnlyAppearOnBossFloors(t *testing.T) {
 		_, enemies, _, _, _, _ := GenerateRandomMap(70, 70, floor-1, &player, newFloorRNG(99, floor))
 		bosses := 0
 		for _, enemy := range enemies {
-			if MonsterDefinitions[enemy.ID].IsBoss {
+			if MonsterDefinitions[enemy.ID].IsBoss && !isShopMonsterID(enemy.ID) { // 店主はボスと同じ例外だがボスではない
 				bosses++
 				if enemy.StatusAilments.Sleep != 0 {
 					t.Fatalf("floor %d boss should be awake", floor)

@@ -281,6 +281,9 @@ func (g *Game) projectileHitsEnemy(p *Projectile, index int) bool {
 
 // hitEnemyWithProjectile は敵 index に道具が当たったときの処理（効果は onTargetHit）。
 func (g *Game) hitEnemyWithProjectile(p *Projectile, index int) {
+	if p.FromPlayer {
+		g.provokeShopkeeper(index) // 店主に投擲・杖を当てると泥棒と同じ扱い（wave10-B）
+	}
 	g.TargetEnemyIndex = index
 	g.ThrownItemDestination = Coordinate{X: p.X, Y: p.Y}
 	g.TargetEnemy = &g.state.Enemies[index]

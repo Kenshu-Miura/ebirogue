@@ -517,6 +517,8 @@ func (g *Game) executeItemSwap() {
 						g.state.Player.Inventory[g.selectedItemIndex] = item
 						g.selectedItemIndex = 0
 						g.isActioned = true
+						g.onShopItemPickedUp(item)
+						g.onItemPlacedInShop(selectedInventoryItem)
 					},
 					IsIdentified: identified,
 				}
@@ -550,6 +552,7 @@ func (g *Game) PickUpItem(item Item, i int) {
 	} else {
 		// それ以外の場合、アイテムをプレイヤーのインベントリに追加
 		g.state.Player.Inventory = append(g.state.Player.Inventory, item)
+		g.onShopItemPickedUp(item)
 		if identifiable, ok := item.(Identifiable); ok && !identifiable.IsIdentified() && g.playerHasAbility(AbilityAppraiser) {
 			identifiable.SetIdentified(true)
 			g.EnqueueMessage(fmt.Sprintf("%sだった。", identifiable.GetName()), 0.5)
@@ -662,7 +665,7 @@ func (g *Game) PickupItem() {
 
 				action := Action{
 					Duration: 0.5,
-					Message:  fmt.Sprintf("%sに乗った", itemName),
+					Message:  fmt.Sprintf("%sに乗った%s", itemName, g.shopPriceNote(item)),
 					ItemName: itemName,
 					Execute: func(g *Game) {
 					},

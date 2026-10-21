@@ -52,6 +52,12 @@ func saveSettings(settings GameSettings) {
 
 // itemToSaved はアイテムをセーブ用表現へ変換する
 func itemToSaved(item Item) SavedItem {
+	saved := itemToSavedBase(item)
+	saved.ShopPrice = itemShopPrice(item) // 店の商品・未払いの品の値段（wave10-B）
+	return saved
+}
+
+func itemToSavedBase(item Item) SavedItem {
 	switch v := item.(type) {
 	case *Weapon:
 		attackPower := v.AttackPower
@@ -188,6 +194,7 @@ func savedToItem(s SavedItem) (Item, error) {
 	default:
 		return nil, fmt.Errorf("不明なアイテム種別: %q", s.Kind)
 	}
+	setItemShopPrice(item, s.ShopPrice)
 	return item, nil
 }
 
@@ -353,6 +360,7 @@ func (g *Game) buildSaveData() *SaveData {
 		Stats:             g.stats,
 	}
 	save.PendingEnemySpawns = append([]PendingEnemySpawn(nil), g.pendingEnemySpawns...)
+	save.Shop = g.savedShopState()
 
 	// ジェノサイドで封じた敵IDを保存する（順序を安定させるためソート）
 	for id := range g.genocidedMonsterIDs {
@@ -531,6 +539,7 @@ func (g *Game) applySaveData(save *SaveData) error {
 	g.pickupBanned = save.PickupBanned
 
 	g.pendingEnemySpawns = append([]PendingEnemySpawn(nil), save.PendingEnemySpawns...)
+	g.applySavedShopState(save.Shop)
 
 	// ジェノサイドで封じた敵IDを復元する
 	g.genocidedMonsterIDs = nil

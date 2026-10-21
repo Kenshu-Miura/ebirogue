@@ -21,7 +21,7 @@ type SavedRoom struct {
 	Width, Height int
 	CenterX       int
 	CenterY       int
-	Role          RoomRole `json:",omitempty"`
+	Role          RoomRole `json:",omitempty"` // 特別な部屋の用途（モンスターハウス・店）。古いセーブには無く、通常の部屋として読む
 	Entered       bool     `json:",omitempty"`
 }
 
@@ -45,6 +45,7 @@ type SavedItem struct {
 
 	AbilityCounter int                  `json:",omitempty"`
 	ExtraAbilities []EquipmentAbilityID `json:",omitempty"`
+	ShopPrice      int                  `json:",omitempty"` // 店の商品・未払いの品の値段（wave10-B）。0 は自分の物
 }
 
 // SavedEnemy は敵1体のセーブ用表現。
@@ -134,6 +135,15 @@ type SaveData struct {
 	Stats             RunStats       // 冒険中の行動の統計（冒険の記録用）
 	// PendingEnemySpawns は遅れて現れる敵の予約（ヨロイエビ系など）。古いセーブには無く、空として読む
 	PendingEnemySpawns []PendingEnemySpawn `json:",omitempty"`
+	// Shop はこの階の店の状態（泥棒をしたか・使った未払いの品の代金。wave10-B）。古いセーブには無く、店の無い状態として読む
+	Shop *SavedShopState `json:",omitempty"`
+}
+
+// SavedShopState は店の状態のセーブ用表現。商品の値段は各アイテムの ShopPrice、店の部屋は SavedRoom.Role、
+// 店主が怒っているかは店主の SavedEnemy.Alerted に保存する。
+type SavedShopState struct {
+	Alarm bool `json:",omitempty"` // この階で泥棒をした（店主が怒り、敵が湧きやすい）
+	Debt  int  `json:",omitempty"` // 未払いのまま使った・失った品の代金
 }
 
 // decodeSaveData はJSONを解析し、検証済みのセーブデータを返す

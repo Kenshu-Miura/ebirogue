@@ -53,7 +53,7 @@ func TestRandomIDListsCoverTablesAndExcludeBosses(t *testing.T) {
 	}
 	bosses := 0
 	for _, definition := range MonsterDefinitions {
-		if definition.IsBoss {
+		if definition.IsBoss || isShopMonsterID(definition.ID) { // 店主・番犬もランダム出現の対象外（wave10-B）
 			bosses++
 		}
 	}
