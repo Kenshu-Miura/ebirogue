@@ -142,6 +142,9 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		g.revealEnemy(index)
 	}
 
+	if g.queueStatItemHit(target, item, index) {
+		return
+	}
 	// Check if the item is of type Cane
 	if cane, ok := item.(*Cane); ok {
 		// 封印の杖を投げた場合、直接当たった敵を封印状態にする
@@ -250,6 +253,9 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		} else {
 			// 通常のポーションの場合の処理
 			recovery := recoveredValue(target.GetHealth(), target.GetMaxHealth(), potion.Health, potion.FullRecovery) - target.GetHealth()
+			if player, ok := target.(*Player); ok {
+				recovery = player.recoveredHP(potion.Health, potion.FullRecovery) - player.Health
+			}
 			action := Action{
 				Duration: 0.5, // Assuming a duration of 0.5 seconds for this action
 				Message:  fmt.Sprintf("%sのHPが%d回復した。", target.GetName(), recovery),
@@ -257,7 +263,9 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 					// Type assertion to check if target is of type *Player or *Enemy
 					if _, ok := target.(*Player); ok {
 						// If target is of type *Player
-						g.state.Player.Health = recoveredValue(g.state.Player.Health, g.state.Player.GetMaxHealth(), potion.Health, potion.FullRecovery)
+						if !statusActive(g.state.Player.StatusAilments, StatusNoHealing) {
+							g.state.Player.Health = recoveredValue(g.state.Player.Health, g.state.Player.GetMaxHealth(), potion.Health, potion.FullRecovery)
+						}
 					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 						// If target is of type *Enemy
 						g.state.Enemies[index].Health = recoveredValue(g.state.Enemies[index].Health, g.state.Enemies[index].GetMaxHealth(), potion.Health, potion.FullRecovery)
@@ -298,7 +306,7 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			if arrow, ok := item.(*Arrow); ok {
 				attack += arrow.AttackPower
 			}
-			result := rollPlayerAttackDamage(attack, target.GetDefensePower(), 1.0, g.damageIntn())
+			result := rollPlayerAttackDamage(attack, target.GetDefensePower(), statAttackMultiplier(g.state.Player.StatusAilments)*statDefenseMultiplier(characterStatuses(target)), g.damageIntn())
 			damage = result.Damage
 			critical = result.Critical
 		} else {

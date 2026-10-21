@@ -87,18 +87,23 @@ var restoreHP = func(g *Game) {
 			Message:  fmt.Sprintf("最大HPが%d上昇した。", potionItem.MaxStatBonus),
 			Execute: func(g *Game) {
 				g.state.Player.MaxHealth += potionItem.MaxStatBonus
-				g.state.Player.Health = g.state.Player.MaxHealth
+				if !statusActive(g.state.Player.StatusAilments, StatusNoHealing) {
+					g.state.Player.Health = g.state.Player.MaxHealth
+				}
 			},
 		}
 		g.Enqueue(action)
 	} else {
 		if potionItem, ok := item.(*Potion); ok {
 			recovered := recoveredValue(g.state.Player.Health, g.state.Player.MaxHealth, potionItem.Health, potionItem.FullRecovery)
+			if statusActive(g.state.Player.StatusAilments, StatusNoHealing) {
+				recovered = g.state.Player.Health
+			}
 			action := Action{
 				Duration: 0.4,
 				Message:  fmt.Sprintf("HPが%d回復した。", recovered-g.state.Player.Health),
 				Execute: func(g *Game) {
-					g.state.Player.Health = recovered
+					g.state.Player.Health = g.state.Player.recoveredHP(potionItem.Health, potionItem.FullRecovery)
 				},
 			}
 			g.Enqueue(action)
@@ -906,7 +911,12 @@ var fullHealCard = func(g *Game) {
 			player := &g.state.Player
 			wasFull := player.Health >= player.MaxHealth
 			healed := player.MaxHealth - player.Health
+			before := player.Health
 			player.Health, player.MaxHealth = fullHealResult(player.Health, player.MaxHealth)
+			if statusActive(player.StatusAilments, StatusNoHealing) {
+				player.Health = before
+				healed = 0
+			}
 			if wasFull {
 				g.EnqueueMessage(fmt.Sprintf("最大HPが%d上昇した", fullHealMaxHealthBonus), 0.4)
 			} else {

@@ -122,7 +122,7 @@ func TestStatusRecoveryMessages(t *testing.T) {
 func TestEnemyStatusTicks(t *testing.T) {
 	g := newFoundationTestGame()
 	e := CreateEnemyByID(0, 6, 4)
-	e.StatusAilments = StatusAilments{Confusion: 2, Haste: 2, Slow: 2, Backward: 2, Sleep: 1, HasteOnWake: true, Blind: 999, Paralysis: true, Seal: true}
+	e.StatusAilments = StatusAilments{Confusion: 2, Haste: 2, Backward: 2, Sleep: 1, HasteOnWake: true, Blind: 999, Paralysis: true, Seal: true}
 	nap := CreateEnemyByID(0, 2, 2)
 	nap.StatusAilments = StatusAilments{Sleep: -1, Blind: 10}
 	g.state.Enemies = []Enemy{e, nap}
@@ -131,7 +131,7 @@ func TestEnemyStatusTicks(t *testing.T) {
 	if !strings.Contains(msg, "目を覚まし、倍速で動き出した") {
 		t.Fatalf("wake message missing: %q", msg)
 	}
-	want := StatusAilments{Confusion: 1, Haste: hasteOnWakeTurns, Slow: 1, Backward: 1, Blind: 999, Paralysis: true, Seal: true}
+	want := StatusAilments{Confusion: 1, Haste: hasteOnWakeTurns, Backward: 1, Blind: 999, Paralysis: true, Seal: true}
 	if got := g.state.Enemies[0].StatusAilments; got != want {
 		t.Fatalf("enemy status %+v, want %+v", got, want)
 	}
@@ -176,8 +176,8 @@ func TestApplyPlayerStatus(t *testing.T) {
 	if msg := runQueuedActions(g); msg != "海老さんは混乱した" {
 		t.Fatalf("message %q", msg)
 	}
-	if g.applyPlayerStatus(StatusHaste, 5, StatusSource{}) || g.state.Player.StatusAilments.Haste != 0 {
-		t.Fatal("haste is not a player status yet")
+	if !g.applyPlayerStatus(StatusHaste, 5, StatusSource{}) || g.state.Player.StatusAilments.Haste != 5 {
+		t.Fatal("haste should be applied to the player")
 	}
 	if !g.applyPlayerStatus(StatusSleep, 3, StatusSource{Stack: StackLonger}) || !g.applyPlayerStatus(StatusSleep, 2, StatusSource{Stack: StackLonger}) || g.state.Player.StatusAilments.Sleep != 3 {
 		t.Fatalf("StackLonger sleep = %d", g.state.Player.StatusAilments.Sleep)

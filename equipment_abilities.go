@@ -180,6 +180,8 @@ func statusKindLabel(kind StatusKind) string {
 		return def.Name
 	}
 	switch kind {
+	case StatusLevelDown:
+		return "レベル低下"
 	case StatusPoison:
 		return "毒"
 	case StatusCurse:

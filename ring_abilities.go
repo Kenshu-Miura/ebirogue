@@ -36,7 +36,7 @@ func init() {
 	registerAbilityHooks(AbilityRegeneration, AbilityHooks{OnTurn: func(g *Game, stacks int) {
 		p := &g.state.Player
 		if p.Satiety > 0 {
-			p.Health = recoveredValue(p.Health, p.MaxHealth, stacks, false)
+			p.Health = p.recoveredHP(stacks, false)
 		}
 		if g.moveCount%20 == 0 {
 			p.Satiety = max(0, p.Satiety-stacks)

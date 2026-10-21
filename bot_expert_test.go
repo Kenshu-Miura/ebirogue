@@ -54,6 +54,8 @@ var itemRoles = map[int]itemRole{
 	167: roleNone, 168: roleHarmful, 169: roleBuff, 170: roleHarmful,
 	171: roleBuff, 172: roleNone, 173: roleHeal,
 	174: roleEscape,
+	205: roleBuff, 206: roleBuff, 207: roleBuff, 208: roleAttack, 209: roleAttack,
+	210: roleEscape, 211: roleAttack, 212: roleAttack, 213: roleHarmful,
 }
 
 // 強化のカードのうち「すぐ使う」もの（使える条件は expertBuffUsable で判定する）。
@@ -87,6 +89,8 @@ func (b *bot) expertBuffUsable(id int) bool {
 		return b.hasUnidentified()
 	case 8:
 		return p.SetTrap == nil
+	case 205, 206, 207:
+		return true
 	case 43, 30:
 		return true
 	}

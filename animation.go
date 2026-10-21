@@ -138,9 +138,12 @@ func (g *Game) HandleActionQueue() {
 func (g *Game) CheckCombatState() {
 	if g.isActioned {
 		if !g.isCombatActive {
+			haste := g.state.Player.StatusAilments.Haste > 0 && g.state.Player.StatusAilments.Slow <= 0
 			g.AdvanceTurn()
 			g.IncrementMoveCount()
-			g.MoveEnemies()
+			if !haste || g.moveCount%2 == 0 {
+				g.MoveEnemies()
+			}
 			if shouldTakeExtraEnemyTurn(g.state.Player.StatusAilments.Slow, g.moveCount) {
 				g.MoveEnemies()
 			}

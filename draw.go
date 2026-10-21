@@ -511,6 +511,8 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 					img = g.unequipTrapImg
 				case "腐敗の罠":
 					img = g.spoilTrapImg
+				case "回復封じの罠":
+					img = g.noHealingTrapImg
 				case "散乱の罠":
 					img = g.scatterTrapImg
 				case "サビの罠":

@@ -57,6 +57,11 @@ type StatusAilments struct {
 	Seal        bool // 封印状態
 	HasteOnWake bool // 睡眠から目覚めた時に倍速化するかどうか
 	Backward    int  // ゾワゾワ（敵）: 通常攻撃を反対向きに出す残りターン数
+	AttackUp    int  `json:",omitempty"`
+	AttackDown  int  `json:",omitempty"`
+	DefenseUp   int  `json:",omitempty"`
+	DefenseDown int  `json:",omitempty"`
+	NoHealing   int  `json:",omitempty"`
 }
 
 type Player struct {
@@ -179,6 +184,7 @@ type Game struct {
 	accessoryImg              *ebiten.Image
 	hatenaImg                 *ebiten.Image
 	sleepTrapImg              *ebiten.Image
+	noHealingTrapImg          *ebiten.Image
 	poisonArrowTrapImg        *ebiten.Image
 	slowTrapImg               *ebiten.Image
 	mineTrapImg               *ebiten.Image
@@ -997,6 +1003,7 @@ func NewGame() *Game {
 	accessoryImg := loadImage("img/ring.png")
 	hatenaImg := loadImage("img/hatena.png")
 	sleepTrapImg := loadImage("img/suimin_trap.png")
+	noHealingTrapImg := loadImage("img/no_healing_trap.png")
 	poisonArrowTrapImg := loadImage("img/poison_arrow_trap.png")
 	slowTrapImg := loadImage("img/slow_trap.png")
 	mineTrapImg := loadImage("img/mine_trap.png")
@@ -1055,6 +1062,7 @@ func NewGame() *Game {
 		accessoryImg:        accessoryImg,
 		hatenaImg:           hatenaImg,
 		sleepTrapImg:        sleepTrapImg,
+		noHealingTrapImg:    noHealingTrapImg,
 		poisonArrowTrapImg:  poisonArrowTrapImg,
 		slowTrapImg:         slowTrapImg,
 		mineTrapImg:         mineTrapImg,

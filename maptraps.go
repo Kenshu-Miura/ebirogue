@@ -125,11 +125,12 @@ var mapTrapTemplates = map[int]mapTrapTemplate{
 	12: {ID: 12, Name: "装備はずしの罠", Effect: unequipTrapEffect, FailRate: 20},
 	13: {ID: 13, Name: "腐敗の罠", FailRate: 20}, // 効果はアイテムテーブルとの初期化循環を避けて init で登録。
 	14: {ID: 14, Name: "散乱の罠", Effect: scatterTrapEffect, FailRate: 20},
+	15: {ID: 15, Name: "回復封じの罠", Effect: noHealingTrapEffect, FailRate: 20},
 }
 
 // floorTrapIDs は床生成とワナのカードで抽選する罠 ID の一覧。睡眠ガスを多めに混ぜる。
 // 新しい罠は既存の要素を並べ替えずに追記する。
-var floorTrapIDs = []int{0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+var floorTrapIDs = []int{0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 
 // randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。
 var randomMapTrapIDs = sortedTemplateIDs(mapTrapTemplates, nil)
