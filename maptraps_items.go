@@ -120,7 +120,7 @@ var scatterTrapEffect = func(g *Game) {
 			}
 			candidates = append(candidates, i)
 		}
-		selected := rollItemTrapIndices(candidates, min(3, len(positions)), g.randIntn)
+		selected := rollItemTrapIndices(candidates, min(scatterTrapMaxItems, len(positions)), g.randIntn)
 		// 削除でインデックスがずれる前に対象を保存する。壺の中身はそのまま保持する。
 		items := make([]Item, len(selected))
 		for i, index := range selected {

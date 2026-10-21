@@ -489,7 +489,7 @@ func TestSpecialUnidentifiedNamesAndRarity(t *testing.T) {
 		}
 	}
 	for _, id := range []int{2, 3, 17, 18, 19, 28, 29, 215, 216, 218} {
-		if itemSpawnWeights[id] != 4*itemSpawnWeights[217] {
+		if itemFloorWeight(id, 4) != 4*itemFloorWeight(217, 4) {
 			t.Fatal("invincible is not rarer")
 		}
 	}

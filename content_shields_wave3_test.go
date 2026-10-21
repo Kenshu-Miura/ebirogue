@@ -93,8 +93,10 @@ func TestWave3ShieldTemplatesAndSave(t *testing.T) {
 			}
 		})
 	}
-	if itemCategorySpawnWeights["Armor"] != 14 {
-		t.Fatal("armor category weight changed")
+	for floor := 1; floor <= finalFloor; floor++ {
+		if itemCategoryWeight("Armor", floor) != 14 {
+			t.Fatal("armor category weight changed")
+		}
 	}
 }
 

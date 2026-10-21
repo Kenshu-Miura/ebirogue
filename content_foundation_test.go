@@ -654,27 +654,32 @@ func TestItemCategorySpawnWeights(t *testing.T) {
 	for _, template := range itemTemplates {
 		types[template.ItemType]++
 	}
-	for itemType := range types {
-		if itemCategorySpawnWeights[itemType] <= 0 {
-			t.Errorf("item type %q has no category spawn weight (its items would never appear on the floor)", itemType)
+	// どの階でもすべてのカテゴリに重みがあり、道具が1つ以上出る。
+	for floor := 1; floor <= finalFloor; floor++ {
+		for itemType := range types {
+			if itemCategoryWeight(itemType, floor) <= 0 {
+				t.Errorf("floor %d: item type %q has no category spawn weight (its items would never appear on the floor)", floor, itemType)
+			}
+		}
+		if got := len(floorItemCategoriesFor(floor)); got != len(types) {
+			t.Errorf("floor %d: %d categories can appear, want %d", floor, got, len(types))
 		}
 	}
-	for name := range itemCategorySpawnWeights {
+	for name := range itemCategoryBandWeights {
 		if types[name] == 0 {
 			t.Errorf("category weight %q has no item templates", name)
 		}
 	}
-	// 導入時の割合を維持し、wave4-A で指輪だけ重みを1から3へ増やす。
+	// 導入時の割合を全階で維持し、wave4-A で指輪だけ重みを1から3へ増やした（wave9-A の初期値も同じ）。
 	want := map[string]int{"Card": 31, "Armor": 14, "Weapon": 12, "Potion": 7, "Food": 4, "Cane": 2, "Accessory": 3, "Arrow": 1, "Money": 1, "Pot": 1, "Trap": 1}
-	for _, category := range itemSpawnCategories {
-		if category.Weight != want[category.Name] {
-			t.Errorf("category %s weight = %d, want %d", category.Name, category.Weight, want[category.Name])
+	for _, floor := range []int{1, 5, 10, 15, 20, 25, 30} {
+		for _, category := range floorItemCategoriesFor(floor) {
+			if category.Weight != want[category.Name] {
+				t.Errorf("floor %d: category %s weight = %d, want %d", floor, category.Name, category.Weight, want[category.Name])
+			}
 		}
 	}
-	if len(itemSpawnCategories) != len(want) {
-		t.Fatalf("categories = %d, want %d", len(itemSpawnCategories), len(want))
-	}
-	// createItem は各カテゴリから選ぶ（カテゴリの抽選 r を全通り試す）
+	// createFloorItem は各カテゴリから選ぶ（カテゴリの抽選 r を全通り試す。補正なしでは重みは spawnWeightScale 倍）
 	total := 0
 	for _, w := range want {
 		total += w
@@ -682,10 +687,10 @@ func TestItemCategorySpawnWeights(t *testing.T) {
 	counts := map[string]int{}
 	for r := 0; r < total; r++ {
 		calls := 0
-		item := createItem(0, 0, func(n int) int {
+		item := createFloorItem(0, 0, 1, DifficultyAdvanced, func(n int) int {
 			calls++
 			if calls == 1 {
-				return r
+				return r * spawnWeightScale
 			}
 			return 0
 		})
@@ -693,7 +698,204 @@ func TestItemCategorySpawnWeights(t *testing.T) {
 	}
 	for name, w := range want {
 		if counts[name] != w {
-			t.Errorf("createItem category %s = %d of %d, want %d", name, counts[name], total, w)
+			t.Errorf("createFloorItem category %s = %d of %d, want %d", name, counts[name], total, w)
+		}
+	}
+}
+
+// TestItemFloorRulesSanity は道具ごとの規則の健全性を確かめる（wave9-A）。
+func TestItemFloorRulesSanity(t *testing.T) {
+	for id, rule := range itemFloorRules {
+		_, exists := itemTemplates[id]
+		if !exists && (id < 225 || id > 239) {
+			t.Errorf("rule for unknown item %d (only wave9-C's 225〜239 may be missing)", id)
+		}
+		if rule.From < 0 || rule.Until < 0 || rule.Weight < 0 {
+			t.Errorf("item %d: negative rule %+v", id, rule)
+		}
+		if rule.Until > 0 && rule.Until <= max(rule.From, 1) {
+			t.Errorf("item %d: stops at %d before it starts at %d", id, rule.Until, rule.From)
+		}
+		if rule.From > finalFloor {
+			t.Errorf("item %d: starts at %d below the final floor", id, rule.From)
+		}
+		if rule.Heal && rule.Strong {
+			t.Errorf("item %d: heal and strong at the same time", id)
+		}
+		if exists && rule.Heal && itemTemplates[id].ItemType != "Potion" {
+			t.Errorf("item %d: heal flag is for potions (food is tuned by category)", id)
+		}
+		// 強い道具でないのに出る階を限る規則は無い（遅らせる道具には Strong を付ける）。
+		if !rule.Strong && (rule.From > 1 || rule.Until > 0) {
+			t.Errorf("item %d has a floor limit without the strong flag", id)
+		}
+	}
+}
+
+// floorTableHas は floor 階の抽選表に id があるか。
+func floorTableHas(floor, id int) bool {
+	for _, category := range floorItemCategoriesFor(floor) {
+		for _, entry := range category.Entries {
+			if entry.ID == id {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// TestItemFloorRulesDelayStrongItems は出始める階より浅い階で抽選に入らないことを確かめる。
+func TestItemFloorRulesDelayStrongItems(t *testing.T) {
+	for id, rule := range itemFloorRules {
+		if _, ok := itemTemplates[id]; !ok {
+			if floorTableHas(finalFloor, id) {
+				t.Errorf("missing template %d is in the floor table", id)
+			}
+			continue
+		}
+		for floor := 1; floor <= finalFloor; floor++ {
+			want := rule.appearsOnFloor(floor)
+			if got := floorTableHas(floor, id); got != want {
+				t.Errorf("item %d on floor %d: in table = %v, want %v (rule %+v)", id, floor, got, want, rule)
+			}
+		}
+	}
+	// 具体例: 全滅・ジェノサイドのカードは9階から、無敵の薬・白紙・聖域のカードは4階から。
+	for _, c := range []struct{ id, from int }{{56, 9}, {54, 9}, {217, 4}, {53, 4}, {55, 4}} {
+		if floorTableHas(c.from-1, c.id) || !floorTableHas(c.from, c.id) {
+			t.Errorf("item %d should start on floor %d", c.id, c.from)
+		}
+	}
+	// 通常の道具と、強い武具（出始める階を遅らせない）はどの階でも出る。
+	for floor := 1; floor <= finalFloor; floor++ {
+		if !floorTableHas(floor, 1) || !floorTableHas(floor, 20) || !floorTableHas(floor, 7) || !floorTableHas(floor, 4) || !floorTableHas(floor, 70) {
+			t.Fatalf("floor %d: basic items missing", floor)
+		}
+	}
+}
+
+// TestPickFloorItemIDDistribution は抽選の割合が表の重みどおりになることを、カテゴリ内の乱数を全通り回して確かめる。
+func TestPickFloorItemIDDistribution(t *testing.T) {
+	for _, floor := range []int{1, 9, 30} {
+		categories := floorItemCategoriesFor(floor)
+		catTotal := 0
+		for _, c := range categories {
+			catTotal += c.Weight
+		}
+		offset := 0
+		for _, c := range categories {
+			entryTotal := 0
+			for _, e := range c.Entries {
+				entryTotal += e.Weight
+			}
+			counts := map[int]int{}
+			for r := 0; r < entryTotal*spawnWeightScale; r++ {
+				calls := 0
+				id := pickFloorItemID(floor, DifficultyBeginner, func(n int) int {
+					calls++
+					if calls == 1 {
+						if n != catTotal*spawnWeightScale {
+							t.Fatalf("category total %d, want %d", n, catTotal*spawnWeightScale)
+						}
+						return offset * spawnWeightScale
+					}
+					return r
+				})
+				counts[id]++
+			}
+			for _, e := range c.Entries {
+				if counts[e.ID] != e.Weight*spawnWeightScale {
+					t.Errorf("floor %d %s item %d drawn %d, want %d", floor, c.Name, e.ID, counts[e.ID], e.Weight*spawnWeightScale)
+				}
+			}
+			offset += c.Weight
+		}
+	}
+}
+
+// TestFloorTrapTableSanity は罠の帯別の重みの健全性を確かめる（wave9-A）。
+func TestFloorTrapTableSanity(t *testing.T) {
+	for id := range mapTrapTemplates {
+		if _, ok := trapBandWeights[id]; !ok {
+			t.Errorf("trap %d has no band weights (it would never appear on the floor)", id)
+		}
+	}
+	for id, weights := range trapBandWeights {
+		if _, ok := mapTrapTemplates[id]; !ok {
+			t.Errorf("band weights for unknown trap %d", id)
+		}
+		for i, w := range weights {
+			if w < 0 {
+				t.Errorf("trap %d band %d: negative weight", id, i)
+			}
+		}
+	}
+	for floor := 1; floor <= finalFloor; floor++ {
+		ids := availableTrapIDs(randomMapTrapIDs, floor)
+		total := 0
+		for _, id := range ids {
+			total += trapFloorWeight(id, floor)
+		}
+		if total <= 0 {
+			t.Fatalf("floor %d has no traps", floor)
+		}
+		// 抽選を全通り試し、重みどおりの回数と、ボス階・30階で落とし穴が出ないことを確かめる。
+		counts := map[int]int{}
+		for r := 0; r < total; r++ {
+			counts[pickFloorTrapID(floor, func(int) int { return r })]++
+		}
+		for _, id := range ids {
+			if counts[id] != trapFloorWeight(id, floor) {
+				t.Errorf("floor %d trap %d drawn %d, want %d", floor, id, counts[id], trapFloorWeight(id, floor))
+			}
+		}
+		if (isBossFloor(floor) || floor >= finalFloor) && counts[pitfallTrapID] > 0 {
+			t.Errorf("floor %d draws a pitfall", floor)
+		}
+	}
+	// 浅い階は大型地雷・鉄の矢を出さず、深い階ほど大型地雷・鉄の矢・落石・回復封じが増える。
+	if trapFloorWeight(11, 1) != 0 || trapFloorWeight(9, 3) != 0 || trapFloorWeight(11, 4) == 0 {
+		t.Error("shallow floors should not have large mines or iron arrows")
+	}
+	for _, id := range []int{9, 10, 11, 15} {
+		if trapFloorWeight(id, 26) <= trapFloorWeight(id, 1) {
+			t.Errorf("trap %d should be more common deep", id)
+		}
+	}
+}
+
+// TestDifficultySpawnTuningNeutral は難易度の補正がまだすべて 1.0（補正なし）であることを確かめる。
+// wave11 で値を入れたらこのテストを直す。
+func TestDifficultySpawnTuningNeutral(t *testing.T) {
+	for _, d := range allDifficulties {
+		if got := spawnTuningFor(d); got != neutralSpawnTuning {
+			t.Errorf("%v tuning = %+v, want neutral", d, got)
+		}
+		if got := spawnTuningFor(d).floorItemCount(); got != floorItemBaseCount {
+			t.Errorf("%v item count = %d, want %d", d, got, floorItemBaseCount)
+		}
+	}
+}
+
+// TestFloorItemsUseFloorTable は生成した浅い階に、まだ出ない道具・罠が置かれないことを確かめる。
+func TestFloorItemsUseFloorTable(t *testing.T) {
+	for seed := int64(1); seed <= 20; seed++ {
+		for _, floor := range []int{1, 2, 3} {
+			player := newInitialPlayer()
+			_, _, items, _, _, traps := GenerateRandomMapFor(70, 70, floor-1, &player, newFloorRNG(seed, floor), DifficultyBeginner)
+			if len(items) != floorItemBaseCount {
+				t.Fatalf("seed %d floor %d: %d items", seed, floor, len(items))
+			}
+			for _, item := range items {
+				if !floorTableHas(floor, item.GetID()) {
+					t.Errorf("seed %d floor %d: item %d is not in the floor table", seed, floor, item.GetID())
+				}
+			}
+			for _, trap := range traps {
+				if trapFloorWeight(trap.TemplateID, floor) == 0 {
+					t.Errorf("seed %d floor %d: trap %d on a shallow floor", seed, floor, trap.TemplateID)
+				}
+			}
 		}
 	}
 }

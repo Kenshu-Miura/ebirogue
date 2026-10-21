@@ -185,7 +185,7 @@ func (g *Game) startNewRun(seed int64) {
 	player := newInitialPlayer()
 
 	// 新しいマップを生成（プレイヤーの座標も部屋の中に設定される）
-	mapGrid, enemies, items, newFloor, rooms, traps := GenerateRandomMap(70, 70, 0, &player, newFloorRNG(seed, 1))
+	mapGrid, enemies, items, newFloor, rooms, traps := GenerateRandomMapFor(70, 70, 0, &player, newFloorRNG(seed, 1), g.difficulty)
 	g.Floor = newFloor
 	g.floorTurns = 0
 	g.windWarning1Shown = false

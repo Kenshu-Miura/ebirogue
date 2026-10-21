@@ -125,18 +125,20 @@ var mapTrapTemplates = map[int]mapTrapTemplate{
 	9:  {ID: 9, Name: "鉄の矢の罠", Effect: ironArrowTrapEffect, FailRate: 20},
 	10: {ID: 10, Name: "落石の罠", Effect: fallingRockTrapEffect, FailRate: 20},
 	11: {ID: 11, Name: "大型地雷", Effect: largeMineTrapEffect, FailRate: 10},
-	12: {ID: 12, Name: "装備はずしの罠", Effect: unequipTrapEffect, FailRate: 20},
-	13: {ID: 13, Name: "腐敗の罠", FailRate: 20}, // 効果はアイテムテーブルとの初期化循環を避けて init で登録。
-	14: {ID: 14, Name: "散乱の罠", Effect: scatterTrapEffect, FailRate: 20},
+	12: {ID: 12, Name: "装備はずしの罠", Effect: unequipTrapEffect, FailRate: itemTrapFailRate},
+	13: {ID: 13, Name: "腐敗の罠", FailRate: itemTrapFailRate}, // 効果はアイテムテーブルとの初期化循環を避けて init で登録。
+	14: {ID: 14, Name: "散乱の罠", Effect: scatterTrapEffect, FailRate: itemTrapFailRate},
 	15: {ID: 15, Name: "回復封じの罠", Effect: noHealingTrapEffect, FailRate: 20},
 }
 
-// floorTrapIDs は床生成とワナのカードで抽選する罠 ID の一覧。睡眠ガスを多めに混ぜる。
-// 新しい罠は既存の要素を並べ替えずに追記する。
-var floorTrapIDs = []int{0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
-
 // randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。
 var randomMapTrapIDs = sortedTemplateIDs(mapTrapTemplates, nil)
+
+// pickFloorTrapID は床生成とワナのカードで置く罠を、floor 階の重み（trapBandWeights、item_floor_tables.go）で選ぶ。
+// ボス階と30階では落とし穴を除く（availableTrapIDs）。乱数は1回使う。
+func pickFloorTrapID(floor int, intn func(int) int) int {
+	return pickWeightedTrapID(availableTrapIDs(randomMapTrapIDs, floor), floor, intn, 0)
+}
 
 func createMapTrapByID(id, x, y int) MapTrap {
 	template, ok := mapTrapTemplates[id]
@@ -219,12 +221,17 @@ func (g *Game) checkTrapInFront() bool {
 	return false
 }
 
-// 罠を生成する関数
+// 罠を生成する関数（難易度の補正なし）
 func generateMapTraps(rooms []Room, rng *gameRNG, floor int) []MapTrap {
+	return generateMapTrapsWith(rooms, rng, floor, neutralSpawnTuning)
+}
+
+// generateMapTrapsWith は難易度の補正 tuning で罠の数を変えて生成する。
+func generateMapTrapsWith(rooms []Room, rng *gameRNG, floor int, tuning difficultySpawnTuning) []MapTrap {
 	var traps []MapTrap
 
-	// 5-10個の罠をランダムに生成
-	numTraps := rng.Intn(6) + 5 // 5～10個
+	// 5-10個の罠をランダムに生成（難易度の補正で増減）
+	numTraps := tuning.floorTrapCount(rng.Intn(floorTrapMaxCount-floorTrapMinCount+1) + floorTrapMinCount)
 
 	for i := 0; i < numTraps; i++ {
 		// ランダムな部屋を選択
@@ -245,8 +252,7 @@ func generateMapTraps(rooms []Room, rng *gameRNG, floor int) []MapTrap {
 		}
 
 		if !duplicate {
-			trapIDs := availableTrapIDs(floorTrapIDs, floor)
-			trap := createMapTrapByID(trapIDs[rng.Intn(len(trapIDs))], x, y)
+			trap := createMapTrapByID(pickFloorTrapID(floor, rng.Intn), x, y)
 			traps = append(traps, trap)
 		} else {
 			// 重複していた場合は再試行

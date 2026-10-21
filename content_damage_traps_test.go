@@ -138,7 +138,8 @@ func TestDamageTrapsSaveAndGeneration(t *testing.T) {
 	}
 	seen := map[int]bool{}
 	for seed := int64(0); seed < 100; seed++ {
-		for _, trap := range generateMapTraps([]Room{{X: 0, Y: 0, Width: 20, Height: 20}}, newFloorRNG(seed, 1), 1) {
+		// 鉄の矢・大型地雷は4階から出る（wave9-A の階層別の重み）ので5階で生成する。
+		for _, trap := range generateMapTraps([]Room{{X: 0, Y: 0, Width: 20, Height: 20}}, newFloorRNG(seed, 5), 5) {
 			seen[trap.TemplateID] = true
 		}
 	}

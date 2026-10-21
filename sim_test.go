@@ -100,6 +100,8 @@ type simOutcome struct {
 	Death              *deathTrace    `json:",omitempty"` // Trace のときだけ。最後の数十ターンと各階の床の道具
 	// FloorItemKinds は各階に初めて着いたときの床の道具の種類別の数（床出現の割合の確認用）
 	FloorItemKinds map[string]int `json:",omitempty"`
+	// FloorBandItemKinds は FloorItemKinds を階の帯（spawnBandLabel）ごとに分けたもの（wave9-A の階層別の表の確認用）
+	FloorBandItemKinds map[string]map[string]int `json:",omitempty"`
 	// 食料と滞在の計測。FoodPicked は拾った食料の数（敵が落とした食料も含む）、
 	// FloorFood[i] は i+1 階に初めて着いたときに床にあった食料の数
 	FoodPicked int   `json:",omitempty"`
@@ -118,9 +120,17 @@ func countFloorItemKinds(g *Game, out *simOutcome) {
 	if out.FloorItemKinds == nil {
 		out.FloorItemKinds = map[string]int{}
 	}
+	if out.FloorBandItemKinds == nil {
+		out.FloorBandItemKinds = map[string]map[string]int{}
+	}
+	band := spawnBandLabel(g.Floor)
+	if out.FloorBandItemKinds[band] == nil {
+		out.FloorBandItemKinds[band] = map[string]int{}
+	}
 	food := 0
 	for _, item := range g.state.Items {
 		out.FloorItemKinds[itemKind(item)]++
+		out.FloorBandItemKinds[band][itemKind(item)]++
 		if isFoodItem(item) {
 			food++
 		}
@@ -542,6 +552,8 @@ type simSummary struct {
 	DeathCauses map[string]int
 	// FloorItemKinds は各階の到着時の床の道具の種類別の合計（F5 の床出現の割合の確認用）
 	FloorItemKinds map[string]int `json:",omitempty"`
+	// FloorBandItemKinds は FloorItemKinds を階の帯ごとに分けたもの（wave9-A）
+	FloorBandItemKinds map[string]map[string]int `json:",omitempty"`
 	// Stage4Deaths は段4の敵（ID 108〜125）による死亡の数（死因の名前ごと）
 	Stage4Deaths map[string]int `json:",omitempty"`
 	Violations   int
@@ -592,6 +604,17 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 				s.FloorItemKinds = map[string]int{}
 			}
 			s.FloorItemKinds[kind] += n
+		}
+		for band, kinds := range o.FloorBandItemKinds {
+			if s.FloorBandItemKinds == nil {
+				s.FloorBandItemKinds = map[string]map[string]int{}
+			}
+			if s.FloorBandItemKinds[band] == nil {
+				s.FloorBandItemKinds[band] = map[string]int{}
+			}
+			for kind, n := range kinds {
+				s.FloorBandItemKinds[band][kind] += n
+			}
 		}
 		switch o.Ended {
 		case "cleared":
@@ -845,6 +868,38 @@ func renderFloorItemKinds(b *strings.Builder, s simSummary) {
 		n := s.FloorItemKinds[kind]
 		fmt.Fprintf(b, "| %s | %d | %.1f%% |\n", kind, n, float64(n)/float64(total)*100)
 	}
+	renderFloorBandItemKinds(b, s)
+}
+
+// renderFloorBandItemKinds は床の道具の種類別の割合を階の帯ごとに書く（wave9-A の階層別の表の確認用）。
+func renderFloorBandItemKinds(b *strings.Builder, s simSummary) {
+	if len(s.FloorBandItemKinds) == 0 {
+		return
+	}
+	labels := []string{}
+	totals := map[string]int{}
+	for _, band := range spawnFloorBands {
+		label := spawnBandLabel(band.From)
+		if kinds := s.FloorBandItemKinds[label]; len(kinds) > 0 {
+			labels = append(labels, label)
+			for _, n := range kinds {
+				totals[label] += n
+			}
+		}
+	}
+	fmt.Fprintf(b, "\n### 床の道具（階の帯別、到着時の割合）\n\n| 種類 | %s |\n|---|%s\n", strings.Join(labels, " | "), strings.Repeat("---:|", len(labels)))
+	for _, kind := range sortedKeys(s.FloorItemKinds) {
+		cells := make([]string, len(labels))
+		for i, label := range labels {
+			cells[i] = fmt.Sprintf("%.1f%%", float64(s.FloorBandItemKinds[label][kind])/float64(totals[label])*100)
+		}
+		fmt.Fprintf(b, "| %s | %s |\n", kind, strings.Join(cells, " | "))
+	}
+	cells := make([]string, len(labels))
+	for i, label := range labels {
+		cells[i] = fmt.Sprintf("%d", totals[label])
+	}
+	fmt.Fprintf(b, "| 合計（個） | %s |\n", strings.Join(cells, " | "))
 }
 
 func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary, elapsed time.Duration) string {

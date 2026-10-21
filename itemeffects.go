@@ -549,11 +549,11 @@ func rollMonsterHouseItemCount(intn func(int) int) int {
 	return 2 + intn(2)
 }
 
-// createItemを直接参照するとitemTemplatesとの初期化循環になるため、init時に間接参照を張る
-var newRandomFloorItem func(x, y int, intn func(int) int) Item
+// createFloorItemを直接参照するとitemTemplatesとの初期化循環になるため、init時に間接参照を張る
+var newRandomFloorItem func(x, y, floor int, difficulty Difficulty, intn func(int) int) Item
 
 func init() {
-	newRandomFloorItem = createItem
+	newRandomFloorItem = createFloorItem
 }
 
 // pickFreeCellsInRoom は部屋の内側から isFree を満たすマスを最大 count 個ランダムに選ぶ。
@@ -630,7 +630,7 @@ var summonMonsterHouse = func(g *Game) {
 					enemy.ShowOnMiniMap = true
 					g.state.Enemies = append(g.state.Enemies, enemy)
 				} else {
-					g.state.Items = append(g.state.Items, newRandomFloorItem(cell.X, cell.Y, g.randIntn))
+					g.state.Items = append(g.state.Items, newRandomFloorItem(cell.X, cell.Y, g.Floor, g.difficulty, g.randIntn))
 				}
 			}
 			g.EnqueueMessage("モンスターハウスだ！", 0.5)
@@ -778,8 +778,7 @@ var increaseFloorTraps = func(g *Game) {
 				if occupied {
 					continue
 				}
-				trapIDs := availableTrapIDs(floorTrapIDs, g.Floor)
-				g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(trapIDs[g.randIntn(len(trapIDs))], x, y))
+				g.state.MapTraps = append(g.state.MapTraps, createMapTrapByID(pickFloorTrapID(g.Floor, g.randIntn), x, y))
 				added++
 			}
 			g.isActioned = true
