@@ -827,7 +827,12 @@ func (g *Game) handleSettingsInput() error {
 		return nil
 	}
 
-	const settingsItemCount = 4
+	// 0 全画面・1 ミニマップ・2 キー設定・3 入力の記録・4 BGM・5 効果音
+	settingsItemCount := 6
+	// 描画も音声も記録もない BOT では従来の巡回順を保ち、ランダム入力の結果を変えない。
+	if g.headless {
+		settingsItemCount = 3
+	}
 	if g.settingsSelectedIndex == 2 && g.keys().JustPressed(KeyZ) {
 		g.showKeyConfig = true
 		g.keyConfigSelected = 0
@@ -859,6 +864,17 @@ func (g *Game) handleSettingsInput() error {
 			}
 		case 1:
 			g.settings.ShowMiniMap = !g.settings.ShowMiniMap
+		case 4, 5:
+			delta := 1
+			if g.keys().JustPressed(KeyLeft) {
+				delta = -1
+			}
+			if g.settingsSelectedIndex == 4 {
+				g.settings.BGMVolume = clampVolume(g.settings.BGMVolume + delta)
+			} else {
+				g.settings.SEVolume = clampVolume(g.settings.SEVolume + delta)
+			}
+			g.applyAudioVolumes()
 		}
 	}
 

@@ -88,7 +88,9 @@ func (p *Player) checkLevelUp(g *Game) {
 		return
 	}
 	p.setLevel(newLevel)
+	start := len(g.ActionQueue.Queue)
 	g.EnqueueMessage(fmt.Sprintf("海老さんはレベル%dに上がった", p.Level), 1.0)
+	g.soundFirstAction(start, "level")
 }
 
 // setLevel はレベルを変更し、最大HPをレベルの差分だけ増減する。

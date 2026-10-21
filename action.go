@@ -740,6 +740,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 		g.Enqueue(Action{
 			Duration: 0.5,
 			Execute: func(g *Game) {
+				g.playSE("miss")
 				g.isActioned = true
 			},
 		})
@@ -787,6 +788,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 			Duration: 0.5,
 			Message:  message,
 			Execute: func(g *Game) {
+				g.playSE("miss")
 				g.isActioned = true
 				attack.Target = nil // 実行時の敵を引き直す（倒れていれば nil）
 				if i := g.enemyIndexAt(targetX, targetY); i >= 0 {
@@ -823,6 +825,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 			if currentIndex < 0 {
 				return
 			}
+			g.playSE("hit")
 			target := g.state.Enemies[currentIndex]
 			hitResult := PlayerAttackHit{Weapon: weapon, EnemyID: target.ID, Enemy: target, Damage: netDamage,
 				Critical: result.Critical, Defeated: target.Health-netDamage <= 0}

@@ -190,7 +190,9 @@ func (g *Game) stepOnTrap(trapIndex int) {
 	} else {
 		// 罠の効果関数は死因の記録にこの罠を使う
 		g.steppedTrapSource = trapSource(trap.TemplateID, trap.Name)
+		start := len(g.ActionQueue.Queue)
 		trap.Effect(g)
+		g.soundFirstAction(start, "trap")
 	}
 
 	// 罠を発見済みにする

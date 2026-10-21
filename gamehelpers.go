@@ -121,6 +121,8 @@ func (g *Game) takeShotArrow(arrow *Arrow) *Arrow {
 
 // useCane は杖を1回振る。残り回数がない場合はメッセージのみ表示して false を返す。
 func (g *Game) useCane(caneItem *Cane) bool {
+	start := len(g.ActionQueue.Queue)
+	defer func() { g.soundFirstAction(start, "use") }()
 	if caneItem.Uses <= 0 {
 		g.EnqueueMessage(fmt.Sprintf("%sを使った。しかし何も起こらなかった。", caneItem.GetName()), 0.5)
 		return false
@@ -136,6 +138,11 @@ func (g *Game) useCane(caneItem *Cane) bool {
 
 // useConsumable は食料・薬・カード・お金・罠アイテムを使用する。該当しない場合は false を返す。
 func (g *Game) useConsumable(item Item) bool {
+	switch item.(type) {
+	case *Potion, *Card:
+		start := len(g.ActionQueue.Queue)
+		defer func() { g.soundFirstAction(start, "use") }()
+	}
 	switch item.(type) {
 	case *Food, *Potion, *Card, *Money, *Trap:
 		g.recordItemUse(item)
