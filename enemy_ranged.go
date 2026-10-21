@@ -84,7 +84,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 	attack := enemy.RangedAttack
 	targetX, targetY := g.state.Player.X, g.state.Player.Y
 	dx, dy := sign(targetX-enemy.X), sign(targetY-enemy.Y)
-	damage := rollEnemyAttackDamage(attack.AttackPower, g.state.Player.DefensePower, g.damageIntn())
+	damage := rollEnemyAttackDamageWith(attack.AttackPower, g.state.Player.DefensePower, statAttackMultiplier(enemy.StatusAilments)*statDefenseMultiplier(g.state.Player.StatusAilments), g.damageIntn())
 	defense := g.resolvePlayerDefense(damage, enemyDamageKindForRangedAttack(attack.Kind), EnemyAttackRanged, enemy, false)
 	enemyName := g.enemyDisplayName(enemy.Name)
 
@@ -141,6 +141,10 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 // enqueueExplosionCollateral は同じ敵ターンで予約済みの行動が終わった後に、
 // 着弾点周囲のモンスターへ巻き込みダメージを適用する。
 func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targetX, targetY int, attack RangedAttackDefinition) {
+	attackMultiplier := 1.0
+	if i := g.findEnemyForDefense(attackerID, attackerX, attackerY); i >= 0 {
+		attackMultiplier = statAttackMultiplier(g.state.Enemies[i].StatusAilments)
+	}
 	hasTarget := false
 	for _, enemy := range g.state.Enemies {
 		if enemy.ID == attackerID && enemy.X == attackerX && enemy.Y == attackerY {
@@ -168,7 +172,7 @@ func (g *Game) enqueueExplosionCollateral(attackerID, attackerX, attackerY, targ
 				if !withinBlastRadius(targetX, targetY, target.X, target.Y, attack.BlastRadius) {
 					continue
 				}
-				target.Health -= rollEnemyAttackDamage(attack.AttackPower, target.DefensePower, g.damageIntn())
+				target.Health -= rollEnemyAttackDamageWith(attack.AttackPower, target.DefensePower, attackMultiplier*statDefenseMultiplier(target.StatusAilments), g.damageIntn())
 				clearStatus(&target.StatusAilments, StatusSleep)
 				clearStatus(&target.StatusAilments, StatusParalysis)
 				if target.Health <= 0 {

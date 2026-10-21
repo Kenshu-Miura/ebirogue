@@ -365,6 +365,8 @@ func (b *bot) useInventoryItemOn(index int, action string, target int) (bool, er
 
 // itemValues はカード・杖・薬の価値の目安（itemRoles の分類から決まらないもの）。
 var itemValues = map[int]int{
+	205: 50, 206: 50, 207: 50, 208: 70, 209: 70,
+	210: 65, 211: 70, 212: 70, 213: 0,
 	cardBlankID:        75, // 白紙（全滅・完全回復を書ける）
 	cardSanctuaryID:    60,
 	cardZowazowaID:     55,

@@ -20,6 +20,9 @@ type StatusSource struct {
 
 // guardPlayerStatus は付与の前の耐性の判定。source.Shield なら盾の判定で乱数を1回使うことがある。
 func (g *Game) guardPlayerStatus(kind StatusKind, source StatusSource) (guard string, blocked bool) {
+	if def, ok := statusDefOf(kind); ok && !def.Bad {
+		return "", false
+	}
 	if source.Shield {
 		return g.playerStatusGuard(kind)
 	}
@@ -44,7 +47,7 @@ func (g *Game) applyPlayerStatus(kind StatusKind, turns int, source StatusSource
 func (g *Game) playerStatusAction(kind StatusKind, turns int, rule StatusStack, guard string, blocked bool) Action {
 	return Action{
 		Duration: statusMessageDuration,
-		Message:  statusResultMessage(kind, guard, blocked),
+		Message:  g.playerStatusApplicationMessage(kind, guard, blocked),
 		Execute: func(g *Game) {
 			if !blocked {
 				g.stackPlayerStatus(kind, turns, rule)
@@ -61,10 +64,21 @@ func (g *Game) enqueuePlayerStatus(kind StatusKind, turns int, rule StatusStack,
 // applyPlayerStatusResult は判定済みの付与をすぐかけて、統一したメッセージを積む。
 // Action の Execute の中で、続く処理より先に状態を反映したいときに使う。
 func (g *Game) applyPlayerStatusResult(kind StatusKind, turns int, rule StatusStack, guard string, blocked bool) {
+	message := g.playerStatusApplicationMessage(kind, guard, blocked)
 	if !blocked {
 		g.stackPlayerStatus(kind, turns, rule)
 	}
-	g.EnqueueMessage(statusResultMessage(kind, guard, blocked), statusMessageDuration)
+	g.EnqueueMessage(message, statusMessageDuration)
+}
+
+// 逆の状態と相殺されたときは、かかったという文言ではなく解除の文言を使う。
+func (g *Game) playerStatusApplicationMessage(kind StatusKind, guard string, blocked bool) string {
+	if !blocked && statusActive(g.state.Player.StatusAilments, oppositeStatStatus(kind)) {
+		if def, ok := statusDefOf(oppositeStatStatus(kind)); ok && def.PlayerRecover != "" {
+			return def.PlayerRecover
+		}
+	}
+	return statusResultMessage(kind, guard, blocked)
 }
 
 // setPlayerStatus は耐性の判定を済ませた後に、表の重ねがけの規則で海老さんに状態をかける（メッセージなし）。

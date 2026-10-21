@@ -119,7 +119,7 @@ type ItemTemplate struct {
 // itemTemplates はアイテムのデータテーブル（全種類）。ID 0〜71 は baseItemTemplates、
 // 追加計画（content-expansion-plan.md）の武器・盾・カード・指輪は種類ごとのファイルの表に書く
 // （items_weapons.go・items_shields.go・items_cards.go・items_rings.go）。並列の担当が同じ表を触らないため。
-var itemTemplates = mergeItemTemplates(baseItemTemplates, weaponItemTemplates, shieldItemTemplates, cardItemTemplates, ringItemTemplates)
+var itemTemplates = mergeItemTemplates(baseItemTemplates, weaponItemTemplates, shieldItemTemplates, cardItemTemplates, ringItemTemplates, statItemTemplates)
 
 // mergeItemTemplates は複数の表を1つにまとめる。ID が重なっていたら起動時に止める。
 func mergeItemTemplates(tables ...map[int]ItemTemplate) map[int]ItemTemplate {

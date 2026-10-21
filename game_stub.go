@@ -31,6 +31,11 @@ type StatusAilments struct {
 	Seal        bool
 	HasteOnWake bool
 	Backward    int
+	AttackUp    int `json:",omitempty"`
+	AttackDown  int `json:",omitempty"`
+	DefenseUp   int `json:",omitempty"`
+	DefenseDown int `json:",omitempty"`
+	NoHealing   int `json:",omitempty"`
 }
 
 type Player struct {

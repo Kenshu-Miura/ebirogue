@@ -553,7 +553,7 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	attack := EnemyAttack{Enemy: enemy, CriticalPercent: enemyCriticalPercent(enemy), Multiplier: 1.0}
 	g.runBeforeEnemyAttackHooks(&attack)
 	critical := attack.CriticalPercent > 0 && g.enemyCriticalIntn()(100) < attack.CriticalPercent
-	multiplier := attack.Multiplier
+	multiplier := attack.Multiplier * statAttackMultiplier(enemy.StatusAilments) * statDefenseMultiplier(g.state.Player.StatusAilments)
 	if critical {
 		multiplier *= enemyCriticalMultiplier
 	}
@@ -600,7 +600,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 	target := &g.state.Enemies[targetIndex]
 
 	// 敵同士の攻撃（目潰し状態の敵が他の敵を攻撃）
-	netDamage := rollEnemyAttackDamage(attacker.AttackPower, target.DefensePower, g.damageIntn())
+	netDamage := rollEnemyAttackDamageWith(attacker.AttackPower, target.DefensePower, statAttackMultiplier(attacker.StatusAilments)*statDefenseMultiplier(target.StatusAilments), g.damageIntn())
 
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
 	attackerID, attackerX, attackerY := attacker.ID, attacker.X, attacker.Y
@@ -667,7 +667,7 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 		enemyID, enemyX, enemyY, experience := enemy.ID, enemy.X, enemy.Y, enemy.ExperiencePoints
 		// ボスは炸裂装甲による即死に耐えるが、威力50の反撃ダメージは受ける。
 		if MonsterDefinitions[enemyID].IsBoss {
-			damage := rollEnemyAttackDamage(50, enemy.DefensePower, g.damageIntn())
+			damage := rollEnemyAttackDamageWith(50, enemy.DefensePower, statDefenseMultiplier(enemy.StatusAilments), g.damageIntn())
 			g.Enqueue(Action{Duration: 0.5, Message: fmt.Sprintf("%sは即死を耐え、%dダメージを受けた。", enemy.Name, damage), Execute: func(g *Game) {
 				if index := g.findEnemyForDefense(enemyID, enemyX, enemyY); index >= 0 {
 					g.applyDamageToEnemy(index, damage)
@@ -804,7 +804,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 	result := rollDamage(DamageParams{
 		Attack:              total,
 		Defense:             enemy.DefensePower,
-		Multiplier:          attack.Multiplier,
+		Multiplier:          attack.Multiplier * statAttackMultiplier(g.state.Player.StatusAilments) * statDefenseMultiplier(enemy.StatusAilments),
 		MinDamage:           minAttackDamage,
 		CriticalDenominator: attack.CriticalDenominator,
 		ForceCritical:       attack.ForceCritical,

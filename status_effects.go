@@ -17,7 +17,7 @@ import (
 
 // 状態異常の種類（StatusConfusion などの既存の種類は equipment_abilities.go）。
 const (
-	StatusHaste     StatusKind = "haste"      // 倍速（敵。睡眠のカードで眠った敵の目覚め、倍速のカード）
+	StatusHaste     StatusKind = "haste"      // 倍速（海老さん・敵）
 	StatusMouthSeal StatusKind = "mouth_seal" // 口封じ（カード・薬・食料を口にできない）
 	StatusParalysis StatusKind = "paralysis"  // 金縛り（ダメージを受けると解ける）
 	StatusSeal      StatusKind = "seal"       // 封印（特殊能力が止まる）
@@ -120,9 +120,10 @@ var statusDefs = []statusDef{
 		SetTurns:      func(s *StatusAilments, n int) { s.Slow = n },
 	},
 	{
-		// 海老さんの倍速は wave8-A で追加する（今は敵だけ）。
+		// 倍速は海老さんと敵の両方に付く。
 		Kind: StatusHaste, Name: "倍速", HUD: "倍速", HUDOrder: 30,
-		Enemy: StatusTurns, Stack: StackOverwrite,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackLonger,
+		PlayerApply: "海老さんは倍速になった", PlayerRecover: "海老さんの体の速さが元に戻った",
 		Turns:    func(s *StatusAilments) int { return s.Haste },
 		SetTurns: func(s *StatusAilments, n int) { s.Haste = n },
 	},
@@ -153,6 +154,41 @@ var statusDefs = []statusDef{
 		PlayerApply: "海老さんは封印された",
 		Turns:       func(s *StatusAilments) int { return boolTurns(s.Seal) },
 		SetTurns:    func(s *StatusAilments, n int) { s.Seal = n > 0 },
+	},
+	{
+		Kind: StatusAttackUp, Name: "攻撃力上昇", HUD: "攻撃力上昇", HUDOrder: 110,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackLonger, Bad: false,
+		PlayerApply: "海老さんは攻撃力が上がった", PlayerRecover: "海老さんの攻撃力上昇が解けた",
+		Turns:    func(s *StatusAilments) int { return s.AttackUp },
+		SetTurns: func(s *StatusAilments, n int) { s.AttackUp = n },
+	},
+	{
+		Kind: StatusAttackDown, Name: "攻撃力低下", HUD: "攻撃力低下", HUDOrder: 120,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackLonger, Bad: true,
+		PlayerApply: "海老さんは攻撃力が下がった", PlayerRecover: "海老さんの攻撃力低下が解けた",
+		Turns:    func(s *StatusAilments) int { return s.AttackDown },
+		SetTurns: func(s *StatusAilments, n int) { s.AttackDown = n },
+	},
+	{
+		Kind: StatusDefenseUp, Name: "防御力上昇", HUD: "防御力上昇", HUDOrder: 130,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackLonger, Bad: false,
+		PlayerApply: "海老さんは防御力が上がった", PlayerRecover: "海老さんの防御力上昇が解けた",
+		Turns:    func(s *StatusAilments) int { return s.DefenseUp },
+		SetTurns: func(s *StatusAilments, n int) { s.DefenseUp = n },
+	},
+	{
+		Kind: StatusDefenseDown, Name: "防御力低下", HUD: "防御力低下", HUDOrder: 140,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackLonger, Bad: true,
+		PlayerApply: "海老さんは防御力が下がった", PlayerRecover: "海老さんの防御力低下が解けた",
+		Turns:    func(s *StatusAilments) int { return s.DefenseDown },
+		SetTurns: func(s *StatusAilments, n int) { s.DefenseDown = n },
+	},
+	{
+		Kind: StatusNoHealing, Name: "回復不能", HUD: "回復不能", HUDOrder: 150,
+		Player: StatusTurns, Stack: StackLonger, Bad: true,
+		PlayerApply: "海老さんは回復できなくなった", PlayerRecover: "海老さんの回復不能が解けた",
+		Turns:    func(s *StatusAilments) int { return s.NoHealing },
+		SetTurns: func(s *StatusAilments, n int) { s.NoHealing = n },
 	},
 }
 
@@ -242,6 +278,13 @@ func addStatus(s *StatusAilments, kind StatusKind, turns int, rule StatusStack) 
 	if !ok {
 		return
 	}
+	if turns > 0 {
+		if opposite := oppositeStatStatus(kind); opposite != "" && statusActive(*s, opposite) {
+			clearStatus(s, opposite)
+			clearStatus(s, kind)
+			return
+		}
+	}
 	if rule == StackDefault {
 		rule = def.Stack
 	}
@@ -296,8 +339,8 @@ func wakeFromSleep(status *StatusAilments) bool {
 		return false
 	}
 	status.HasteOnWake = false
-	setStatusTurns(status, StatusHaste, hasteOnWakeTurns)
-	return true
+	addStatus(status, StatusHaste, hasteOnWakeTurns, StackDefault)
+	return statusActive(*status, StatusHaste)
 }
 
 // tickStatuses は1ターン分の経過を進め、このターンで治った状態を表の順に返す。

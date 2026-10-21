@@ -402,7 +402,7 @@ func (g *Game) hitPlayerWithReturnedProjectile(p *Projectile) {
 		if arrow, ok := p.Item.(*Arrow); ok {
 			attack += arrow.AttackPower
 		}
-		damage = rollEnemyAttackDamage(attack, player.DefensePower, g.damageIntn())
+		damage = rollEnemyAttackDamageWith(attack, player.DefensePower, statAttackMultiplier(player.StatusAilments)*statDefenseMultiplier(player.StatusAilments), g.damageIntn())
 	} else {
 		damage = rollThrownItemDamage(g.damageIntn())
 	}

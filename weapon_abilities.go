@@ -52,7 +52,7 @@ func init() {
 	}})
 	registerAbilityHooks(AbilityLifeSteal, AbilityHooks{AfterPlayerHit: func(g *Game, hit PlayerAttackHit, stacks int) {
 		p := &g.state.Player
-		p.Health = recoveredValue(p.Health, p.MaxHealth, max(1, hit.Damage/4), false)
+		p.Health = p.recoveredHP(max(1, hit.Damage/4), false)
 	}})
 	registerAbilityHooks(AbilityDoubleStrike, AbilityHooks{AfterPlayerHit: func(g *Game, hit PlayerAttackHit, stacks int) {
 		if hit.Weapon == nil || hit.Defeated || g.inDoubleStrike || g.abilityIntn()(100) >= 25 {

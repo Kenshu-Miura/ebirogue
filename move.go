@@ -21,7 +21,7 @@ func (g *Game) IncrementMoveCount() {
 	} else {
 		// 満腹度が0でない場合のみ、レベルに応じて毎ターンHPが自然回復する
 		player := &g.state.Player
-		player.Health = recoveredValue(player.Health, player.MaxHealth, naturalRegenPerTurn(player.Level), false)
+		player.Health = player.recoveredHP(naturalRegenPerTurn(player.Level), false)
 	}
 
 	armorAbilities := []EquipmentAbilityID(nil)

@@ -85,11 +85,11 @@ func TestAddAndClearStatus(t *testing.T) {
 func TestTickStatuses(t *testing.T) {
 	s := StatusAilments{BearTrap: 1, Sleep: 2, Blind: 1, Haste: 1, Backward: 1, Paralysis: true}
 	ended := tickStatuses(&s, false)
-	if len(ended) != 2 || ended[0] != StatusBearTrap || ended[1] != StatusBlind {
+	if len(ended) != 3 || ended[0] != StatusBearTrap || ended[1] != StatusBlind || ended[2] != StatusHaste {
 		t.Fatalf("player ended %v", ended)
 	}
-	// 海老さんの倍速・ゾワゾワは今は付かない状態なので減らない
-	if s != (StatusAilments{Sleep: 1, Haste: 1, Backward: 1, Paralysis: true}) {
+	// 倍速は経過する。ゾワゾワは海老さんに付かないので減らない
+	if s != (StatusAilments{Sleep: 1, Backward: 1, Paralysis: true}) {
 		t.Fatalf("player after tick %+v", s)
 	}
 
