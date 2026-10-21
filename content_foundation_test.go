@@ -725,9 +725,9 @@ func TestItemFloorRulesSanity(t *testing.T) {
 		if exists && rule.Heal && itemTemplates[id].ItemType != "Potion" {
 			t.Errorf("item %d: heal flag is for potions (food is tuned by category)", id)
 		}
-		// 強い道具は1階からは出さない。
-		if rule.Strong && rule.From <= 1 {
-			t.Errorf("strong item %d appears from floor 1", id)
+		// 強い道具でないのに出る階を限る規則は無い（遅らせる道具には Strong を付ける）。
+		if !rule.Strong && (rule.From > 1 || rule.Until > 0) {
+			t.Errorf("item %d has a floor limit without the strong flag", id)
 		}
 	}
 }
@@ -760,15 +760,15 @@ func TestItemFloorRulesDelayStrongItems(t *testing.T) {
 			}
 		}
 	}
-	// 具体例: 全滅・ジェノサイドのカードと伝説の剣は9階から、無敵の薬は4階から、火迅の太刀は13階から。
-	for _, c := range []struct{ id, from int }{{56, 9}, {54, 9}, {4, 9}, {217, 4}, {146, 13}} {
+	// 具体例: 全滅・ジェノサイドのカードは9階から、無敵の薬・白紙・聖域のカードは4階から。
+	for _, c := range []struct{ id, from int }{{56, 9}, {54, 9}, {217, 4}, {53, 4}, {55, 4}} {
 		if floorTableHas(c.from-1, c.id) || !floorTableHas(c.from, c.id) {
 			t.Errorf("item %d should start on floor %d", c.id, c.from)
 		}
 	}
-	// 通常の道具はどの階でも出る。
+	// 通常の道具と、強い武具（出始める階を遅らせない）はどの階でも出る。
 	for floor := 1; floor <= finalFloor; floor++ {
-		if !floorTableHas(floor, 1) || !floorTableHas(floor, 20) || !floorTableHas(floor, 7) {
+		if !floorTableHas(floor, 1) || !floorTableHas(floor, 20) || !floorTableHas(floor, 7) || !floorTableHas(floor, 4) || !floorTableHas(floor, 70) {
 			t.Fatalf("floor %d: basic items missing", floor)
 		}
 	}
