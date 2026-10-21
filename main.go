@@ -149,6 +149,13 @@ type Game struct {
 	runHistoryScroll     int
 	runHistoryError      string
 
+	// 図鑑（冒険とは別の永続データ）
+	showCodex               bool
+	codex                   CodexData
+	codexLoaded, codexDirty bool
+	codexError              string
+	codexTab, codexPage     int
+
 	state                     GameState
 	seed                      int64    // 冒険のシード（同じシードなら同じフロアが生成される）
 	rng                       *gameRNG // ターン進行用の乱数源。直接ではなく random()/randIntn() 経由で使う
@@ -392,6 +399,12 @@ func (g *Game) Update() error {
 	g.keys().Update()
 	g.recordReplayKeys()
 	g.updateAudio()
+	g.observeCodexInventory()
+	defer g.observeCodexInventory()
+	if g.showCodex {
+		g.handleCodexInput()
+		return nil
+	}
 	g.inputFrame++
 	if g.showKeyConfig {
 		physical, held := g.replayPhysicalKey()
@@ -682,6 +695,10 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	if g.showCodex {
+		g.drawCodex(screen)
+		return
+	}
 	if g.showDifficultySelect {
 		g.drawDifficultyWindow(screen)
 		return

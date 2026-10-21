@@ -13,6 +13,7 @@ func (g *Game) beginFloorDescent() {
 	if g.playerDead || g.cleared || !stairsUsable(g.Floor, g.bossDefeated) {
 		return
 	}
+	g.saveCodex()
 	g.executeAudioCue("stairs")
 	g.stopBGM()
 	g.fadingOut = true

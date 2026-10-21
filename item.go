@@ -555,6 +555,7 @@ func (g *Game) PickUpItem(item Item, i int) {
 			g.EnqueueMessage(fmt.Sprintf("%sだった。", identifiable.GetName()), 0.5)
 		}
 	}
+	g.observeCodexItem(item)
 	// アイテムをGameState.Itemsから削除
 	g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
 }

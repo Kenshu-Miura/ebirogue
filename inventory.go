@@ -136,6 +136,7 @@ func (g *Game) sortInventory() {
 // inventoryItemLabel はインベントリでの表示名と未識別かどうかを返す。
 // 未識別アイテムに任意名が設定されていればそれを表示する。
 func (g *Game) inventoryItemLabel(item Item) (string, bool) {
+	g.observeCodexItem(item)
 	if identifiableItem, ok := item.(Identifiable); ok && !identifiableItem.IsIdentified() {
 		if name, exists := g.customNames[item.GetID()]; exists && name != "" {
 			return name, true

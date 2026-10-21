@@ -462,6 +462,7 @@ func (g *Game) revealEnemy(enemyIndex int) bool {
 	if enemy.Disguise == EnemyDisguiseNone || enemy.Revealed {
 		return false
 	}
+	g.recordCodex(1, enemy.ID, func(r *CodexRecord) { r.Seen = true })
 	message := revealMessage(*enemy)
 	enemy.Revealed = true
 	enemy.PlayerDiscovered = true

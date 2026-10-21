@@ -30,6 +30,7 @@ func (g *Game) runEnemyBehavior(i int) bool {
 
 // onEnemyDefeated は倒れた敵の撃破時の処理を呼ぶ。敵が倒れて取り除かれるすべての経路から呼ぶ。
 func (g *Game) onEnemyDefeated(defeated Enemy) {
+	g.recordCodex(1, defeated.ID, func(r *CodexRecord) { r.Seen = true; r.Defeated++ })
 	g.playSE("defeat")
 	onDefeated := MonsterDefinitions[defeated.ID].OnDefeated
 	if onDefeated == nil || defeated.StatusAilments.Seal || statusActive(defeated.StatusAilments, StatusDecoy) {

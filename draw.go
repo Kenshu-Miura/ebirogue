@@ -476,6 +476,9 @@ func (g *Game) DrawItems(screen *ebiten.Image, offsetX, offsetY int) {
 
 		// Check if the tile at the item's position is fully bright
 		if g.state.Map[itemY][itemX].Brightness == 1.0 {
+			if g.state.Player.StatusAilments.Blind == 0 && codexOnScreen(itemX, itemY, offsetX, offsetY, screen.Bounds().Dx(), screen.Bounds().Dy()) {
+				g.observeCodexItem(item)
+			}
 			var img *ebiten.Image
 			// プレイヤーが目潰し状態の場合、全てのアイテムをhatena.pngで表示
 			if g.state.Player.StatusAilments.Blind > 0 {
@@ -494,48 +497,12 @@ func (g *Game) DrawMapTraps(screen *ebiten.Image, offsetX, offsetY int) {
 	for _, trap := range g.state.MapTraps {
 		// 罠が発見済みの場合のみ描画
 		if trap.Discovered {
+			g.recordCodex(2, trap.TemplateID, func(r *CodexRecord) { r.Seen = true })
 			trapX, trapY := trap.X, trap.Y
 
 			// Check if the tile at the trap's position is fully bright
 			if g.state.Map[trapY][trapX].Brightness == 1.0 {
-				var img *ebiten.Image
-				// 罠の種類に応じて画像を選択（現在は睡眠ガスの罠のみ）
-				switch trap.Name {
-				case "睡眠ガスの罠":
-					img = g.sleepTrapImg
-				case "毒矢の罠":
-					img = g.poisonArrowTrapImg
-				case "鈍足の罠":
-					img = g.slowTrapImg
-				case "地雷":
-					img = g.mineTrapImg
-				case "ワープの罠":
-					img = g.warpTrapImg
-				case "落とし穴":
-					img = g.pitfallTrapImg
-				case "トラバサミ":
-					img = g.bearTrapImg
-				case "木の矢の罠":
-					img = g.woodArrowTrapImg
-				case "鉄の矢の罠":
-					img = g.ironArrowTrapImg
-				case "落石の罠":
-					img = g.fallingRockTrapImg
-				case "大型地雷":
-					img = g.largeMineTrapImg
-				case "装備はずしの罠":
-					img = g.unequipTrapImg
-				case "腐敗の罠":
-					img = g.spoilTrapImg
-				case "回復封じの罠":
-					img = g.noHealingTrapImg
-				case "散乱の罠":
-					img = g.scatterTrapImg
-				case "サビの罠":
-					img = g.rustTrapImg
-				default:
-					img = g.sleepTrapImg // デフォルトで睡眠ガスの罠の画像を使用
-				}
+				img := g.codexTrapImage(trap.Name)
 
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(trapX*tileSize+offsetX), float64(trapY*tileSize+offsetY))
@@ -612,6 +579,9 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 
 		// Check if the tile at the enemy's position is fully bright
 		if g.state.Map[enemy.Y][enemy.X].Brightness == 1.0 && g.specialEnemyVisible(*enemy) {
+			if codexOnScreen(enemy.X, enemy.Y, offsetX, offsetY, screen.Bounds().Dx(), screen.Bounds().Dy()) {
+				g.observeCodexEnemy(*enemy)
+			}
 
 			// 擬態中は道具・階段として静止表示する。
 			if !isEnemyDisguised(*enemy) {
