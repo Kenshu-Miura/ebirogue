@@ -44,6 +44,10 @@ const (
 	StackAdd                          // 加算して MaxTurns まで
 )
 
+// statusMessageDuration は海老さんの状態異常のメッセージ（かかった・防いだ・治った）の表示時間。
+// どの付与元でも同じ時間にそろえる。
+const statusMessageDuration = 0.5
+
 // statusDef は状態1つの定義。
 type statusDef struct {
 	Kind StatusKind
@@ -60,6 +64,8 @@ type statusDef struct {
 	MaxTurns int
 	// Bad は困った時のカードなどで治す「悪い状態」か。
 	Bad bool
+	// PlayerApply は海老さんに状態がかかったときのメッセージ。付与元にかかわらずこれを出す。
+	PlayerApply string
 	// PlayerRecover は海老さんの状態がターン経過で治ったときのメッセージ（空なら出さない）。
 	PlayerRecover string
 	// RefreshMiniMap は海老さんの状態が治ったときにミニマップを描き直すか（目潰し）。
@@ -77,34 +83,39 @@ var statusDefs = []statusDef{
 	{
 		Kind: StatusBearTrap, Name: "トラバサミ", HUD: "トラバサミ", HUDOrder: 10,
 		Player: StatusTurns, Stack: StackLonger, Bad: true,
-		PlayerRecover: "トラバサミから抜け出した",
+		PlayerApply:   "海老さんはトラバサミに足を挟まれた",
+		PlayerRecover: "海老さんはトラバサミから抜け出した",
 		Turns:         func(s *StatusAilments) int { return s.BearTrap },
 		SetTurns:      func(s *StatusAilments, n int) { s.BearTrap = n },
 	},
 	{
 		Kind: StatusConfusion, Name: "混乱", HUD: "混乱", HUDOrder: 50,
 		Player: StatusTurns, Enemy: StatusTurns, Stack: StackOverwrite, Bad: true, BossShortened: true,
-		Turns:    func(s *StatusAilments) int { return s.Confusion },
-		SetTurns: func(s *StatusAilments, n int) { s.Confusion = n },
+		PlayerApply: "海老さんは混乱した",
+		Turns:       func(s *StatusAilments) int { return s.Confusion },
+		SetTurns:    func(s *StatusAilments, n int) { s.Confusion = n },
 	},
 	{
 		Kind: StatusSleep, Name: "睡眠", HUD: "睡眠", HUDOrder: 40,
 		Player: StatusTurns, Enemy: StatusTurns, Stack: StackOverwrite, Bad: true, BossShortened: true,
-		PlayerRecover: "目を覚ました",
+		PlayerApply:   "海老さんは眠った",
+		PlayerRecover: "海老さんは目を覚ました",
 		Turns:         func(s *StatusAilments) int { return s.Sleep },
 		SetTurns:      func(s *StatusAilments, n int) { s.Sleep = n },
 	},
 	{
 		Kind: StatusBlind, Name: "目潰し", HUD: "目潰し", HUDOrder: 60,
 		Player: StatusTurns, Enemy: StatusPermanent, Stack: StackOverwrite, Bad: true,
-		PlayerRecover: "目が見えるようになった", RefreshMiniMap: true,
+		PlayerApply:   "海老さんは目が見えなくなった",
+		PlayerRecover: "海老さんは目が見えるようになった", RefreshMiniMap: true,
 		Turns:    func(s *StatusAilments) int { return s.Blind },
 		SetTurns: func(s *StatusAilments, n int) { s.Blind = n },
 	},
 	{
 		Kind: StatusSlow, Name: "鈍足", HUD: "鈍足", HUDOrder: 20,
 		Player: StatusTurns, Enemy: StatusTurns, Stack: StackOverwrite, Bad: true,
-		PlayerRecover: "体の速さが元に戻った",
+		PlayerApply:   "海老さんは鈍足になった",
+		PlayerRecover: "海老さんの体の速さが元に戻った",
 		Turns:         func(s *StatusAilments) int { return s.Slow },
 		SetTurns:      func(s *StatusAilments, n int) { s.Slow = n },
 	},
@@ -118,7 +129,8 @@ var statusDefs = []statusDef{
 	{
 		Kind: StatusMouthSeal, Name: "口封じ", HUD: "口封じ", HUDOrder: 70,
 		Player: StatusTurns, Stack: StackOverwrite, Bad: true,
-		PlayerRecover: "口が動くようになった",
+		PlayerApply:   "海老さんは口を封じられた",
+		PlayerRecover: "海老さんは口が動くようになった",
 		Turns:         func(s *StatusAilments) int { return s.MouthSeal },
 		SetTurns:      func(s *StatusAilments, n int) { s.MouthSeal = n },
 	},
@@ -131,14 +143,16 @@ var statusDefs = []statusDef{
 	{
 		Kind: StatusParalysis, Name: "金縛り", HUD: "金縛り", HUDOrder: 80,
 		Player: StatusUntilCleared, Enemy: StatusUntilCleared, Stack: StackOverwrite, Bad: true,
-		Turns:    func(s *StatusAilments) int { return boolTurns(s.Paralysis) },
-		SetTurns: func(s *StatusAilments, n int) { s.Paralysis = n > 0 },
+		PlayerApply: "海老さんは金縛りにあった",
+		Turns:       func(s *StatusAilments) int { return boolTurns(s.Paralysis) },
+		SetTurns:    func(s *StatusAilments, n int) { s.Paralysis = n > 0 },
 	},
 	{
 		Kind: StatusSeal, Name: "封印", HUD: "封印", HUDOrder: 90,
 		Player: StatusUntilCleared, Enemy: StatusUntilCleared, Stack: StackOverwrite, Bad: true,
-		Turns:    func(s *StatusAilments) int { return boolTurns(s.Seal) },
-		SetTurns: func(s *StatusAilments, n int) { s.Seal = n > 0 },
+		PlayerApply: "海老さんは封印された",
+		Turns:       func(s *StatusAilments) int { return boolTurns(s.Seal) },
+		SetTurns:    func(s *StatusAilments, n int) { s.Seal = n > 0 },
 	},
 }
 
@@ -160,6 +174,27 @@ func statusDefOf(kind StatusKind) (statusDef, bool) {
 		}
 	}
 	return statusDef{}, false
+}
+
+// statusAppliedMessage は海老さんに状態 kind がかかったときのメッセージ。
+func statusAppliedMessage(kind StatusKind) string {
+	if def, ok := statusDefOf(kind); ok && def.PlayerApply != "" {
+		return def.PlayerApply
+	}
+	return "海老さんは" + statusKindLabel(kind) + "状態になった"
+}
+
+// statusBlockedMessage は装備品 guard が状態 kind を防いだときのメッセージ。
+func statusBlockedMessage(kind StatusKind, guard string) string {
+	return fmt.Sprintf("%sが%sを防いだ", guard, statusKindLabel(kind))
+}
+
+// statusResultMessage は耐性の判定の結果に応じたメッセージ（防いだ・かかった）。
+func statusResultMessage(kind StatusKind, guard string, blocked bool) string {
+	if blocked {
+		return statusBlockedMessage(kind, guard)
+	}
+	return statusAppliedMessage(kind)
 }
 
 // statusDuration は海老さん（enemy=false）または敵の側での持続の型を返す。

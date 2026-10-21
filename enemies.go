@@ -265,19 +265,8 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 				enemyName = "何者"
 			}
 			guard, resisted := g.playerStatusGuard(StatusSlow)
-			message := fmt.Sprintf("%sのくねくね踊り。海老さんは鈍足になった。", enemyName)
-			if resisted {
-				message = fmt.Sprintf("%sのくねくね踊り。しかし%sが鈍足を防いだ。", enemyName, guard)
-			}
-			g.Enqueue(Action{
-				Duration: 0.5,
-				Message:  message,
-				Execute: func(g *Game) {
-					if !resisted {
-						g.stackPlayerStatus(StatusSlow, 8, StackLonger)
-					}
-				},
-			})
+			g.EnqueueMessage(fmt.Sprintf("%sのくねくね踊り", enemyName), 0.5)
+			g.enqueuePlayerStatus(StatusSlow, 8, StackLonger, guard, resisted)
 		},
 		SpecialAttackProbability: 0.25,
 	},

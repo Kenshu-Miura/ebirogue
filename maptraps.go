@@ -19,19 +19,7 @@ type MapTrap struct {
 // 罠の効果関数
 var sleepGasTrapEffect = func(g *Game) {
 	guard, resisted := g.playerStatusGuard(StatusSleep)
-	message := "海老さんは眠った"
-	if resisted {
-		message = fmt.Sprintf("%sが睡眠ガスを防いだ", guard)
-	}
-	g.Enqueue(Action{
-		Duration: 0.5,
-		Message:  message,
-		Execute: func(g *Game) {
-			if !resisted {
-				g.setPlayerStatus(StatusSleep, 10) // 10ターン睡眠
-			}
-		},
-	})
+	g.enqueuePlayerStatus(StatusSleep, 10, StackDefault, guard, resisted) // 10ターン睡眠
 }
 
 var poisonArrowTrapEffect = func(g *Game) {
@@ -56,19 +44,7 @@ var poisonArrowTrapEffect = func(g *Game) {
 
 var slowTrapEffect = func(g *Game) {
 	guard, resisted := g.playerStatusGuard(StatusSlow)
-	message := "体が重くなり、鈍足状態になった"
-	if resisted {
-		message = fmt.Sprintf("%sが鈍足を防いだ", guard)
-	}
-	g.Enqueue(Action{
-		Duration: 0.5,
-		Message:  message,
-		Execute: func(g *Game) {
-			if !resisted {
-				g.setPlayerStatus(StatusSlow, 10)
-			}
-		},
-	})
+	g.enqueuePlayerStatus(StatusSlow, 10, StackDefault, guard, resisted)
 }
 
 var mineTrapEffect = func(g *Game) {

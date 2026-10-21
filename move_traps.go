@@ -62,11 +62,7 @@ var pitfallTrapEffect = func(g *Game) {
 }
 
 var bearTrapEffect = func(g *Game) {
-	if message, immune := g.playerImmunityMessage(StatusBearTrap); immune {
-		g.EnqueueMessage(message, 0.5)
-		return
-	}
-	g.Enqueue(Action{Duration: 0.5, Message: "トラバサミに足を挟まれた", Execute: func(g *Game) {
-		g.setPlayerStatus(StatusBearTrap, 6) // 表の規則（長い方を残す）
-	}})
+	// トラバサミは装備能力による無効化だけを見る（状態異常耐性の盾は効かない）。
+	guard, immune := g.playerImmunitySource(StatusBearTrap)
+	g.enqueuePlayerStatus(StatusBearTrap, 6, StackDefault, guard, immune) // 表の規則（長い方を残す）
 }

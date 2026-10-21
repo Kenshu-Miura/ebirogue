@@ -12,6 +12,12 @@ import (
 
 // usePlayerItem は持ち物の先頭に道具 id を入れて使い、メッセージを返す。
 func usePlayerItem(g *Game, id int) string {
+	queuePlayerItem(g, id)
+	return runQueuedActions(g)
+}
+
+// queuePlayerItem は持ち物の道具 id を使い、積まれた Action を実行せずに残す。
+func queuePlayerItem(g *Game, id int) {
 	g.state.Player.Inventory = []Item{buildItemFromTemplate(id, 0, 0)}
 	switch item := g.state.Player.Inventory[0].(type) {
 	case *Potion:
@@ -19,7 +25,6 @@ func usePlayerItem(g *Game, id int) string {
 	case *Card:
 		item.Use(g)
 	}
-	return runQueuedActions(g)
 }
 
 // TestPlayerStatusStackingRules は状態ごとに「2回かけたとき」の残りターンを固定する。
@@ -94,7 +99,7 @@ func TestStatusRecoveryMessages(t *testing.T) {
 	g.state.Player.StatusAilments = StatusAilments{BearTrap: 1, Confusion: 1, Sleep: 1, Blind: 1, Slow: 1, MouthSeal: 1}
 	g.decrementStatusAilments()
 	got := runQueuedActions(g)
-	want := strings.Join([]string{"トラバサミから抜け出した", "目を覚ました", "目が見えるようになった", "体の速さが元に戻った", "口が動くようになった"}, "\n")
+	want := strings.Join([]string{"海老さんはトラバサミから抜け出した", "海老さんは目を覚ました", "海老さんは目が見えるようになった", "海老さんの体の速さが元に戻った", "海老さんは口が動くようになった"}, "\n")
 	if got != want {
 		t.Fatalf("messages = %q, want %q", got, want)
 	}
@@ -165,7 +170,7 @@ func TestTroubleCardClearsBadStatuses(t *testing.T) {
 
 func TestApplyPlayerStatus(t *testing.T) {
 	g := newFoundationTestGame()
-	if !g.applyPlayerStatus(StatusConfusion, 10, StatusSource{Message: "海老さんは混乱した"}) || g.state.Player.StatusAilments.Confusion != 10 {
+	if !g.applyPlayerStatus(StatusConfusion, 10, StatusSource{}) || g.state.Player.StatusAilments.Confusion != 10 {
 		t.Fatal("confusion should be applied")
 	}
 	if msg := runQueuedActions(g); msg != "海老さんは混乱した" {
@@ -197,11 +202,11 @@ func TestApplyPlayerStatus(t *testing.T) {
 	if !g.applyPlayerStatus(StatusSlow, 10, StatusSource{}) || rolled != 0 {
 		t.Fatalf("without Shield the shield must not roll (rolls %d)", rolled)
 	}
-	if g.applyPlayerStatus(StatusConfusion, 10, StatusSource{Shield: true, Blocked: "%sが混乱の霧を防いだ"}) || rolled != 1 {
+	if g.applyPlayerStatus(StatusConfusion, 10, StatusSource{Shield: true}) || rolled != 1 {
 		t.Fatalf("with Shield the shield should block (rolls %d)", rolled)
 	}
-	if msg := runQueuedActions(g); !strings.HasSuffix(msg, "が混乱の霧を防いだ") {
-		t.Fatalf("custom blocked message %q", msg)
+	if msg := runQueuedActions(g); !strings.HasSuffix(msg, "が混乱を防いだ") {
+		t.Fatalf("shield blocked message %q", msg)
 	}
 	g.clearPlayerStatus(StatusSlow)
 	if g.state.Player.StatusAilments.Slow != 0 {
@@ -235,5 +240,86 @@ func TestApplyEnemyStatusBossImmunity(t *testing.T) {
 	g.clearEnemyStatus(0, StatusParalysis)
 	if g.state.Enemies[0].StatusAilments.Paralysis {
 		t.Fatal("clearEnemyStatus")
+	}
+}
+
+// --- メッセージと表示時間の統一 ---
+
+// queuedActions はキューを実行しながら、表示された Action（メッセージと表示時間）を集める。
+func queuedActions(g *Game) []Action {
+	var shown []Action
+	for len(g.ActionQueue.Queue) > 0 {
+		a := g.ActionQueue.Queue[0]
+		g.ActionQueue.Queue = g.ActionQueue.Queue[1:]
+		shown = append(shown, a)
+		if a.Execute != nil {
+			a.Execute(g)
+		}
+	}
+	return shown
+}
+
+// TestPlayerStatusMessagesAreUnified は付与元にかかわらず、かかった・防いだのメッセージが定義表の文言で、
+// 表示時間が statusMessageDuration にそろっていることを固定する。
+func TestPlayerStatusMessagesAreUnified(t *testing.T) {
+	kunekune := func(g *Game) {
+		g.state.Enemies = []Enemy{CreateEnemyByID(3, 5, 4)}
+		g.state.Enemies[0].SpecialAttack(&g.state.Enemies[0], g)
+	}
+	cases := []struct {
+		name   string
+		apply  func(g *Game)
+		immune []StatusKind // 試験の指輪で防ぐ種類（空なら防がない）
+		want   string
+	}{
+		{"睡眠ガスの罠", sleepGasTrapEffect, nil, "海老さんは眠った"},
+		{"睡眠薬を飲む", func(g *Game) { queuePlayerItem(g, 17) }, nil, "海老さんは眠った"},
+		{"混乱薬を飲む", func(g *Game) { queuePlayerItem(g, 18) }, nil, "海老さんは混乱した"},
+		{"目潰し薬を飲む", func(g *Game) { queuePlayerItem(g, 19) }, nil, "海老さんは目が見えなくなった"},
+		{"鈍足の罠", slowTrapEffect, nil, "海老さんは鈍足になった"},
+		{"くねくね踊り", kunekune, nil, "海老さんは鈍足になった"},
+		{"トラバサミ", bearTrapEffect, nil, "海老さんはトラバサミに足を挟まれた"},
+		{"口封じのカード", func(g *Game) { queuePlayerItem(g, 42) }, nil, "海老さんは口を封じられた"},
+		{"睡眠ガスの罠を防ぐ", sleepGasTrapEffect, []StatusKind{StatusSleep}, "試験の指輪が睡眠を防いだ"},
+		{"睡眠薬を防ぐ", func(g *Game) { queuePlayerItem(g, 17) }, []StatusKind{StatusSleep}, "試験の指輪が睡眠を防いだ"},
+		{"くねくね踊りを防ぐ", kunekune, []StatusKind{StatusSlow}, "試験の指輪が鈍足を防いだ"},
+		{"トラバサミを防ぐ", bearTrapEffect, []StatusKind{StatusBearTrap}, "試験の指輪がトラバサミを防いだ"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := newFoundationTestGame()
+			if len(tc.immune) > 0 {
+				withTestImmunity(t, "test_unified", tc.immune...)
+				equip(g, testRing("test_unified"))
+				runQueuedActions(g)
+			}
+			tc.apply(g)
+			var messages []string
+			found := false
+			for _, a := range queuedActions(g) {
+				messages = append(messages, a.Message)
+				if a.Message == tc.want {
+					found = true
+					if a.Duration != statusMessageDuration {
+						t.Fatalf("%q の表示時間 %v、want %v", a.Message, a.Duration, statusMessageDuration)
+					}
+				}
+			}
+			if !found {
+				t.Fatalf("messages = %q, want %q", messages, tc.want)
+			}
+		})
+	}
+}
+
+// TestPlayerStatusRecoveryDuration は治ったときのメッセージも同じ表示時間であることを固定する。
+func TestPlayerStatusRecoveryDuration(t *testing.T) {
+	g := newFoundationTestGame()
+	g.state.Player.StatusAilments = StatusAilments{Sleep: 1, Slow: 1}
+	g.decrementStatusAilments()
+	for _, a := range queuedActions(g) {
+		if a.Duration != statusMessageDuration {
+			t.Fatalf("%q の表示時間 %v", a.Message, a.Duration)
+		}
 	}
 }

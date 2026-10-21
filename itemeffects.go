@@ -835,12 +835,12 @@ var sealPlayerMouth = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
 	g.Enqueue(Action{
 		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを使用した。口が封じられて開かなくなった", item.GetName()),
+		Message:  fmt.Sprintf("%sを使用した", item.GetName()),
 		Execute: func(g *Game) {
-			g.setPlayerStatus(StatusMouthSeal, mouthSealCardTurns)
 			g.isActioned = true
 		},
 	})
+	g.enqueuePlayerStatus(StatusMouthSeal, mouthSealCardTurns, StackDefault, "", false)
 	removeUsedItem(g, isInventoryItem)
 }
 
@@ -1389,28 +1389,10 @@ var paralyzeAllEnemiesAround = func(g *Game) {
 // 睡眠ポーション効果関数 - プレイヤーを睡眠状態にする
 var sleepPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	guardMessage, immune := g.playerImmunityMessage(StatusSleep)
-
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
-		Execute: func(g *Game) {
-			if !immune {
-				g.setPlayerStatus(StatusSleep, 10) // 10ターン睡眠
-			}
-		},
-	}
-	g.Enqueue(action)
-
-	if !immune {
-		guardMessage = "海老さんは眠った"
-	}
-	action = Action{
-		Duration: 0.4,
-		Message:  guardMessage,
-		Execute:  func(g *Game) {},
-	}
-	g.Enqueue(action)
+	// 飲んだ薬は装備能力による無効化だけを見る（状態異常耐性の盾は効かない）。
+	guard, immune := g.playerImmunitySource(StatusSleep)
+	g.EnqueueMessage(fmt.Sprintf("%sを飲んだ", item.GetName()), 0.4)
+	g.enqueuePlayerStatus(StatusSleep, 10, StackDefault, guard, immune) // 10ターン睡眠
 
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
@@ -1419,28 +1401,10 @@ var sleepPotion = func(g *Game) {
 // 混乱ポーション効果関数 - プレイヤーを混乱状態にする
 var confusionPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	guardMessage, immune := g.playerImmunityMessage(StatusConfusion)
-
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
-		Execute: func(g *Game) {
-			if !immune {
-				g.setPlayerStatus(StatusConfusion, 10) // 10ターン混乱
-			}
-		},
-	}
-	g.Enqueue(action)
-
-	if !immune {
-		guardMessage = "海老さんは混乱した"
-	}
-	action = Action{
-		Duration: 0.4,
-		Message:  guardMessage,
-		Execute:  func(g *Game) {},
-	}
-	g.Enqueue(action)
+	// 飲んだ薬は装備能力による無効化だけを見る（状態異常耐性の盾は効かない）。
+	guard, immune := g.playerImmunitySource(StatusConfusion)
+	g.EnqueueMessage(fmt.Sprintf("%sを飲んだ", item.GetName()), 0.4)
+	g.enqueuePlayerStatus(StatusConfusion, 10, StackDefault, guard, immune) // 10ターン混乱
 
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)
@@ -1449,28 +1413,10 @@ var confusionPotion = func(g *Game) {
 // 目潰しポーション効果関数 - プレイヤーを目潰し状態にする
 var blindPotion = func(g *Game) {
 	item, isInventoryItem := determineItemSource(g)
-	guardMessage, immune := g.playerImmunityMessage(StatusBlind)
-
-	action := Action{
-		Duration: 0.4,
-		Message:  fmt.Sprintf("%sを飲んだ", item.GetName()),
-		Execute: func(g *Game) {
-			if !immune {
-				g.setPlayerStatus(StatusBlind, 30) // 30ターン目潰し状態
-			}
-		},
-	}
-	g.Enqueue(action)
-
-	if !immune {
-		guardMessage = "海老さんは目が見えなくなった"
-	}
-	action = Action{
-		Duration: 0.4,
-		Message:  guardMessage,
-		Execute:  func(g *Game) {},
-	}
-	g.Enqueue(action)
+	// 飲んだ薬は装備能力による無効化だけを見る（状態異常耐性の盾は効かない）。
+	guard, immune := g.playerImmunitySource(StatusBlind)
+	g.EnqueueMessage(fmt.Sprintf("%sを飲んだ", item.GetName()), 0.4)
+	g.enqueuePlayerStatus(StatusBlind, 30, StackDefault, guard, immune) // 30ターン目潰し状態
 
 	// アイテムの使用後の処理
 	removeUsedItem(g, isInventoryItem)

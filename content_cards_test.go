@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -612,7 +613,9 @@ func TestMouthSealCard(t *testing.T) {
 	g := &Game{state: GameState{Player: Player{Inventory: []Item{card}}}}
 
 	card.Use(g)
-	g.ActionQueue.Queue[0].Execute(g)
+	if msg := runQueuedActions(g); !strings.HasSuffix(msg, "海老さんは口を封じられた") {
+		t.Fatalf("messages = %q", msg)
+	}
 
 	if got := g.state.Player.StatusAilments.MouthSeal; got != mouthSealCardTurns {
 		t.Fatalf("mouth seal turns = %d, want %d", got, mouthSealCardTurns)

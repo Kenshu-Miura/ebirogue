@@ -165,12 +165,12 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		// 睡眠薬の場合の処理
 		if potion.Name == "睡眠薬" {
 			message := fmt.Sprintf("%sは眠った", target.GetName())
-			guardMessage, immune := "", false
+			immune := false
 			if _, ok := target.(*Player); ok {
-				guardMessage, immune = g.playerImmunityMessage(StatusSleep)
-			}
-			if immune {
-				message = guardMessage
+				// 投げられた薬は装備能力による無効化だけを見る。メッセージは状態異常の共通の文言。
+				var guard string
+				guard, immune = g.playerImmunitySource(StatusSleep)
+				message = statusResultMessage(StatusSleep, guard, immune)
 			}
 			action := Action{
 				Duration: 0.5,
@@ -193,12 +193,12 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		} else if potion.Name == "混乱薬" {
 			// 混乱薬の場合の処理
 			message := fmt.Sprintf("%sは混乱した", target.GetName())
-			guardMessage, immune := "", false
+			immune := false
 			if _, ok := target.(*Player); ok {
-				guardMessage, immune = g.playerImmunityMessage(StatusConfusion)
-			}
-			if immune {
-				message = guardMessage
+				// 投げられた薬は装備能力による無効化だけを見る。メッセージは状態異常の共通の文言。
+				var guard string
+				guard, immune = g.playerImmunitySource(StatusConfusion)
+				message = statusResultMessage(StatusConfusion, guard, immune)
 			}
 			action := Action{
 				Duration: 0.5,
@@ -223,9 +223,9 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 			// 効果を即座に適用（ミニマップを即座に非表示にするため）
 			message := fmt.Sprintf("%sは目が見えなくなった", target.GetName())
 			if _, ok := target.(*Player); ok {
-				if guardMessage, immune := g.playerImmunityMessage(StatusBlind); immune {
-					message = guardMessage // 装備能力で無効なら目潰しにならない
-				} else {
+				guard, immune := g.playerImmunitySource(StatusBlind)
+				message = statusResultMessage(StatusBlind, guard, immune)
+				if !immune { // 装備能力で無効なら目潰しにならない
 					g.setPlayerStatus(StatusBlind, 30)
 				}
 				// ミニマップを更新するためのフラグを設定

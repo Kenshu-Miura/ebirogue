@@ -7,12 +7,13 @@
 新しい状態異常は作っていない。今ある状態異常の付与・経過・解除・表示・保存の経路を1か所にまとめた。
 
 - `status_effects.go`（タグなし・純粋）: 状態の定義表 `statusDefs` と純粋な共通処理。
-  - 表の列: 種類 `Kind`、名前 `Name`（「〜を防いだ」に使う）、HUD の表示名 `HUD` と並び順 `HUDOrder`、海老さん側・敵側の持続の型 `Player`・`Enemy`（`StatusNotApplicable` 付かない／`StatusTurns` 毎ターン減る／`StatusPermanent` 減らない／`StatusUntilCleared` bool で解除されるまで）、重ねがけの規則 `Stack`（`StackOverwrite` 上書き／`StackLonger` 長い方／`StackAdd` 加算して `MaxTurns` まで）、悪い状態か `Bad`、海老さんが治ったときのメッセージ `PlayerRecover`、治ったときにミニマップを描き直すか `RefreshMiniMap`、ボスの行動時に短縮するか `BossShortened`、項目の読み書き `Turns`・`SetTurns`。
+  - 表の列: 種類 `Kind`、名前 `Name`（「〜を防いだ」に使う）、HUD の表示名 `HUD` と並び順 `HUDOrder`、海老さん側・敵側の持続の型 `Player`・`Enemy`（`StatusNotApplicable` 付かない／`StatusTurns` 毎ターン減る／`StatusPermanent` 減らない／`StatusUntilCleared` bool で解除されるまで）、重ねがけの規則 `Stack`（`StackOverwrite` 上書き／`StackLonger` 長い方／`StackAdd` 加算して `MaxTurns` まで）、悪い状態か `Bad`、海老さんにかかったときのメッセージ `PlayerApply`（統合後に追加）、海老さんが治ったときのメッセージ `PlayerRecover`、治ったときにミニマップを描き直すか `RefreshMiniMap`、ボスの行動時に短縮するか `BossShortened`、項目の読み書き `Turns`・`SetTurns`。
   - 純粋な関数: `statusDefOf`・`statusTurns`・`statusActive`・`stackStatusTurns`・`addStatus`（規則を通してかける）・`setStatusTurns`（規則を通さない。仮眠の -1 用）・`clearStatus`・`hasBadStatus`・`clearBadStatuses`・`markHasteOnWake`・`wakeFromSleep`（`status.go` から移動）・`tickStatuses`（1ターン進めて治った種類を返す）・`formatPlayerStatus`（HUD。`status.go` から移動し表から出す）。
   - 表に載せた種類: トラバサミ・混乱・睡眠・目潰し・鈍足・倍速・口封じ・ゾワゾワ・金縛り・封印。`StatusKind` に `StatusHaste`・`StatusMouthSeal`・`StatusParalysis`・`StatusSeal`・`StatusBackward` を追加。`statusKindLabel` は表の名前を優先する（呪い・さびなど表に無い種類は従来の switch）。
 - `status_game.go`（`!test`）: `*Game` を使う共通処理。
   - 海老さん: `g.applyPlayerStatus(kind, turns, StatusSource{...}) bool`（耐性→重ねがけ→メッセージ。戻り値は付いたか）、`g.setPlayerStatus(kind, turns)`（耐性の判定を済ませた後に表の規則でかける）、`g.stackPlayerStatus(kind, turns, rule)`（規則を指定）、`g.guardPlayerStatus(kind, source)`、`g.clearPlayerStatus(kind)`、`g.clearPlayerBadStatuses()`。
-  - `StatusSource`: `Shield`（状態異常耐性の盾の50%でも防げるか。false なら装備能力の無効化だけ）、`Stack`（規則の上書き）、`Message`（付いたとき）、`Blocked`（防いだとき。`%s` に装備品の名前。空なら「<装備品>が<状態>を防いだ」）。
+  - `StatusSource`: `Shield`（状態異常耐性の盾の50%でも防げるか。false なら装備能力の無効化だけ）、`Stack`（規則の上書き）。
+  - **統合後の変更（2026-10-21、開発者の決定）**: メッセージと表示時間を統一した。`StatusSource` の `Message`・`Blocked` は廃止し、かかったときは表の `PlayerApply`、防いだときは「<装備品>が<状態の名前>を防いだ」（`statusResultMessage`）、表示時間はかかった・防いだ・治ったのすべてで `statusMessageDuration`（0.5秒）。原因のメッセージ（「〜を飲んだ」「〜のくねくね踊り」など）は付与元が先に出す。耐性の判定を Enqueue の時点で済ませる付与は `g.enqueuePlayerStatus(kind, turns, rule, guard, blocked)`（表示時にかける）、Execute の中ですぐかけるなら `g.applyPlayerStatusResult(...)`。乱数の消費は変えていない（`TestSimBatch` 1512冒険の集計はベースラインと完全一致）。
   - 敵: `g.applyEnemyStatus(index, kind, turns) bool`（ボスが受け付けない状態なら false）、`applyStatusToEnemy(*Enemy, …)`、`g.clearEnemyStatus(index, kind)`。
   - 経過: `g.decrementStatusAilments()` は表を回す形にし、治ったときのメッセージ・ミニマップの描き直しも表から出す。敵の睡眠のカードの目覚めの倍速（`HasteOnWake`）はそのまま残した。
 - `bosses.go`: ボスが受け付けない状態を表 `bossStatusImmunities`（今は最終ボス44の金縛りだけ）、短縮する状態を定義表の `BossShortened`（睡眠・混乱・ゾワゾワ）から引く形にした。判定 `bossStatusImmune`。
@@ -43,7 +44,8 @@
    - `Player`・`Enemy`: その側に付かないなら `StatusNotApplicable`（何も書かない）、毎ターン減るなら `StatusTurns`、減らないなら `StatusPermanent`、bool なら `StatusUntilCleared`。
    - `Stack` と、`StackAdd` なら `MaxTurns`。
    - `Bad`: 困った時のカード（と今後の治す薬）で治すなら true。
-   - `PlayerRecover`: 海老さんの状態が治ったときのメッセージ。
+   - `PlayerApply`: 海老さんにかかったときのメッセージ（「海老さんは〜」）。付与元にかかわらずこれが出る。
+   - `PlayerRecover`: 海老さんの状態が治ったときのメッセージ（「海老さんは〜」）。
    - `BossShortened`: ボスにかかったとき短縮するか。ボスが受け付けない状態は `bosses.go` の `bossStatusImmunities` に足す。
    - `Turns`・`SetTurns`: 足した項目を読み書きする関数（bool なら `boolTurns(s.X)` と `s.X = n > 0`）。
 4. 状態異常耐性の盾（50%）・よけの指輪で防ぐ対象にするなら、付与のときに `StatusSource{Shield: true}` を渡す。確実に無効にする能力は `statusImmunities` に能力 ID → 種類を足す。

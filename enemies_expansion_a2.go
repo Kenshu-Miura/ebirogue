@@ -139,12 +139,8 @@ func sandMoguriAttack(enemy *Enemy, g *Game) {
 		if g.randIntn(100) >= 30 {
 			return
 		}
-		if guard, blocked := g.playerStatusGuard(StatusBlind); blocked {
-			g.EnqueueMessage(fmt.Sprintf("%sが目潰しを防いだ。", guard), 0.5)
-			return
-		}
-		g.setPlayerStatus(StatusBlind, 5)
-		g.EnqueueMessage("海老さんは目が見えなくなった。", 0.5)
+		guard, blocked := g.playerStatusGuard(StatusBlind)
+		g.applyPlayerStatusResult(StatusBlind, 5, StackDefault, guard, blocked)
 	})
 }
 

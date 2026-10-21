@@ -8,16 +8,14 @@ import "fmt"
 // どれも Action の Execute の中（または効果を即時に反映してよい場所）から呼ぶ。
 
 // StatusSource は applyPlayerStatus に渡す付与の出どころ。
+// メッセージは付与元にかかわらず定義表（PlayerApply）と「<装備品>が<状態>を防いだ」にそろえ、
+// 表示時間は statusMessageDuration。原因（「〜を飲んだ」「〜のくねくね踊り」など）は付与元が先に出す。
 type StatusSource struct {
 	// Shield は状態異常耐性の盾（50%）でも防げるか。敵・罠からの付与は true、
-	// 自分で薬を飲んだときなどは false（装備能力による無効化だけを見る）。
+	// 自分で薬を飲んだとき・トラバサミなどは false（装備能力による無効化だけを見る）。
 	Shield bool
 	// Stack は重ねがけの規則。StackDefault なら表の規則。
 	Stack StatusStack
-	// Message は付いたときのメッセージ、Blocked は防いだときのメッセージ（%s に防いだ装備品の名前）。
-	// 空なら Message は出さず、Blocked は「<装備品>が<状態>を防いだ」になる。
-	Message string
-	Blocked string
 }
 
 // guardPlayerStatus は付与の前の耐性の判定。source.Shield なら盾の判定で乱数を1回使うことがある。
@@ -28,30 +26,48 @@ func (g *Game) guardPlayerStatus(kind StatusKind, source StatusSource) (guard st
 	return g.playerImmunitySource(kind)
 }
 
-// applyPlayerStatus は耐性・重ねがけの規則・メッセージを通して海老さんに状態をかける。
+// applyPlayerStatus は耐性・重ねがけの規則・メッセージを通して海老さんに状態をすぐかける。
 // 付いたら true。防いだとき・海老さんに付かない状態のときは false。
 func (g *Game) applyPlayerStatus(kind StatusKind, turns int, source StatusSource) bool {
 	def, ok := statusDefOf(kind)
 	if !ok || def.Player == StatusNotApplicable {
 		return false
 	}
-	if guard, blocked := g.guardPlayerStatus(kind, source); blocked {
-		message := fmt.Sprintf("%sが%sを防いだ", guard, def.Name)
-		if source.Blocked != "" {
-			message = fmt.Sprintf(source.Blocked, guard)
-		}
-		g.EnqueueMessage(message, 0.4)
-		return false
-	}
-	g.stackPlayerStatus(kind, turns, source.Stack)
-	if source.Message != "" {
-		g.EnqueueMessage(source.Message, 0.4)
-	}
-	return true
+	guard, blocked := g.guardPlayerStatus(kind, source)
+	g.applyPlayerStatusResult(kind, turns, source.Stack, guard, blocked)
+	return !blocked
 }
 
-// setPlayerStatus は耐性の判定を済ませた後に、表の重ねがけの規則で海老さんに状態をかける。
-// 耐性の判定とかける時点が分かれている既存の付与（判定は Enqueue 時、かけるのは Execute 内）が使う。
+// playerStatusAction は耐性の判定を済ませた付与を、統一したメッセージの Action にする。
+// Execute で状態をかける（blocked なら何もしない）。判定を Enqueue の時点で行い、
+// かけるのはメッセージの表示時にする既存の付与が使う。
+func (g *Game) playerStatusAction(kind StatusKind, turns int, rule StatusStack, guard string, blocked bool) Action {
+	return Action{
+		Duration: statusMessageDuration,
+		Message:  statusResultMessage(kind, guard, blocked),
+		Execute: func(g *Game) {
+			if !blocked {
+				g.stackPlayerStatus(kind, turns, rule)
+			}
+		},
+	}
+}
+
+// enqueuePlayerStatus は playerStatusAction を積む。
+func (g *Game) enqueuePlayerStatus(kind StatusKind, turns int, rule StatusStack, guard string, blocked bool) {
+	g.Enqueue(g.playerStatusAction(kind, turns, rule, guard, blocked))
+}
+
+// applyPlayerStatusResult は判定済みの付与をすぐかけて、統一したメッセージを積む。
+// Action の Execute の中で、続く処理より先に状態を反映したいときに使う。
+func (g *Game) applyPlayerStatusResult(kind StatusKind, turns int, rule StatusStack, guard string, blocked bool) {
+	if !blocked {
+		g.stackPlayerStatus(kind, turns, rule)
+	}
+	g.EnqueueMessage(statusResultMessage(kind, guard, blocked), statusMessageDuration)
+}
+
+// setPlayerStatus は耐性の判定を済ませた後に、表の重ねがけの規則で海老さんに状態をかける（メッセージなし）。
 func (g *Game) setPlayerStatus(kind StatusKind, turns int) {
 	g.stackPlayerStatus(kind, turns, StackDefault)
 }
@@ -109,7 +125,7 @@ func (g *Game) decrementStatusAilments() {
 			g.miniMapDirty = true // ミニマップを更新して敵・アイテム・階段を表示
 		}
 		if def.PlayerRecover != "" {
-			g.EnqueueMessage(def.PlayerRecover, 0.4)
+			g.EnqueueMessage(def.PlayerRecover, statusMessageDuration)
 		}
 	}
 

@@ -160,8 +160,9 @@ func octopusBossSpecial(e *Enemy, g *Game) {
 	if g.randIntn(2) == 0 {
 		g.Enqueue(Action{Duration: 0.5, Message: "深海ダコ将軍が墨を吐いた！", Execute: func(g *Game) {
 			i := g.livingBossIndex(id)
-			if i >= 0 && !g.state.Enemies[i].StatusAilments.Seal && !g.playerOnSanctuary() && !g.playerBlocksStatus(StatusBlind) {
-				g.stackPlayerStatus(StatusBlind, bossInkDuration, StackLonger)
+			if i >= 0 && !g.state.Enemies[i].StatusAilments.Seal && !g.playerOnSanctuary() {
+				guard, blocked := g.playerStatusGuard(StatusBlind)
+				g.applyPlayerStatusResult(StatusBlind, bossInkDuration, StackLonger, guard, blocked)
 			}
 		}})
 		return

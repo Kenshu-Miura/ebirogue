@@ -2,8 +2,6 @@
 
 package main
 
-import "fmt"
-
 // 装備能力のフック（content-expansion-plan.md の F1）。
 //
 // 武器・盾・指輪の能力は能力 ID ごとに AbilityHooks を登録し、装備中の全装備品
@@ -249,7 +247,7 @@ func (g *Game) playerImmunityMessage(kind StatusKind) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	return fmt.Sprintf("%sが%sを防いだ", name, statusKindLabel(kind)), true
+	return statusBlockedMessage(kind, name), true
 }
 
 // playerImmuneTo は装備能力で状態異常 kind を確実に無効化できるかを返す。乱数は使わない。
