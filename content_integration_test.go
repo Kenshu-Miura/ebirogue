@@ -495,3 +495,139 @@ func TestWave9BottomlessPotAvoidsTerrain(t *testing.T) {
 		}
 	}
 }
+
+// 10-A×10-B: 店とモンスターハウスが同じ階に出ても別の部屋になり、互いの部屋を荒らさない。
+// 店主は眠らされず、モンスターハウスの道具は商品にならない。
+func TestWave10ShopAndMonsterHouseShareFloors(t *testing.T) {
+	both := 0
+	for seed := int64(1); seed <= 150; seed++ {
+		for floor := 4; floor < finalFloor; floor++ {
+			if isBossFloor(floor) {
+				continue
+			}
+			player := newInitialPlayer()
+			_, enemies, items, _, rooms, _ := GenerateRandomMapFor(70, 70, floor-1, &player, newFloorRNG(seed, floor), DifficultyAdvanced)
+			shop, house := -1, -1
+			for i, r := range rooms {
+				switch r.Role {
+				case RoomRoleShop:
+					if shop >= 0 {
+						t.Fatalf("seed %d floor %d: two shops", seed, floor)
+					}
+					shop = i
+				case RoomRoleMonsterHouse:
+					if house >= 0 {
+						t.Fatalf("seed %d floor %d: two monster houses", seed, floor)
+					}
+					house = i
+				}
+			}
+			if shop < 0 || house < 0 {
+				continue
+			}
+			both++
+			s, h := rooms[shop], rooms[house]
+			for _, e := range enemies {
+				inShop, inHouse := roomContainsWithWalls(s, e.X, e.Y), roomContains(h, e.X, e.Y)
+				if inShop && inHouse {
+					t.Fatalf("seed %d floor %d: rooms overlap at (%d,%d)", seed, floor, e.X, e.Y)
+				}
+				if inShop && (e.ID != shopkeeperMonsterID || e.StatusAilments.Sleep != 0) {
+					t.Fatalf("seed %d floor %d: enemy %d (sleep %d) in the shop", seed, floor, e.ID, e.StatusAilments.Sleep)
+				}
+				if e.ID == shopkeeperMonsterID && !inShop {
+					t.Fatalf("seed %d floor %d: keeper outside the shop", seed, floor)
+				}
+			}
+			for _, item := range items {
+				x, y := item.GetPosition()
+				if roomContains(h, x, y) && itemShopPrice(item) != 0 {
+					t.Fatalf("seed %d floor %d: monster house item %d has a price", seed, floor, item.GetID())
+				}
+			}
+		}
+	}
+	if both == 0 {
+		t.Fatal("no floor had both a shop and a monster house (test is not meaningful)")
+	}
+}
+
+// 10-A×10-B: 部屋の役割（店・モンスターハウス）と入室済みは同じ階でまとめて中断セーブされる。
+func TestWave10ShopAndMonsterHouseSaveTogether(t *testing.T) {
+	g := newShopTestGame(t)
+	g.rooms[1].Role = RoomRoleMonsterHouse
+	g.rooms[1].Entered = true
+	pickUpShopProduct(t, g)
+	restored, vs := saveRoundTrip(g)
+	if len(vs) > 0 {
+		t.Fatalf("round trip: %+v", vs)
+	}
+	if restored.rooms[0].Role != RoomRoleShop || restored.rooms[0].Entered {
+		t.Fatalf("shop room = %+v", restored.rooms[0])
+	}
+	if restored.rooms[1].Role != RoomRoleMonsterHouse || !restored.rooms[1].Entered {
+		t.Fatalf("monster house = %+v", restored.rooms[1])
+	}
+	if !restored.shopOpen() || restored.shopUnpaidTotal() != 200 {
+		t.Fatalf("shop open %v unpaid %d", restored.shopOpen(), restored.shopUnpaidTotal())
+	}
+	// 店へ入り直しても「モンスターハウスだ！」は出ない
+	restored.previousPlayerRoomID = -1
+	before := len(restored.ActionQueue.Queue)
+	restored.CheckSleepingEnemyWakeUp()
+	if len(restored.ActionQueue.Queue) != before {
+		t.Fatal("entering the shop must not announce a monster house")
+	}
+}
+
+// 10-B×10-C: 店主・番犬も図鑑の敵の一覧に1回ずつ並ぶ（上位種化の表に無い1段階の敵）。
+func TestWave10CodexListsShopMonsters(t *testing.T) {
+	order := codexEnemyOrder()
+	seen := map[int]int{}
+	for _, id := range order {
+		seen[id]++
+	}
+	if len(order) != len(MonsterDefinitions) {
+		t.Fatalf("codex lists %d enemies, want %d", len(order), len(MonsterDefinitions))
+	}
+	for _, id := range []int{shopkeeperMonsterID, guardDogMonsterID, eliteGuardDogMonsterID} {
+		if seen[id] != 1 {
+			t.Fatalf("enemy %d listed %d times", id, seen[id])
+		}
+	}
+}
+
+// 10-B×10-C: 怒った店主に倒されると図鑑の店主に敗北が1つ記録され、店主を倒すと撃破が記録される。
+func TestWave10CodexRecordsShopkeeper(t *testing.T) {
+	t.Chdir(t.TempDir())
+	g := newShopTestGame(t)
+	g.persistent = true
+	g.codexLoaded, g.codex = true, newCodexData()
+	g.applyDamageToEnemy(g.shopkeeperIndex(), 1) // 怒らせる
+	g.state.Player.X, g.state.Player.Y = 7, 3
+	g.state.Player.Health = 1
+	for i := 0; i < 5 && !g.RunEnded(); i++ {
+		g.MoveEnemies()
+		if err := g.RunUntilInputReady(600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !g.RunEnded() {
+		t.Fatal("angry keeper must defeat the player")
+	}
+	if r := g.codex.Enemies[shopkeeperMonsterID]; !r.Seen || r.Deaths != 1 {
+		t.Fatalf("keeper record after death = %+v", r)
+	}
+
+	h := newShopTestGame(t)
+	h.persistent = true
+	h.codexLoaded, h.codex = true, newCodexData()
+	h.applyDamageToEnemy(h.shopkeeperIndex(), 1)
+	h.applyDamageToEnemy(h.shopkeeperIndex(), 10000)
+	if err := h.RunUntilInputReady(200); err != nil {
+		t.Fatal(err)
+	}
+	if r := h.codex.Enemies[shopkeeperMonsterID]; r.Defeated != 1 {
+		t.Fatalf("keeper record after defeat = %+v", r)
+	}
+}

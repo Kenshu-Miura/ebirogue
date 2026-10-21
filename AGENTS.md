@@ -48,9 +48,10 @@ go test -run TestReplayFile -count=1 . -args -replay.file=ebirogue_replay_last.j
   - expert の立ち回り（`bot_tactics_test.go`）: 部屋で2体以上の敵が近づいたら（`approachingEnemies`: 地形とほかの敵を避けて6歩以内に来られる敵だけ。水路の向こうの敵や金縛りの敵にふさがれた敵は数えない）通路の入口へ下がって1対1で戦い、隣に回復役（イヤシナマコ系）がいれば先に殴り、距離2の敵は足踏みで待って先手を取り、殴り合うと倒れる見積もりなら止める・倒す道具を早めに使う。ボス階では手下を倒してボスへ進む。
   - expert の道具（`bot_expert_items_test.go`）: 指輪を価値の表で付け替え、封印・シフトチェンジの杖、ゾワゾワ・自爆・聖域・ウインナー化（空腹で食料が無いとき）・大部屋・白紙のカード、保存の壺（予備の食料を入れる）を使う。満杯なら床の道具が持ち物の最低より価値が高いとき足元の「交換」で入れ替える（予備の武器・盾は種類ごとに1つ、不利なカードは拾わない）。真実の眼のカードは対象を選んで確定する。
   - expert の段4の敵への対処は人に見える姿（`enemyAppearance`）で判断する: ウチカエシエビ系には撃たない・投げない、膨らんだフクレフグ系・帯電したシビレエイ系は一撃で倒せず破裂・放電が HP の1/4を超えるなら離れる（6ターンまで）。
+  - 店（`bot_shop_test.go`）: BOT は商品を拾いに行かず経路でも商品のマスを避け、うっかり拾ったら次の行動で置いて返す。怒っていない店主は敵として数えない。支払い・売却の窓は X で閉じる（売買はしない。wave11）。
   - 計測用に `-bot.off=<名前,...>` で expert の改善を個別に切れる（名前の一覧は `bot_tactics_test.go` の `botFeature` と `docs/agents/done/bot-tactics.md`）。
 - 毎行動で不変条件（`invariants_test.go`: 壁の中・重なり・HP/満腹度/所持品の範囲・座標・倒れた敵の残留）、ソフトロック（`RunUntilInputReady` が上限フレームで戻らない）、panic を検査し、ランダムなターンで中断セーブ→再開の一致も確かめる。
-- `TestSimBatch` は `reports/sim-<日時>.json`（全結果）と `.md`（難易度×性格のクリア率・到達階・ターン、判断ミス死〔回復薬を持ったまま死亡・食料を持ったまま餓死・自分に不利なカードによる被害〕と死亡時のレベル・満腹度、性格別の到着時平均レベル〔主要な階〕と死亡時にレベル上限だった割合、性格別の死因上位、道具の操作回数、性格別の食料と滞在〔床の食料を拾った割合・1階あたりの滞在ターン・餓死時の満腹度0の継続ターンと所持品の満杯〕、段4の敵による死亡、階層別死亡率、違反一覧、`reports/baseline.json` との差分）を出力する。`-sim.writebaseline` でベースラインを更新する。主なフラグ: `-sim.runs` `-sim.difficulty` `-sim.persona` `-sim.turns` `-sim.seedbase` `-sim.parallel` `-sim.out`、`-sim.immortal`（計測用の不死モード。HP が1未満にならず、BOT が死なずに深い階まで進むので1〜30階のレベル曲線を測れる。`Game.immortal`、`damagePlayer` で適用）。
+- `TestSimBatch` は `reports/sim-<日時>.json`（全結果）と `.md`（難易度×性格のクリア率・到達階・ターン、判断ミス死〔回復薬を持ったまま死亡・食料を持ったまま餓死・自分に不利なカードによる被害〕と死亡時のレベル・満腹度、性格別の到着時平均レベル〔主要な階〕と死亡時にレベル上限だった割合、性格別の死因上位、道具の操作回数、性格別の食料と滞在〔床の食料を拾った割合・1階あたりの滞在ターン・餓死時の満腹度0の継続ターンと所持品の満杯〕、段4の敵による死亡、モンスターハウスの中での死亡、性格別の店のある階に着いた回数と泥棒の回数、階層別死亡率、違反一覧、`reports/baseline.json` との差分）を出力する。`-sim.writebaseline` でベースラインを更新する。主なフラグ: `-sim.runs` `-sim.difficulty` `-sim.persona` `-sim.turns` `-sim.seedbase` `-sim.parallel` `-sim.out`、`-sim.immortal`（計測用の不死モード。HP が1未満にならず、BOT が死なずに深い階まで進むので1〜30階のレベル曲線を測れる。`Game.immortal`、`damagePlayer` で適用）。
 - `TestEarlyDeathAnalysis`（`sim_early_test.go`）は expert の死亡直前40ターン（HP・行動 `bot.act`・隣の敵・遠距離攻撃が届くか・所持品など）を記録し、1〜`-sim.earlyfloor`（既定5、30まで指定できる）階の死亡を「BOT の判断ミス」と「避けにくい死」に分類した `reports/early-<日時>.md` を出力する。分類基準は `docs/agents/early-game-analysis.md`。expert は敵がいなければ HP 60% 未満で休憩し（`expertShouldRest`）、投石は直線でなくても届くと判断する。
 - `reports/` は `baseline.json` 以外を `.gitignore` 済み。
 - ファジングで見つかった入力は `testdata/fuzz/FuzzInputSequence/` に保存され、以後の `go test ./...` で毎回再生される（修正後もコミットして残す）。
@@ -81,7 +82,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go`, `audio_stub.go`（音声の空実装） |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `status_stats.go`, `status_special.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go`, `item_floor_tables.go`, `terrain.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `status_stats.go`, `status_special.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go`, `item_floor_tables.go`, `terrain.go`, `special_rooms.go`, `item_prices.go`, `codex.go` |
 | デバッグビルド専用 | `//go:build debug && !test` / `!debug && !test` | `debug_on.go`（F1 の処理）/ `debug_off.go`（空の実装） |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
@@ -124,6 +125,11 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 出現テーブル（wave9-A）: タグなしの `item_floor_tables.go` に階の帯 `spawnFloorBands`、種類の帯別の重み `itemCategoryBandWeights`、道具ごとの規則 `itemFloorRules`（`From`・`Until`・`Weight`・`Strong`・`Heal`）、罠の帯別の重み `trapBandWeights`、難易度の補正 `difficultySpawnTunings`（すべて 1.0。変えたら `TestDifficultySpawnTuningNeutral` を直す）。つまみの使い方は `docs/agents/done/wave9-A.md`。**床・店などで道具を選ぶときは `pickFloorItemID(階, 難易度, intn)`（作るなら `createFloorItem`）、罠は `pickFloorTrapID(階, intn)` を使う**（ボス階・30階の落とし穴の除外も含む）。マップ生成の入口は難易度付きの `GenerateRandomMapFor`（`GenerateRandomMap` は補正なしの入口）。
   - 特殊地形（wave9-B）: タイルの種類 `"water"`・`"cracked_wall"`・`"hidden_corridor"`（どれも `Blocked`）。純粋な判定・生成はタグなしの `terrain.go`（`terrainBlocksWalking`・`terrainStopsProjectile`・敵の通行 `enemyTerrainPassable`・`generateTerrain`、出現率 `terrainRates`）、発見・破壊は `terrain_game.go`（`revealHiddenAt`・`searchHiddenTerrain`・`breakCrackedAround`）。海老さんの通行は `g.terrainOpenAt(x, y)`、道具を置けるかは `g.itemDropFree(x, y)`（どちらも `displacement.go`）。敵の接近 `stepEnemyToward` は、間に自分が通れない水路があるとき（`waterBetween`）だけ経路探索 `enemyPathStep`（`terrain.go`、乱数なし、`enemyPathMaxSteps` 歩まで）で回り込み、それ以外は従来の直進。水棲の属性 `EnemyTraitAquatic` は系統の表で基本種に付ける。**海老さん・敵を動かす新しい処理（場所替えを含む）は、行き先を `g.terrainOpenAt`・敵の通行の判定で確かめる。**
   - 壺と合成（wave9-C）: `pots_synthesis.go`（壺 225〜232 の表 `additionalPotTemplates`、入れたときの効果 `applyPotInsertEffect`〔Action の Execute で呼ぶ〕、合成 `synthesizeItem`、直接取り出せるか `potAllowsTakeOut`、背中の壺の標的 `backPotTarget`、底抜けの罠 `scatterBottomlessTraps`）。合成で増えた能力はテンプレートとの差分を `SavedItem.ExtraAbilities`（省略可能）に保存する。233〜239 は予備。
+- 段10（テストは `content_monster_house_test.go`・`special_rooms_test.go`・`content_shop_test.go`・`codex_test.go`・`codex_game_test.go`・`codex_draw_test.go`、担当をまたぐものは `content_integration_test.go`）:
+  - 特別な部屋の共通処理（10-A/B で共有）: タグなしの `special_rooms.go` に部屋の役割 `RoomRole`（`Room.Role`。モンスターハウス・店。空は通常の部屋）、部屋の選び方 `selectSpecialRoom`（開始地点・階段・役割のある部屋を除く）、モンスターハウスと店の確率・数の純粋処理。フロア生成（`map.go`）の順番は「敵・道具・罠 → 店 `placeShop` → 地形 → モンスターハウス `generateMonsterHouse`」。**新しい特別な部屋も `selectSpecialRoom` で選び、役割を `RoomRole` に足す**（重ならない）。
+  - モンスターハウス（wave10-A）: `monster_house.go`（自然生成・初回入室 `enterMonsterHouse`〔`CheckSleepingEnemyWakeUp` から〕・`inMonsterHouse`）。入室済みは `Room.Entered`。カードの数も `monsterHouseCounts` を通す。
+  - 店（wave10-B）: `shop.go`（店の生成、買う・売る・支払い、泥棒 `updateShop`〔毎フレーム〕・`leaveShopFloor`、店主 126・番犬 127/128 の定義、値段の入口 `itemBuyPrice`・`itemSellPrice`）、窓の描画は `draw_shop.go`。値段表はタグなしの `item_prices.go`（`itemBasePrices`。**新しいアイテムは値段も足す**。無いと `TestItemPriceTableCoversAllTemplates` が落ちる）。商品・未払いは `BaseItem.ShopPrice > 0`（床なら商品、持ち物なら未払い）。店主は `IsBoss: true` で例外の扱いを受ける（ボス階には店を作らない）。店主を傷つける処理は `applyDamageToEnemy`・`hitEnemyWithProjectile` が泥棒として扱う（敵どうし・敵の爆発・敵が踏んだ罠では傷つかない）。
+  - 図鑑（wave10-C）: タグなしの `codex.go`（記録 `CodexData`・読み込みの検証・結合・発見率）、`codex_game.go`（記録 `g.recordCodex`・`observeCodexItem`・`observeCodexEnemy`、保存 `g.saveCodex`〔階移動・中断/オートセーブ・`finishRun`〕、並び順）、`codex_ui.go`（画面）、`codex_trap_image.go`（罠の画像の選択。ゲーム画面と共用）。記録・保存は `g.persistent` のときだけ。対象はテンプレート表から毎回作るので、新しい道具・敵・罠は自動で図鑑に載る。
 - `replay.go`（タグなし）と `replay_game.go`（`!test`）: 通常プレイの入力の記録（`ReplayData`。区間 `ReplaySegment` ごとに開始状態・圧縮した論理キー入力・毎フレームの照合値 `replayCheck`）、保存（`ebirogue_replay_last.json`・`ebirogue_replays.json`）、ヘッドレス再生 `playReplay`。`Update` の先頭の `g.beginReplayFrame()`・`g.recordReplayKeys()` が記録する。記録は `g.persistent` のときだけ。ビルド識別はソース（`//go:embed *.go go.mod go.sum`）の SHA-256 なので、ソースを変えると前の記録は再生できない。**キー設定画面の物理キーは `g.replayPhysicalKey()` を通す。**
 - `audio.go`（`!test`）・`audio_settings.go`（タグなし）・`audio_stub.go`（`test`）: 音声。BGM は `g.playBGM(id)`／`g.stopBGM()`（`updateAudio` が階・ボス・クリアで切り替える）、効果音は `g.playSE(id)`。既存の Action に音を添えるときは Action を増やさず `g.soundFirstAction(start, id)`（`start` は積む前の `len(g.ActionQueue.Queue)`）、キューに積まない操作は `g.executeAudioCue(id)`。音源は `sound/*.wav`（`//go:embed`。`go run tools/generate_sounds.go` で再生成）。音声は `g.persistent && !g.headless` のときだけ初期化するので BOT・テストの結果と乱数に影響しない。音量は `GameSettings.BGMVolume`・`SEVolume`（0〜10、`clampVolume`）。
 - `displacement_path.go`（タグなし・純粋）と `displacement.go`（`!test`）: 位置を動かす共通処理。`g.knockbackPlayer(dx, dy, マス数, 衝突ダメージ, 死因)`・`g.knockbackEnemy(添字, …)`（壁や敵に当たると固定ダメージ、ボスは動かない）、`g.pullPlayer(dx, dy, マス数)`（途中の罠で止まって踏む）、`g.dropPlayerItemsForward(個数, dx, dy)`（装備中を除き前方1〜2マス→周囲へ落とす）。不動 `AbilityImmovable`（`g.playerImmovable()`。吹き飛ばし・引き寄せ・イレカエダコ系とボスの場所替えを防ぐ）と受け身 `AbilityBreakFall`（`g.playerBreaksFall()`。衝突ダメージを防ぐ）で無効化する。どれも Action の Execute の中から呼ぶ。
@@ -150,9 +156,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `Enemy`（enemies.go）: ステータス + `SpecialAttack SpecialAttackFunc` + `SpecialAttackProbability` + `Traits []EnemyTrait`（特効の属性）+ `StatusAilments` + 系統が使う汎用の状態（`Counter`・`Timer`・`Flag`・`Alerted`・`DisguiseID`、段4）。定義 `MonsterDefinition` の `CriticalPercent`（通常攻撃が痛恨の一撃〔×1.5〕になる確率）と `EvasionPercent`（プレイヤーの通常攻撃をかわす確率。必中は無視）は敵の ID から引く（`enemyCriticalPercent` / `enemyEvasionPercent`、封印中は0、回避は睡眠・金縛り中も0）。
 - `StatusAilments`（main.go / game_stub.go 両方に定義）: トラバサミ・混乱・睡眠・目潰し・鈍足・倍速・口封じ・ゾワゾワ（`Backward`、敵だけが使う。残りターン int）、金縛り・封印（bool）、`HasteOnWake`、段8の `AttackUp`・`AttackDown`・`DefenseUp`・`DefenseDown`・`NoHealing`・`Nigiri`・`Berserk`・`Decoy`・`Invisible`・`Invincible`（残りターン int、省略可能な項目）。種類ごとの規則は `status_effects.go` の `statusDefs`。
 - `Tile`（main.go / game_stub.go）: `Type`（"floor", "wall", "corridor", "door"、段9の "water"・"cracked_wall"・"hidden_corridor" 等の文字列）, `Blocked`, `BlockSight`, `Visited`, `Brightness`。
-- `Room`（map.go）: `ID, X, Y, Width, Height, Center`。
+- `Room`（mapgen.go）: `ID, X, Y, Width, Height, Center`、段10の `Role`（特別な部屋の用途）・`Entered`（モンスターハウスに入ったか）。
 - `MapTrap`（maptraps.go）: 座標・名前・発見済みフラグ・効果関数・不発率。
-- アイテムは `BaseItem`（items.go）を埋め込んだ具象型 `Weapon`/`Armor`/`Arrow`/`Food`/`Potion`/`Card`/`Money`/`Accessory`/`Cane`/`Trap`/`Pot`。`Weapon`・`Armor`・`Accessory` の `Abilities []EquipmentAbilityID` はテンプレートから生成され、セーブしない。インタフェース `Item`/`Equipable`/`Identifiable`/`Character` は `interfaces.go`。
+- アイテムは `BaseItem`（items.go）を埋め込んだ具象型 `Weapon`/`Armor`/`Arrow`/`Food`/`Potion`/`Card`/`Money`/`Accessory`/`Cane`/`Trap`/`Pot`。`Weapon`・`Armor`・`Accessory` の `Abilities []EquipmentAbilityID` はテンプレートから生成され、セーブしない。インタフェース `Item`/`Equipable`/`Identifiable`/`Character` は `interfaces.go`。`BaseItem.ShopPrice` は店の値段（段10。床では商品、持ち物では未払い、0は自分の物）。
 - 武具の `Sharpness` は強化値（生成時 -1〜3 のランダム、-1 なら呪い付き）。
 
 ## コンテンツのデータテーブル（新要素の追加場所）
@@ -172,7 +178,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 新しいアイテム・敵・罠を 1 つ追加するときに触る場所:
 
-1. **テーブル**: 上記の該当テーブルへ追加（ID は `docs/agents/README.md` の割り当て表に従う）。
+1. **テーブル**: 上記の該当テーブルへ追加（ID は `docs/agents/README.md` の割り当て表に従う）。アイテムは店の値段表 `itemBasePrices`（item_prices.go）にも追加する。
    - **敵を追加する場合は基本種だけで終わらせず、元画像の色相と能力値を変化させた同系統の上位種（第2段階・第3段階）も同時に追加する。** 上位種は基本種の特殊能力を継承し、`MonsterLevelUpTable` に基本種→第2段階→第3段階の対応を登録する。階層で敵の能力値を補正せず、深い階の強さは上位種の出現で表す（開発者の方針）。第3段階の画像は `go run tools/third_stage_enemy_images.go` と同じ色相回転で作れる。
 2. **効果**: `itemeffects.go`（アイテム）/ 定義内クロージャ（敵・罠）。
 3. **画像**: `img/` に 30x30 透過 PNG。敵の上位種画像は基本種の輪郭・アルファ・明暗を保ち、色相だけを変更した色違いにする。`NewGame()`（main.go）で読み込み、`getItemImage` / `getEnemyImage` / `DrawMapTraps`（draw.go）の分岐に追加。画像は `BaseItem.Type` や `Enemy.Type` の文字列で選ばれる（例: `"Mintia"` → mintiaImg, `"Card"` → cardImg）。
@@ -186,7 +192,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `savedata.go`（タグなし・純粋）: `SaveData`/`SavedPlayer` 等の構造体、`decodeSaveData`、破損検出の `validateSaveData`、`GameSettings`。`saveDataVersion = 3`（シード・乱数状態・難易度・ボス撃破を含む。構造を壊す変更をしたらインクリメント。旧セーブは破棄され新規冒険になる）。
 - `savegame.go`（`!test`）: セーブ/設定の I/O、`buildSaveData`/`applySaveData`、メニューの「中断」→ `saveSuspendData`、フロア移動時の `autoSave`、起動時の `tryResumeFromSave`、死亡時の `deleteSaveFile`。
 - 保存先は `storage.go`（`!js`, `os` ファイル）と `storage_js.go`（`js`, ブラウザ `localStorage`）が `storageRead`/`storageWrite`/`storageRemove`/`storageIsNotExist` として抽象化する。`savegame.go` は `os` を直接呼ばずこれらを使う。**新しい保存 I/O もこの4関数経由にすること。**
-- キーは `ebirogue_save.json` / `ebirogue_settings.json` / `ebirogue_results.json`（冒険の記録、最大100件）/ `ebirogue_replay_last.json`（最後の冒険の入力の記録）/ `ebirogue_replays.json`（終わった冒険の入力の記録、最大10件）。ネイティブ版はカレントディレクトリのファイル、WASM 版は同名キーの `localStorage` 項目。**WASM でも中断・オートセーブが機能する。**
+- キーは `ebirogue_save.json` / `ebirogue_settings.json` / `ebirogue_results.json`（冒険の記録、最大100件）/ `ebirogue_replay_last.json`（最後の冒険の入力の記録）/ `ebirogue_replays.json`（終わった冒険の入力の記録、最大10件）/ `ebirogue_codex.json`（図鑑。冒険をまたぐ発見記録）。ネイティブ版はカレントディレクトリのファイル、WASM 版は同名キーの `localStorage` 項目。**WASM でも中断・オートセーブが機能する。**
 - ストレージへの書き込みは `g.persistent`（`NewGame` の通常のゲームだけ true）のときだけ行う。テストや BOT の `Game` はセーブ・設定・記録を書き換えない。
 - 設定（`GameSettings`）の省略可能な項目: 入力の記録 `SaveInputReplay *bool`（nil はオン）、音量 `BGMVolume`・`SEVolume`（項目が無ければ6。0は有効な値なので `omitempty` を付けない）。中断セーブの `Replay` も省略可能（`saveDataVersion` は3のまま）。
 - 設定画面の項目の並びは 0 フルスクリーン・1 ミニマップ・2 キー設定・3 入力の記録・4 BGM・5 効果音（`handleSettingsInput`・`drawSettingsWindow`）。ヘッドレス（BOT）は従来どおり0〜2の3項目だけを巡回し、random BOT の操作経路を変えない。
@@ -267,11 +273,10 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority B: dungeon systems
 
-- モンスターハウスを追加する。
-- 店、商品の購入・売却、店主、泥棒状態を追加する。
 - 段9の仮画像を正式な画像に差し替え、実機での30px表示を確認する: 水路 `img/water.png`・割れた壁 `img/cracked_wall.png`（`go run tools/terrain_images.go` の仮画像。暗い床とミニマップでの見え方も）、壺 `img/pot_225.png`〜`pot_232.png`（`pot.png` の色違い）。説明窓の印の一覧の読みやすさも確認する。
-- 換金の壺の仮の売値（1個100）を店（wave10-B）の価格表へつなぐ。
-- アイテム・敵・罠の図鑑と発見率を追加する。
+- 段10の仮画像を正式な画像に差し替え、実機での30px表示を確認する: 店主 `img/shopkeeper.png`・番犬 `img/guard_dog.png`・猛番犬 `img/elite_guard_dog.png`（`go run tools/shop_images.go` の単純な図形）。
+- 図鑑の画面（長い説明の折り返し、キー設定を変えたときの案内）と、WASM の `localStorage` での図鑑の保存を実機・ブラウザで通して確認する。
+- 店で、モンスターハウスのカードが床に出した道具は値段の無い（拾っても泥棒にならない）品になる。商品にするか、店では効かないようにするかを決める。
 
 ### Roadmap acceptance criteria
 
