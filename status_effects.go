@@ -17,11 +17,16 @@ import (
 
 // 状態異常の種類（StatusConfusion などの既存の種類は equipment_abilities.go）。
 const (
-	StatusHaste     StatusKind = "haste"      // 倍速（敵。睡眠のカードで眠った敵の目覚め、倍速のカード）
-	StatusMouthSeal StatusKind = "mouth_seal" // 口封じ（カード・薬・食料を口にできない）
-	StatusParalysis StatusKind = "paralysis"  // 金縛り（ダメージを受けると解ける）
-	StatusSeal      StatusKind = "seal"       // 封印（特殊能力が止まる）
-	StatusBackward  StatusKind = "backward"   // ゾワゾワ（敵。通常攻撃を反対向きに出す）
+	StatusHaste      StatusKind = "haste"      // 倍速（敵。睡眠のカードで眠った敵の目覚め、倍速のカード）
+	StatusMouthSeal  StatusKind = "mouth_seal" // 口封じ（カード・薬・食料を口にできない）
+	StatusParalysis  StatusKind = "paralysis"  // 金縛り（ダメージを受けると解ける）
+	StatusSeal       StatusKind = "seal"       // 封印（特殊能力が止まる）
+	StatusNigiri     StatusKind = "nigiri"
+	StatusBerserk    StatusKind = "berserk"
+	StatusDecoy      StatusKind = "decoy"
+	StatusInvisible  StatusKind = "invisible"
+	StatusInvincible StatusKind = "invincible"
+	StatusBackward   StatusKind = "backward" // ゾワゾワ（敵。通常攻撃を反対向きに出す）
 )
 
 // StatusDuration は状態の持続の型。
@@ -153,6 +158,46 @@ var statusDefs = []statusDef{
 		PlayerApply: "海老さんは封印された",
 		Turns:       func(s *StatusAilments) int { return boolTurns(s.Seal) },
 		SetTurns:    func(s *StatusAilments, n int) { s.Seal = n > 0 },
+	},
+	{
+		Kind: StatusNigiri, Name: "にぎり", HUD: "にぎり", HUDOrder: 210,
+		Player: StatusTurns, Enemy: StatusNotApplicable, Stack: StackOverwrite, Bad: true,
+		PlayerApply: "海老さんはにぎり状態になった", PlayerRecover: "海老さんのにぎり状態が解けた",
+		RefreshMiniMap: true,
+		Turns:          func(s *StatusAilments) int { return s.Nigiri },
+		SetTurns:       func(s *StatusAilments, n int) { s.Nigiri = n },
+	},
+	{
+		Kind: StatusBerserk, Name: "暴走", HUD: "暴走", HUDOrder: 220,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackOverwrite, Bad: true,
+		PlayerApply: "海老さんは暴走状態になった", PlayerRecover: "海老さんの暴走状態が解けた",
+		RefreshMiniMap: true,
+		Turns:          func(s *StatusAilments) int { return s.Berserk },
+		SetTurns:       func(s *StatusAilments, n int) { s.Berserk = n },
+	},
+	{
+		Kind: StatusDecoy, Name: "身代わり", HUD: "身代わり", HUDOrder: 230,
+		Player: StatusNotApplicable, Enemy: StatusTurns, Stack: StackOverwrite, Bad: true,
+		PlayerApply: "海老さんは身代わり状態になった", PlayerRecover: "海老さんの身代わり状態が解けた",
+		RefreshMiniMap: true,
+		Turns:          func(s *StatusAilments) int { return s.Decoy },
+		SetTurns:       func(s *StatusAilments, n int) { s.Decoy = n },
+	},
+	{
+		Kind: StatusInvisible, Name: "透明", HUD: "透明", HUDOrder: 240,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackOverwrite, Bad: false,
+		PlayerApply: "海老さんは透明状態になった", PlayerRecover: "海老さんの透明状態が解けた",
+		RefreshMiniMap: true,
+		Turns:          func(s *StatusAilments) int { return s.Invisible },
+		SetTurns:       func(s *StatusAilments, n int) { s.Invisible = n },
+	},
+	{
+		Kind: StatusInvincible, Name: "無敵", HUD: "無敵", HUDOrder: 250,
+		Player: StatusTurns, Enemy: StatusNotApplicable, Stack: StackOverwrite, Bad: false,
+		PlayerApply: "海老さんは無敵状態になった", PlayerRecover: "海老さんの無敵状態が解けた",
+		RefreshMiniMap: true,
+		Turns:          func(s *StatusAilments) int { return s.Invincible },
+		SetTurns:       func(s *StatusAilments, n int) { s.Invincible = n },
 	},
 }
 

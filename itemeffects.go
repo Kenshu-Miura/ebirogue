@@ -99,6 +99,7 @@ var restoreHP = func(g *Game) {
 				Message:  fmt.Sprintf("HPが%d回復した。", recovered-g.state.Player.Health),
 				Execute: func(g *Game) {
 					g.state.Player.Health = recovered
+					g.clearPlayerStatus(StatusNigiri)
 				},
 			}
 			g.Enqueue(action)
@@ -506,7 +507,9 @@ var vacuumSlash = func(g *Game) {
 				wakeFromSleep(&enemy.StatusAilments)
 				clearStatus(&enemy.StatusAilments, StatusParalysis)
 				if enemy.Health <= 0 {
-					defeatedExperience += enemy.ExperiencePoints
+					if !statusActive(enemy.StatusAilments, StatusDecoy) {
+						defeatedExperience += enemy.ExperiencePoints
+					}
 					g.EnqueueMessage(fmt.Sprintf("%sを倒した。", enemy.Name), 0.4)
 					defeated = append(defeated, enemy)
 					continue

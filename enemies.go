@@ -113,7 +113,7 @@ func (g *Game) updateEnemyVisibility() {
 		}
 
 		// プレイヤーが盲目状態の場合、敵を非表示にする
-		if g.state.Player.StatusAilments.Blind > 0 {
+		if g.state.Player.StatusAilments.Blind > 0 || !g.specialEnemyVisible(*enemy) {
 			enemy.SetShowOnMiniMap(false)
 			g.miniMapDirty = true
 		} else if inSameRoom || adjacent || enemy.PlayerDiscovered || (!isEnemyDisguised(*enemy) && (g.playerHasAbility(AbilitySenseEnemies) || g.playerHasAbility(AbilityClairvoyance))) {

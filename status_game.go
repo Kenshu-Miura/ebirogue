@@ -75,6 +75,9 @@ func (g *Game) setPlayerStatus(kind StatusKind, turns int) {
 // stackPlayerStatus は setPlayerStatus の重ねがけの規則を指定する版。
 func (g *Game) stackPlayerStatus(kind StatusKind, turns int, rule StatusStack) {
 	addStatus(&g.state.Player.StatusAilments, kind, turns, rule)
+	if kind == StatusBerserk {
+		g.closeAllMenus()
+	}
 }
 
 // clearPlayerStatus は海老さんの状態 kind を解く。
@@ -102,10 +105,14 @@ func (g *Game) applyEnemyStatus(index int, kind StatusKind, turns int) bool {
 // applyStatusToEnemy は applyEnemyStatus の、敵の値を直接受け取る版（添字の無い敵の写しなど）。
 func applyStatusToEnemy(e *Enemy, kind StatusKind, turns int) bool {
 	def, ok := statusDefOf(kind)
-	if !ok || def.Enemy == StatusNotApplicable || bossStatusImmune(*e, kind) {
+	if !ok || def.Enemy == StatusNotApplicable || bossStatusImmune(*e, kind) || (kind == StatusDecoy && MonsterDefinitions[e.ID].IsBoss) {
 		return false
 	}
 	addStatus(&e.StatusAilments, kind, turns, StackDefault)
+	if kind == StatusDecoy {
+		clearStatus(&e.StatusAilments, StatusSleep)
+		clearStatus(&e.StatusAilments, StatusParalysis)
+	}
 	return true
 }
 

@@ -32,7 +32,7 @@ func (g *Game) runEnemyBehavior(i int) bool {
 func (g *Game) onEnemyDefeated(defeated Enemy) {
 	g.playSE("defeat")
 	onDefeated := MonsterDefinitions[defeated.ID].OnDefeated
-	if onDefeated == nil || defeated.StatusAilments.Seal {
+	if onDefeated == nil || defeated.StatusAilments.Seal || statusActive(defeated.StatusAilments, StatusDecoy) {
 		return
 	}
 	onDefeated(g, defeated)
@@ -253,6 +253,9 @@ type EnemyDamagedFunc func(g *Game, i int, damage int)
 // g.applyDamageToEnemy を通るダメージ（海老さんの攻撃・射撃・投擲・杖・カード・罠・吹き飛ばしの衝突・
 // 盾の反撃）で呼ばれる。敵どうしの攻撃では呼ばれない。
 func (g *Game) onEnemyDamaged(index, damage int) {
+	if index >= 0 && index < len(g.state.Enemies) && statusActive(g.state.Enemies[index].StatusAilments, StatusDecoy) {
+		return
+	}
 	enemy := g.state.Enemies[index]
 	onDamaged := MonsterDefinitions[enemy.ID].OnDamaged
 	if onDamaged == nil || damage <= 0 || enemy.StatusAilments.Seal {

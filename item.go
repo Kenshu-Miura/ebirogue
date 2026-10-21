@@ -142,6 +142,9 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 		g.revealEnemy(index)
 	}
 
+	if g.specialStatusItemHit(target, item, index) {
+		return
+	}
 	// Check if the item is of type Cane
 	if cane, ok := item.(*Cane); ok {
 		// 封印の杖を投げた場合、直接当たった敵を封印状態にする
@@ -258,6 +261,9 @@ func (g *Game) onTargetHit(target Character, item Item, index int) {
 					if _, ok := target.(*Player); ok {
 						// If target is of type *Player
 						g.state.Player.Health = recoveredValue(g.state.Player.Health, g.state.Player.GetMaxHealth(), potion.Health, potion.FullRecovery)
+						if potion.Health > 0 || potion.FullRecovery {
+							g.clearPlayerStatus(StatusNigiri)
+						}
 					} else if _, ok := target.(*Enemy); ok && index >= 0 && index < len(g.state.Enemies) {
 						// If target is of type *Enemy
 						g.state.Enemies[index].Health = recoveredValue(g.state.Enemies[index].Health, g.state.Enemies[index].GetMaxHealth(), potion.Health, potion.FullRecovery)
@@ -369,7 +375,7 @@ func getItemNameWithSharpness(item Item) string {
 		// Check if the item is identified
 		if !identifiable.IsIdentified() {
 			// For unidentified items, return the base name without sharpness
-			return identifiable.GetName()
+			return specialUnidentifiedName(item)
 		} else {
 			// Process identified items
 			switch item := item.(type) {

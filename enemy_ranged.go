@@ -84,7 +84,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 	attack := enemy.RangedAttack
 	targetX, targetY := g.state.Player.X, g.state.Player.Y
 	dx, dy := sign(targetX-enemy.X), sign(targetY-enemy.Y)
-	damage := rollEnemyAttackDamage(attack.AttackPower, g.state.Player.DefensePower, g.damageIntn())
+	damage := rollEnemyAttackDamage(attack.AttackPower, g.specialPlayerDefense(), g.damageIntn())
 	defense := g.resolvePlayerDefense(damage, enemyDamageKindForRangedAttack(attack.Kind), EnemyAttackRanged, enemy, false)
 	enemyName := g.enemyDisplayName(enemy.Name)
 

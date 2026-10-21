@@ -330,7 +330,7 @@ func (g *Game) removeLaunchedItem(p *Projectile) {
 // enemyProjectileReturnPercent は敵が飛んできた道具を打ち返す確率（%）を返す。
 // 確率は ID の定義（MonsterDefinition.ProjectileReturnPercent）から引く。封印・睡眠・金縛り中は0。
 func enemyProjectileReturnPercent(enemy Enemy) int {
-	if enemy.StatusAilments.Seal || enemy.StatusAilments.Sleep != 0 || enemy.StatusAilments.Paralysis {
+	if enemy.StatusAilments.Seal || enemy.StatusAilments.Sleep != 0 || enemy.StatusAilments.Paralysis || statusActive(enemy.StatusAilments, StatusDecoy) {
 		return 0
 	}
 	return MonsterDefinitions[enemy.ID].ProjectileReturnPercent
@@ -402,7 +402,7 @@ func (g *Game) hitPlayerWithReturnedProjectile(p *Projectile) {
 		if arrow, ok := p.Item.(*Arrow); ok {
 			attack += arrow.AttackPower
 		}
-		damage = rollEnemyAttackDamage(attack, player.DefensePower, g.damageIntn())
+		damage = rollEnemyAttackDamage(attack, g.specialPlayerDefense(), g.damageIntn())
 	} else {
 		damage = rollThrownItemDamage(g.damageIntn())
 	}

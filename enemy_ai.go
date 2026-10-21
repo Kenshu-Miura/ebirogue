@@ -647,6 +647,9 @@ func (g *Game) actEnemy(i int) {
 		return
 	}
 
+	if statusActive(enemy.StatusAilments, StatusDecoy) {
+		return
+	}
 	// 混乱状態の敵は周囲8マスからランダムに移動
 	if enemy.StatusAilments.Confusion > 0 {
 		g.moveEnemyConfused(i)
@@ -661,6 +664,10 @@ func (g *Game) actEnemy(i int) {
 
 	// 擬態中は自分から行動せず、攻撃・投擲・接触で正体を現す。
 	if isEnemyDisguised(enemy) {
+		return
+	}
+
+	if g.actSpecialEnemyTarget(i) {
 		return
 	}
 

@@ -28,7 +28,7 @@ func displayItemName(item Item) (name string, identified bool) {
 	if identifiableItem, ok := item.(Identifiable); ok {
 		identified = identifiableItem.IsIdentified()
 		if !identified {
-			return identifiableItem.GetName(), false
+			return specialUnidentifiedName(item), false
 		}
 	}
 	return getItemNameWithSharpness(item), identified
@@ -81,6 +81,9 @@ func (g *Game) throwWithCallbacks(item Item, throwRange int) {
 // Dキーとインベントリの「撃つ」で同じ処理を使い、回転・ダメージ判定を統一する。
 // 連射の能力（Projectile.Volley）があれば、矢が残っている限り続けて撃つ。
 func (g *Game) shootArrow(arrow *Arrow, throwRange int) bool {
+	if g.rejectSpecialItemUse() {
+		return false
+	}
 	if arrow == nil || arrow.ShotCount <= 0 {
 		return false
 	}
@@ -121,6 +124,9 @@ func (g *Game) takeShotArrow(arrow *Arrow) *Arrow {
 
 // useCane は杖を1回振る。残り回数がない場合はメッセージのみ表示して false を返す。
 func (g *Game) useCane(caneItem *Cane) bool {
+	if g.rejectSpecialItemUse() {
+		return false
+	}
 	start := len(g.ActionQueue.Queue)
 	defer func() { g.soundFirstAction(start, "use") }()
 	if caneItem.Uses <= 0 {
@@ -138,6 +144,9 @@ func (g *Game) useCane(caneItem *Cane) bool {
 
 // useConsumable は食料・薬・カード・お金・罠アイテムを使用する。該当しない場合は false を返す。
 func (g *Game) useConsumable(item Item) bool {
+	if g.rejectSpecialItemUse() {
+		return true
+	}
 	switch item.(type) {
 	case *Potion, *Card:
 		start := len(g.ActionQueue.Queue)
@@ -170,7 +179,9 @@ func (g *Game) defeatEnemy(index int) {
 	g.EnqueueMessage(fmt.Sprintf("%sを倒した。", enemy.Name), 0.5)
 	g.dropEnemyHeldItem(index)
 	g.state.Enemies = append(g.state.Enemies[:index], g.state.Enemies[index+1:]...)
-	g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+	if !statusActive(enemy.StatusAilments, StatusDecoy) {
+		g.state.Player.ExperiencePoints += enemy.ExperiencePoints
+	}
 	g.state.Player.checkLevelUp(g)
 	g.onEnemyDefeated(enemy)
 }
@@ -219,7 +230,9 @@ func (g *Game) defeatEnemyByEnemy(attackerIndex, targetIndex int) {
 	if targetIndex < attackerIndex {
 		attackerIndex--
 	}
-	g.levelUpEnemy(attackerIndex)
+	if !statusActive(defeated.StatusAilments, StatusDecoy) {
+		g.levelUpEnemy(attackerIndex)
+	}
 	g.miniMapDirty = true
 	g.onEnemyDefeated(defeated)
 }

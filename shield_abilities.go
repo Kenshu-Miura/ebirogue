@@ -23,7 +23,7 @@ func (g *Game) capSatietyForSatori() {
 }
 
 func init() {
-	statusImmunities[AbilityNigiriGuard] = []StatusKind{StatusFoodTransform}
+	statusImmunities[AbilityNigiriGuard] = []StatusKind{StatusFoodTransform, StatusNigiri}
 	statusImmunities[AbilityPuppetGuard] = []StatusKind{StatusManipulation}
 	registerAbilityHooks(AbilityDragonGuard, AbilityHooks{ModifyIncomingDamage: func(g *Game, incoming *IncomingDamage, stacks int) {
 		if incoming.Kind == EnemyDamageFire || (incoming.Attacker != nil && hasEnemyTrait(incoming.Attacker.Traits, EnemyTraitDragon)) {

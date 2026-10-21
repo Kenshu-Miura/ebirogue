@@ -7,7 +7,7 @@ import "fmt"
 func physicalTrapEffect(name string, power int) func(*Game) {
 	return func(g *Game) {
 		source := g.steppedTrapSource
-		damage := rollEnemyAttackDamage(power, g.state.Player.DefensePower, g.damageIntn())
+		damage := rollEnemyAttackDamage(power, g.specialPlayerDefense(), g.damageIntn())
 		defense := g.resolvePlayerShieldDefense(damage, EnemyDamageNormal, EnemyAttackEnvironment)
 		g.Enqueue(Action{Duration: 0.5, Message: fmt.Sprintf("%sで%dダメージを受けた", name, defense.Damage), Execute: func(g *Game) {
 			g.applyPlayerShieldDefense(defense, source, -1, -1, -1)

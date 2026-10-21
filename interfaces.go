@@ -292,60 +292,90 @@ func (m *Money) GetIdentified() bool {
 }
 
 func (c *Weapon) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := c.UseActions["WeaponEffect"]; exists {
 		action(g)
 	}
 }
 
 func (c *Armor) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := c.UseActions["ArmorEffect"]; exists {
 		action(g)
 	}
 }
 
 func (f *Food) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := f.UseActions["RestoreSatiety"]; exists {
 		action(g)
 	}
 }
 
 func (p *Potion) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := p.UseActions["RestoreHealth"]; exists {
 		action(g)
 	}
 }
 
 func (a *Arrow) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := a.UseActions["ArrowEffect"]; exists {
 		action(g)
 	}
 }
 
 func (c *Card) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := c.UseActions["UseCard"]; exists {
 		action(g)
 	}
 }
 
 func (m *Money) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := m.UseActions["UseMoney"]; exists {
 		action(g)
 	}
 }
 
 func (t *Trap) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := t.UseActions["SetTrap"]; exists {
 		action(g)
 	}
 }
 
 func (c *Cane) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := c.UseActions["CaneEffect"]; exists {
 		action(g)
 	}
 }
 
 func (a *Accessory) Use(g *Game) {
+	if g.rejectSpecialItemUse() {
+		return
+	}
 	if action, exists := a.UseActions["AccessoryEffect"]; exists {
 		action(g)
 	}

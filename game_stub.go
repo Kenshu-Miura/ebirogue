@@ -20,6 +20,11 @@ type Coordinate struct {
 }
 
 type StatusAilments struct {
+	Nigiri      int `json:",omitempty"`
+	Berserk     int `json:",omitempty"`
+	Decoy       int `json:",omitempty"`
+	Invisible   int `json:",omitempty"`
+	Invincible  int `json:",omitempty"`
 	BearTrap    int // トラバサミの残りターン数
 	Confusion   int
 	Sleep       int

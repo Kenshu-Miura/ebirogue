@@ -401,6 +401,9 @@ func (b *bot) step() error {
 	if b.idle > botStuckLimit {
 		return errBotStuck
 	}
+	if g.specialItemUseBlocked() {
+		return b.stepInPlace()
+	}
 	if b.persona == personaRandom {
 		return b.randomInput()
 	}
