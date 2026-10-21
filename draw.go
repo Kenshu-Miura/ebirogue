@@ -173,7 +173,8 @@ func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 	opts := &ebiten.DrawImageOptions{}
 	tmpPlayerOffsetX, tmpPlayerOffsetY := 0.0, 0.0
 
-	w, h := g.playerImg.Bounds().Dx(), g.playerImg.Bounds().Dy()
+	playerImage := g.specialPlayerImage()
+	w, h := playerImage.Bounds().Dx(), playerImage.Bounds().Dy()
 	opts.GeoM.Translate(float64(-w/2), float64(-h/2)) // Move the image center to the origin
 
 	switch g.state.Player.Direction {
@@ -207,7 +208,10 @@ func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 	}
 
 	opts.GeoM.Translate(float64(w/2)+float64(centerX)+tmpPlayerOffsetX, float64(h/2)+float64(centerY)+tmpPlayerOffsetY)
-	screen.DrawImage(g.playerImg, opts)
+	if statusActive(g.state.Player.StatusAilments, StatusInvisible) {
+		opts.ColorScale.ScaleAlpha(0.4)
+	}
+	screen.DrawImage(playerImage, opts)
 }
 
 func (g *Game) getItemImage(item Item) *ebiten.Image {
@@ -422,7 +426,9 @@ func (g *Game) DrawTrajectoryPreview(screen *ebiten.Image, offsetX, offsetY int)
 	for _, enemy := range g.state.Enemies {
 		if enemy.Y >= 0 && enemy.Y < len(g.state.Map) && enemy.X >= 0 && enemy.X < len(g.state.Map[0]) &&
 			g.state.Map[enemy.Y][enemy.X].Brightness == 1.0 {
-			visibleEnemies = append(visibleEnemies, enemy)
+			if g.specialEnemyVisible(enemy) {
+				visibleEnemies = append(visibleEnemies, enemy)
+			}
 		}
 	}
 
@@ -595,7 +601,7 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 		enemy := &g.state.Enemies[i]
 
 		// Check if the tile at the enemy's position is fully bright
-		if g.state.Map[enemy.Y][enemy.X].Brightness == 1.0 {
+		if g.state.Map[enemy.Y][enemy.X].Brightness == 1.0 && g.specialEnemyVisible(*enemy) {
 
 			// 擬態中は道具・階段として静止表示する。
 			if !isEnemyDisguised(*enemy) {
@@ -616,6 +622,8 @@ func (g *Game) DrawEnemies(screen *ebiten.Image, offsetX, offsetY int) {
 			// プレイヤーが目潰し状態の場合、全ての敵をebisan.pngで表示
 			if g.state.Player.StatusAilments.Blind > 0 {
 				img = g.playerImg // ebisan.png
+			} else if statusActive(enemy.StatusAilments, StatusDecoy) {
+				img = g.specialDecoyImage()
 			} else if isEnemyDisguised(*enemy) {
 				img = g.getEnemyDisguiseImage(*enemy)
 			} else {

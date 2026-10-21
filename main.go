@@ -62,6 +62,11 @@ type StatusAilments struct {
 	DefenseUp   int  `json:",omitempty"`
 	DefenseDown int  `json:",omitempty"`
 	NoHealing   int  `json:",omitempty"`
+	Nigiri      int  `json:",omitempty"`
+	Berserk     int  `json:",omitempty"`
+	Decoy       int  `json:",omitempty"`
+	Invisible   int  `json:",omitempty"`
+	Invincible  int  `json:",omitempty"`
 }
 
 type Player struct {
@@ -148,6 +153,8 @@ type Game struct {
 	randHooks                 randHooks
 	rooms                     []Room
 	playerImg                 *ebiten.Image
+	nigiriPlayerImg           *ebiten.Image
+	decoyImg                  *ebiten.Image
 	ebiImg                    *ebiten.Image
 	snakeImg                  *ebiten.Image
 	mamuruImg                 *ebiten.Image
@@ -518,6 +525,10 @@ func (g *Game) Update() error {
 			g.isActioned = true
 			return nil
 		}
+		if statusActive(g.state.Player.StatusAilments, StatusBerserk) {
+			g.actBerserkPlayer()
+			return nil
+		}
 		dx, dy := g.HandleInput()
 		//dx, dy := g.CheatHandleInput()
 
@@ -553,7 +564,7 @@ func (g *Game) Update() error {
 	}
 
 	// 睡眠状態・メッセージ履歴/メニュー/設定/中断確認/ヘルプ/カード書き込みの表示中はDキーとF1キーも無効
-	if g.state.Player.StatusAilments.Sleep == 0 && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
+	if g.state.Player.StatusAilments.Sleep == 0 && !statusActive(g.state.Player.StatusAilments, StatusBerserk) && !g.showMessageLog && !g.showMenu && !g.showSettings && !g.showSuspendPrompt && !g.showHelp && !g.showBlankCardMenu {
 		g.processDKeyPress()
 
 		// デバッグ用F1キー処理（-tags debug のビルドでのみ有効）
@@ -581,47 +592,49 @@ func (g *Game) Update() error {
 	g.updateItemVisibility()
 	g.updateEnemyVisibility()
 
-	err := g.handleInventoryInput()
-	if err != nil {
-		return err
-	}
+	if !statusActive(g.state.Player.StatusAilments, StatusBerserk) {
+		err := g.handleInventoryInput()
+		if err != nil {
+			return err
+		}
 
-	err = g.handleMenuInput()
-	if err != nil {
-		return err
-	}
+		err = g.handleMenuInput()
+		if err != nil {
+			return err
+		}
 
-	err = g.handleSettingsInput()
-	if err != nil {
-		return err
-	}
+		err = g.handleSettingsInput()
+		if err != nil {
+			return err
+		}
 
-	err = g.handleSuspendPromptInput()
-	if err != nil {
-		return err
-	}
+		err = g.handleSuspendPromptInput()
+		if err != nil {
+			return err
+		}
 
-	err = g.handleEmptyInventoryMessage()
-	if err != nil {
-		return err
-	}
+		err = g.handleEmptyInventoryMessage()
+		if err != nil {
+			return err
+		}
 
-	err = g.handleMessageLogInput()
-	if err != nil {
-		return err
-	}
+		err = g.handleMessageLogInput()
+		if err != nil {
+			return err
+		}
 
-	err = g.handleHelpInput()
-	if err != nil {
-		return err
-	}
+		err = g.handleHelpInput()
+		if err != nil {
+			return err
+		}
 
-	err = g.handleBlankCardInput()
-	if err != nil {
-		return err
-	}
+		err = g.handleBlankCardInput()
+		if err != nil {
+			return err
+		}
 
-	g.HandleGroundItemInput()
+		g.HandleGroundItemInput()
+	}
 
 	g.HandleAnimationProgress()
 
@@ -645,8 +658,10 @@ func (g *Game) Update() error {
 
 	g.updateTileBrightness()
 
-	g.checkForStairs()
-	g.handleStairsPrompt()
+	if !statusActive(g.state.Player.StatusAilments, StatusBerserk) {
+		g.checkForStairs()
+		g.handleStairsPrompt()
+	}
 	g.ResetStairsIgnoreFlag()
 
 	g.startPendingFloorDescent()

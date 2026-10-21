@@ -169,7 +169,7 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	// プレイヤーが目潰し状態でない場合、敵をミニマップに表示
 	if g.state.Player.StatusAilments.Blind == 0 {
 		for _, enemy := range g.state.Enemies {
-			if enemy.GetShowOnMiniMap() {
+			if enemy.GetShowOnMiniMap() && g.specialEnemyVisible(enemy) {
 				enemyX, enemyY := enemy.GetPosition()
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(enemyX*tilePixelSize), float64(enemyY*tilePixelSize))

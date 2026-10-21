@@ -50,6 +50,12 @@ func (g *Game) currentItemActions() []string {
 }
 
 func (g *Game) executeGroundItemAction() {
+	if g.specialItemUseBlocked() && (g.selectedGroundActionIndex == 2 || g.selectedGroundActionIndex == 3) {
+		g.rejectSpecialItemUse()
+		g.closeGroundItemMenu()
+		return
+	}
+
 	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
 	if g.selectedGroundActionIndex == 0 { // Assuming index 0 corresponds to '拾う'
@@ -233,6 +239,21 @@ func (g *Game) executeGroundItemAction() {
 }
 
 func (g *Game) executeAction() {
+	if g.specialItemUseBlocked() {
+		allowed := false
+		for i, label := range g.currentItemActions() {
+			if i == g.selectedActionIndex && (label == "置く" || label == "説明") {
+				allowed = true
+			}
+		}
+		if !allowed {
+			g.rejectSpecialItemUse()
+			g.showInventory = false
+			g.showItemActions = false
+			return
+		}
+	}
+
 	// かつおぶしだけに増えた項目を処理し、後続の既存添字へ対応させる。
 	if w, ok := g.state.Player.Inventory[g.selectedItemIndex].(*Weapon); ok && hasEquipmentAbility(w.Abilities, AbilityEdible) {
 		if g.selectedActionIndex == 1 {
@@ -553,11 +574,11 @@ func (g *Game) enqueueEnemyNormalAttack(enemyIndex int) {
 	attack := EnemyAttack{Enemy: enemy, CriticalPercent: enemyCriticalPercent(enemy), Multiplier: 1.0}
 	g.runBeforeEnemyAttackHooks(&attack)
 	critical := attack.CriticalPercent > 0 && g.enemyCriticalIntn()(100) < attack.CriticalPercent
-	multiplier := attack.Multiplier * statAttackMultiplier(enemy.StatusAilments) * statDefenseMultiplier(g.state.Player.StatusAilments)
+	multiplier := attack.Multiplier * statAttackMultiplier(enemy.StatusAilments) * statDefenseMultiplier(g.state.Player.StatusAilments) * berserkMultiplier(enemy.StatusAilments)
 	if critical {
 		multiplier *= enemyCriticalMultiplier
 	}
-	netDamage := rollEnemyAttackDamageWith(enemy.AttackPower, g.state.Player.DefensePower, multiplier, g.damageIntn())
+	netDamage := rollEnemyAttackDamageWith(enemy.AttackPower, g.specialPlayerDefense(), multiplier, g.damageIntn())
 	defense := g.resolvePlayerDefense(netDamage, EnemyDamageNormal, EnemyAttackMelee, enemy, critical)
 	enemyName := g.enemyDisplayName(enemy.Name)
 	enemyID, enemyX, enemyY := enemy.ID, enemy.X, enemy.Y
@@ -600,7 +621,7 @@ func (g *Game) AttackEnemyFromBlindEnemy(attackerIndex, targetIndex int) {
 	target := &g.state.Enemies[targetIndex]
 
 	// 敵同士の攻撃（目潰し状態の敵が他の敵を攻撃）
-	netDamage := rollEnemyAttackDamageWith(attacker.AttackPower, target.DefensePower, statAttackMultiplier(attacker.StatusAilments)*statDefenseMultiplier(target.StatusAilments), g.damageIntn())
+	netDamage := rollEnemyAttackDamageWith(attacker.AttackPower, target.DefensePower, statAttackMultiplier(attacker.StatusAilments)*statDefenseMultiplier(target.StatusAilments)*berserkMultiplier(attacker.StatusAilments), g.damageIntn())
 
 	dx, dy := target.X-attacker.X, target.Y-attacker.Y
 	attackerID, attackerX, attackerY := attacker.ID, attacker.X, attacker.Y
@@ -690,7 +711,9 @@ func (g *Game) AttackFromEnemy(enemyIndex int) {
 				g.miniMapDirty = true
 
 				// 敵の経験値をプレイヤーの所持経験値に加える
-				g.state.Player.ExperiencePoints += experience
+				if !statusActive(defeated.StatusAilments, StatusDecoy) {
+					g.state.Player.ExperiencePoints += experience
+				}
 
 				g.state.Player.checkLevelUp(g) // レベルアップをチェック
 				g.onEnemyDefeated(defeated)
@@ -762,6 +785,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 	enemy := &g.state.Enemies[enemyIndex]
 	targetX, targetY := enemy.X, enemy.Y
 	multiplier, slayerEffective := slayerMultiplier(weaponAbilities, enemy.Traits)
+	multiplier *= berserkMultiplier(g.state.Player.StatusAilments)
 	attack := &PlayerAttack{
 		Weapon:              g.state.Player.EquippedWeapon,
 		Target:              enemy,

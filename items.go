@@ -119,7 +119,7 @@ type ItemTemplate struct {
 // itemTemplates はアイテムのデータテーブル（全種類）。ID 0〜71 は baseItemTemplates、
 // 追加計画（content-expansion-plan.md）の武器・盾・カード・指輪は種類ごとのファイルの表に書く
 // （items_weapons.go・items_shields.go・items_cards.go・items_rings.go）。並列の担当が同じ表を触らないため。
-var itemTemplates = mergeItemTemplates(baseItemTemplates, weaponItemTemplates, shieldItemTemplates, cardItemTemplates, ringItemTemplates, statItemTemplates)
+var itemTemplates = mergeItemTemplates(baseItemTemplates, weaponItemTemplates, shieldItemTemplates, cardItemTemplates, ringItemTemplates, statItemTemplates, specialStatusItemTemplates)
 
 // mergeItemTemplates は複数の表を1つにまとめる。ID が重なっていたら起動時に止める。
 func mergeItemTemplates(tables ...map[int]ItemTemplate) map[int]ItemTemplate {
@@ -980,6 +980,10 @@ const powerUpCardSpawnWeight = 4
 // itemSpawnWeights はカテゴリ内での出現の重み（書いていない ID は1）。
 var itemSpawnWeights = map[int]int{
 	43: powerUpCardSpawnWeight,
+	// 薬の通常の重みを4、無敵だけ1にして出現を1/4に抑える。
+	2: 4, 3: 4, 17: 4, 18: 4, 19: 4, 28: 4, 29: 4,
+	205: 4, 206: 4, 207: 4, 208: 4, 209: 4, // 段8の能力値系の薬（wave8-A）
+	215: 4, 216: 4, 217: 1, 218: 4, // 段8の特殊系の薬（wave8-B）
 }
 
 // itemCategorySpawnWeights は床に出るアイテムのカテゴリ（ItemTemplate.ItemType）ごとの出現の重み。

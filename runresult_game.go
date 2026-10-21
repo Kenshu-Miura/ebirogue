@@ -7,7 +7,7 @@ import "time"
 // damagePlayer はプレイヤーの HP を damage だけ減らし（0 未満にはしない）、死因として source を記録する。
 // プレイヤーへのダメージはすべてこの関数を通す（死亡判定 checkDeath は呼び出し側で行う）。
 func (g *Game) damagePlayer(damage int, source DamageSource) {
-	if damage <= 0 {
+	if damage <= 0 || statusActive(g.state.Player.StatusAilments, StatusInvincible) {
 		return
 	}
 	g.playSE("hurt")

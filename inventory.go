@@ -140,7 +140,7 @@ func (g *Game) inventoryItemLabel(item Item) (string, bool) {
 		if name, exists := g.customNames[item.GetID()]; exists && name != "" {
 			return name, true
 		}
-		return identifiableItem.GetName(), true
+		return specialUnidentifiedName(item), true
 	}
 	return getItemNameWithSharpness(item), false
 }

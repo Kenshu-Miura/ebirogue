@@ -56,6 +56,7 @@ var itemRoles = map[int]itemRole{
 	174: roleEscape,
 	205: roleBuff, 206: roleBuff, 207: roleBuff, 208: roleAttack, 209: roleAttack,
 	210: roleEscape, 211: roleAttack, 212: roleAttack, 213: roleHarmful,
+	215: roleAttack, 216: roleEscape, 217: roleHeal, 218: roleAttack, 219: roleEscape, 220: roleHarmful, 221: roleAttack,
 }
 
 // 強化のカードのうち「すぐ使う」もの（使える条件は expertBuffUsable で判定する）。

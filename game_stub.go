@@ -36,6 +36,11 @@ type StatusAilments struct {
 	DefenseUp   int `json:",omitempty"`
 	DefenseDown int `json:",omitempty"`
 	NoHealing   int `json:",omitempty"`
+	Nigiri      int `json:",omitempty"`
+	Berserk     int `json:",omitempty"`
+	Decoy       int `json:",omitempty"`
+	Invisible   int `json:",omitempty"`
+	Invincible  int `json:",omitempty"`
 }
 
 type Player struct {
