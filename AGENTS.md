@@ -43,7 +43,7 @@ go test -run TestReplayFile -count=1 . -args -replay.file=ebirogue_replay_last.j
 
 - 画面の無い Linux（クラウド）では通常ビルドのテストを `xvfb-run -a go test ./...` のように仮想ディスプレイで実行する（無いと Ebiten の初期化で止まる）。
 
-- BOT（`bot_test.go`）はゲーム状態を直接読み、仮想入力（`VirtualInput`）で本物のメニュー経路を操作する。性格は `aggressive` / `cautious` / `itemUser` / `diver` / `random` / `expert`。`expert`（`bot_expert_test.go`）はカード・杖・薬をテンプレート ID ごとの分類表 `itemRoles`（攻撃・逃走・強化・回復・不利）で使い分け、強化値込みで装備を持ち替え、矢を撃ち、遠距離の敵の射線を避けて探索してから降りる。バランス評価には主に `expert` の結果を使い、ほかの性格は比較用に残す。**新しいカード・杖・薬を追加したら `itemRoles` にも分類を追加する。新しい指輪は `ringValues`、手放す・入れ替える価値は `itemValues`（`bot_expert_items_test.go`）にも追加する。**
+- BOT（`bot_test.go`）はゲーム状態を直接読み、仮想入力（`VirtualInput`）で本物のメニュー経路を操作する。性格は `aggressive` / `cautious` / `itemUser` / `diver` / `random` / `expert`。`expert`（`bot_expert_test.go`）はカード・杖・薬をテンプレート ID ごとの分類表 `itemRoles`（攻撃・逃走・強化・回復・不利）で使い分け、強化値込みで装備を持ち替え、矢を撃ち、遠距離の敵の射線を避けて探索してから降りる。バランス評価には主に `expert` の結果を使い、ほかの性格は比較用に残す。にぎり・暴走で道具を使えない間は足踏みする。**新しいカード・杖・薬を追加したら `itemRoles` にも分類を追加する。新しい指輪は `ringValues`、手放す・入れ替える価値は `itemValues`（`bot_expert_items_test.go`）にも追加する。**
   - 食料（`bot_test.go`、random 以外）: 見えている床の食料（ミニマップに表示）を優先して拾い、所持品が満杯なら価値の低い道具を置いて（足元がふさがっていれば投げて）空ける。手放した道具は同じ階では拾い直さない。満腹度30以下で食料が無ければ探索より階段を優先し、通路を敵・罠にふさがれたら倒し・踏んで進む。満腹度を減らす装備は付けない。
   - expert の立ち回り（`bot_tactics_test.go`）: 部屋で2体以上の敵が近づいたら通路の入口へ下がって1対1で戦い、距離2の敵は足踏みで待って先手を取り、殴り合うと倒れる見積もりなら止める・倒す道具を早めに使う。ボス階では手下を倒してボスへ進む。
   - expert の道具（`bot_expert_items_test.go`）: 指輪を価値の表で付け替え、封印・シフトチェンジの杖、ゾワゾワ・自爆・聖域・ウインナー化（空腹で食料が無いとき）・大部屋・白紙のカード、保存の壺（予備の食料を入れる）を使う。満杯なら床の道具が持ち物の最低より価値が高いとき足元の「交換」で入れ替える（予備の武器・盾は種類ごとに1つ、不利なカードは拾わない）。真実の眼のカードは対象を選んで確定する。
@@ -81,7 +81,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go`, `audio_stub.go`（音声の空実装） |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `status_stats.go`, `status_special.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go` |
 | デバッグビルド専用 | `//go:build debug && !test` / `!debug && !test` | `debug_on.go`（F1 の処理）/ `debug_off.go`（空の実装） |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
@@ -115,6 +115,11 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 状態異常の無効化は `statusImmunities`（能力 ID → `StatusKind` の一覧）へ書くだけで効く。問い合わせは `g.playerImmuneTo(kind)`、メッセージ付きは `g.playerImmunityMessage(kind)`、盾の状態異常耐性（50%）も含めた判定は `g.playerStatusGuard(kind)`。睡眠・混乱・目潰し・鈍足・トラバサミ・毒（`drainPlayerPower`）・呪い（ノロイガニ系）・さび（さびの罠・`rustPlayerEquipment`）・食料化（にぎりエビ系）・あやつり（あやつりクラゲ系）・装備の弾き飛ばし・持ち物の投げ捨て（`equipment_harm.go`）の付与箇所はすべてこれを通っている。その装備品自身だけがさびない能力は `AbilityRustImmune`（`itemResistsRust`）。**新しく状態異常を付与する処理も必ずこれらを通す。**
   - 特効は `slayerTraits`（能力 ID → 敵の属性 `EnemyTrait`）の表から引く。属性は竜・霊・一つ目・吸い取り・甲殻（カニ・ヤドカリ・貝）・爆発（ウニ）・浮遊（クラゲ）で、基本種に付ければ上位種へ引き継がれる。鼓舞の指輪のパワー補正は `accessoryPowerBonus`（`AbilityPowerBoost`）。
 - `status_effects.go`（タグなし・純粋）と `status_game.go`（`!test`）: 状態異常の定義表 `statusDefs`（名前・HUD・持続の型・重ねがけの規則・悪い状態か・治ったときのメッセージ・ボスで短縮するか）と付与・解除・経過の共通処理。海老さんへの付与は `g.applyPlayerStatus(kind, turns, StatusSource{...})`（耐性・重ねがけ・メッセージ。`Shield: true` で状態異常耐性の盾の50%も見る）、耐性の判定を Enqueue の時点で済ませた付与は `g.enqueuePlayerStatus(kind, turns, rule, guard, blocked)`（表示時にかける）か Execute の中ですぐかける `g.applyPlayerStatusResult(...)`、メッセージなしでかけるだけなら `g.setPlayerStatus`／`g.stackPlayerStatus`。**かかった・防いだ・治ったのメッセージは付与元にかかわらず定義表の `PlayerApply`・「<装備品>が<状態>を防いだ」・`PlayerRecover` にそろえ、表示時間は `statusMessageDuration`（0.5秒）。文言を付与元で手書きしない**（原因の「〜を飲んだ」などは付与元が先に出す）。耐性の判定は、敵・罠からの付与は盾の50%も見て、飲んだ・投げられた薬とトラバサミは装備能力の無効化だけを見る（開発者の決定）。解除は `g.clearPlayerStatus`・`g.clearPlayerBadStatuses`。敵へは `g.applyEnemyStatus(index, kind, turns)`（ボスが受け付けない状態は `bosses.go` の `bossStatusImmunities`）と `g.clearEnemyStatus`。ターン経過は `g.decrementStatusAilments()` が表を回す。**`StatusAilments` の項目を直接書き換えない。** 新しい状態の追加手順は `docs/agents/done/wave7-A.md` の「新しい状態異常の追加手順」（`StatusAilments` に項目を足すときは `main.go` と `game_stub.go` の両方へ、`statusDefs` の末尾に1行）。
+- 段8の状態異常と罠（テストは `content_status_stats_test.go`・`content_status_special_test.go`・`content_trap_interaction_test.go`）:
+  - 能力値系（wave8-A）: 倍率・相殺の純粋処理はタグなしの `status_stats.go`（`statAttackMultiplier`・`statDefenseMultiplier`・逆の状態 `oppositeStatStatus`）、レベル低下・退化・回復不能・薬と杖の効果は `status_stats_game.go`、薬 205〜209・杖 210〜213 の表は `items_status_stats.go`。海老さんの倍速は敵の行動を1回おきに飛ばす。**HP を回復する新しい処理は `p.recoveredHP(量, 全快)` を通す**（回復不能で止まる）。逆の状態（倍速⇔鈍足、上昇⇔低下）をかけると両方消える。良い状態（`Bad: false`）は耐性で防がず乱数も使わない（`guardPlayerStatus`）。
+  - 特殊系（wave8-B）: タグなしの `status_special.go`（暴走の倍率 `berserkMultiplier`）・`status_special_game.go`（にぎりの防御 `g.specialPlayerDefense()`、道具を使えないときの `g.rejectSpecialItemUse()`、暴走の自動行動、敵の標的選び `specialEnemyTarget`）、薬 215〜218・杖 219〜221 の表は `items_status_special.go`。無敵は `damagePlayer` で止める。
+  - **敵・罠から海老さんへの能力値式のダメージは、防御力に `g.specialPlayerDefense()`、倍率に `statAttackMultiplier(攻撃側)`・`statDefenseMultiplier(受ける側)`（敵の通常攻撃は `berserkMultiplier(敵)` も）を掛けて `rollEnemyAttackDamageWith` で計算する。**
+  - 罠の相互作用（wave8-C）: `trap_interaction.go`。敵用の効果は `mapTrapTemplate.EnemyEffect`（罠 ID ごとの `applyTrapToEnemy`。無い罠は敵には効かず残る）、敵が動いた後の `g.enemyTrapAfterMove(添字, 元のX, 元のY)`（敵を動かす新しい処理はこれを呼ぶ）、矢・投げた道具の着地 `g.queueLandedTrap`、誘爆 `g.explodeTraps`（深さ3まで）。どれも Action の Execute で敵を ID と座標から引き直す。**海老さんへのダメージは積んだ Action で後から減るので、誘爆の中の HP の割合のダメージは見込みの HP（`explodeTrapsChain` の `hp`）から数え、自分のダメージを積む爆発は先に `hp` から引いてから誘爆させる**（`explodePlayer` は軽減後のダメージを返す）。
 - `replay.go`（タグなし）と `replay_game.go`（`!test`）: 通常プレイの入力の記録（`ReplayData`。区間 `ReplaySegment` ごとに開始状態・圧縮した論理キー入力・毎フレームの照合値 `replayCheck`）、保存（`ebirogue_replay_last.json`・`ebirogue_replays.json`）、ヘッドレス再生 `playReplay`。`Update` の先頭の `g.beginReplayFrame()`・`g.recordReplayKeys()` が記録する。記録は `g.persistent` のときだけ。ビルド識別はソース（`//go:embed *.go go.mod go.sum`）の SHA-256 なので、ソースを変えると前の記録は再生できない。**キー設定画面の物理キーは `g.replayPhysicalKey()` を通す。**
 - `audio.go`（`!test`）・`audio_settings.go`（タグなし）・`audio_stub.go`（`test`）: 音声。BGM は `g.playBGM(id)`／`g.stopBGM()`（`updateAudio` が階・ボス・クリアで切り替える）、効果音は `g.playSE(id)`。既存の Action に音を添えるときは Action を増やさず `g.soundFirstAction(start, id)`（`start` は積む前の `len(g.ActionQueue.Queue)`）、キューに積まない操作は `g.executeAudioCue(id)`。音源は `sound/*.wav`（`//go:embed`。`go run tools/generate_sounds.go` で再生成）。音声は `g.persistent && !g.headless` のときだけ初期化するので BOT・テストの結果と乱数に影響しない。音量は `GameSettings.BGMVolume`・`SEVolume`（0〜10、`clampVolume`）。
 - `displacement_path.go`（タグなし・純粋）と `displacement.go`（`!test`）: 位置を動かす共通処理。`g.knockbackPlayer(dx, dy, マス数, 衝突ダメージ, 死因)`・`g.knockbackEnemy(添字, …)`（壁や敵に当たると固定ダメージ、ボスは動かない）、`g.pullPlayer(dx, dy, マス数)`（途中の罠で止まって踏む）、`g.dropPlayerItemsForward(個数, dx, dy)`（装備中を除き前方1〜2マス→周囲へ落とす）。不動 `AbilityImmovable`（`g.playerImmovable()`。吹き飛ばし・引き寄せ・イレカエダコ系とボスの場所替えを防ぐ）と受け身 `AbilityBreakFall`（`g.playerBreaksFall()`。衝突ダメージを防ぐ）で無効化する。どれも Action の Execute の中から呼ぶ。
@@ -139,7 +144,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `GameState`（main.go）: `Map [][]Tile`, `Player`, `Enemies []Enemy`, `Items []Item`, `MapTraps []MapTrap`。
 - `Player`（main.go）: HP/満腹度/パワー/レベル/経験値/所持金、`Inventory []Item`（最大20）、装備スロット（武器・防具・矢 各1、アクセサリ2）、`StatusAilments`。
 - `Enemy`（enemies.go）: ステータス + `SpecialAttack SpecialAttackFunc` + `SpecialAttackProbability` + `Traits []EnemyTrait`（特効の属性）+ `StatusAilments` + 系統が使う汎用の状態（`Counter`・`Timer`・`Flag`・`Alerted`・`DisguiseID`、段4）。定義 `MonsterDefinition` の `CriticalPercent`（通常攻撃が痛恨の一撃〔×1.5〕になる確率）と `EvasionPercent`（プレイヤーの通常攻撃をかわす確率。必中は無視）は敵の ID から引く（`enemyCriticalPercent` / `enemyEvasionPercent`、封印中は0、回避は睡眠・金縛り中も0）。
-- `StatusAilments`（main.go / game_stub.go 両方に定義）: トラバサミ・混乱・睡眠・目潰し・鈍足・倍速・口封じ・ゾワゾワ（`Backward`、敵だけが使う。残りターン int）、金縛り・封印（bool）、`HasteOnWake`。種類ごとの規則は `status_effects.go` の `statusDefs`。
+- `StatusAilments`（main.go / game_stub.go 両方に定義）: トラバサミ・混乱・睡眠・目潰し・鈍足・倍速・口封じ・ゾワゾワ（`Backward`、敵だけが使う。残りターン int）、金縛り・封印（bool）、`HasteOnWake`、段8の `AttackUp`・`AttackDown`・`DefenseUp`・`DefenseDown`・`NoHealing`・`Nigiri`・`Berserk`・`Decoy`・`Invisible`・`Invincible`（残りターン int、省略可能な項目）。種類ごとの規則は `status_effects.go` の `statusDefs`。
 - `Tile`（main.go / game_stub.go）: `Type`（"floor", "wall", "corridor", "door" 等の文字列）, `Blocked`, `BlockSight`, `Visited`, `Brightness`。
 - `Room`（map.go）: `ID, X, Y, Width, Height, Center`。
 - `MapTrap`（maptraps.go）: 座標・名前・発見済みフラグ・効果関数・不発率。
@@ -150,9 +155,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go。ID 0〜71 は `baseItemTemplates`、追加計画の武器・盾・カード・指輪は `items_weapons.go`・`items_shields.go`・`items_cards.go`・`items_rings.go` の表を `mergeItemTemplates` でまとめる。ID の重複は起動時に panic） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go。ID 0〜71 は `baseItemTemplates`、追加計画の武器・盾・カード・指輪は `items_weapons.go`・`items_shields.go`・`items_cards.go`・`items_rings.go`、段8の薬・杖は `items_status_stats.go`・`items_status_special.go` の表を `mergeItemTemplates` でまとめる。ID の重複は起動時に panic） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
 | 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜65。42〜44 はボス〔`IsBoss`〕、45〜65 は第3段階）。追加計画の敵（ID 66〜）は系統（基本種・第2・第3段階）ごとの `monsterFamily` を担当別のファイル（`enemies_expansion_a1.go` など）の表に書き、`enemy_expansion.go` が定義・上位種化・画像・出現階をまとめて登録する | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ、固有の行動 `Behavior`・撃破時の `OnDefeated`（共通処理は `enemy_behaviors.go`） |
-| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜14）。床生成・ワナのカードの重み付き抽選一覧は `floorTrapIDs` | `createMapTrapByID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`）、装備・所持品の罠は `maptraps_items.go`（対象の抽選は `item_trap_selection.go`） |
+| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜15）。床生成・ワナのカードの重み付き抽選一覧は `floorTrapIDs` | `createMapTrapByID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`）、装備・所持品の罠は `maptraps_items.go`（対象の抽選は `item_trap_selection.go`）、敵が踏んだときの効果は `trap_interaction.go` |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go。1〜8階は個別、9〜30階は `deepFloorSpawnBands` の帯） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go）。処理は `registerAbilityHooks`（equipment_hooks.go）、状態異常の無効化は `statusImmunities`、特効は `slayerTraits` | 武器・盾・指輪のテンプレートの `Abilities` に付与 | 純粋な判定は equipment_abilities.go、`*Game` を使うフックは能力ごとのファイルか equipment_hooks.go |
 
@@ -186,7 +191,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 - 初期ステータス: HP 40（`initialPlayerHealth`）/ 満腹度 100 / パワー 8 / 攻撃 3 / 防御 3 / インベントリ上限 20。
 - レベル（`leveling.go`、タグなし・純粋）: 上限99。必要経験値は式で生成する `playerLevelExpTable`（`expForLevel` / `levelForExp`）、最大HPの増加は `levelHealthGains`、攻撃力の補正は `levelAttackBonus`。レベルの変更は `Player.setLevel`（move.go。最大HPを差分だけ増減、将来のレベル低下もこれを使う）、経験値獲得後は `checkLevelUp` で複数レベルまとめて上がる。数値の根拠は `docs/agents/balance-level99.md` の決定事項。
-- ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + `levelAttackBonus(レベル)`。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。敵の痛恨の一撃は×1.5（`enemyCriticalMultiplier`、防御は通常どおり）で、`CriticalPercent` を持つ敵だけが出す（現在はいない）。
+- ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + `levelAttackBonus(レベル)`。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。敵の痛恨の一撃は×1.5（`enemyCriticalMultiplier`、防御は通常どおり）で、`CriticalPercent` を持つ敵だけが出す（現在はいない）。攻撃力上昇×1.5・低下×0.5、防御力上昇で被ダメージ×0.67・低下で×1.5、暴走×1.5、にぎりは防御力0（段8）。
 - 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら毎ターン自然回復し、量は Lv1〜9 で1・Lv10〜19 で2・Lv20 以上で3（`naturalRegenPerTurn`, leveling.go）。毒は状態異常ではなくパワー1低下の即時効果（`g.drainPlayerPower`, player_power.go。量は `poisonPowerDrain`, trap_damage.go）。毒ヘビ系・毒矢の罠・腐った食料が使い、完全回復のカードでは戻らない。
 - 特殊盾は爆発・炎・魔法の半減、盗難無効、状態異常50%無効、敵攻撃25%回避、爆発以外の遠距離攻撃反射、通常攻撃への半分カウンターを提供する。使い捨ての盾は被弾ごとに強化値と防御力が1低下する。
 - 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）、大型地雷は 3/4 切り上げ（`largeMineTrapDamage`, trap_damage.go）。木の矢・鉄の矢・落石の罠は固定の威力 6・12・16（trap_damage.go、初期HP40に合わせた値。根拠は `docs/agents/balance-level99.md` の「残った課題」）。
@@ -252,11 +257,8 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority A: traps and status ailments
 
-- プレイヤーだけでなく敵も罠を踏むようにする。
-- 矢、投擲アイテム、爆発で罠を起動できるようにし、罠を攻略へ利用可能にする。
-- 追加予定の状態異常・一時効果:
-  - おにぎり状態、キグニ族状態、倍速、身代わり、透明、無敵
-  - 攻撃力・防御力の上昇と低下、レベル低下、回復不能（口封じは実装済み）
+- 段8の仮画像を正式な画像へ差し替え、実機で30px表示を確認する: 回復封じの罠 `img/no_healing_trap.png`（発見済み表示・ミニマップも）、にぎり状態の海老さん `img/player_nigiri.png`、身代わりの敵 `img/enemy_decoy.png`。
+- 段8の未決事項（開発者が決める。詳細は `docs/agents/done/wave8-A/B/C.md`）: 固定ダメージ・爆発・餓死にも防御力の上下を掛けるか、にぎり中に回復薬・困った時のカードを自分で使えるようにするか、毒矢の罠を敵に当てたとき攻撃力低下を付けるか。
 - 新しい罠には `img/` 配下へ30x30の透過PNGを用意し、発見済み表示とミニマップ表示を確認する。
 - 段7（wave7-D）で正式な画像に差し替えた罠（ID 5〜14）・腐ったウインナー・ボス（ID 42〜44）と、色相を調整した第3段階のオンリョウガニ・ジクウクラゲ（`tools/third_stage_enemy_images.go` は +60°）の、実機での30px表示・罠の発見済み表示とミニマップ・ボス戦中の視認性を確認する（比較シートは `docs/agents/done/wave7-D-sheet.png`）。旧ボス・罠の生成スクリプトは再実行しないようガード済み。
 

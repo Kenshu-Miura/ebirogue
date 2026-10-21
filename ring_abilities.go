@@ -97,8 +97,10 @@ func init() {
 }
 
 func explodeRing(g *Game) {
-	g.explodeTraps(g.state.Player.X, g.state.Player.Y, 1, true, 0)
 	p := &g.state.Player
+	// 誘爆の割合のダメージは、指輪で HP が1になった後の値から数える。
+	hp := min(p.Health, 1)
+	g.explodeTrapsChain(p.X, p.Y, 1, true, 0, &hp)
 	for i := len(g.state.Enemies) - 1; i >= 0; i-- {
 		e := g.state.Enemies[i]
 		if abs(e.X-p.X) > 1 || abs(e.Y-p.Y) > 1 {

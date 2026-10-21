@@ -29,7 +29,9 @@ var largeMineTrapEffect = func(g *Game) {
 	}
 	g.Enqueue(Action{Duration: 0.5, Message: message, Execute: func(g *Game) {
 		g.removeMineAt(x, y)
-		g.explodeTraps(x, y, 1, true, 0)
+		// 誘爆の割合のダメージは、この大型地雷のダメージを引いた HP から数える。
+		hp := g.state.Player.Health - defense.Damage
+		g.explodeTrapsChain(x, y, 1, true, 0, &hp)
 		// 後ろから処理し、撃破によるスライス削除で対象を飛ばさない。
 		for i := len(g.state.Enemies) - 1; i >= 0; i-- {
 			enemy := g.state.Enemies[i]

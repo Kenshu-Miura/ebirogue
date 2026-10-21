@@ -471,3 +471,54 @@ func TestIdentifyCardFromGround(t *testing.T) {
 		t.Fatal("the chosen inventory item must be identified")
 	}
 }
+
+// 段8の統合で BOT が見つけた panic: 地雷を踏んだ先に道具があり、隣の地雷の誘爆で床の道具が消えると、
+// 先に積んだ拾う Action の添字がずれて範囲外になっていた（seed=87 expert 中級 11階）。
+func TestRegressionPickupAfterMineChainDestroysItems(t *testing.T) {
+	g := newProjectileTestGame()
+	mine, chained := createMapTrapByID(3, 5, 4), createMapTrapByID(3, 6, 5)
+	mine.FailRate, chained.FailRate = 0, 0
+	g.state.MapTraps = []MapTrap{mine, chained}
+	far := buildItemFromTemplate(1, 7, 6)
+	under := buildItemFromTemplate(1, 5, 4)
+	g.state.Items = []Item{far, under}
+	if !g.MovePlayer(1, 0) {
+		t.Fatal("移動できない")
+	}
+	runQueuedActions(g)
+	if len(g.state.Items) != 0 {
+		t.Fatalf("誘爆で道具が消えていない: %d", len(g.state.Items))
+	}
+	for _, item := range g.state.Player.Inventory {
+		if item == under || item == far {
+			t.Fatal("爆発で消えた道具を拾った")
+		}
+	}
+}
+
+// 段8の統合で TestSimBatch が見つけた不具合: 誘爆した地雷が、先の爆発で減る前の HP の割合で
+// ダメージを計算していたため、HP が満タンでも地雷2つ（半分＋半分）で倒れていた（expert の死因 地雷25・大型地雷17）。
+func TestRegressionMineChainUsesRemainingHealth(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		first int
+		want  int
+	}{
+		{"地雷→地雷", 3, 10},   // 40 → 20 → 10
+		{"大型地雷→地雷", 11, 5}, // 40 → 10（3/4 切り上げ）→ 5
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := newProjectileTestGame()
+			first, chained := createMapTrapByID(tc.first, 5, 4), createMapTrapByID(3, 6, 5)
+			first.FailRate, chained.FailRate = 0, 0
+			g.state.MapTraps = []MapTrap{first, chained}
+			if !g.MovePlayer(1, 0) {
+				t.Fatal("移動できない")
+			}
+			runQueuedActions(g)
+			if g.state.Player.Health != tc.want {
+				t.Fatalf("HP=%d want=%d", g.state.Player.Health, tc.want)
+			}
+		})
+	}
+}

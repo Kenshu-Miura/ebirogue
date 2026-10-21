@@ -68,19 +68,22 @@ func (g *Game) enqueueEnemyExplosion(explosion EnemyExplosion) {
 					g.onEnemyDefeated(defeated)
 				}
 			}
-			g.explodeTraps(explosion.CenterX, explosion.CenterY, explosion.Radius, false, 0)
+			// 海老さんへのダメージを先に積み、誘爆した地雷の割合のダメージはその後の HP から数える。
+			hp := g.state.Player.Health
+			if withinBlastRadius(explosion.CenterX, explosion.CenterY, g.state.Player.X, g.state.Player.Y, explosion.Radius) {
+				hp -= g.explodePlayer(explosion.Damage, source)
+			}
+			g.explodeTrapsChain(explosion.CenterX, explosion.CenterY, explosion.Radius, false, 0, &hp)
 			g.explodeItemsAround(explosion.CenterX, explosion.CenterY, explosion.Radius)
 			g.explodeEnemiesAround(explosion, bomberID, bomberX, bomberY)
-			if withinBlastRadius(explosion.CenterX, explosion.CenterY, g.state.Player.X, g.state.Player.Y, explosion.Radius) {
-				g.explodePlayer(explosion.Damage, source)
-			}
 			g.miniMapDirty = true
 		},
 	})
 }
 
 // explodePlayer は海老さんへ爆発のダメージを与える（爆風よけの盾で半減）。
-func (g *Game) explodePlayer(damage int, source DamageSource) {
+// explodePlayer は盾の軽減の後に受けるダメージを返す（HP は積んだ Action で減る）。
+func (g *Game) explodePlayer(damage int, source DamageSource) int {
 	defense := g.resolvePlayerShieldDefense(damage, EnemyDamageExplosion, EnemyAttackEnvironment)
 	message := fmt.Sprintf("爆発に巻き込まれ、%dダメージを受けた！", defense.Damage)
 	if defense.Resisted && g.state.Player.EquippedArmor != nil {
@@ -93,6 +96,7 @@ func (g *Game) explodePlayer(damage int, source DamageSource) {
 			g.applyPlayerShieldDefense(defense, source, -1, -1, -1)
 		},
 	})
+	return defense.Damage
 }
 
 // explodeEnemiesAround は爆発の範囲にいる敵（爆発させた敵を除く）へダメージを与える。

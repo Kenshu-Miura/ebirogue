@@ -66,7 +66,8 @@ func (g *Game) activateInteractionTrap(x, y int, credit, discover bool, depth in
 	if trap.TemplateID == 3 || trap.TemplateID == 11 {
 		// 地雷は一度爆発すると消える。中心を先に除き、再帰で同じ罠を踏まない。
 		g.state.MapTraps = append(g.state.MapTraps[:ti], g.state.MapTraps[ti+1:]...)
-		g.trapBlast(trap, credit, depth)
+		hp := g.state.Player.Health
+		g.trapBlast(trap, credit, depth, &hp)
 		return
 	}
 	if i >= 0 && effect != nil {
@@ -131,7 +132,10 @@ func (g *Game) applyTrapToEnemy(id, i int, credit bool) {
 	}
 }
 
-func (g *Game) trapBlast(trap MapTrap, credit bool, depth int) {
+// trapBlast は地雷1つの爆発。海老さんへのダメージは積んだ Action で後から減らすので、
+// 同じ誘爆の中では hp（それまでの爆発を引いた後の見込みの HP）から割合を計算する。
+// 現在の HP から計算すると、2つの地雷がそれぞれ同じ HP の半分を削って倒れてしまう。
+func (g *Game) trapBlast(trap MapTrap, credit bool, depth int, hp *int) {
 	for i := len(g.state.Enemies) - 1; i >= 0; i-- {
 		e := g.state.Enemies[i]
 		if !withinBlastRadius(trap.X, trap.Y, e.X, e.Y, 1) {
@@ -145,18 +149,24 @@ func (g *Game) trapBlast(trap MapTrap, credit bool, depth int) {
 	}
 	p := g.state.Player
 	if withinBlastRadius(trap.X, trap.Y, p.X, p.Y, 1) {
-		damage := mineTrapDamage(p.Health)
+		damage := mineTrapDamage(*hp)
 		if trap.TemplateID == 11 {
-			damage = largeMineTrapDamage(p.Health)
+			damage = largeMineTrapDamage(*hp)
 		}
-		g.explodePlayer(damage, trapSource(trap.TemplateID, trap.Name))
+		*hp -= g.explodePlayer(damage, trapSource(trap.TemplateID, trap.Name))
 	}
 	g.explodeItemsAround(trap.X, trap.Y, 1)
-	g.explodeTraps(trap.X, trap.Y, 1, credit, depth)
+	g.explodeTrapsChain(trap.X, trap.Y, 1, credit, depth, hp)
 }
 
 // 誘爆は深さ3で止め、範囲内のほかの罠は破壊する。
+// 海老さんの HP は呼んだ時点の値から数える（自分のダメージを積んでから呼ぶ側は、先に HP を減らしておく）。
 func (g *Game) explodeTraps(x, y, radius int, credit bool, depth int) {
+	hp := g.state.Player.Health
+	g.explodeTrapsChain(x, y, radius, credit, depth, &hp)
+}
+
+func (g *Game) explodeTrapsChain(x, y, radius int, credit bool, depth int, hp *int) {
 	traps := append([]MapTrap(nil), g.state.MapTraps...)
 	for _, trap := range traps {
 		if !withinBlastRadius(x, y, trap.X, trap.Y, radius) {
@@ -168,7 +178,7 @@ func (g *Game) explodeTraps(x, y, radius int, credit bool, depth int) {
 		}
 		g.state.MapTraps = append(g.state.MapTraps[:ti], g.state.MapTraps[ti+1:]...)
 		if (trap.TemplateID == 3 || trap.TemplateID == 11) && depth < 3 {
-			g.trapBlast(trap, credit, depth+1)
+			g.trapBlast(trap, credit, depth+1, hp)
 		}
 	}
 	g.miniMapDirty = true

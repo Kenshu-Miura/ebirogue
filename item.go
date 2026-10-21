@@ -526,6 +526,20 @@ func (g *Game) executeItemSwap() {
 }
 
 func (g *Game) PickUpItem(item Item, i int) {
+	// 積んだときの添字は、先に実行された Action（地雷の誘爆で床の道具が消えるなど）でずれることがある。
+	// 実行時に同じ道具を探し直し、もう床に無ければ何もしない。
+	if i < 0 || i >= len(g.state.Items) || g.state.Items[i] != item {
+		i = -1
+		for j, floorItem := range g.state.Items {
+			if floorItem == item {
+				i = j
+				break
+			}
+		}
+		if i < 0 {
+			return
+		}
+	}
 	g.playSE("pickup")
 	g.stats.counts(itemKind(item)).Picked++
 	if money, isMoney := item.(*Money); isMoney {
