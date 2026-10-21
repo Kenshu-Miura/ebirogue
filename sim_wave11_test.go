@@ -118,6 +118,8 @@ func (t *simFloorTracker) step(g *Game, turns int, out *simOutcome) {
 		}
 		t.arrive(g, out)
 	}
+	// 割れた壁は壊れたマスの数、隠し通路は見つかった回数（つながった通路はまとめて見つかるので、1ステップで1回）
+	hiddenFound := false
 	for c, kind := range t.terrainLeft {
 		if g.state.Map[c.Y][c.X].Type == kind {
 			continue
@@ -126,8 +128,11 @@ func (t *simFloorTracker) step(g *Game, turns int, out *simOutcome) {
 		if kind == "cracked_wall" {
 			out.CrackedBroken++
 		} else {
-			out.HiddenFound++
+			hiddenFound = true
 		}
+	}
+	if hiddenFound {
+		out.HiddenFound++
 	}
 	if t.hasStairs && t.stairsSeen < 0 && g.state.Map[t.stairs.Y][t.stairs.X].Visited {
 		t.stairsSeen = turns
@@ -318,8 +323,8 @@ func renderWave11Stats(b *strings.Builder, s simSummary) {
 	}
 
 	fmt.Fprintf(b, "\n## 地形（性格別、全難易度）\n\n")
-	fmt.Fprintf(b, "地形のある階 = 水路・割れた壁・隠し通路のどれかがある階。滞在は降りた階だけ。割れた壁は BOT 以外（爆発など）で壊れた分、隠し通路はカードなどで見つかった分も含む。\n\n")
-	fmt.Fprintf(b, "| 性格 | 地形のある階の滞在 | 無い階の滞在 | 突風（ある／無い） | 餓死（ある／無い） | 割れた壁を壊した | 隠し通路を見つけた |\n|---|---:|---:|---:|---:|---:|---:|\n")
+	fmt.Fprintf(b, "地形のある階 = 水路・割れた壁・隠し通路のどれかがある階。滞在は降りた階だけ。割れた壁は BOT 以外（爆発など）で壊れた分、隠し通路はカード（あかり）・透視の指輪で見つかった分も含み、1ステップで見つかった分を1回と数える。\n\n")
+	fmt.Fprintf(b, "| 性格 | 地形のある階の滞在 | 無い階の滞在 | 突風（ある／無い） | 餓死（ある／無い） | 割れた壁を壊した（マス） | 隠し通路を見つけた（回） |\n|---|---:|---:|---:|---:|---:|---:|\n")
 	for _, name := range names {
 		w := s.Wave11[name]
 		fmt.Fprintf(b, "| %s | %.0f (%d階) | %.0f (%d階) | %d／%d | %d／%d | %d | %d |\n", name,
