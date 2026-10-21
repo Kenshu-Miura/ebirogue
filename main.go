@@ -210,6 +210,7 @@ type Game struct {
 	ironArrowTrapImg          *ebiten.Image
 	woodArrowTrapImg          *ebiten.Image
 	potImg                    *ebiten.Image
+	additionalPotImages       map[int]*ebiten.Image
 	offsetX                   int
 	offsetY                   int
 	moveCount                 int
@@ -1097,6 +1098,7 @@ func NewGame() *Game {
 		ironArrowTrapImg:    ironArrowTrapImg,
 		woodArrowTrapImg:    woodArrowTrapImg,
 		potImg:              potImg,
+		additionalPotImages: loadAdditionalPotImages(),
 		offsetX:             0,
 		offsetY:             0,
 		frameCount:          0,

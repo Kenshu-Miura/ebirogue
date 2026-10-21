@@ -134,7 +134,7 @@ func (g *Game) drawItemDescription(screen *ebiten.Image) {
 	if g.showItemDescription {
 		// Define menu window parameters
 		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-		descriptionWindowWidth, descriptionWindowHeight := 500, 120
+		descriptionWindowWidth, descriptionWindowHeight := 500, max(120, (strings.Count(g.itemdescriptionText, "\n")+1)*20+20)
 		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
 
 		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight, 255)
@@ -147,7 +147,7 @@ func (g *Game) drawItemDescription(screen *ebiten.Image) {
 func (g *Game) drawGroundItemDescription(screen *ebiten.Image) {
 	if g.ShowGroundItem && g.showGroundItemDescription {
 		screenWidth, screenHeight := screen.Bounds().Dx(), screen.Bounds().Dy()
-		descriptionWindowWidth, descriptionWindowHeight := 500, 120
+		descriptionWindowWidth, descriptionWindowHeight := 500, max(120, (strings.Count(g.groundItemDescriptionText, "\n")+1)*20+20)
 		windowX, windowY := (screenWidth-descriptionWindowWidth)/2, screenHeight-descriptionWindowHeight-10
 
 		drawWindowWithBorder(screen, windowX, windowY, descriptionWindowWidth, descriptionWindowHeight, 255)

@@ -57,9 +57,10 @@ func itemToSaved(item Item) SavedItem {
 		attackPower := v.AttackPower
 		return SavedItem{Kind: "Weapon", ID: v.ID, X: v.X, Y: v.Y,
 			AbilityCounter: v.AbilityCounter,
+			ExtraAbilities: extraItemAbilities(v.ID, v.Abilities),
 			Sharpness:      v.Sharpness, AttackPower: &attackPower, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
 	case *Armor:
-		return SavedItem{Kind: "Armor", ID: v.ID, X: v.X, Y: v.Y,
+		return SavedItem{Kind: "Armor", ID: v.ID, X: v.X, Y: v.Y, ExtraAbilities: extraItemAbilities(v.ID, v.Abilities),
 			Sharpness: v.Sharpness, Cursed: v.Cursed, Identified: v.Identified, RustProof: v.RustProof}
 	case *Arrow:
 		return SavedItem{Kind: "Arrow", ID: v.ID, X: v.X, Y: v.Y,
@@ -111,6 +112,7 @@ func savedToItem(s SavedItem) (Item, error) {
 		v.Cursed = s.Cursed
 		v.Identified = s.Identified
 		v.RustProof = s.RustProof
+		v.Abilities = mergedAbilities(v.Abilities, s.ExtraAbilities)
 	case "Armor":
 		v, ok := item.(*Armor)
 		if !ok {
@@ -120,6 +122,7 @@ func savedToItem(s SavedItem) (Item, error) {
 		v.Cursed = s.Cursed
 		v.Identified = s.Identified
 		v.RustProof = s.RustProof
+		v.Abilities = mergedAbilities(v.Abilities, s.ExtraAbilities)
 	case "Arrow":
 		v, ok := item.(*Arrow)
 		if !ok {
