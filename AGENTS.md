@@ -38,7 +38,10 @@ go test -run TestSimReplay -count=1 . -args -sim.seed=<シード> -sim.persona=<
 go test -fuzz=FuzzInputSequence -fuzztime=30m .   # 入力列のファジング
 go test -run TestEarlyDeathAnalysis -count=1 -timeout 0 . -args -sim.early=2000 -sim.out=reports   # 序盤の死亡分析（expert・上級）
 go test -run TestEarlyDeathDump -count=1 . -v -args -sim.earlydump=<シード>                        # 1件の死亡直前のターンを表示
+go test -run TestReplayFile -count=1 . -args -replay.file=ebirogue_replay_last.json                  # 通常プレイの入力の記録を再生して照合
 ```
+
+- 画面の無い Linux（クラウド）では通常ビルドのテストを `xvfb-run -a go test ./...` のように仮想ディスプレイで実行する（無いと Ebiten の初期化で止まる）。
 
 - BOT（`bot_test.go`）はゲーム状態を直接読み、仮想入力（`VirtualInput`）で本物のメニュー経路を操作する。性格は `aggressive` / `cautious` / `itemUser` / `diver` / `random` / `expert`。`expert`（`bot_expert_test.go`）はカード・杖・薬をテンプレート ID ごとの分類表 `itemRoles`（攻撃・逃走・強化・回復・不利）で使い分け、強化値込みで装備を持ち替え、矢を撃ち、遠距離の敵の射線を避けて探索してから降りる。バランス評価には主に `expert` の結果を使い、ほかの性格は比較用に残す。**新しいカード・杖・薬を追加したら `itemRoles` にも分類を追加する。新しい指輪は `ringValues`、手放す・入れ替える価値は `itemValues`（`bot_expert_items_test.go`）にも追加する。**
   - 食料（`bot_test.go`、random 以外）: 見えている床の食料（ミニマップに表示）を優先して拾い、所持品が満杯なら価値の低い道具を置いて（足元がふさがっていれば投げて）空ける。手放した道具は同じ階では拾い直さない。満腹度30以下で食料が無ければ探索より階段を優先し、通路を敵・罠にふさがれたら倒し・踏んで進む。満腹度を減らす装備は付けない。
@@ -77,8 +80,8 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 | 種別 | タグ | 例 |
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
-| テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go` |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go` |
+| テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go`, `audio_stub.go`（音声の空実装） |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go` |
 | デバッグビルド専用 | `//go:build debug && !test` / `!debug && !test` | `debug_on.go`（F1 の処理）/ `debug_off.go`（空の実装） |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
@@ -111,6 +114,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 重ね数は `g.playerAbilityCount(ID)`（2つの指輪で2）、有無は `g.playerHasAbility(ID)`。
   - 状態異常の無効化は `statusImmunities`（能力 ID → `StatusKind` の一覧）へ書くだけで効く。問い合わせは `g.playerImmuneTo(kind)`、メッセージ付きは `g.playerImmunityMessage(kind)`、盾の状態異常耐性（50%）も含めた判定は `g.playerStatusGuard(kind)`。睡眠・混乱・目潰し・鈍足・トラバサミ・毒（`drainPlayerPower`）・呪い（ノロイガニ系）・さび（さびの罠・`rustPlayerEquipment`）・食料化（にぎりエビ系）・あやつり（あやつりクラゲ系）・装備の弾き飛ばし・持ち物の投げ捨て（`equipment_harm.go`）の付与箇所はすべてこれを通っている。その装備品自身だけがさびない能力は `AbilityRustImmune`（`itemResistsRust`）。**新しく状態異常を付与する処理も必ずこれらを通す。**
   - 特効は `slayerTraits`（能力 ID → 敵の属性 `EnemyTrait`）の表から引く。属性は竜・霊・一つ目・吸い取り・甲殻（カニ・ヤドカリ・貝）・爆発（ウニ）・浮遊（クラゲ）で、基本種に付ければ上位種へ引き継がれる。鼓舞の指輪のパワー補正は `accessoryPowerBonus`（`AbilityPowerBoost`）。
+- `status_effects.go`（タグなし・純粋）と `status_game.go`（`!test`）: 状態異常の定義表 `statusDefs`（名前・HUD・持続の型・重ねがけの規則・悪い状態か・治ったときのメッセージ・ボスで短縮するか）と付与・解除・経過の共通処理。海老さんへの付与は `g.applyPlayerStatus(kind, turns, StatusSource{...})`（耐性・重ねがけ・メッセージ。`Shield: true` で状態異常耐性の盾の50%も見る）、耐性の判定を済ませた後にかけるだけなら `g.setPlayerStatus`／規則を指定する `g.stackPlayerStatus`、解除は `g.clearPlayerStatus`・`g.clearPlayerBadStatuses`。敵へは `g.applyEnemyStatus(index, kind, turns)`（ボスが受け付けない状態は `bosses.go` の `bossStatusImmunities`）と `g.clearEnemyStatus`。ターン経過は `g.decrementStatusAilments()` が表を回す。**`StatusAilments` の項目を直接書き換えない。** 新しい状態の追加手順は `docs/agents/done/wave7-A.md` の「新しい状態異常の追加手順」（`StatusAilments` に項目を足すときは `main.go` と `game_stub.go` の両方へ、`statusDefs` の末尾に1行）。
+- `replay.go`（タグなし）と `replay_game.go`（`!test`）: 通常プレイの入力の記録（`ReplayData`。区間 `ReplaySegment` ごとに開始状態・圧縮した論理キー入力・毎フレームの照合値 `replayCheck`）、保存（`ebirogue_replay_last.json`・`ebirogue_replays.json`）、ヘッドレス再生 `playReplay`。`Update` の先頭の `g.beginReplayFrame()`・`g.recordReplayKeys()` が記録する。記録は `g.persistent` のときだけ。ビルド識別はソース（`//go:embed *.go go.mod go.sum`）の SHA-256 なので、ソースを変えると前の記録は再生できない。**キー設定画面の物理キーは `g.replayPhysicalKey()` を通す。**
+- `audio.go`（`!test`）・`audio_settings.go`（タグなし）・`audio_stub.go`（`test`）: 音声。BGM は `g.playBGM(id)`／`g.stopBGM()`（`updateAudio` が階・ボス・クリアで切り替える）、効果音は `g.playSE(id)`。既存の Action に音を添えるときは Action を増やさず `g.soundFirstAction(start, id)`（`start` は積む前の `len(g.ActionQueue.Queue)`）、キューに積まない操作は `g.executeAudioCue(id)`。音源は `sound/*.wav`（`//go:embed`。`go run tools/generate_sounds.go` で再生成）。音声は `g.persistent && !g.headless` のときだけ初期化するので BOT・テストの結果と乱数に影響しない。音量は `GameSettings.BGMVolume`・`SEVolume`（0〜10、`clampVolume`）。
 - `displacement_path.go`（タグなし・純粋）と `displacement.go`（`!test`）: 位置を動かす共通処理。`g.knockbackPlayer(dx, dy, マス数, 衝突ダメージ, 死因)`・`g.knockbackEnemy(添字, …)`（壁や敵に当たると固定ダメージ、ボスは動かない）、`g.pullPlayer(dx, dy, マス数)`（途中の罠で止まって踏む）、`g.dropPlayerItemsForward(個数, dx, dy)`（装備中を除き前方1〜2マス→周囲へ落とす）。不動 `AbilityImmovable`（`g.playerImmovable()`。吹き飛ばし・引き寄せ・イレカエダコ系とボスの場所替えを防ぐ）と受け身 `AbilityBreakFall`（`g.playerBreaksFall()`。衝突ダメージを防ぐ）で無効化する。どれも Action の Execute の中から呼ぶ。
 - `projectile.go`（`!test`）: 投げた道具・撃った矢・杖の魔法弾の飛び方。`Projectile`（種類 `ProjectileThrow`/`Shot`/`Bolt`、壁・敵の貫通、跳ね返りの回数、命中率と必中、射撃の本数 `Volley`、1マスごとの `OnTile`、命中判定の前の `BeforeHit`）を `g.ThrowItem(p)` が Action として積み、`flyProjectile` が1マスずつ進める。海老さんが飛ばす道具は `g.newPlayerProjectile` で作り、装備能力のフック `ModifyProjectile` が飛ぶ前に項目を変える。基本の命中率は投げた道具・矢が85%（`thrownItemHitPercent`）、杖の魔法弾が100%。命中率が100%以上なら乱数を使わない（命中判定の乱数は `randHooks.projectile`。テストは `newProjectileTestGame` が当たる側に固定する）。当たった効果は `item.go` の `onTargetHit`、床に置くのは着地のアニメーション（`UpdateThrownItem`）。敵が打ち返す（`ProjectileReturnPercent`）と命中判定の前に向きを反転して戻り（`returnProjectile`）、海老さんに当たると打ち返した敵の遠距離攻撃として扱う（`hitPlayerWithReturnedProjectile`）。テストは `content_projectile_test.go`（共通化の前の挙動を固定したもの）と `content_projectile_abilities_test.go`。
 - `equipment_harm.go`（`!test`）: 装備・持ち物を損なう共通処理。強化値を下げる `g.rustPlayerEquipment(対象, 量)`（さびの罠もこれを使う。さび止め・`AbilityRustImmune`・`StatusRust` で防ぐ）、装備を弾き飛ばす `g.knockOffPlayerEquipment(装備, dx, dy, マス数)`（`StatusKnockOff` で防ぐ）、持ち物を投げ捨てる `g.tossPlayerItem(x, y, 優先, intn)`（`StatusItemToss` で防ぐ）、道具を飛ばして落とす `g.flingItem`。どれも Action の Execute の中から呼ぶ。
@@ -133,7 +139,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `GameState`（main.go）: `Map [][]Tile`, `Player`, `Enemies []Enemy`, `Items []Item`, `MapTraps []MapTrap`。
 - `Player`（main.go）: HP/満腹度/パワー/レベル/経験値/所持金、`Inventory []Item`（最大20）、装備スロット（武器・防具・矢 各1、アクセサリ2）、`StatusAilments`。
 - `Enemy`（enemies.go）: ステータス + `SpecialAttack SpecialAttackFunc` + `SpecialAttackProbability` + `Traits []EnemyTrait`（特効の属性）+ `StatusAilments` + 系統が使う汎用の状態（`Counter`・`Timer`・`Flag`・`Alerted`・`DisguiseID`、段4）。定義 `MonsterDefinition` の `CriticalPercent`（通常攻撃が痛恨の一撃〔×1.5〕になる確率）と `EvasionPercent`（プレイヤーの通常攻撃をかわす確率。必中は無視）は敵の ID から引く（`enemyCriticalPercent` / `enemyEvasionPercent`、封印中は0、回避は睡眠・金縛り中も0）。
-- `StatusAilments`（main.go / game_stub.go 両方に定義）: トラバサミ・混乱・睡眠・目潰し・鈍足・倍速・口封じ・ゾワゾワ（`Backward`、敵だけが使う。残りターン int）、金縛り・封印（bool）、`HasteOnWake`。
+- `StatusAilments`（main.go / game_stub.go 両方に定義）: トラバサミ・混乱・睡眠・目潰し・鈍足・倍速・口封じ・ゾワゾワ（`Backward`、敵だけが使う。残りターン int）、金縛り・封印（bool）、`HasteOnWake`。種類ごとの規則は `status_effects.go` の `statusDefs`。
 - `Tile`（main.go / game_stub.go）: `Type`（"floor", "wall", "corridor", "door" 等の文字列）, `Blocked`, `BlockSight`, `Visited`, `Brightness`。
 - `Room`（map.go）: `ID, X, Y, Width, Height, Center`。
 - `MapTrap`（maptraps.go）: 座標・名前・発見済みフラグ・効果関数・不発率。
@@ -171,8 +177,10 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `savedata.go`（タグなし・純粋）: `SaveData`/`SavedPlayer` 等の構造体、`decodeSaveData`、破損検出の `validateSaveData`、`GameSettings`。`saveDataVersion = 3`（シード・乱数状態・難易度・ボス撃破を含む。構造を壊す変更をしたらインクリメント。旧セーブは破棄され新規冒険になる）。
 - `savegame.go`（`!test`）: セーブ/設定の I/O、`buildSaveData`/`applySaveData`、メニューの「中断」→ `saveSuspendData`、フロア移動時の `autoSave`、起動時の `tryResumeFromSave`、死亡時の `deleteSaveFile`。
 - 保存先は `storage.go`（`!js`, `os` ファイル）と `storage_js.go`（`js`, ブラウザ `localStorage`）が `storageRead`/`storageWrite`/`storageRemove`/`storageIsNotExist` として抽象化する。`savegame.go` は `os` を直接呼ばずこれらを使う。**新しい保存 I/O もこの4関数経由にすること。**
-- キーは `ebirogue_save.json` / `ebirogue_settings.json` / `ebirogue_results.json`（冒険の記録、最大100件）。ネイティブ版はカレントディレクトリのファイル、WASM 版は同名キーの `localStorage` 項目。**WASM でも中断・オートセーブが機能する。**
+- キーは `ebirogue_save.json` / `ebirogue_settings.json` / `ebirogue_results.json`（冒険の記録、最大100件）/ `ebirogue_replay_last.json`（最後の冒険の入力の記録）/ `ebirogue_replays.json`（終わった冒険の入力の記録、最大10件）。ネイティブ版はカレントディレクトリのファイル、WASM 版は同名キーの `localStorage` 項目。**WASM でも中断・オートセーブが機能する。**
 - ストレージへの書き込みは `g.persistent`（`NewGame` の通常のゲームだけ true）のときだけ行う。テストや BOT の `Game` はセーブ・設定・記録を書き換えない。
+- 設定（`GameSettings`）の省略可能な項目: 入力の記録 `SaveInputReplay *bool`（nil はオン）、音量 `BGMVolume`・`SEVolume`（項目が無ければ6。0は有効な値なので `omitempty` を付けない）。中断セーブの `Replay` も省略可能（`saveDataVersion` は3のまま）。
+- 設定画面の項目の並びは 0 フルスクリーン・1 ミニマップ・2 キー設定・3 入力の記録・4 BGM・5 効果音（`handleSettingsInput`・`drawSettingsWindow`）。ヘッドレス（BOT）は従来どおり0〜2の3項目だけを巡回し、random BOT の操作経路を変えない。
 
 ## ゲーム仕様早見表
 
@@ -249,21 +257,13 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 追加予定の状態異常・一時効果:
   - おにぎり状態、キグニ族状態、倍速、身代わり、透明、無敵
   - 攻撃力・防御力の上昇と低下、レベル低下、回復不能（口封じは実装済み）
-- 状態異常は残りターン、重複時の規則、解除手段、耐性を共通処理へまとめる。可能な状態はプレイヤーと敵の双方へ適用できるようにする。
 - 新しい罠には `img/` 配下へ30x30の透過PNGを用意し、発見済み表示とミニマップ表示を確認する。
-- 仮画像を正式な画像へ差し替える（wave1・wave2 でスクリプトにより仮作成した 30x30 透過 PNG）。
-  - 移動罠: `img/warp_trap.png`（青い渦）、`img/pitfall_trap.png`（穴）、`img/bear_trap.png`（トラバサミ）
-  - ダメージ罠: `img/wood_arrow_trap.png`、`img/iron_arrow_trap.png`、`img/falling_rock_trap.png`、`img/large_mine_trap.png`（`go run tools/damage_trap_images.go` で再生成できる単純図形）
-  - 装備・所持品の罠（wave2-A）: `img/unequip_trap.png`（装備が外れる図形）、`img/spoil_trap.png`（緑の腐敗霧）、`img/scatter_trap.png`（散らばる3個の物）（`go run tools/item_trap_images.go` で再生成できる単純図形）
-  - 腐ったウインナー（アイテム ID 71）: `img/rotten_sausage.png`（`sausage.png` を緑がかった色にしたもの。同じスクリプトで再生成）
-  - いずれもゲーム画面上での視認性は未確認。
-  - ボス（wave1-C）: `img/boss_crab.png`・`img/boss_octopus.png`・`img/boss_dragon.png`（既存の敵画像の色相を回したもの。`go run tools/boss_images.go` で再生成）。ボスらしい大きさ・形の正式画像に差し替え、暗い床と戦闘中の視認性を確認する。
-  - 第3段階の敵（ID 45〜65）: 第2段階の画像の色相を150度回したもの（`tools/third_stage_enemy_images.go`）。基本種や他系統と色が似ていないか、暗い床での視認性を確認して必要なら描き直す。
+- 段7（wave7-D）で正式な画像に差し替えた罠（ID 5〜14）・腐ったウインナー・ボス（ID 42〜44）と、色相を調整した第3段階のオンリョウガニ・ジクウクラゲ（`tools/third_stage_enemy_images.go` は +60°）の、実機での30px表示・罠の発見済み表示とミニマップ・ボス戦中の視認性を確認する（比較シートは `docs/agents/done/wave7-D-sheet.png`）。旧ボス・罠の生成スクリプトは再実行しないようガード済み。
 
 ### Priority A: usability
 
-- 設定メニューを拡張する（フルスクリーン・ミニマップ表示は実装済み）。
-  - BGM・効果音の音量設定（音声システム自体が未実装のため、その導入後に追加する）
+- 仮の音源（`sound/*.wav`、`tools/generate_sounds.go` で合成した16個: 効果音13・BGM 3）を正式な音源へ差し替え、実機・ブラウザで音色・音量のバランスを聴いて確認する。
+- メニューの「記録」の一覧に、入力の記録（`ebirogue_replays.json`）が残っている冒険の印を付ける（再生 UI は作らない）。
 
 ### Priority B: dungeon systems
 
@@ -273,10 +273,6 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 武器・盾・杖の合成を追加する（保存の壺・壺拡大/吸い出しのカードは実装済み。合成の壺など壺の種類追加は未実装）。
 - 水路、壊せる壁、隠し通路などの特殊地形を追加する。
 - アイテム・敵・罠の図鑑と発見率を追加する。
-
-### Priority C: replayability and diagnostics
-
-- 通常プレイの入力履歴（`InputRecorder` が記録済み）をファイルへ保存し、シードと合わせて再生できるようにする（BOT の冒険は `TestSimReplay` でシードから再現できる）。
 
 ### Roadmap acceptance criteria
 
