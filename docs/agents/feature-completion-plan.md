@@ -4,13 +4,15 @@
 
 最初に `AGENTS.md`、`docs/agents/README.md`（並列作業のルール・ID 割り当て）、`docs/agents/STATUS.md` を読むこと。各タスクの詳しい仕様は下の表の指示書にある。
 
-## クリア率の目標（開発者の決定、2026-10-20）
+## クリア率の目標（開発者の決定、2026-10-20。2026-10-21 に少し難しい調整へ変更）
 
-| 難易度 | 目標 | 現在（`reports/baseline.json`、expert 各84冒険） |
-|---|---|---|
-| 初級（10階ボス） | 85%前後 | 91.7% |
-| 中級（20階ボス） | 50%前後 | 48.8% |
-| 上級（30階ボス） | 10%前後 | 4.8% |
+| 難易度 | 目標 | 合格の範囲（500冒険） | 段10の統合後（`reports/baseline.json`、expert 各84冒険） |
+|---|---|---|---|
+| 初級（10階ボス） | 80%前後 | 77〜83% | 78.6% |
+| 中級（20階ボス） | 45%前後 | 41〜49% | 33.3% |
+| 上級（30階ボス） | 5%前後 | 3〜7% | 4.8% |
+
+- 以前の目標は初級85%・中級50%・上級10%。
 
 - 測る BOT は **expert**。各難易度 500 冒険（`-sim.persona=expert -sim.runs=1500 -sim.difficulty=all`）で判定する（84冒険ではばらつきが大きい）。
 - 調整は wave11（BOT 強化の後）で行う。wave7〜10 の担当は、新しい要素で BOT の結果が大きく動いた場合に報告するだけでよく、数値を合わせにいかない。
@@ -32,7 +34,7 @@
 | 11 | モンスターハウス（フロア生成で自然に出る） | AGENTS.md「Priority B」、wave2-backlog 6 | wave10-A |
 | 12 | 店・売買・店主・泥棒 | AGENTS.md「Priority B」 | wave10-B |
 | 13 | アイテム・敵・罠の図鑑と発見率 | AGENTS.md「Priority B」 | wave10-C |
-| — | BOT の強化 → クリア率の調整 | 開発者の方針 | wave11（未作成。wave10 の統合後に Claude Code が指示書を作る） |
+| — | BOT の強化 → クリア率の調整 | 開発者の方針 | wave11-0〜D（下の「段11」） |
 
 杖は2種類（シフトチェンジ・封印）、壺は1種類（保存）、薬は回復と状態薬だけしか無い。新しい状態異常を起こす手段として wave8-A/B で薬と杖を、wave9-C で壺を足す。
 
@@ -44,7 +46,7 @@
 | 段8 | wave8-A・8-B・8-C | wave7-A の統合 |
 | 段9 | wave9-A・9-B・9-C | 段8の統合（9-A は全アイテムがそろってから重みを決めるため、9-C の ID だけ先に決めておく） |
 | 段10 | wave10-A・10-B・10-C | 段9の統合（10-A/B は 9-B の地形の上に部屋を作る。10-C は全コンテンツがそろってから） |
-| 段11 | BOT 強化 → クリア率の調整 | 段10の統合 |
+| 段11 | **wave11-0（単独）** → wave11-A・11-B・11-C（並列）→ **wave11-D（単独）** | 段10の統合（詳しくは下の「段11」） |
 
 各段の統合（マージ・衝突の解消・`IMPLEMENTED_FEATURES.md` と `AGENTS.md` の更新・`TestSimBatch` でベースラインを取り直す・`STATUS.md` の更新）は Claude Code が行う。
 
@@ -66,7 +68,32 @@
 | wave10-B 店 | Claude Code | `agent/wave10-B-shop` | `wave10-B-shop.md` | 敵 126〜128（店主・番犬） |
 | wave10-C 図鑑 | Codex | `agent/wave10-C-encyclopedia` | `wave10-C-encyclopedia.md` | なし |
 
+| wave11-0 計測の準備 | Claude Code | `agent/wave11-0-measure` | `wave11-0-measure.md` | なし |
+| wave11-A BOT の立ち回り（モンスターハウス・地形） | Codex | `agent/wave11-A-bot-house-terrain` | `wave11-A-bot-house-terrain.md` | なし |
+| wave11-B BOT の道具（段8の薬・杖・段9の壺） | Codex | `agent/wave11-B-bot-items` | `wave11-B-bot-items.md` | なし |
+| wave11-C BOT の店の売買と探索の切り上げ | Codex | `agent/wave11-C-bot-shop-explore` | `wave11-C-bot-shop-explore.md` | なし |
+| wave11-D クリア率の調整 | Claude Code | `agent/wave11-D-balance` | `wave11-D-balance.md` | なし |
+
 担当は目安で、Claude Code と Codex のどちらが行ってもよい。設計の判断が多いもの（7-A・9-A・10-B）を Claude Code にしている。
+
+## 段11（BOT の強化 → クリア率の調整）
+
+| 順 | タスク | 内容 | 触るファイル |
+|---|---|---|---|
+| 1 | wave11-0（単独） | expert だけのベースライン `reports/baseline-expert.json`（各難易度500冒険）と、段7〜10の要素（新しい道具・モンスターハウス・地形・店・探索）のレポートの項目。今の負け方の分析 | `sim_test.go`・`.gitignore` |
+| 2 | wave11-A（並列） | モンスターハウスでの立ち回り（入口で1対1・一掃の道具・逃げる判断）、割れた壁を壊す・隠し通路を探す | `bot_tactics_test.go`（新しく `bot_house_test.go`）、`bot_test.go` の経路探索 |
+| 2 | wave11-B（並列） | 段8の薬・杖（205〜221）を強化・弱体に使い分け、段9の壺（合成・強化・識別・冷蔵）を使う | `bot_expert_items_test.go`・`bot_expert_test.go` の `itemRoles` |
+| 2 | wave11-C（並列） | 店で売る・買う（泥棒しない）、探索の切り上げと降りる前の休憩 | `bot_shop_test.go`・`bot_test.go`・`bot_expert_test.go` |
+| 3 | 統合 | 11-A/B/C を統合して expert のベースラインを取り直す | — |
+| 4 | wave11-D（単独） | 目標（初級80%・中級45%・上級5%）にゲームのつまみで合わせる。到着時のレベルの曲線の案 | `item_floor_tables.go`・`special_rooms.go`・`terrain.go` ほか |
+
+- 11-A/B/C は **BOT のテストファイルだけを変え、ゲームのコード・数値を変えない**（ゲームの不具合を見つけたときの修正と回帰テストは除く）。改善ごとに `botFeature` の名前を付けて `-bot.off` で効果を測り、どの難易度のクリア率もベースラインより下げない。
+- 11-A と 11-C はどちらも `bot_test.go` の探索の判断に触れる可能性がある。触れた関数名を完了報告に書き、統合時に合わせる。
+- 比較のコマンド（11-A〜D 共通）:
+
+```bash
+go test -run TestSimBatch -count=1 -timeout 0 . -args -sim.persona=expert -sim.runs=1500 -sim.difficulty=all -sim.baseline=reports/baseline-expert.json -sim.out=reports
+```
 
 ## 新しい要素の共通の約束
 
