@@ -1,5 +1,7 @@
 //go:build ignore
 
+// 正式な画像に差し替え済み。再実行しない（wave7-D）。
+
 // 装備・所持品の罠の仮画像: go run tools/item_trap_images.go
 package main
 
@@ -11,6 +13,8 @@ import (
 )
 
 func main() {
+	fmt.Fprintln(os.Stderr, "正式な画像に差し替え済み。再実行しない（wave7-D）。")
+	os.Exit(1)
 	for i, name := range []string{"unequip_trap", "spoil_trap", "scatter_trap"} {
 		im := image.NewNRGBA(image.Rect(0, 0, 30, 30))
 		colors := []color.NRGBA{{245, 195, 85, 255}, {145, 205, 85, 255}, {115, 200, 245, 255}}

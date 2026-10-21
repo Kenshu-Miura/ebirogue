@@ -1,5 +1,6 @@
 //go:build ignore
 
+// wave7-D: オンリョウガニとジクウクラゲは基本種との混同を避け +60°。
 // 第3段階の敵画像を第2段階の画像から作る: go run tools/third_stage_enemy_images.go
 // 輪郭・アルファ・明暗を保ち、色相だけを回転させる（AGENTS.md の上位種画像の規則）。
 // 彩度の低い（灰色に近い）画像は色相を回しても変化が見えないため、彩度を少し足す。
@@ -28,11 +29,11 @@ var stages = []struct {
 	{"dynamite_uni", "megaton_uni", 150},
 	{"oodorobou_yadokari", "kaitou_yadokari", 150},
 	{"nigiri_oyakata_ebi", "nigiri_meijin_ebi", 150},
-	{"tatari_gani", "onryou_gani", 150},
+	{"tatari_gani", "onryou_gani", 60},
 	{"shihai_kurage", "teiou_kurage", 150},
 	{"shinigami_ebi", "meifu_ebi", 150},
 	{"inazuma_shako", "raijin_shako", 150},
-	{"telepo_kurage", "jikuu_kurage", 150},
+	{"telepo_kurage", "jikuu_kurage", 60},
 	{"tokkae_dako", "surikae_dako", 150},
 	{"wana_master_yadokari", "wana_ou_yadokari", 150},
 	{"bake_horagai", "bake_oumugai", 150},
