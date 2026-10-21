@@ -21,6 +21,8 @@ type SavedRoom struct {
 	Width, Height int
 	CenterX       int
 	CenterY       int
+	Role          RoomRole `json:",omitempty"`
+	Entered       bool     `json:",omitempty"`
 }
 
 // SavedItem はアイテム1個のセーブ用表現。
