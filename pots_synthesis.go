@@ -227,7 +227,7 @@ func (g *Game) scatterBottomlessTraps(x, y int) {
 		if !g.itemDropFree(tx, ty) {
 			continue
 		}
-		trap := createMapTrapByID(randomMapTrapIDs[g.randIntn(len(randomMapTrapIDs))], tx, ty)
+		trap := createMapTrapByID(pickFloorTrapID(g.Floor, g.randIntn), tx, ty)
 		trap.Discovered = true
 		g.state.MapTraps = append(g.state.MapTraps, trap)
 	}

@@ -134,7 +134,7 @@ var mapTrapTemplates = map[int]mapTrapTemplate{
 // randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。
 var randomMapTrapIDs = sortedTemplateIDs(mapTrapTemplates, nil)
 
-// pickFloorTrapID は床生成とワナのカードで置く罠を、floor 階の重み（trapBandWeights、item_floor_tables.go）で選ぶ。
+// pickFloorTrapID は床生成・ワナのカード・底抜けの壺で置く罠を、floor 階の重み（trapBandWeights、item_floor_tables.go）で選ぶ。
 // ボス階と30階では落とし穴を除く（availableTrapIDs）。乱数は1回使う。
 func pickFloorTrapID(floor int, intn func(int) int) int {
 	return pickWeightedTrapID(availableTrapIDs(randomMapTrapIDs, floor), floor, intn, 0)

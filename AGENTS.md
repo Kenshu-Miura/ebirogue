@@ -81,7 +81,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go`, `audio_stub.go`（音声の空実装） |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `status_stats.go`, `status_special.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `status_stats.go`, `status_special.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go`, `item_floor_tables.go`, `terrain.go` |
 | デバッグビルド専用 | `//go:build debug && !test` / `!debug && !test` | `debug_on.go`（F1 の処理）/ `debug_off.go`（空の実装） |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
@@ -120,6 +120,10 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
   - 特殊系（wave8-B）: タグなしの `status_special.go`（暴走の倍率 `berserkMultiplier`）・`status_special_game.go`（にぎりの防御 `g.specialPlayerDefense()`、道具を使えないときの `g.rejectSpecialItemUse()`、暴走の自動行動、敵の標的選び `specialEnemyTarget`）、薬 215〜218・杖 219〜221 の表は `items_status_special.go`。無敵は `damagePlayer` で止める。
   - **敵・罠から海老さんへの能力値式のダメージは、防御力に `g.specialPlayerDefense()`、倍率に `statAttackMultiplier(攻撃側)`・`statDefenseMultiplier(受ける側)`（敵の通常攻撃は `berserkMultiplier(敵)` も）を掛けて `rollEnemyAttackDamageWith` で計算する。**
   - 罠の相互作用（wave8-C）: `trap_interaction.go`。敵用の効果は `mapTrapTemplate.EnemyEffect`（罠 ID ごとの `applyTrapToEnemy`。無い罠は敵には効かず残る）、敵が動いた後の `g.enemyTrapAfterMove(添字, 元のX, 元のY)`（敵を動かす新しい処理はこれを呼ぶ）、矢・投げた道具の着地 `g.queueLandedTrap`、誘爆 `g.explodeTraps`（深さ3まで）。どれも Action の Execute で敵を ID と座標から引き直す。**海老さんへのダメージは積んだ Action で後から減るので、誘爆の中の HP の割合のダメージは見込みの HP（`explodeTrapsChain` の `hp`）から数え、自分のダメージを積む爆発は先に `hp` から引いてから誘爆させる**（`explodePlayer` は軽減後のダメージを返す）。
+- 段9（テストは `item_floor_tables_test.go`・`content_foundation_test.go`・`content_terrain_test.go`・`content_pots_synthesis_test.go`、担当をまたぐものは `content_integration_test.go`）:
+  - 出現テーブル（wave9-A）: タグなしの `item_floor_tables.go` に階の帯 `spawnFloorBands`、種類の帯別の重み `itemCategoryBandWeights`、道具ごとの規則 `itemFloorRules`（`From`・`Until`・`Weight`・`Strong`・`Heal`）、罠の帯別の重み `trapBandWeights`、難易度の補正 `difficultySpawnTunings`（すべて 1.0。変えたら `TestDifficultySpawnTuningNeutral` を直す）。つまみの使い方は `docs/agents/done/wave9-A.md`。**床・店などで道具を選ぶときは `pickFloorItemID(階, 難易度, intn)`（作るなら `createFloorItem`）、罠は `pickFloorTrapID(階, intn)` を使う**（ボス階・30階の落とし穴の除外も含む）。マップ生成の入口は難易度付きの `GenerateRandomMapFor`（`GenerateRandomMap` は補正なしの入口）。
+  - 特殊地形（wave9-B）: タイルの種類 `"water"`・`"cracked_wall"`・`"hidden_corridor"`（どれも `Blocked`）。純粋な判定・生成はタグなしの `terrain.go`（`terrainBlocksWalking`・`terrainStopsProjectile`・敵の通行 `enemyTerrainPassable`・`generateTerrain`、出現率 `terrainRates`）、発見・破壊は `terrain_game.go`（`revealHiddenAt`・`searchHiddenTerrain`・`breakCrackedAround`）。海老さんの通行は `g.terrainOpenAt(x, y)`、道具を置けるかは `g.itemDropFree(x, y)`（どちらも `displacement.go`）。水棲の属性 `EnemyTraitAquatic` は系統の表で基本種に付ける。**海老さん・敵を動かす新しい処理（場所替えを含む）は、行き先を `g.terrainOpenAt`・敵の通行の判定で確かめる。**
+  - 壺と合成（wave9-C）: `pots_synthesis.go`（壺 225〜232 の表 `additionalPotTemplates`、入れたときの効果 `applyPotInsertEffect`〔Action の Execute で呼ぶ〕、合成 `synthesizeItem`、直接取り出せるか `potAllowsTakeOut`、背中の壺の標的 `backPotTarget`、底抜けの罠 `scatterBottomlessTraps`）。合成で増えた能力はテンプレートとの差分を `SavedItem.ExtraAbilities`（省略可能）に保存する。233〜239 は予備。
 - `replay.go`（タグなし）と `replay_game.go`（`!test`）: 通常プレイの入力の記録（`ReplayData`。区間 `ReplaySegment` ごとに開始状態・圧縮した論理キー入力・毎フレームの照合値 `replayCheck`）、保存（`ebirogue_replay_last.json`・`ebirogue_replays.json`）、ヘッドレス再生 `playReplay`。`Update` の先頭の `g.beginReplayFrame()`・`g.recordReplayKeys()` が記録する。記録は `g.persistent` のときだけ。ビルド識別はソース（`//go:embed *.go go.mod go.sum`）の SHA-256 なので、ソースを変えると前の記録は再生できない。**キー設定画面の物理キーは `g.replayPhysicalKey()` を通す。**
 - `audio.go`（`!test`）・`audio_settings.go`（タグなし）・`audio_stub.go`（`test`）: 音声。BGM は `g.playBGM(id)`／`g.stopBGM()`（`updateAudio` が階・ボス・クリアで切り替える）、効果音は `g.playSE(id)`。既存の Action に音を添えるときは Action を増やさず `g.soundFirstAction(start, id)`（`start` は積む前の `len(g.ActionQueue.Queue)`）、キューに積まない操作は `g.executeAudioCue(id)`。音源は `sound/*.wav`（`//go:embed`。`go run tools/generate_sounds.go` で再生成）。音声は `g.persistent && !g.headless` のときだけ初期化するので BOT・テストの結果と乱数に影響しない。音量は `GameSettings.BGMVolume`・`SEVolume`（0〜10、`clampVolume`）。
 - `displacement_path.go`（タグなし・純粋）と `displacement.go`（`!test`）: 位置を動かす共通処理。`g.knockbackPlayer(dx, dy, マス数, 衝突ダメージ, 死因)`・`g.knockbackEnemy(添字, …)`（壁や敵に当たると固定ダメージ、ボスは動かない）、`g.pullPlayer(dx, dy, マス数)`（途中の罠で止まって踏む）、`g.dropPlayerItemsForward(個数, dx, dy)`（装備中を除き前方1〜2マス→周囲へ落とす）。不動 `AbilityImmovable`（`g.playerImmovable()`。吹き飛ばし・引き寄せ・イレカエダコ系とボスの場所替えを防ぐ）と受け身 `AbilityBreakFall`（`g.playerBreaksFall()`。衝突ダメージを防ぐ）で無効化する。どれも Action の Execute の中から呼ぶ。
@@ -145,7 +149,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - `Player`（main.go）: HP/満腹度/パワー/レベル/経験値/所持金、`Inventory []Item`（最大20）、装備スロット（武器・防具・矢 各1、アクセサリ2）、`StatusAilments`。
 - `Enemy`（enemies.go）: ステータス + `SpecialAttack SpecialAttackFunc` + `SpecialAttackProbability` + `Traits []EnemyTrait`（特効の属性）+ `StatusAilments` + 系統が使う汎用の状態（`Counter`・`Timer`・`Flag`・`Alerted`・`DisguiseID`、段4）。定義 `MonsterDefinition` の `CriticalPercent`（通常攻撃が痛恨の一撃〔×1.5〕になる確率）と `EvasionPercent`（プレイヤーの通常攻撃をかわす確率。必中は無視）は敵の ID から引く（`enemyCriticalPercent` / `enemyEvasionPercent`、封印中は0、回避は睡眠・金縛り中も0）。
 - `StatusAilments`（main.go / game_stub.go 両方に定義）: トラバサミ・混乱・睡眠・目潰し・鈍足・倍速・口封じ・ゾワゾワ（`Backward`、敵だけが使う。残りターン int）、金縛り・封印（bool）、`HasteOnWake`、段8の `AttackUp`・`AttackDown`・`DefenseUp`・`DefenseDown`・`NoHealing`・`Nigiri`・`Berserk`・`Decoy`・`Invisible`・`Invincible`（残りターン int、省略可能な項目）。種類ごとの規則は `status_effects.go` の `statusDefs`。
-- `Tile`（main.go / game_stub.go）: `Type`（"floor", "wall", "corridor", "door" 等の文字列）, `Blocked`, `BlockSight`, `Visited`, `Brightness`。
+- `Tile`（main.go / game_stub.go）: `Type`（"floor", "wall", "corridor", "door"、段9の "water"・"cracked_wall"・"hidden_corridor" 等の文字列）, `Blocked`, `BlockSight`, `Visited`, `Brightness`。
 - `Room`（map.go）: `ID, X, Y, Width, Height, Center`。
 - `MapTrap`（maptraps.go）: 座標・名前・発見済みフラグ・効果関数・不発率。
 - アイテムは `BaseItem`（items.go）を埋め込んだ具象型 `Weapon`/`Armor`/`Arrow`/`Food`/`Potion`/`Card`/`Money`/`Accessory`/`Cane`/`Trap`/`Pot`。`Weapon`・`Armor`・`Accessory` の `Abilities []EquipmentAbilityID` はテンプレートから生成され、セーブしない。インタフェース `Item`/`Equipable`/`Identifiable`/`Character` は `interfaces.go`。
@@ -155,9 +159,9 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 | コンテンツ | テーブル | 生成関数 | 効果関数の置き場所 |
 |---|---|---|---|
-| アイテム | `itemTemplates map[int]ItemTemplate`（items.go。ID 0〜71 は `baseItemTemplates`、追加計画の武器・盾・カード・指輪は `items_weapons.go`・`items_shields.go`・`items_cards.go`・`items_rings.go`、段8の薬・杖は `items_status_stats.go`・`items_status_special.go` の表を `mergeItemTemplates` でまとめる。ID の重複は起動時に panic） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数） | `itemeffects.go` |
+| アイテム | `itemTemplates map[int]ItemTemplate`（items.go。ID 0〜71 は `baseItemTemplates`、追加計画の武器・盾・カード・指輪は `items_weapons.go`・`items_shields.go`・`items_cards.go`・`items_rings.go`、段8の薬・杖は `items_status_stats.go`・`items_status_special.go`、段9の壺は `pots_synthesis.go` の表を `mergeItemTemplates` でまとめる。ID の重複は起動時に panic） | `buildItemFromTemplate`（テスト・復元用）/ `g.createItemByID`・`rollItemFromTemplate`（冒険の乱数）/ 床の抽選は `pickFloorItemID`・`createFloorItem` | `itemeffects.go` |
 | 敵 | `MonsterDefinitions map[int]MonsterDefinition`（enemies.go, ID 0〜65。42〜44 はボス〔`IsBoss`〕、45〜65 は第3段階）。追加計画の敵（ID 66〜）は系統（基本種・第2・第3段階）ごとの `monsterFamily` を担当別のファイル（`enemies_expansion_a1.go` など）の表に書き、`enemy_expansion.go` が定義・上位種化・画像・出現階をまとめて登録する | `CreateEnemyByID` | 定義内の `SpecialAttack` クロージャ、固有の行動 `Behavior`・撃破時の `OnDefeated`（共通処理は `enemy_behaviors.go`） |
-| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜15）。床生成・ワナのカードの重み付き抽選一覧は `floorTrapIDs` | `createMapTrapByID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`）、装備・所持品の罠は `maptraps_items.go`（対象の抽選は `item_trap_selection.go`）、敵が踏んだときの効果は `trap_interaction.go` |
+| 罠 | `mapTrapTemplates map[int]mapTrapTemplate`（maptraps.go, 明示 ID 0〜15）。床生成・ワナのカード・底抜けの壺の帯別の重みは `trapBandWeights`（item_floor_tables.go。新しい罠は行を足す。無いと床に出ず `TestFloorTrapTableSanity` が検出） | `createMapTrapByID` / 床の抽選は `pickFloorTrapID` | 同ファイル、移動罠は `move_traps.go`、ダメージ罠は `maptraps_damage.go`（数値は `trap_damage.go`）、装備・所持品の罠は `maptraps_items.go`（対象の抽選は `item_trap_selection.go`）、敵が踏んだときの効果は `trap_interaction.go` |
 | 階層別湧きテーブル | `FloorSpawnTables map[int][]MonsterSpawnEntry`（monster_spawn.go。1〜8階は個別、9〜30階は `deepFloorSpawnBands` の帯） | — | — |
 | 装備能力 | `EquipmentAbilityID` 定数（equipment_abilities.go）。処理は `registerAbilityHooks`（equipment_hooks.go）、状態異常の無効化は `statusImmunities`、特効は `slayerTraits` | 武器・盾・指輪のテンプレートの `Abilities` に付与 | 純粋な判定は equipment_abilities.go、`*Game` を使うフックは能力ごとのファイルか equipment_hooks.go |
 
@@ -173,7 +177,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 2. **効果**: `itemeffects.go`（アイテム）/ 定義内クロージャ（敵・罠）。
 3. **画像**: `img/` に 30x30 透過 PNG。敵の上位種画像は基本種の輪郭・アルファ・明暗を保ち、色相だけを変更した色違いにする。`NewGame()`（main.go）で読み込み、`getItemImage` / `getEnemyImage` / `DrawMapTraps`（draw.go）の分岐に追加。画像は `BaseItem.Type` や `Enemy.Type` の文字列で選ばれる（例: `"Mintia"` → mintiaImg, `"Card"` → cardImg）。
 4. **セーブ対応**: アイテムはテンプレート ID から再生成される（`SavedItem`, savegame.go の `itemToSaved`/`savedToItem`）ので、**新しい可変フィールドを追加した場合は `SavedItem` と両変換関数に追記**する。敵は `SavedEnemy`（ID + 可変ステータス）。罠は `MapTrap.TemplateID` の明示 ID で保存されるので、**一度使った罠 ID は変更・再利用しない**。
-5. **湧き/出現**: 敵なら `FloorSpawnTables`。アイテムの床出現は `createItem` がカテゴリ（`ItemTemplate.ItemType`）を `itemCategorySpawnWeights` の重みで選び、そのカテゴリ内で `itemSpawnWeights`（書いていない ID は1）の重みで選ぶ（items.go の `itemSpawnCategories`）。**アイテムを追加してもカテゴリの割合は変わらない**（同じカテゴリのほかの道具が出にくくなる）。新しいカテゴリを作るときだけ `itemCategorySpawnWeights` に追加する（無いと床に出ない。`TestItemCategorySpawnWeights` が検出する）。
+5. **湧き/出現**: 敵なら `FloorSpawnTables`。アイテムの床出現は `pickFloorItemID` が階の帯のカテゴリ（`ItemTemplate.ItemType`）を `itemCategoryBandWeights` の重みで選び、そのカテゴリ内で `itemFloorRules`（書いていない ID は全階・重み1。出始める階 `From`・出なくなる階 `Until`・重み `Weight`、強い道具は `Strong`、回復薬は `Heal`）の重みで選ぶ（item_floor_tables.go）。**アイテムを追加してもカテゴリの割合は変わらない**（同じカテゴリのほかの道具が出にくくなる）。強い道具は `From` で出始める階を遅らせる。新しいカテゴリを作るときだけ `itemCategoryBandWeights` の全帯に追加する（無いと床に出ない。`TestItemCategorySpawnWeights` が検出する）。罠は `trapBandWeights` に行を足す。
 6. **テスト**: 分野別のコンテンツテスト（`content_weapons_test.go` / `content_foundation_test.go`（装備能力のフック・属性・位置を動かす処理・痛恨と回避・床出現の重み） / `content_enemies_test.go` / `content_cards_test.go` / `content_pots_test.go` / `content_traps_test.go` / `content_tables_test.go`）にテンプレート存在チェックと効果のテストを追加。`go test -run TestSimSmoke -count=1 .` で不変条件違反が無いことも確認する。
 7. **説明**: 必要なら `help.go` のヘルプページも更新。
 
@@ -194,7 +198,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - ダメージ計算（damage.go）: 攻撃力 × (15/16)^防御力 × 乱数(7/8〜9/8) × 倍率、最低1ダメージ。プレイヤーの総攻撃力 = 装備込み攻撃力 + パワー + `levelAttackBonus(レベル)`。プレイヤーの通常攻撃・射撃のみ 1/20 で会心の一撃（防御無視×1.5）。特効武器は×1.5（重複なし）。敵の痛恨の一撃は×1.5（`enemyCriticalMultiplier`、防御は通常どおり）で、`CriticalPercent` を持つ敵だけが出す（現在はいない）。攻撃力上昇×1.5・低下×0.5、防御力上昇で被ダメージ×0.67・低下で×1.5、暴走×1.5、にぎりは防御力0（段8）。
 - 満腹度は 10 ターンごとに 1 減少（`satietyLossInterval`、皮甲の盾で 20 ターンに緩和、重甲の盾で 5 ターンに悪化）。満腹度 0 で毎ターン HP-1。満腹度 > 0 なら毎ターン自然回復し、量は Lv1〜9 で1・Lv10〜19 で2・Lv20 以上で3（`naturalRegenPerTurn`, leveling.go）。毒は状態異常ではなくパワー1低下の即時効果（`g.drainPlayerPower`, player_power.go。量は `poisonPowerDrain`, trap_damage.go）。毒ヘビ系・毒矢の罠・腐った食料が使い、完全回復のカードでは戻らない。
 - 特殊盾は爆発・炎・魔法の半減、盗難無効、状態異常50%無効、敵攻撃25%回避、爆発以外の遠距離攻撃反射、通常攻撃への半分カウンターを提供する。使い捨ての盾は被弾ごとに強化値と防御力が1低下する。
-- 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）、大型地雷は 3/4 切り上げ（`largeMineTrapDamage`, trap_damage.go）。木の矢・鉄の矢・落石の罠は固定の威力 6・12・16（trap_damage.go、初期HP40に合わせた値。根拠は `docs/agents/balance-level99.md` の「残った課題」）。
+- 地雷ダメージは現在 HP の半分（`mineTrapDamage`, status.go）、大型地雷は 3/4 切り上げ（`largeMineTrapDamage`, trap_damage.go）。木の矢・鉄の矢・落石の罠は固定の威力 6・12・16（trap_damage.go、初期HP40に合わせた値。根拠は `docs/agents/balance-level99.md` の「残った課題」）。装備はずし・腐敗・散乱の罠の不発率 `itemTrapFailRate`（20%）・散乱の最大個数 `scatterTrapMaxItems`（3）・腐ったウインナーの満腹度 `rottenSausageSatiety`（10）も trap_damage.go（根拠は同ファイルのコメント）。
 - 罠の効果関数は `stepOnTrap` が設定する `g.steppedTrapSource` を死因に使う（罠 ID・名前を手書きしない）。落とし穴は `availableTrapIDs` でボス階・30階の抽選から除き、落下は `requestFloorDescent` で予約し、キューが空になりターンの処理が終わってから階段と同じ `beginFloorDescent`（map.go）を通す（すぐ暗転すると残った行動が新しい階で実行される）。
 - モンスター湧き: 上限 19 体、20〜30 ターン間隔、プレイヤーから 8 マス以内には湧かない（monster_spawn.go の定数）。
 - フロア滞在 1200/1300 ターンで風の警告（`checkFloorTimeWarnings`）。
@@ -245,11 +249,6 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - クリア条件は「目標階のボスを倒す」（初級10階・中級20階・上級30階）。ボスはランダム出現と上位種化の対象外で、「敵を追加するときは上位種も同時に追加する」規則の例外とする。
 - 骨格（難易度・目標階・ボス階の階段封鎖・クリア判定）はフェーズ0、難易度選択・クリア画面・冒険の記録は wave1-D、ボス3体（`bosses.go`、ID 42〜44）は wave1-C で実装済み。ボスの仕様と計測方法は `docs/agents/done/wave1-C.md`。
 
-### Priority A: cards based on scrolls
-
-- 新規カードは既存の `img/card.png` を共用し、あかり・真空斬りを含めて階層別出現テーブル導入時に出現率を調整する。
-  （白紙・ジェノサイド・聖域・全滅の特殊使用カードは実装済み。）
-
 ### Priority A: enemies and monster behavior
 
 - 敵の特殊能力は封印状態で無効になり、目潰し・睡眠・混乱・鈍足などの共通状態処理と矛盾しないようにする。
@@ -268,11 +267,10 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority B: dungeon systems
 
-- 階層別のアイテム・罠出現テーブルを作る（敵は1〜30階で実装済み）。
 - モンスターハウスを追加する。
 - 店、商品の購入・売却、店主、泥棒状態を追加する。
-- 武器・盾・杖の合成を追加する（保存の壺・壺拡大/吸い出しのカードは実装済み。合成の壺など壺の種類追加は未実装）。
-- 水路、壊せる壁、隠し通路などの特殊地形を追加する。
+- 段9の仮画像を正式な画像に差し替え、実機での30px表示を確認する: 水路 `img/water.png`・割れた壁 `img/cracked_wall.png`（`go run tools/terrain_images.go` の仮画像。暗い床とミニマップでの見え方も）、壺 `img/pot_225.png`〜`pot_232.png`（`pot.png` の色違い）。説明窓の印の一覧の読みやすさも確認する。
+- 換金の壺の仮の売値（1個100）を店（wave10-B）の価格表へつなぐ。
 - アイテム・敵・罠の図鑑と発見率を追加する。
 
 ### Roadmap acceptance criteria

@@ -707,8 +707,8 @@ func TestItemCategorySpawnWeights(t *testing.T) {
 func TestItemFloorRulesSanity(t *testing.T) {
 	for id, rule := range itemFloorRules {
 		_, exists := itemTemplates[id]
-		if !exists && (id < 225 || id > 239) {
-			t.Errorf("rule for unknown item %d (only wave9-C's 225〜239 may be missing)", id)
+		if !exists {
+			t.Errorf("rule for unknown item %d", id)
 		}
 		if rule.From < 0 || rule.Until < 0 || rule.Weight < 0 {
 			t.Errorf("item %d: negative rule %+v", id, rule)

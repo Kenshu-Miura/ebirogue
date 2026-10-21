@@ -382,3 +382,116 @@ func TestWave8PoisonArrowTrapLowersEnemyAttack(t *testing.T) {
 		t.Fatal("毒矢で倒れない")
 	}
 }
+
+// 9-A×9-C: 合成・強化の壺は4階から、そのほかの段9の壺は1階から床の抽選表に入る。
+func TestWave9NewPotsFollowFloorTable(t *testing.T) {
+	for id := 225; id <= 232; id++ {
+		if _, ok := itemTemplates[id]; !ok {
+			t.Fatalf("pot %d has no template", id)
+		}
+		delayed := id == 225 || id == 227
+		if got := floorTableHas(3, id); got == delayed {
+			t.Errorf("pot %d on floor 3: in table = %v", id, got)
+		}
+		if !floorTableHas(4, id) || !floorTableHas(finalFloor, id) {
+			t.Errorf("pot %d missing from deep floors", id)
+		}
+	}
+}
+
+// 9-A×9-B×9-C: 難易度付きのマップ生成でも、地形の上に道具・罠・敵を置かず、
+// 3階までに合成・強化の壺を置かない。段9の壺と3種の地形は実際に生成される。
+func TestWave9FloorGenerationWithTerrainAndPots(t *testing.T) {
+	pots, terrain := map[int]int{}, map[string]int{}
+	for seed := 0; seed < 240; seed++ {
+		floor := 1 + seed%8
+		difficulty := []Difficulty{DifficultyBeginner, DifficultyIntermediate, DifficultyAdvanced}[seed%3]
+		player := Player{}
+		grid, enemies, items, _, _, traps := GenerateRandomMapFor(70, 70, floor-1, &player, newFloorRNG(int64(seed), floor), difficulty)
+		onTerrain := func(x, y int) bool { return terrainBlocksWalking(grid[y][x]) }
+		for _, item := range items {
+			x, y := item.GetPosition()
+			if onTerrain(x, y) {
+				t.Fatalf("seed=%d floor=%d: item %d on %s", seed, floor, item.GetID(), grid[y][x].Type)
+			}
+			if id := item.GetID(); id >= 225 && id <= 232 {
+				pots[id]++
+				if floor < 4 && (id == 225 || id == 227) {
+					t.Fatalf("seed=%d floor=%d: delayed pot %d", seed, floor, id)
+				}
+			}
+		}
+		for _, trap := range traps {
+			if onTerrain(trap.X, trap.Y) {
+				t.Fatalf("seed=%d floor=%d: trap on %s", seed, floor, grid[trap.Y][trap.X].Type)
+			}
+		}
+		for _, e := range enemies {
+			if onTerrain(e.X, e.Y) {
+				t.Fatalf("seed=%d floor=%d: enemy on %s", seed, floor, grid[e.Y][e.X].Type)
+			}
+		}
+		for _, row := range grid {
+			for _, tile := range row {
+				terrain[tile.Type]++
+			}
+		}
+	}
+	if len(pots) == 0 {
+		t.Fatal("no wave9 pots generated")
+	}
+	for _, kind := range []string{"water", "cracked_wall", "hidden_corridor"} {
+		if terrain[kind] == 0 {
+			t.Errorf("terrain %s never generated", kind)
+		}
+	}
+}
+
+// 9-A×9-C: 底抜けの壺が割れて作る罠も床の罠の表を使い、ボス階では落とし穴を作らない
+// （落とし穴でボスを倒さずに降りられないように）。
+func TestWave9BottomlessPotTrapsUseFloorTable(t *testing.T) {
+	pitfalls := map[int]int{}
+	for _, floor := range []int{9, 10} {
+		for seed := int64(0); seed < 80; seed++ {
+			g := newFoundationTestGame()
+			g.rng = newTurnRNG(seed)
+			g.Floor = floor
+			g.scatterBottomlessTraps(4, 4)
+			if len(g.state.MapTraps) == 0 {
+				t.Fatal("no traps")
+			}
+			for _, trap := range g.state.MapTraps {
+				if trap.TemplateID == 6 {
+					pitfalls[floor]++
+				}
+				if !trap.Discovered {
+					t.Fatal("bottomless trap must be discovered")
+				}
+			}
+		}
+	}
+	if pitfalls[10] != 0 {
+		t.Fatalf("pitfall on boss floor: %d", pitfalls[10])
+	}
+	if pitfalls[9] == 0 {
+		t.Fatal("pitfall never chosen on floor 9 (test is not meaningful)")
+	}
+}
+
+// 9-B×9-C: 底抜けの壺は水路・割れた壁・隠し通路の上に罠を作らない。
+func TestWave9BottomlessPotAvoidsTerrain(t *testing.T) {
+	g := newFoundationTestGame()
+	g.Floor = 5
+	g.state.Map[4][5] = Tile{Type: "water", Blocked: true}
+	g.state.Map[3][4] = Tile{Type: "cracked_wall", Blocked: true, BlockSight: true}
+	g.state.Map[5][4] = Tile{Type: "hidden_corridor", Blocked: true, BlockSight: true}
+	g.scatterBottomlessTraps(4, 4)
+	if len(g.state.MapTraps) != 6 {
+		t.Fatalf("traps = %d, want 6 (9 tiles minus 3 terrain)", len(g.state.MapTraps))
+	}
+	for _, trap := range g.state.MapTraps {
+		if terrainBlocksWalking(g.state.Map[trap.Y][trap.X]) {
+			t.Fatalf("trap on %s", g.state.Map[trap.Y][trap.X].Type)
+		}
+	}
+}

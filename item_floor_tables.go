@@ -95,7 +95,7 @@ const basicCardSpawnWeight = 2
 // itemFloorRules はテンプレート ID ごとの出現の規則。書いていない道具は全階・重み1。
 // 強い道具（Strong）は、全滅・ジェノサイド・白紙・聖域のカード、無敵の薬、wave9-C の合成・強化の壺の出始める階を遅らせる。
 // 基礎の攻撃力・防御力が高い武具も Strong だが、出始める階は遅らせない（理由は武器の行）。強化値は生成時の抽選で、階では変えない。
-// テンプレートが無い ID（並行する wave9-C の壺 225〜239 など）は読み飛ばす。
+// テンプレートが無い ID は読み飛ばす（TestItemFloorRulesSanity が検出する）。
 var itemFloorRules = map[int]itemFloorRule{
 	// 薬
 	2:   {Weight: potionSpawnWeight, Heal: true}, // ミンティア
