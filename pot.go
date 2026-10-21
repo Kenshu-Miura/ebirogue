@@ -41,7 +41,7 @@ func (p *Pot) GetIdentified() bool {
 // GetDescription は基本説明に現在の中身の一覧を付けて返す。
 func (p *Pot) GetDescription() string {
 	if len(p.Contents) == 0 {
-		return p.Description + "（中身は空）"
+		return wrapPotDescription(p.Description + "（中身は空）")
 	}
 	names := ""
 	for i, item := range p.Contents {
@@ -51,7 +51,7 @@ func (p *Pot) GetDescription() string {
 		name, _ := displayItemName(item)
 		names += name
 	}
-	return p.Description + "（中身: " + names + "）"
+	return wrapPotDescription(p.Description + "（中身: " + names + "）")
 }
 
 // inventoryPots はインベントリ内の壺の一覧を返す。
@@ -67,8 +67,9 @@ func (g *Game) inventoryPots() []*Pot {
 
 // startPotInsert は「入れる」を選んだときに、壺へ入れるアイテムの選択モードへ移る。
 func (g *Game) startPotInsert(pot *Pot) {
+	potName, _ := displayItemName(pot)
 	if len(pot.Contents) >= pot.Capacity {
-		g.EnqueueMessage(fmt.Sprintf("%sはもういっぱいだ", pot.GetName()), 0.4)
+		g.EnqueueMessage(fmt.Sprintf("%sはもういっぱいだ", potName), 0.4)
 		g.showItemActions = false
 		g.showInventory = false
 		g.selectedItemIndex = 0
@@ -115,6 +116,7 @@ func (g *Game) executePotInsertSelection() {
 		closeAll()
 		return
 	}
+	potName, _ := displayItemName(pot)
 	item := g.state.Player.Inventory[itemIndex]
 	itemName, identified := displayItemName(item)
 
@@ -129,18 +131,24 @@ func (g *Game) executePotInsertSelection() {
 		return
 	}
 	if len(pot.Contents) >= pot.Capacity {
-		g.EnqueueMessage(fmt.Sprintf("%sはもういっぱいだ", pot.GetName()), 0.4)
+		g.EnqueueMessage(fmt.Sprintf("%sはもういっぱいだ", potName), 0.4)
 		closeAll()
 		return
 	}
 
-	pot.Contents = append(pot.Contents, item)
+	if pot.ID < synthesisPotID {
+		pot.Contents = append(pot.Contents, item)
+	}
 	g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
 	g.Enqueue(Action{
-		Duration:     0.4,
-		Message:      fmt.Sprintf("%sを%sに入れた", itemName, pot.GetName()),
-		ItemName:     itemName,
-		Execute:      func(g *Game) {},
+		Duration: 0.4,
+		Message:  fmt.Sprintf("%sを%sに入れた", itemName, potName),
+		ItemName: itemName,
+		Execute: func(g *Game) {
+			if pot.ID >= synthesisPotID {
+				g.applyPotInsertEffect(pot, item)
+			}
+		},
 		IsIdentified: identified,
 	})
 	g.isActioned = true
@@ -150,8 +158,14 @@ func (g *Game) executePotInsertSelection() {
 // executePotTakeOut は壺の中身を持ち物へ取り出す。
 // 持ち物がいっぱいになったら残りは壺の中へ残る。
 func (g *Game) executePotTakeOut(pot *Pot) {
+	potName, _ := displayItemName(pot)
+	if !potAllowsTakeOut(pot) {
+		g.EnqueueMessage("中身は割るか吸い出しで取り出そう", 0.4)
+		g.closeAllMenus()
+		return
+	}
 	if len(pot.Contents) == 0 {
-		g.EnqueueMessage(fmt.Sprintf("%sは空っぽだ", pot.GetName()), 0.4)
+		g.EnqueueMessage(fmt.Sprintf("%sは空っぽだ", potName), 0.4)
 	} else {
 		took := false
 		for len(pot.Contents) > 0 && len(g.state.Player.Inventory) < g.state.Player.MaxInventory {
@@ -184,6 +198,11 @@ func (g *Game) executePotTakeOut(pot *Pot) {
 // scatterPotContents は割れた壺の中身を着地点の周囲の床へ散らばらせる。
 // 置ける場所が無かった中身は消える。
 func (g *Game) scatterPotContents(pot *Pot, x, y int) {
+	if pot.ID == 229 {
+		g.scatterBottomlessTraps(x, y)
+		pot.Contents = nil
+		return
+	}
 	positions := []Coordinate{{0, 0}, {-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}}
 	for _, item := range pot.Contents {
 		for _, dir := range positions {

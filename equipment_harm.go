@@ -121,6 +121,10 @@ func (g *Game) tossPlayerItem(fromX, fromY int, prefer func(Item) bool, intn fun
 		return nil, false
 	}
 	item := player.Inventory[index]
+	if target, found := g.backPotTarget(); found {
+		item = target
+		g.removeBackPotContent(item)
+	}
 	directions := getDirections()
 	direction := directions[intn(len(directions))]
 	itemName, _ := displayItemName(item)

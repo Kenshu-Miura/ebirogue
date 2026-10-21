@@ -51,6 +51,9 @@ func enqueueStealAttack(enemy *Enemy, g *Game, intn func(int) int) {
 	}
 
 	item := g.state.Player.Inventory[index]
+	if target, found := g.backPotTarget(); found {
+		item = target
+	}
 	itemName, identified := displayItemName(item)
 	g.Enqueue(Action{
 		Duration:     0.5,
@@ -58,6 +61,11 @@ func enqueueStealAttack(enemy *Enemy, g *Game, intn func(int) int) {
 		ItemName:     itemName,
 		IsIdentified: identified,
 		Execute: func(g *Game) {
+			if g.removeBackPotContent(item) {
+				enemy.HeldItem = item
+				enemy.Fleeing = true
+				return
+			}
 			currentIndex, exists := inventoryItemIndex(&g.state.Player, item)
 			if !exists {
 				return

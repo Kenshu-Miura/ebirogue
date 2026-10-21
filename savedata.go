@@ -41,7 +41,8 @@ type SavedItem struct {
 	Contents    []SavedItem // 壺の中身
 	Stuck       bool        // 聖域のカードが床に貼りついているかどうか
 
-	AbilityCounter int `json:",omitempty"`
+	AbilityCounter int                  `json:",omitempty"`
+	ExtraAbilities []EquipmentAbilityID `json:",omitempty"`
 }
 
 // SavedEnemy は敵1体のセーブ用表現。

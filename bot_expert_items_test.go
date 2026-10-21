@@ -266,7 +266,7 @@ const storagePotID = 46
 func (b *bot) storagePot() (int, *Pot) {
 	best, bestPot := -1, (*Pot)(nil)
 	for i, item := range b.g.state.Player.Inventory {
-		if pot, ok := item.(*Pot); ok && pot.GetID() == storagePotID {
+		if pot, ok := item.(*Pot); ok && (pot.GetID() == storagePotID || pot.GetID() == synthesisPotID) {
 			if bestPot == nil || pot.Capacity-len(pot.Contents) > bestPot.Capacity-len(bestPot.Contents) {
 				best, bestPot = i, pot
 			}
@@ -279,7 +279,7 @@ func (b *bot) storagePot() (int, *Pot) {
 func (b *bot) potFood() int {
 	n := 0
 	for _, item := range b.g.state.Player.Inventory {
-		if pot, ok := item.(*Pot); ok && pot.GetID() == storagePotID {
+		if pot, ok := item.(*Pot); ok && (pot.GetID() == storagePotID || pot.GetID() == synthesisPotID) {
 			for _, c := range pot.Contents {
 				if isFoodItem(c) && c.GetID() != rottenSausageItemID {
 					n++
@@ -316,7 +316,7 @@ func (b *bot) expertTakeFoodOut(limit int) (bool, error) {
 		return false, nil
 	}
 	for i, item := range p.Inventory {
-		if pot, ok := item.(*Pot); ok && pot.GetID() == storagePotID {
+		if pot, ok := item.(*Pot); ok && (pot.GetID() == storagePotID || pot.GetID() == synthesisPotID) {
 			for _, c := range pot.Contents {
 				if isFoodItem(c) {
 					b.act = "takeFood"
@@ -365,6 +365,7 @@ func (b *bot) useInventoryItemOn(index int, action string, target int) (bool, er
 
 // itemValues はカード・杖・薬の価値の目安（itemRoles の分類から決まらないもの）。
 var itemValues = map[int]int{
+	225: 35, 226: 25, 227: 30, 228: 10, 229: 0, 230: 10, 231: 25, 232: 25,
 	205: 50, 206: 50, 207: 50, 208: 70, 209: 70,
 	210: 65, 211: 70, 212: 70, 213: 0,
 	215: 5, 216: 6, 217: 10, 218: 6, 219: 7, 220: -1, 221: 5,
@@ -398,6 +399,9 @@ func (b *bot) itemValue(item Item) (int, bool) {
 	case *Pot:
 		if len(v.Contents) > 0 {
 			return 0, false
+		}
+		if value, ok := itemValues[v.GetID()]; ok {
+			return value, true
 		}
 		if v.GetID() == storagePotID {
 			return 25, true

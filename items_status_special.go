@@ -135,6 +135,9 @@ func (g *Game) placeSpecialFood(food Item, x, y int) {
 
 // 未識別表示だけを差し替え、テンプレートの正式名は変えない。
 func specialUnidentifiedName(item Item) string {
+	if item.GetID() >= 225 && item.GetID() <= 232 {
+		return potUnidentifiedName(item.GetID())
+	}
 	switch item.GetID() {
 	case 219:
 		return "木彫りの杖"
