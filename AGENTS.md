@@ -257,7 +257,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 
 ### Priority A: traps and status ailments
 
-- 段8の仮画像を正式な画像へ差し替え、実機で30px表示を確認する: 回復封じの罠 `img/no_healing_trap.png`（発見済み表示・ミニマップも）、にぎり状態の海老さん `img/player_nigiri.png`、身代わりの敵 `img/enemy_decoy.png`。生成プロンプトと加工手順は `tools/wave8-prompts.md`。
+- 段8で正式な画像に差し替えた回復封じの罠（ID 15）・にぎり状態の海老さん・身代わりの敵の、実機での30px表示を確認する（発見済みの罠の表示、にぎりの8方向と透明時の半透明、暗い床での身代わり）。比較シートは `python tools/wave8_sheet.py`（`tools/wave8-prompts.md`）。
 - 新しい罠には `img/` 配下へ30x30の透過PNGを用意し、発見済み表示とミニマップ表示を確認する。
 - 段7（wave7-D）で正式な画像に差し替えた罠（ID 5〜14）・腐ったウインナー・ボス（ID 42〜44）と、色相を調整した第3段階のオンリョウガニ・ジクウクラゲ（`tools/third_stage_enemy_images.go` は +60°）の、実機での30px表示・罠の発見済み表示とミニマップ・ボス戦中の視認性を確認する（比較シートは `docs/agents/done/wave7-D-sheet.png`）。旧ボス・罠の生成スクリプトは再実行しないようガード済み。
 

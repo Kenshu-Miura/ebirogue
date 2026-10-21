@@ -65,3 +65,11 @@ python tools/process_expansion_sprites.py --originals tools/wave8-originals --co
   - にぎりの海老さん: 8方向に回転しても崩れないか。透明の半透明表示（透明の薬）と重なったときも見えるか。
   - 身代わり: 暗い床で輪郭が分かるか。ほかの敵の中で身代わりだと分かるか。
 - 差し替えたら `AGENTS.md` の Implementation roadmap の「段8の仮画像」の行を削除する。
+
+## 差し替え結果
+
+指定の共通プロンプト＋各 Subject を組み込み画像生成（透過）へ渡し、3枚を生成・加工済み。原画は `tools/wave8-originals/`（Git対象外）。
+
+`python tools/wave8_sheet.py` で規格検査と `tools/wave8-originals/review/sheet.png` の再生成ができる。実際の床画像に重ねた原寸・3倍表示、にぎりの8方向とアルファ0.4の比較を目視確認済み。このシートはPillowによる比較で、実機の描画確認とは別。
+
+ミニマップの発見済み罠は `draw_hud.go` で共通の赤い×を描き、罠画像は縮小しない。実機操作による発見済み罠・8方向・透明・身代わりの確認は未実施。
