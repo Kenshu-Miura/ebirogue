@@ -71,6 +71,11 @@ func (b *bot) expertBuffUsable(id int) bool {
 		}
 		return false
 	case 171:
+		// 商売中の店がある階では使わない。商品が値段の付いたまま店の外の周りへ集まり、踏むと泥棒になるので
+		// 動けなくなる（wave11-A。突風で倒れた冒険の多くがこれだった）
+		if botFeature("gathershop") && b.g.shopOpen() {
+			return false
+		}
 		for _, item := range b.g.state.Items {
 			x, y := item.GetPosition()
 			if gatherDistance(Coordinate{X: x, Y: y}, Coordinate{X: p.X, Y: p.Y}) > 3 {
@@ -313,6 +318,9 @@ func (b *bot) expertWantsToDescend() bool {
 	if b.bossAlive() {
 		return false
 	}
+	if b.houseWantsToDescend() { // モンスターハウスの敵が多く残っていれば、階段の上なら降りる
+		return true
+	}
 	if g.floorTurns > 700 { // 風（1200ターン）よりかなり前に降りる
 		return true
 	}
@@ -338,10 +346,12 @@ func (b *bot) expertWantsToDescend() bool {
 
 // expertItemGoalFunc は expert が向かう床の道具の判定（入れ替えを切ったときは従来の pickableItemGoal）。
 func (b *bot) expertItemGoalFunc() func(x, y int) bool {
+	goal := b.pickableItemGoal
 	if botFeature("swap") {
-		return b.expertItemGoal
+		goal = b.expertItemGoal
 	}
-	return b.pickableItemGoal
+	// モンスターハウスの部屋の道具は、部屋の敵を片づけてから拾う（bot_house_test.go）
+	return func(x, y int) bool { return goal(x, y) && !b.houseItemBlocked(x, y) }
 }
 
 // useByID は所持品のうち ids のどれかを action で使う。
@@ -392,6 +402,7 @@ func (b *bot) expertStep() error {
 	}
 	adjacent := b.adjacentEnemies()
 	b.act = ""
+	b.updateHouse()
 
 	// 1. 回復: HP 40% 未満で回復薬・完全回復のカード
 	if player.Health*100 < player.MaxHealth*40 {
@@ -640,13 +651,13 @@ func (b *bot) expertStep() error {
 	}
 	// 射程内から撃ってくる遠距離の敵（特に障害物越しの投石）は、離れるより詰めて倒す
 	if player.Health*100 >= player.MaxHealth*40 {
-		if enemy, ok := b.rangedThreat(); ok {
+		if enemy, ok := b.rangedThreat(); ok && b.worthChasing(enemy) {
 			addGoal("toRanged", b.enemyGoal(enemy))
 		}
 	}
 	addGoal("toFood", b.visibleFoodGoal)
 	if healthy {
-		if enemy, ok := b.nearestEnemy(8); ok && !b.isStrongEnemy(enemy) && !isHazardEnemy(enemy) {
+		if enemy, ok := b.nearestEnemy(8); ok && !b.isStrongEnemy(enemy) && !isHazardEnemy(enemy) && b.worthChasing(enemy) {
 			addGoal("toEnemy", b.enemyGoal(enemy))
 		}
 	}
@@ -676,6 +687,10 @@ func (b *bot) expertStep() error {
 			}
 			return b.move(dx, dy)
 		}
+	}
+	// 行き先が無ければ、隠し通路を探す（bot_terrain_test.go）
+	if done, err := b.expertSearchHidden(); done || err != nil {
+		return err
 	}
 	b.act = "wait"
 	return b.stepInPlace()

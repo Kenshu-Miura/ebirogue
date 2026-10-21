@@ -178,7 +178,8 @@ func TestMonsterHouseExpertRetreatsToCorridor(t *testing.T) {
 	if err := b.step(); err != nil {
 		t.Fatal(err)
 	}
-	if b.act != "retreat" || g.state.Player.X != 7 {
+	// 通知に気づいたら、モンスターハウスの立ち回り（wave11-A、bot_house_test.go）で同じ入口へ下がる
+	if (b.act != "retreat" && b.act != "houseRetreat") || g.state.Player.X != 7 {
 		t.Fatalf("did not retreat toward the corridor: act=%s player=(%d,%d)", b.act, g.state.Player.X, g.state.Player.Y)
 	}
 }
