@@ -1,5 +1,7 @@
 //go:build ignore
 
+// 正式な画像に差し替え済み。再実行しない（wave7-D）。
+
 // ボスの仮画像を既存の敵画像から作る: go run tools/boss_images.go
 // 輪郭・アルファ・明暗を保ち、色相だけを回転させる（AGENTS.md の上位種画像の規則）。
 // 彩度の低い（灰色に近い）画像は色相を回しても変化が見えないため、彩度を少し足す。
@@ -25,6 +27,8 @@ var stages = []struct {
 }
 
 func main() {
+	fmt.Fprintln(os.Stderr, "正式な画像に差し替え済み。再実行しない（wave7-D）。")
+	os.Exit(1)
 	for _, s := range stages {
 		if err := convert("img/"+s.src+".png", "img/"+s.dst+".png", s.hue); err != nil {
 			fmt.Fprintln(os.Stderr, err)

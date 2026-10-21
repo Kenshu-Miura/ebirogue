@@ -1,5 +1,7 @@
 //go:build ignore
 
+// 正式な画像に差し替え済み。再実行しない（wave7-D）。
+
 // ダメージ罠の仮画像を再生成する: go run tools/damage_trap_images.go
 package main
 
@@ -11,6 +13,8 @@ import (
 )
 
 func main() {
+	fmt.Fprintln(os.Stderr, "正式な画像に差し替え済み。再実行しない（wave7-D）。")
+	os.Exit(1)
 	names := []string{"wood_arrow_trap", "iron_arrow_trap", "falling_rock_trap", "large_mine_trap"}
 	colors := []color.NRGBA{{180, 110, 55, 255}, {155, 200, 220, 255}, {160, 160, 180, 255}, {235, 85, 55, 255}}
 	for i, name := range names {
