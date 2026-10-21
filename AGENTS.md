@@ -276,7 +276,6 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 段9の仮画像を正式な画像に差し替え、実機での30px表示を確認する: 水路 `img/water.png`・割れた壁 `img/cracked_wall.png`（`go run tools/terrain_images.go` の仮画像。暗い床とミニマップでの見え方も）、壺 `img/pot_225.png`〜`pot_232.png`（`pot.png` の色違い）。説明窓の印の一覧の読みやすさも確認する。
 - 段10の仮画像を正式な画像に差し替え、実機での30px表示を確認する: 店主 `img/shopkeeper.png`・番犬 `img/guard_dog.png`・猛番犬 `img/elite_guard_dog.png`（`go run tools/shop_images.go` の単純な図形）。
 - 図鑑の画面（長い説明の折り返し、キー設定を変えたときの案内）と、WASM の `localStorage` での図鑑の保存を実機・ブラウザで通して確認する。
-- 店で、モンスターハウスのカードが床に出した道具は値段の無い（拾っても泥棒にならない）品になる。商品にするか、店では効かないようにするかを決める。
 
 ### Roadmap acceptance criteria
 

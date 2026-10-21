@@ -624,7 +624,9 @@ var summonMonsterHouse = func(g *Game) {
 					enemy.ShowOnMiniMap = true
 					g.state.Enemies = append(g.state.Enemies, enemy)
 				} else {
-					g.state.Items = append(g.state.Items, newRandomFloorItem(cell.X, cell.Y, g.Floor, g.difficulty, g.randIntn))
+					item := newRandomFloorItem(cell.X, cell.Y, g.Floor, g.difficulty, g.randIntn)
+					priceItemIfInShop(g, item) // 店の中なら商品にする
+					g.state.Items = append(g.state.Items, item)
 				}
 			}
 			g.EnqueueMessage("モンスターハウスだ！", 0.5)

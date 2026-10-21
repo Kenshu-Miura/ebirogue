@@ -653,3 +653,43 @@ func TestShopEnemyTrapDoesNotAngerKeeper(t *testing.T) {
 		t.Fatal("a player-triggered trap counts as theft")
 	}
 }
+
+// 店の中でモンスターハウスのカードを使うと、出た道具は商品になる（開発者の決定、2026-10-21）。
+// 店主が怒っていれば値段は付かない。
+func TestMonsterHouseCardInShopMakesGoods(t *testing.T) {
+	for _, angry := range []bool{false, true} {
+		g := newShopTestGame(t)
+		if angry {
+			g.provokeShopkeeper(g.shopkeeperIndex())
+		}
+		product := g.state.Items[0]
+		card := buildItemFromTemplate(35, 0, 0)
+		g.state.Player.Inventory = []Item{card}
+		g.selectedItemIndex = 0
+		card.Use(g)
+		if err := g.RunUntilInputReady(200); err != nil {
+			t.Fatal(err)
+		}
+		spawned := 0
+		for _, item := range g.state.Items {
+			if item == product {
+				continue
+			}
+			spawned++
+			x, y := item.GetPosition()
+			if !g.inShopInterior(x, y) {
+				t.Fatalf("item at (%d,%d) outside the shop", x, y)
+			}
+			price, want := itemShopPrice(item), itemBuyPrice(item)
+			if angry {
+				want = 0
+			}
+			if price != want {
+				t.Fatalf("angry=%v: %s price %d, want %d", angry, item.GetName(), price, want)
+			}
+		}
+		if spawned < 2 {
+			t.Fatalf("angry=%v: spawned items = %d, want 2..3", angry, spawned)
+		}
+	}
+}

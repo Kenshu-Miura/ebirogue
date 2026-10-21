@@ -43,6 +43,7 @@ func init() {
 		d.Behavior = shopkeeperBehavior
 		d.OnDefeated = shopkeeperDefeated
 	}, shopkeeperMonsterID)
+	priceItemIfInShop = priceSpawnedShopItem
 	upperEnemyImagePaths["Shopkeeper"] = "img/shopkeeper.png"
 	upperEnemyImagePaths["GuardDog"] = "img/guard_dog.png"
 	upperEnemyImagePaths["EliteGuardDog"] = "img/elite_guard_dog.png"
@@ -61,6 +62,20 @@ func init() {
 }
 
 // --- 品物の値段 ---
+
+// priceItemIfInShop は床に新しく出した道具が商売中の店の中なら商品にする（モンスターハウスのカード）。
+// アイテムの表から呼ぶので、初期化の循環を避けて init で代入する。
+var priceItemIfInShop = func(*Game, Item) {}
+
+func priceSpawnedShopItem(g *Game, item Item) {
+	if item == nil {
+		return
+	}
+	x, y := item.GetPosition()
+	if g.shopOpen() && g.inShopInterior(x, y) {
+		setItemShopPrice(item, itemBuyPrice(item)) // お金など値段の無い品は0のまま
+	}
+}
 
 type shopPricedItem interface{ shopBaseItem() *BaseItem }
 
