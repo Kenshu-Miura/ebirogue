@@ -68,6 +68,7 @@ func (g *Game) enqueueEnemyExplosion(explosion EnemyExplosion) {
 					g.onEnemyDefeated(defeated)
 				}
 			}
+			g.explodeTraps(explosion.CenterX, explosion.CenterY, explosion.Radius, false, 0)
 			g.explodeItemsAround(explosion.CenterX, explosion.CenterY, explosion.Radius)
 			g.explodeEnemiesAround(explosion, bomberID, bomberX, bomberY)
 			if withinBlastRadius(explosion.CenterX, explosion.CenterY, g.state.Player.X, g.state.Player.Y, explosion.Radius) {

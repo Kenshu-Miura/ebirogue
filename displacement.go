@@ -82,6 +82,7 @@ func (g *Game) knockbackEnemy(index, dx, dy, distance, collisionDamage int) Disp
 	if index < 0 || index >= len(g.state.Enemies) {
 		return DisplacementResult{}
 	}
+	oldX, oldY := g.state.Enemies[index].X, g.state.Enemies[index].Y
 	enemy := &g.state.Enemies[index]
 	if MonsterDefinitions[enemy.ID].IsBoss {
 		g.EnqueueMessage(fmt.Sprintf("%sはびくともしない", g.enemyDisplayName(enemy.Name)), 0.4)
@@ -98,6 +99,7 @@ func (g *Game) knockbackEnemy(index, dx, dy, distance, collisionDamage int) Disp
 		g.miniMapDirty = true
 		g.EnqueueMessage(fmt.Sprintf("%sは%dマス吹き飛んだ", name, len(path)), 0.4)
 	}
+	g.enemyTrapAfterMove(index, oldX, oldY)
 	if stop != DisplacementFinished && collisionDamage > 0 {
 		result.Damage = collisionDamage
 		g.EnqueueMessage(fmt.Sprintf("%sはぶつかって%dダメージを受けた", name, collisionDamage), 0.4)

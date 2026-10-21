@@ -120,10 +120,12 @@ type ActionQueue struct {
 type Direction int
 
 type ThrownItem struct {
-	Item   Item
-	Image  *ebiten.Image
-	X, Y   int // 投げられたアイテムの現在の位置
-	DX, DY int // アイテムの移動方向と速度
+	TrapLanding bool
+	TrapCredit  bool
+	Item        Item
+	Image       *ebiten.Image
+	X, Y        int // 投げられたアイテムの現在の位置
+	DX, DY      int // アイテムの移動方向と速度
 }
 
 type Game struct {

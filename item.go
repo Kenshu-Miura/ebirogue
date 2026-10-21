@@ -106,6 +106,9 @@ func (g *Game) UpdateThrownItem() {
 				}
 				g.miniMapDirty = true
 
+				if g.ThrownItem.TrapLanding {
+					g.queueLandedTrap(g.ThrownItemDestination.X, g.ThrownItemDestination.Y, g.ThrownItem.TrapCredit)
+				}
 				// Reset the thrown item and its destination
 				g.dPressed = false
 				g.ThrownItem = ThrownItem{}

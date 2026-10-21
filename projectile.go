@@ -294,6 +294,10 @@ func (g *Game) hitEnemyWithProjectile(p *Projectile, index int) {
 // landProjectile は道具が position に落ちる（魔法弾は壁に届く）ときの処理。
 // 床に置くのは着地のアニメーションの最後（UpdateThrownItem）。
 func (g *Game) landProjectile(p *Projectile, position Coordinate) {
+	if p.Kind != ProjectileBolt {
+		g.ThrownItem.TrapLanding = true
+		g.ThrownItem.TrapCredit = p.FromPlayer
+	}
 	g.TargetEnemy = nil
 	p.Item.SetPosition(position.X, position.Y)
 	g.ThrownItemDestination = position
