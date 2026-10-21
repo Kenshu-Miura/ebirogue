@@ -22,7 +22,7 @@ func TestWave5ATablesAndSave(t *testing.T) {
 			if len(d.Traits) != 1 || d.Traits[0] != EnemyTraitShell {
 				t.Fatal("shell trait missing")
 			}
-		} else if len(d.Traits) != 0 {
+		} else if len(d.Traits) != 1 || !hasEnemyTrait(d.Traits, EnemyTraitAquatic) {
 			t.Fatal("unexpected trait")
 		}
 		if k%3 < 2 && MonsterLevelUpTable[id] != id+1 {

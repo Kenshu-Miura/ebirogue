@@ -33,7 +33,7 @@ func TestWave6ATablesAndSave(t *testing.T) {
 			if matched != c.explosive || (matched && multiplier != 1.5) {
 				t.Fatalf("slayer: %v %v", multiplier, matched)
 			}
-			if c.explosive && len(d.Traits) != 1 || !c.explosive && len(d.Traits) != 0 {
+			if !hasEnemyTrait(d.Traits, EnemyTraitAquatic) || c.explosive && len(d.Traits) != 2 || !c.explosive && len(d.Traits) != 1 {
 				t.Fatalf("traits: %v", d.Traits)
 			}
 			for floor := 1; floor <= 30; floor++ {

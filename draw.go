@@ -12,6 +12,8 @@ import (
 	"golang.org/x/image/font"
 )
 
+var terrainImages map[string]*ebiten.Image
+
 var (
 	mplusNormalFont font.Face
 	mplusMediumFont font.Face
@@ -112,7 +114,7 @@ func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 		for x, tile := range row {
 			var srcX, srcY int
 			switch tile.Type {
-			case "wall":
+			case "wall", "hidden_corridor", "cracked_wall", "water":
 				srcX, srcY = 0, 0
 			case "corridor":
 				srcX, srcY = tileSize, 0
@@ -137,6 +139,11 @@ func (g *Game) DrawMap(screen *ebiten.Image, offsetX, offsetY int) {
 
 			// ColorScaleを適用
 			opts.ColorScale = colorScale
+
+			if img := terrainImages[tile.Type]; img != nil {
+				screen.DrawImage(img, opts)
+				continue
+			}
 
 			// プレイヤーが目潰し状態で、タイルが階段の場合の処理
 			if tile.Type == "stairs" && g.state.Player.StatusAilments.Blind > 0 {

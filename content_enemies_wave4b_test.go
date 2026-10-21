@@ -24,7 +24,7 @@ func TestWave4BDefinitionsAndSave(t *testing.T) {
 		t.Run(row.kind, func(t *testing.T) {
 			id := 66 + k
 			d, ok := MonsterDefinitions[id]
-			if !ok || d.Name != row.name || d.Type != row.kind || d.Char != row.char || d.Health != row.hp || d.MaxHealth != row.hp || d.AttackPower != row.attack || d.DefensePower != row.defense || d.ExperiencePoints != row.exp || len(d.Traits) != 0 {
+			if !ok || d.Name != row.name || d.Type != row.kind || d.Char != row.char || d.Health != row.hp || d.MaxHealth != row.hp || d.AttackPower != row.attack || d.DefensePower != row.defense || d.ExperiencePoints != row.exp || hasEnemyTrait(d.Traits, EnemyTraitAquatic) != (id >= 72) {
 				t.Fatalf("definition %d = %+v", id, d)
 			}
 			if k%3 != 2 && MonsterLevelUpTable[id] != id+1 {

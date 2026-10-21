@@ -131,6 +131,7 @@ func (g *Game) tryEnemyRangedAttack(enemyIndex int) bool {
 				g.applyPlayerShieldDefense(defense, source, attackerID, originX, originY)
 			}
 			if attack.Kind == RangedAttackExplosion {
+				g.breakCrackedAround(targetX, targetY, attack.BlastRadius)
 				g.enqueueExplosionCollateral(enemy.ID, originX, originY, targetX, targetY, attack)
 			}
 		},

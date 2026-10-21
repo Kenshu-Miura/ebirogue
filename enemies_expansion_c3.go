@@ -5,7 +5,7 @@ package main
 // expansionC3MonsterFamilies は追加計画の敵 C（ミミックダコ系 117〜119・ウチカエシエビ系 123〜125、docs/agents/wave6-C-enemies.md）。
 // 担当はこの表と、同じファイルの特殊攻撃・行動・被弾時の関数だけを追加する（enemy_expansion.go がまとめて登録する）。
 var expansionC3MonsterFamilies = []monsterFamily{
-	{Base: MonsterDefinition{ID: 117, Type: "MimicDako", Name: "ミミックダコ", Char: 'm', Health: 34, AttackPower: 8, DefensePower: 6, ExperiencePoints: 30, Disguise: EnemyDisguiseEnemy},
+	{Base: MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 117, Type: "MimicDako", Name: "ミミックダコ", Char: 'm', Health: 34, AttackPower: 8, DefensePower: 6, ExperiencePoints: 30, Disguise: EnemyDisguiseEnemy},
 		BaseImage: "img/mimic_dako.png", Second: monsterStage{118, "HengeDako", "ヘンゲダコ", 60, 14, 9, 75, "img/henge_dako.png"}, Third: monsterStage{119, "SenmenDako", "センメンダコ", 102, 28, 11, 188, "img/senmen_dako.png"}, Spawns: []monsterSpawnRange{{117, 6, 12, 5}, {118, 13, 20, 5}, {119, 21, 30, 5}}},
 	{Base: MonsterDefinition{ID: 123, Type: "UchikaeshiEbi", Name: "ウチカエシエビ", Char: 'u', Health: 30, AttackPower: 7, DefensePower: 6, ExperiencePoints: 24, ProjectileReturnPercent: 40},
 		BaseImage: "img/uchikaeshi_ebi.png", Second: monsterStage{124, "HajikikaeshiEbi", "ハジキカエシエビ", 54, 12, 9, 60, "img/hajikikaeshi_ebi.png"}, Third: monsterStage{125, "ZenbukaeshiEbi", "ゼンブカエシエビ", 92, 24, 11, 150, "img/zenbukaeshi_ebi.png"}, Spawns: []monsterSpawnRange{{123, 6, 12, 5}, {124, 13, 20, 5}, {125, 21, 30, 5}}},

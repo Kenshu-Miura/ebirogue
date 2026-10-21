@@ -12,7 +12,7 @@ var expansionC2MonsterFamilies = []monsterFamily{
 		Second:    monsterStage{112, "OoAnaJako", "オオアナジャコ", 63, 14, 10, 65, "img/oo_ana_jako.png"},
 		Third:     monsterStage{113, "JigokuAnaJako", "ジゴクアナジャコ", 107, 28, 12, 162, "img/jigoku_ana_jako.png"},
 		Spawns:    []monsterSpawnRange{{111, 7, 13, 5}, {112, 14, 21, 5}, {113, 22, 30, 5}}},
-	{Base: MonsterDefinition{ID: 120, Type: "Kobanzame", Name: "コバンザメ", Char: 'z', Health: 28, AttackPower: 6, DefensePower: 4, ExperiencePoints: 20},
+	{Base: MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 120, Type: "Kobanzame", Name: "コバンザメ", Char: 'z', Health: 28, AttackPower: 6, DefensePower: 4, ExperiencePoints: 20},
 		BaseImage: "img/kobanzame.png",
 		Second:    monsterStage{121, "Oobanzame", "オオバンザメ", 50, 11, 7, 50, "img/oobanzame.png"},
 		Third:     monsterStage{122, "Senryouzame", "センリョウザメ", 85, 22, 9, 125, "img/senryouzame.png"},

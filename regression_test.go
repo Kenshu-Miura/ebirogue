@@ -7,6 +7,20 @@ import (
 	"testing"
 )
 
+// 水棲のイレカエダコが水路から海老さんを水中へ入れ替えていた。
+func TestTerrainSwapCannotPutPlayerInWater(t *testing.T) {
+	g := newProjectileTestGame()
+	g.rooms = []Room{{ID: 1, X: 0, Y: 0, Width: 9, Height: 9}}
+	g.state.Map[4][6] = Tile{Type: "water", Blocked: true}
+	g.state.Enemies = []Enemy{CreateEnemyByID(14, 6, 4)}
+	if g.trySwapEnemyWithPlayer(0, func(int) int { return 0 }) {
+		t.Fatal("swapped player into water")
+	}
+	if g.state.Player.X != 4 || g.state.Player.Y != 4 {
+		t.Fatal("player moved into water")
+	}
+}
+
 func TestPlaytestCloseDescriptions(t *testing.T) {
 	for _, ground := range []bool{true, false} {
 		g, v := newHeadlessGame(1, DifficultyAdvanced)

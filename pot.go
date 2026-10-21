@@ -191,7 +191,7 @@ func (g *Game) scatterPotContents(pot *Pot, x, y int) {
 			if newX < 0 || newY < 0 || newY >= len(g.state.Map) || newX >= len(g.state.Map[0]) {
 				continue
 			}
-			if g.state.Map[newY][newX].Type == "wall" {
+			if g.state.Map[newY][newX].Blocked {
 				continue
 			}
 			occupied := false

@@ -2,6 +2,46 @@ package main
 
 import "testing"
 
+func TestTerrainTrajectoryMatchesProjectile(t *testing.T) {
+	for _, kind := range []string{"water", "hidden_corridor", "cracked_wall"} {
+		grid := makeBlockedGrid(7, 3)
+		for x := 1; x < 6; x++ {
+			grid[1][x] = Tile{Type: "floor"}
+		}
+		grid[1][3] = Tile{Type: kind, Blocked: true}
+		for _, bolt := range []bool{false, true} {
+			_, end, _ := computeTrajectory(1, 1, 1, 0, 4, grid, nil, bolt)
+			want := 2
+			if bolt {
+				want = 3
+			}
+			if kind == "water" {
+				want = 5
+			}
+			if end.X != want {
+				t.Fatalf("%s bolt=%v end=%v", kind, bolt, end)
+			}
+		}
+	}
+}
+
+func TestTerrainConnectivityExcludesSpecialTiles(t *testing.T) {
+	for _, kind := range []string{"water", "hidden_corridor", "cracked_wall"} {
+		grid := makeBlockedGrid(7, 3)
+		for x := 1; x < 6; x++ {
+			grid[1][x] = Tile{Type: "floor"}
+		}
+		rooms := []Room{{Center: Coordinate{X: 1, Y: 1}}, {Center: Coordinate{X: 5, Y: 1}}}
+		if !floorConnected(grid, rooms) {
+			t.Fatal("baseline disconnected")
+		}
+		grid[1][3] = Tile{Type: kind}
+		if floorConnected(grid, rooms) {
+			t.Fatalf("connectivity used %s", kind)
+		}
+	}
+}
+
 func makeBlockedGrid(width, height int) [][]Tile {
 	grid := make([][]Tile, height)
 	for y := range grid {

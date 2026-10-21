@@ -148,6 +148,7 @@ func (g *Game) explodeEnemiesAround(explosion EnemyExplosion, bomberID, bomberX,
 
 // explodeItemsAround は爆発の範囲の床の道具を消す（床に貼りついた聖域のカードは残る）。
 func (g *Game) explodeItemsAround(centerX, centerY, radius int) {
+	g.breakCrackedAround(centerX, centerY, radius)
 	kept := g.state.Items[:0]
 	destroyed := 0
 	for _, item := range g.state.Items {

@@ -192,6 +192,11 @@ func (g *Game) dropEnemyHeldItem(index int) {
 	if enemy.HeldItem == nil {
 		return
 	}
+	if g.inMapBounds(enemy.X, enemy.Y) && g.state.Map[enemy.Y][enemy.X].Type == "water" {
+		enemy.HeldItem = nil
+		enemy.Fleeing = false
+		return
+	}
 	enemy.HeldItem.SetPosition(enemy.X, enemy.Y)
 	enemy.HeldItem.SetShowOnMiniMap(true)
 	enemy.HeldItem.SetPlayerDiscovered(true)

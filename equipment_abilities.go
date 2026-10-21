@@ -53,6 +53,7 @@ const (
 	EnemyTraitShell     EnemyTrait = "shell"
 	EnemyTraitExplosive EnemyTrait = "explosive"
 	EnemyTraitFloating  EnemyTrait = "floating"
+	EnemyTraitAquatic   EnemyTrait = "aquatic"
 )
 
 // slayerTraits は特効能力と、その能力が効く敵の属性の対応表。
@@ -376,5 +377,5 @@ func isDiggableTile(tile Tile, x, y, width, height int) bool {
 	if x <= 0 || y <= 0 || x >= width-1 || y >= height-1 {
 		return false
 	}
-	return tile.Blocked && (tile.Type == "wall" || tile.Type == "other")
+	return tile.Blocked && (tile.Type == "wall" || tile.Type == "other" || tile.Type == "cracked_wall" || tile.Type == "hidden_corridor")
 }

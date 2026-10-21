@@ -273,6 +273,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	4: {
 		ID:               4,
 		Type:             "Harisenbow",
+		Traits:           []EnemyTrait{EnemyTraitAquatic},
 		Name:             "ハリセンボウ",
 		Char:             'B',
 		Health:           18,
@@ -420,6 +421,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	14: {
 		ID:               14,
 		Type:             "SwapOctopus",
+		Traits:           []EnemyTrait{EnemyTraitAquatic},
 		Name:             "イレカエダコ",
 		Char:             'O',
 		Health:           36,

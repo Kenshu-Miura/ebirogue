@@ -22,7 +22,7 @@ func TestWave5BTablesAndSave(t *testing.T) {
 			t.Fatalf("level up %d", id)
 		}
 		if id < 105 {
-			if len(d.Traits) != 0 || d.CriticalPercent != 0 || d.SpecialAttack == nil || d.SpecialAttackProbability != 0.3 {
+			if hasEnemyTrait(d.Traits, EnemyTraitAquatic) != (id >= 102) || d.CriticalPercent != 0 || d.SpecialAttack == nil || d.SpecialAttackProbability != 0.3 {
 				t.Fatalf("abilities %d", id)
 			}
 		} else {

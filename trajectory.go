@@ -13,7 +13,7 @@ func computeTrajectory(x, y, dx, dy, throwRange int, mapState [][]Tile, enemies 
 	for i := 1; i <= throwRange; i++ {
 		targetX, targetY := x+i*dx, y+i*dy
 		outOfBounds := targetY < 0 || targetY >= len(mapState) || targetX < 0 || targetX >= len(mapState[0])
-		if outOfBounds || mapState[targetY][targetX].Type == "wall" {
+		if outOfBounds || terrainStopsProjectile(mapState[targetY][targetX]) {
 			if stopOnWallTile && !outOfBounds {
 				// 杖の魔法弾は壁のマス自体に到達する
 				landing := Coordinate{X: targetX, Y: targetY}

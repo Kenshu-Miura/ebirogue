@@ -7,12 +7,12 @@ import "fmt"
 // フクレフグ系: Counter は自爆予約済みなら1、Flag は膨張中。Timer は使わない。
 // シビレエイ系: Counter は非帯電中の被弾数、Timer は帯電の残りターン、Flag は帯電中。
 var expansionC1MonsterFamilies = []monsterFamily{
-	{Base: MonsterDefinition{ID: 108, Type: "FukureFugu", Name: "フクレフグ", Char: 'p', Health: 32, AttackPower: 7, DefensePower: 5, ExperiencePoints: 24, Traits: []EnemyTrait{EnemyTraitExplosive}},
+	{Base: MonsterDefinition{ID: 108, Type: "FukureFugu", Name: "フクレフグ", Char: 'p', Health: 32, AttackPower: 7, DefensePower: 5, ExperiencePoints: 24, Traits: []EnemyTrait{EnemyTraitAquatic, EnemyTraitExplosive}},
 		BaseImage: "img/fukure_fugu.png",
 		Second:    monsterStage{109, "BakuhatsuFugu", "バクハツフグ", 56, 12, 8, 60, "img/bakuhatsu_fugu.png"},
 		Third:     monsterStage{110, "DaibakuhatsuFugu", "ダイバクハツフグ", 95, 24, 10, 150, "img/daibakuhatsu_fugu.png"},
 		Spawns:    []monsterSpawnRange{{108, 6, 12, 6}, {109, 13, 20, 6}, {110, 21, 30, 6}}},
-	{Base: MonsterDefinition{ID: 114, Type: "ShibireEi", Name: "シビレエイ", Char: 'e', Health: 38, AttackPower: 8, DefensePower: 7, ExperiencePoints: 30},
+	{Base: MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 114, Type: "ShibireEi", Name: "シビレエイ", Char: 'e', Health: 38, AttackPower: 8, DefensePower: 7, ExperiencePoints: 30},
 		BaseImage: "img/shibire_ei.png",
 		Second:    monsterStage{115, "DenkiEi", "デンキエイ", 66, 14, 10, 75, "img/denki_ei.png"},
 		Third:     monsterStage{116, "RaiteiEi", "ライテイエイ", 112, 28, 12, 188, "img/raitei_ei.png"},
