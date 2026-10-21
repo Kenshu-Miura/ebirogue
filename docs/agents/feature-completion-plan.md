@@ -67,7 +67,6 @@
 | wave10-A モンスターハウス | Codex | `agent/wave10-A-monster-house` | `wave10-A-monster-house.md` | なし |
 | wave10-B 店 | Claude Code | `agent/wave10-B-shop` | `wave10-B-shop.md` | 敵 126〜128（店主・番犬） |
 | wave10-C 図鑑 | Codex | `agent/wave10-C-encyclopedia` | `wave10-C-encyclopedia.md` | なし |
-
 | wave11-0 計測の準備 | Claude Code | `agent/wave11-0-measure` | `wave11-0-measure.md` | なし |
 | wave11-A BOT の立ち回り（モンスターハウス・地形） | Codex | `agent/wave11-A-bot-house-terrain` | `wave11-A-bot-house-terrain.md` | なし |
 | wave11-B BOT の道具（段8の薬・杖・段9の壺） | Codex | `agent/wave11-B-bot-items` | `wave11-B-bot-items.md` | なし |
