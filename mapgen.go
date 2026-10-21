@@ -10,6 +10,8 @@ type Room struct {
 	X, Y          int
 	Width, Height int
 	Center        Coordinate
+	Role          RoomRole `json:",omitempty"`
+	Entered       bool     `json:",omitempty"`
 }
 
 func (r *Room) IsSeparatedBy(other Room, tiles int) bool {

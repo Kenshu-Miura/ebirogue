@@ -365,6 +365,7 @@ func (g *Game) buildSaveData() *SaveData {
 			ID: room.ID, X: room.X, Y: room.Y,
 			Width: room.Width, Height: room.Height,
 			CenterX: room.Center.X, CenterY: room.Center.Y,
+			Role: room.Role, Entered: room.Entered,
 		})
 	}
 	for i := range g.state.Enemies {
@@ -475,6 +476,7 @@ func (g *Game) applySaveData(save *SaveData) error {
 			ID: s.ID, X: s.X, Y: s.Y,
 			Width: s.Width, Height: s.Height,
 			Center: Coordinate{X: s.CenterX, Y: s.CenterY},
+			Role:   s.Role, Entered: s.Entered,
 		})
 	}
 

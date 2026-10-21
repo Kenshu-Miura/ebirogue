@@ -286,6 +286,10 @@ func (g *Game) CheckSleepingEnemyWakeUp() {
 		return
 	}
 
+	if g.enterMonsterHouse(roomID) {
+		return
+	}
+
 	for i := range g.state.Enemies {
 		enemy := &g.state.Enemies[i]
 

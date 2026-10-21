@@ -109,8 +109,9 @@ type simOutcome struct {
 	// FloorStays は階段・落とし穴で離れた階の滞在ターン（終了した階は含まない）
 	FloorStays []int `json:",omitempty"`
 	// StarveTurns は終了時に満腹度0が続いていたターン数、InventoryFull は終了時に所持品が満杯だったか
-	StarveTurns   int  `json:",omitempty"`
-	InventoryFull bool `json:",omitempty"`
+	StarveTurns       int  `json:",omitempty"`
+	InventoryFull     bool `json:",omitempty"`
+	MonsterHouseDeath bool `json:",omitempty"`
 }
 
 const maxViolationsPerRun = 20
@@ -227,6 +228,7 @@ func runSimCase(c simCase) (out simOutcome) {
 		}
 		if g.RunEnded() {
 			out.Ended = "died"
+			out.MonsterHouseDeath = !g.cleared && g.inMonsterHouse()
 			if g.cleared {
 				out.Ended = "cleared"
 			}
@@ -904,6 +906,13 @@ func renderFloorBandItemKinds(b *strings.Builder, s simSummary) {
 
 func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary, elapsed time.Duration) string {
 	var b strings.Builder
+	houseDeaths := 0
+	for _, o := range outcomes {
+		if o.MonsterHouseDeath {
+			houseDeaths++
+		}
+	}
+	fmt.Fprintf(&b, "モンスターハウス内での死亡: %d\n\n", houseDeaths)
 	fmt.Fprintf(&b, "# BOT シミュレーションレポート\n\n")
 	fmt.Fprintf(&b, "- 生成: %s（所要 %v）\n- 冒険数: %d\n- %s\n\n", time.Now().Format("2006-01-02 15:04"), elapsed.Round(time.Second), s.Runs, s.oneLine())
 

@@ -540,16 +540,6 @@ var vacuumSlash = func(g *Game) {
 
 // --- フロアや部屋へ作用するカード ---
 
-// モンスターハウスで湧く敵の数（5〜8体）
-func rollMonsterHouseEnemyCount(intn func(int) int) int {
-	return 5 + intn(4)
-}
-
-// モンスターハウスで床に増えるアイテムの数（2〜3個）
-func rollMonsterHouseItemCount(intn func(int) int) int {
-	return 2 + intn(2)
-}
-
 // createFloorItemを直接参照するとitemTemplatesとの初期化循環になるため、init時に間接参照を張る
 var newRandomFloorItem func(x, y, floor int, difficulty Difficulty, intn func(int) int) Item
 
@@ -611,8 +601,7 @@ var summonMonsterHouse = func(g *Game) {
 				}
 				return true
 			}
-			enemyCount := rollMonsterHouseEnemyCount(g.randIntn)
-			itemCount := rollMonsterHouseItemCount(g.randIntn)
+			enemyCount, itemCount := monsterHouseCounts(0, true, g.randIntn)
 			cells := pickFreeCellsInRoom(*room, isFree, enemyCount+itemCount, g.randIntn)
 			if len(cells) == 0 {
 				g.EnqueueMessage("しかし何も起こらなかった", 0.4)

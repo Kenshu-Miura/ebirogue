@@ -562,6 +562,7 @@ func GenerateRandomMapFor(width, height, currentFloor int, player *Player, rng *
 		protect[Coordinate{X: trap.X, Y: trap.Y}] = true
 	}
 	generateTerrain(mapGrid, rooms, newFloor, rng.Intn, protect)
+	enemies, items, traps = generateMonsterHouse(mapGrid, rooms, player, Coordinate{X: stairsX, Y: stairsY}, newFloor, difficulty, rng.Intn, enemies, items, traps)
 	return mapGrid, enemies, items, newFloor, rooms, traps
 }
 
