@@ -459,6 +459,7 @@ var revealFloor = func(g *Game) {
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを使用した。フロアが明るく照らされた", item.GetName()),
 		Execute: func(g *Game) {
+			g.revealHiddenTerrain()
 			for y := range g.state.Map {
 				for x := range g.state.Map[y] {
 					g.state.Map[y][x].Visited = true
@@ -823,6 +824,7 @@ var selfDestruct = func(g *Game) {
 				Message:  message,
 				Execute: func(g *Game) {
 					g.state.Enemies = survivors
+					g.breakCrackedAround(playerX, playerY, 1)
 					g.applyPlayerShieldDefense(defense, DamageSource{Kind: DamageSourceSelfDestruct, Detail: item.GetName()}, -1, -1, -1)
 				},
 			})

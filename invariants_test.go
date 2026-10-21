@@ -52,7 +52,7 @@ func checkInvariants(g *Game) []simViolation {
 			out = append(out, newViolation(g, "enemy_out_of_bounds", "%s (ID %d) の座標 (%d, %d)", enemy.Name, enemy.ID, enemy.X, enemy.Y))
 			continue
 		}
-		if g.state.Map[enemy.Y][enemy.X].Blocked && enemy.SpecialMovement != SpecialMovementWallPass {
+		if !enemyTerrainPassable(g.state.Map[enemy.Y][enemy.X], enemy.Traits) && enemy.SpecialMovement != SpecialMovementWallPass {
 			out = append(out, newViolation(g, "enemy_in_wall", "%s (ID %d) が壁の中 (%d, %d)", enemy.Name, enemy.ID, enemy.X, enemy.Y))
 		}
 		if enemy.Health <= 0 {

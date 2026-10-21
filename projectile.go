@@ -170,7 +170,7 @@ func (g *Game) flyProjectile(p *Projectile) {
 			break
 		}
 		// 壁だけでなく通路の外側など通れないマスでも止まる（突き抜けてマップ外へ出ないように）
-		if tile := g.state.Map[nextY][nextX]; tile.Type == "wall" || tile.Blocked {
+		if tile := g.state.Map[nextY][nextX]; terrainStopsProjectile(tile) {
 			if p.Bounces > 0 {
 				p.Bounces--
 				p.DX, p.DY = -p.DX, -p.DY
@@ -260,7 +260,7 @@ func (g *Game) projectilePassable(x, y int) bool {
 		return false
 	}
 	tile := g.state.Map[y][x]
-	return tile.Type != "wall" && !tile.Blocked
+	return !terrainStopsProjectile(tile)
 }
 
 // projectileHitsEnemy は p が敵 index に当たるかを判定する。必ず当たるときは乱数を使わない。

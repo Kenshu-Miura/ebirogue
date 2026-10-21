@@ -85,9 +85,20 @@ func (g *Game) updateMiniMap(screen *ebiten.Image) {
 	// ミニマップを描画
 	for y, row := range g.state.Map {
 		for x, tile := range row {
-			if tile.Visited && tile.Type != "wall" {
+			if tile.Visited && tile.Type != "wall" && tile.Type != "hidden_corridor" {
 				opts := &ebiten.DrawImageOptions{}
 				opts.GeoM.Translate(float64(x*tilePixelSize), float64(y*tilePixelSize))
+
+				if tile.Type == "water" || tile.Type == "cracked_wall" {
+					waterTile := ebiten.NewImage(tilePixelSize, tilePixelSize)
+					tint := color.RGBA{0, 180, 220, 160}
+					if tile.Type == "cracked_wall" {
+						tint = color.RGBA{200, 160, 80, 160}
+					}
+					waterTile.Fill(tint)
+					g.miniMap.DrawImage(waterTile, opts)
+					continue
+				}
 
 				// tile.Typeが"stairs"であるかどうかをチェック
 				if tile.Type == "stairs" {

@@ -170,6 +170,7 @@ func (g *Game) explodeTraps(x, y, radius int, credit bool, depth int) {
 }
 
 func (g *Game) explodeTrapsChain(x, y, radius int, credit bool, depth int, hp *int) {
+	g.breakCrackedAround(x, y, radius)
 	traps := append([]MapTrap(nil), g.state.MapTraps...)
 	for _, trap := range traps {
 		if !withinBlastRadius(x, y, trap.X, trap.Y, radius) {

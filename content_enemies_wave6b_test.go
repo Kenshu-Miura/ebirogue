@@ -23,7 +23,7 @@ func TestWave6BDefinitionsAndSave(t *testing.T) {
 	for _, r := range rows {
 		t.Run(fmt.Sprint(r.id), func(t *testing.T) {
 			d, ok := MonsterDefinitions[r.id]
-			if !ok || d.Name != r.name || d.Type != r.typ || d.Health != r.hp || d.MaxHealth != r.hp || d.AttackPower != r.attack || d.DefensePower != r.defense || d.ExperiencePoints != r.exp || len(d.Traits) != 0 || d.Behavior == nil {
+			if !ok || d.Name != r.name || d.Type != r.typ || d.Health != r.hp || d.MaxHealth != r.hp || d.AttackPower != r.attack || d.DefensePower != r.defense || d.ExperiencePoints != r.exp || hasEnemyTrait(d.Traits, EnemyTraitAquatic) != (r.id >= 120) || d.Behavior == nil {
 				t.Fatalf("definition: %+v", d)
 			}
 			char := 'a'

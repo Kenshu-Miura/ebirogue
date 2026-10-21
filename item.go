@@ -62,7 +62,9 @@ func (g *Game) UpdateThrownItem() {
 					}
 				}
 
-				if pot, isPot := g.ThrownItem.Item.(*Pot); isPot {
+				if g.inMapBounds(g.ThrownItemDestination.X, g.ThrownItemDestination.Y) && g.state.Map[g.ThrownItemDestination.Y][g.ThrownItemDestination.X].Type == "water" {
+					// 水に沈んだ壺は中身も失う。着地後の散乱は行わない。
+				} else if pot, isPot := g.ThrownItem.Item.(*Pot); isPot {
 					// 壺は着地・命中時に割れて中身が散らばる
 					g.EnqueueMessage(fmt.Sprintf("%sは割れた！", pot.GetName()), 0.5)
 					g.scatterPotContents(pot, g.ThrownItemDestination.X, g.ThrownItemDestination.Y)
@@ -75,7 +77,7 @@ func (g *Game) UpdateThrownItem() {
 						newY := g.ThrownItem.Y + dir.Y
 						// Check map boundaries and tile type
 						if newX >= 0 && newY >= 0 && newX < len(g.state.Map[0]) && newY < len(g.state.Map) &&
-							g.state.Map[newY][newX].Type != "wall" {
+							!g.state.Map[newY][newX].Blocked {
 							emptyTile := true
 							for _, item := range g.state.Items {
 								x, y := item.GetPosition()

@@ -315,7 +315,7 @@ func floorConnected(mapGrid [][]Tile, rooms []Room) bool {
 	}
 	height, width := len(mapGrid), len(mapGrid[0])
 	start := rooms[0].Center
-	if mapGrid[start.Y][start.X].Blocked {
+	if terrainBlocksWalking(mapGrid[start.Y][start.X]) {
 		return false
 	}
 	visited := make([][]bool, height)
@@ -332,11 +332,18 @@ func floorConnected(mapGrid [][]Tile, rooms []Room) bool {
 			if nx < 0 || ny < 0 || nx >= width || ny >= height {
 				continue
 			}
-			if visited[ny][nx] || mapGrid[ny][nx].Blocked {
+			if visited[ny][nx] || terrainBlocksWalking(mapGrid[ny][nx]) {
 				continue
 			}
 			visited[ny][nx] = true
 			queue = append(queue, Coordinate{X: nx, Y: ny})
+		}
+	}
+	for y := range mapGrid {
+		for x, tile := range mapGrid[y] {
+			if !terrainBlocksWalking(tile) && !visited[y][x] {
+				return false
+			}
 		}
 	}
 	for _, room := range rooms {

@@ -98,6 +98,9 @@ func getPlayerRoom(playerX, playerY int, rooms []Room) *Room {
 }
 
 func (g *Game) updateTileBrightness() {
+	if g.playerHasAbility(AbilityClairvoyance) {
+		g.revealHiddenTerrain()
+	}
 	playerX, playerY := g.state.Player.GetPosition()
 	inRoom := isInsideRoom(playerX, playerY, g.rooms)
 
@@ -540,6 +543,18 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gam
 	// Generate map traps
 	traps := generateMapTraps(rooms, rng, newFloor)
 
+	protect := map[Coordinate]bool{{X: playerX, Y: playerY}: true, {X: stairsX, Y: stairsY}: true}
+	for _, e := range enemies {
+		protect[Coordinate{X: e.X, Y: e.Y}] = true
+	}
+	for _, item := range items {
+		x, y := item.GetPosition()
+		protect[Coordinate{X: x, Y: y}] = true
+	}
+	for _, trap := range traps {
+		protect[Coordinate{X: trap.X, Y: trap.Y}] = true
+	}
+	generateTerrain(mapGrid, rooms, newFloor, rng.Intn, protect)
 	return mapGrid, enemies, items, newFloor, rooms, traps
 }
 

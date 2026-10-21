@@ -17,7 +17,7 @@ func moveEnemy(g *Game, i int, dx, dy int) bool {
 	blockUp, blockDown, blockLeft, blockRight := isBlocked(g, enemy.X, enemy.Y)
 
 	if newX >= 0 && newX < len(g.state.Map[0]) && newY >= 0 && newY < len(g.state.Map) &&
-		!g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) && !g.sanctuaryAt(newX, newY) && ((dx > 0 && dy > 0 && !(blockDown || blockRight)) ||
+		enemyTerrainPassable(g.state.Map[newY][newX], enemy.Traits) && !isOccupied(g, newX, newY) && !g.sanctuaryAt(newX, newY) && ((dx > 0 && dy > 0 && !(blockDown || blockRight)) ||
 		(dx > 0 && dy < 0 && !(blockUp || blockRight)) ||
 		(dx < 0 && dy > 0 && !(blockDown || blockLeft)) ||
 		(dx < 0 && dy < 0 && !(blockUp || blockLeft)) ||
@@ -82,7 +82,7 @@ func moveTowardsCorridor(g *Game, i int) bool {
 
 		// 通路または床タイルへの移動をチェック
 		tile := g.state.Map[newY][newX]
-		if (tile.Type == "corridor" || tile.Type == "floor") && !tile.Blocked {
+		if enemyTerrainPassable(tile, enemy.Traits) {
 			// その位置が移動可能かチェック
 			if isPositionFree(g, newX, newY, i) {
 				corridorDirections = append(corridorDirections, dir)
@@ -259,7 +259,11 @@ func isPositionFree(g *Game, x, y, enemyIndex int) bool {
 	}
 
 	// Check if the position is blocked on the map.
-	if g.state.Map[y][x].Blocked {
+	traits := []EnemyTrait(nil)
+	if enemyIndex >= 0 && enemyIndex < len(g.state.Enemies) {
+		traits = g.state.Enemies[enemyIndex].Traits
+	}
+	if (enemyIndex < 0 && g.state.Map[y][x].Blocked) || !enemyTerrainPassable(g.state.Map[y][x], traits) {
 		return false
 	}
 
@@ -411,7 +415,7 @@ func (g *Game) trySwapEnemyWithPlayer(enemyIndex int, intn func(int) int) bool {
 		return false
 	}
 	// 聖域のカードの上にいるプレイヤー・不動の能力を持つプレイヤーとは場所を入れ替えられない
-	if g.playerOnSanctuary() || g.playerImmovable() {
+	if g.playerOnSanctuary() || g.playerImmovable() || !g.terrainOpenAt(enemy.X, enemy.Y) {
 		return false
 	}
 
@@ -539,7 +543,7 @@ func (g *Game) moveEnemyConfused(i int) {
 	}
 
 	// 移動先が通行可能で他の敵がいない場合、移動（聖域のカードの上には移動できない）
-	if !g.state.Map[newY][newX].Blocked && !isOccupied(g, newX, newY) && !g.sanctuaryAt(newX, newY) {
+	if enemyTerrainPassable(g.state.Map[newY][newX], enemy.Traits) && !isOccupied(g, newX, newY) && !g.sanctuaryAt(newX, newY) {
 		enemy.X = newX
 		enemy.Y = newY
 		enemy.dx = direction.dx
@@ -571,7 +575,7 @@ func (g *Game) moveEnemyBlind(i int) {
 	}
 
 	// 壁または聖域のカードにぶつかった場合、方向を変更
-	if g.state.Map[newY][newX].Blocked || g.sanctuaryAt(newX, newY) {
+	if !enemyTerrainPassable(g.state.Map[newY][newX], enemy.Traits) || g.sanctuaryAt(newX, newY) {
 		g.changeBlindEnemyDirection(i)
 		return
 	}

@@ -22,14 +22,14 @@ var expansionA1MonsterFamilies = []monsterFamily{
 		Spawns:    []monsterSpawnRange{{69, 4, 5, 5}, {69, 6, 10, 8}, {70, 10, 17, 7}, {71, 18, 30, 7}},
 	},
 	{
-		Base:      MonsterDefinition{ID: 72, Type: "NigeHaze", Name: "ニゲハゼ", Char: 'Z', Health: 14, AttackPower: 2, DefensePower: 2, ExperiencePoints: 24, SpecialMovement: SpecialMovementDoubleSpeed},
+		Base:      MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 72, Type: "NigeHaze", Name: "ニゲハゼ", Char: 'Z', Health: 14, AttackPower: 2, DefensePower: 2, ExperiencePoints: 24, SpecialMovement: SpecialMovementDoubleSpeed},
 		BaseImage: "img/nige_haze.png",
 		Second:    monsterStage{73, "TonzuraHaze", "トンズラハゼ", 26, 4, 5, 60, "img/tonzura_haze.png"},
 		Third:     monsterStage{74, "KinpikaHaze", "キンピカハゼ", 44, 8, 7, 150, "img/kinpika_haze.png"},
 		Spawns:    []monsterSpawnRange{{72, 2, 9, 4}, {73, 8, 16, 4}, {74, 15, 30, 3}},
 	},
 	{
-		Base:      MonsterDefinition{ID: 75, Type: "YobikomiBora", Name: "ヨビコミボラ", Char: 'Y', Health: 28, AttackPower: 5, DefensePower: 6, ExperiencePoints: 22},
+		Base:      MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 75, Type: "YobikomiBora", Name: "ヨビコミボラ", Char: 'Y', Health: 28, AttackPower: 5, DefensePower: 6, ExperiencePoints: 22},
 		BaseImage: "img/yobikomi_bora.png",
 		Second:    monsterStage{76, "YobiatsumeBora", "ヨビアツメボラ", 50, 9, 9, 55, "img/yobiatsume_bora.png"},
 		Third:     monsterStage{77, "DaishoukanBora", "ダイショウカンボラ", 85, 18, 11, 138, "img/daishoukan_bora.png"},

@@ -27,7 +27,7 @@ func TestWave6CTablesAndSave(t *testing.T) {
 		stages := []monsterStage{{family.Base.ID, family.Base.Type, family.Base.Name, family.Base.Health, family.Base.AttackPower, family.Base.DefensePower, family.Base.ExperiencePoints, family.BaseImage}, family.Second, family.Third}
 		for n, stage := range stages {
 			d, ok := MonsterDefinitions[stage.ID]
-			if !ok || d.Name != stage.Name || d.Type != stage.Type || d.Health != stage.Health || d.MaxHealth != stage.Health || d.AttackPower != stage.Attack || d.DefensePower != stage.Defense || d.ExperiencePoints != stage.Experience || len(d.Traits) != 0 || d.Char != family.Base.Char {
+			if !ok || d.Name != stage.Name || d.Type != stage.Type || d.Health != stage.Health || d.MaxHealth != stage.Health || d.AttackPower != stage.Attack || d.DefensePower != stage.Defense || d.ExperiencePoints != stage.Experience || hasEnemyTrait(d.Traits, EnemyTraitAquatic) != (stage.ID < 120) || d.Char != family.Base.Char {
 				t.Fatalf("stage %d: %+v", stage.ID, d)
 			}
 			if stage.ID < 120 {

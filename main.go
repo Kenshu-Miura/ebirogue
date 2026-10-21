@@ -985,6 +985,7 @@ func loadSpecialArmorImages() map[string]*ebiten.Image {
 func NewGame() *Game {
 	img := loadImage("img/ebisan.png")
 	tilesetImg := loadImage("img/tileset.png")
+	terrainImages = map[string]*ebiten.Image{"water": loadImage("img/water.png"), "cracked_wall": loadImage("img/cracked_wall.png")}
 	ebiImg := loadImage("img/ebi.png")
 	kaneImg := loadImage("img/kane.png")
 	snakeImg := loadImage("img/snake.png")

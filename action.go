@@ -772,6 +772,7 @@ func (g *Game) CheckForEnemies(x, y int) bool {
 	g.enqueueDisposableWeaponWear(weapon)
 	// 攻撃時に前方の罠を発見する
 	g.checkTrapInFront()
+	g.searchHiddenTerrain(x, y)
 	g.runAfterPlayerSwingHooks(PlayerSwing{DX: sign(x), DY: sign(y), HitEnemy: g.isFrontEnemy})
 	return true
 }
@@ -866,7 +867,7 @@ func (g *Game) enqueuePlayerAttack(enemyIndex int, weaponAbilities []EquipmentAb
 
 // enqueueWallDig はつるはし能力で正面の壁を通路へ変える。
 func (g *Game) enqueueWallDig(dx, dy int, weaponAbilities []EquipmentAbilityID) bool {
-	if !hasEquipmentAbility(weaponAbilities, AbilityDigWall) || len(g.state.Map) == 0 || len(g.state.Map[0]) == 0 {
+	if len(g.state.Map) == 0 || len(g.state.Map[0]) == 0 {
 		return false
 	}
 	x := g.state.Player.X + dx
@@ -876,6 +877,9 @@ func (g *Game) enqueueWallDig(dx, dy int, weaponAbilities []EquipmentAbilityID) 
 		return false
 	}
 
+	if !hasEquipmentAbility(weaponAbilities, AbilityDigWall) && g.state.Map[y][x].Type != "cracked_wall" {
+		return false
+	}
 	g.Enqueue(Action{
 		Duration: 0.5,
 		Message:  "壁を掘った。",
