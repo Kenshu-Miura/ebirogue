@@ -219,6 +219,7 @@ func (g *Game) executeGroundItemAction() {
 				g.selectedGroundItemIndex = i
 
 				g.stats.counts(itemKind(item)).Thrown++
+				countID(&g.stats.ThrownIDs, item.GetID())
 				g.throwWithCallbacks(item, 10)
 
 				g.closeGroundItemMenu()
@@ -423,6 +424,7 @@ func (g *Game) executeAction() {
 		if !isCursedEquipped {
 			// Continue with the throwing logic if the item is not cursed and equipped
 			g.stats.counts(itemKind(item)).Thrown++
+			countID(&g.stats.ThrownIDs, item.GetID())
 			g.throwWithCallbacks(item, 10)
 			g.isActioned = true
 		}

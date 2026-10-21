@@ -140,6 +140,7 @@ func (g *Game) executePotInsertSelection() {
 		pot.Contents = append(pot.Contents, item)
 	}
 	g.state.Player.Inventory = append(g.state.Player.Inventory[:itemIndex], g.state.Player.Inventory[itemIndex+1:]...)
+	countID(&g.stats.PotInsertIDs, pot.ID)
 	g.Enqueue(Action{
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sを%sに入れた", itemName, potName),

@@ -418,6 +418,7 @@ func (g *Game) payShop() bool {
 	}
 	g.state.Player.Cash -= total
 	g.stats.ShopBought += len(g.shopCarried)
+	g.stats.ShopSpent += total
 	for _, item := range g.shopCarried {
 		setItemShopPrice(item, 0)
 	}
@@ -434,6 +435,7 @@ func (g *Game) sellToShop(item Item, price int) bool {
 	}
 	g.state.Player.Cash += price
 	g.stats.ShopSold++
+	g.stats.ShopEarned += price
 	setItemShopPrice(item, max(itemBuyPrice(item), 1))
 	name, _ := displayItemName(item)
 	g.EnqueueMessage(fmt.Sprintf("%sを%d円で売った", name, price), 0.6)

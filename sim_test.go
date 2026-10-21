@@ -114,6 +114,17 @@ type simOutcome struct {
 	MonsterHouseDeath bool `json:",omitempty"`
 	// ShopFloors は店のある階に着いた回数（wave10-B）
 	ShopFloors int `json:",omitempty"`
+	// 段11（wave11-0）の計測。sim_wave11_test.go の simFloorTracker が記録する。
+	HouseFloors   int             `json:",omitempty"` // 自然生成のモンスターハウスがある階に着いた回数
+	HouseEntries  []simHouseEntry `json:",omitempty"`
+	FloorTerrain  []bool          `json:",omitempty"` // FloorStays と同じ順の、その階に地形があったか
+	EndTerrain    bool            `json:",omitempty"` // 終了した階に地形があったか
+	CrackedBroken int             `json:",omitempty"`
+	HiddenFound   int             `json:",omitempty"`
+	ShopEntries   int             `json:",omitempty"`
+	Descents      []simDescent    `json:",omitempty"`
+	EndCash       int             `json:",omitempty"`
+	Acquired      map[int]int     `json:",omitempty"` // 段8・9の道具を手に入れた数（ID ごと）
 }
 
 const maxViolationsPerRun = 20
@@ -156,6 +167,7 @@ func runSimCase(c simCase) (out simOutcome) {
 	}
 	turns, lastTurn := 0, 0
 	arrivalFloor, arrivalTurn := g.Floor, 0
+	tracker := newSimFloorTracker()
 	seen := map[string]bool{}
 	record := func(vs []simViolation) {
 		for _, v := range vs {
@@ -176,6 +188,7 @@ func runSimCase(c simCase) (out simOutcome) {
 		if tracer != nil {
 			out.Death = tracer.trace()
 		}
+		tracker.finish(g, turns, &out)
 		out.Floor, out.Turns, out.Level = g.Floor, turns, g.state.Player.Level
 		if c := g.stats.Items["Food"]; c != nil {
 			out.FoodPicked = c.Picked
@@ -210,6 +223,7 @@ func runSimCase(c simCase) (out simOutcome) {
 			out.FloorStays = append(out.FloorStays, turns-arrivalTurn)
 			arrivalFloor, arrivalTurn = g.Floor, turns
 		}
+		tracker.step(g, turns, &out)
 		if tracer != nil && (g.turnCount != lastTurn || len(tracer.ring) == 0) {
 			tracer.record(b)
 		}
@@ -371,6 +385,7 @@ func TestSimBatch(t *testing.T) {
 		var b simBaselineFile
 		if err := json.Unmarshal(data, &b); err == nil {
 			baseline = &b.Summary
+			simBaselineLabel = fmt.Sprintf("`%s`（%s、コミット %s、%s）", *simBaseline, b.GeneratedAt, orDash(b.Commit), orDash(b.Flags))
 		} else {
 			t.Logf("ベースラインを読めない: %v", err)
 		}
@@ -382,7 +397,8 @@ func TestSimBatch(t *testing.T) {
 	t.Logf("%d 回（%v）: %s", len(outcomes), elapsed.Round(time.Second), summary.oneLine())
 	t.Logf("レポート: %s, %s", jsonPath, mdPath)
 	if *simWriteBase {
-		data, err := json.MarshalIndent(simBaselineFile{GeneratedAt: time.Now().Format(time.RFC3339), Summary: summary}, "", "  ")
+		commit, flags := simRunInfo()
+		data, err := json.MarshalIndent(simBaselineFile{GeneratedAt: time.Now().Format(time.RFC3339), Commit: commit, Flags: flags, Summary: summary}, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -570,10 +586,15 @@ type simSummary struct {
 	// ShopFloors・ShopThefts は性格ごとの、店のある階に着いた回数と泥棒をした回数（wave10-B）
 	ShopFloors map[string]int `json:",omitempty"`
 	ShopThefts map[string]int `json:",omitempty"`
+
+	// Wave11 は性格ごとの段7〜10の要素の集計（wave11-0、sim_wave11_test.go）
+	Wave11 map[string]*simWave11Stats `json:",omitempty"`
 }
 
 type simBaselineFile struct {
 	GeneratedAt string
+	Commit      string `json:",omitempty"` // 計測したコミット（wave11-0 から）
+	Flags       string `json:",omitempty"` // TestSimBatch のフラグ
 	Summary     simSummary
 }
 
@@ -717,6 +738,7 @@ func summarizeOutcomes(outcomes []simOutcome) simSummary {
 			g.AvgFloorLevel[f] = float64(sum) / float64(g.FloorLevelRuns[f])
 		}
 	}
+	s.Wave11 = summarizeWave11(outcomes)
 	return s
 }
 
@@ -941,7 +963,8 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 	}
 	fmt.Fprintf(&b, "モンスターハウス内での死亡: %d\n\n", houseDeaths)
 	fmt.Fprintf(&b, "# BOT シミュレーションレポート\n\n")
-	fmt.Fprintf(&b, "- 生成: %s（所要 %v）\n- 冒険数: %d\n- %s\n\n", time.Now().Format("2006-01-02 15:04"), elapsed.Round(time.Second), s.Runs, s.oneLine())
+	commit, flags := simRunInfo()
+	fmt.Fprintf(&b, "- 生成: %s（所要 %v）\n- コミット: %s、フラグ: %s\n- 冒険数: %d\n- %s\n\n", time.Now().Format("2006-01-02 15:04"), elapsed.Round(time.Second), commit, orDash(flags), s.Runs, s.oneLine())
 
 	fmt.Fprintf(&b, "## 難易度×性格\n\n| 難易度/性格 | 回数 | クリア率 | 平均到達階 | 平均ターン | 死亡 | ターン上限 | BOT行き詰まり |\n|---|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, key := range sortedKeys(s.Groups) {
@@ -959,6 +982,7 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 	renderLevelCurve(&b, s)
 	renderFoodStats(&b, s)
 	renderShopStats(&b, s)
+	renderWave11Stats(&b, s)
 	renderFloorItemKinds(&b, s)
 
 	fmt.Fprintf(&b, "\n## 性格別の死因の上位（判断ミス死は種類で数える）\n\n")
@@ -1079,9 +1103,10 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 
 	fmt.Fprintf(&b, "\n## ベースラインとの差分\n\n")
 	if baseline == nil {
-		fmt.Fprintf(&b, "ベースラインなし（`reports/baseline.json`）\n")
+		fmt.Fprintf(&b, "ベースラインなし（`%s`）\n", *simBaseline)
 		return b.String()
 	}
+	fmt.Fprintf(&b, "比較: %s\n\n", simBaselineLabel)
 	fmt.Fprintf(&b, "| 難易度/性格 | クリア率 | 平均到達階 | 平均ターン | 判断ミス死の割合 |\n|---|---:|---:|---:|---:|\n")
 	for _, key := range sortedKeys(s.Groups) {
 		cur, base := s.Groups[key], baseline.Groups[key]
@@ -1091,6 +1116,7 @@ func renderSimMarkdown(outcomes []simOutcome, s simSummary, baseline *simSummary
 		}
 		fmt.Fprintf(&b, "| %s | %+.1f pt | %+.2f | %+.0f | %.1f%% → %.1f%% |\n", key, (cur.ClearRate-base.ClearRate)*100, cur.AvgFloor-base.AvgFloor, cur.AvgTurns-base.AvgTurns, base.MistakeRate*100, cur.MistakeRate*100)
 	}
+	renderWave11Diff(&b, s, baseline)
 	fmt.Fprintf(&b, "\n違反: %d → %d\n", baseline.Violations, s.Violations)
 	return b.String()
 }

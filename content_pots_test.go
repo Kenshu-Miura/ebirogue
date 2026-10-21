@@ -60,6 +60,9 @@ func TestPotInsertAndTakeOut(t *testing.T) {
 		t.Fatalf("after insert: contents = %d, inventory = %d, want 1 and 1",
 			len(pot.Contents), len(g.state.Player.Inventory))
 	}
+	if g.stats.PotInsertIDs[46] != 1 { // 壺の ID ごとに入れた回数を数える（wave11-0）
+		t.Fatalf("pot insert IDs = %+v", g.stats.PotInsertIDs)
+	}
 
 	g.executePotTakeOut(pot)
 	if len(pot.Contents) != 0 || len(g.state.Player.Inventory) != 2 {
