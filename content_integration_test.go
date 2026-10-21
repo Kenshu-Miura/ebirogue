@@ -215,3 +215,135 @@ func TestWave7SettingsReplayAndVolumesAreIndependent(t *testing.T) {
 		t.Fatalf("old settings should get defaults: %+v", old)
 	}
 }
+
+// 段8（wave8-A 能力値系・wave8-B 特殊系・wave8-C 罠の相互作用）の組み合わせ。
+
+// 8-A×8-B: にぎりの防御0に、防御力上昇と、敵の攻撃力上昇・暴走の倍率が重なる。
+func TestWave8NigiriDefenseAndStatMultipliersStack(t *testing.T) {
+	g := newFoundationTestGame()
+	g.state.Player.Health, g.state.Player.MaxHealth = 1000, 1000
+	g.state.Player.DefensePower = 20
+	g.state.Enemies = []Enemy{CreateEnemyByID(0, 5, 4)}
+	g.setPlayerStatus(StatusNigiri, 20)
+	g.setPlayerStatus(StatusDefenseUp, 30)
+	g.applyEnemyStatus(0, StatusAttackUp, 30)
+	g.applyEnemyStatus(0, StatusBerserk, 15)
+	runQueuedActions(g)
+	e, p := g.state.Enemies[0], g.state.Player
+	multiplier := statAttackMultiplier(e.StatusAilments) * statDefenseMultiplier(p.StatusAilments) * berserkMultiplier(e.StatusAilments)
+	if multiplier == 1 {
+		t.Fatal("倍率がかかっていない")
+	}
+	want := rollEnemyAttackDamageWith(e.AttackPower, 0, multiplier, g.damageIntn())
+	g.enqueueEnemyNormalAttack(0)
+	runQueuedActions(g)
+	if got := 1000 - g.state.Player.Health; got != want {
+		t.Fatalf("damage=%d want=%d", got, want)
+	}
+}
+
+// 8-A×8-B: 回復不能でも、投げ当てられた回復薬でにぎりは解ける（HP は戻らない）。
+func TestWave8ThrownHealingCuresNigiriDuringNoHealing(t *testing.T) {
+	g := newFoundationTestGame()
+	g.state.Player.Health = 10
+	g.setPlayerStatus(StatusNigiri, 20)
+	g.setPlayerStatus(StatusNoHealing, 30)
+	g.onTargetHit(&g.state.Player, buildItemFromTemplate(2, 0, 0), -1)
+	runQueuedActions(g)
+	if g.state.Player.Health != 10 {
+		t.Fatalf("回復不能なのに HP が %d になった", g.state.Player.Health)
+	}
+	if statusActive(g.state.Player.StatusAilments, StatusNigiri) {
+		t.Fatal("にぎりが解けない")
+	}
+}
+
+// 8-A×8-C: 敵の防御力の上下は、敵が踏んだ物理罠のダメージにも効く（海老さんの物理罠と同じ規則）。
+func TestWave8EnemyDefenseStatusAffectsPhysicalTrap(t *testing.T) {
+	damage := map[StatusKind]int{}
+	for _, kind := range []StatusKind{"", StatusDefenseUp, StatusDefenseDown} {
+		g := trapInteractionGame(9) // 鉄の矢の罠
+		if kind != "" {
+			g.applyEnemyStatus(0, kind, 30)
+			runQueuedActions(g)
+		}
+		e := g.state.Enemies[0]
+		want := rollEnemyAttackDamageWith(ironArrowTrapPower, e.DefensePower, statDefenseMultiplier(e.StatusAilments), g.damageIntn())
+		g.enemyTrapAfterMove(0, 2, 2)
+		runQueuedActions(g)
+		got := 100 - g.state.Enemies[0].Health
+		if got != want {
+			t.Fatalf("%q: damage=%d want=%d", kind, got, want)
+		}
+		damage[kind] = got
+	}
+	if !(damage[StatusDefenseUp] < damage[""] && damage[""] < damage[StatusDefenseDown]) {
+		t.Fatalf("防御力の上下が効いていない: %v", damage)
+	}
+}
+
+// 8-A×8-C: 回復封じの罠（15）は敵が踏んでも何も起きず残り、海老さんだけに効く。
+func TestWave8NoHealingTrapOnlyAffectsPlayer(t *testing.T) {
+	g := trapInteractionGame(15)
+	g.enemyTrapAfterMove(0, 2, 2)
+	runQueuedActions(g)
+	if g.state.Enemies[0].StatusAilments != (StatusAilments{}) || len(g.state.MapTraps) != 1 {
+		t.Fatal("回復封じの罠が敵に作動した")
+	}
+	if statusActive(g.state.Player.StatusAilments, StatusNoHealing) {
+		t.Fatal("敵が踏んだ罠が海老さんに効いた")
+	}
+	trap := g.state.MapTraps[0]
+	g.steppedTrapSource = trapSource(trap.TemplateID, trap.Name)
+	trap.Effect(g)
+	runQueuedActions(g)
+	if !statusActive(g.state.Player.StatusAilments, StatusNoHealing) {
+		t.Fatal("海老さんが踏んでも回復不能にならない")
+	}
+}
+
+// 8-B×8-C: 無敵の海老さんは、投げた道具で起こした地雷の誘爆に巻き込まれても HP が減らない。
+func TestWave8InvinciblePlayerSurvivesMineChain(t *testing.T) {
+	g := newProjectileTestGame()
+	g.state.Player.X, g.state.Player.Y = 3, 3
+	g.setPlayerStatus(StatusInvincible, 10)
+	g.state.Enemies = []Enemy{CreateEnemyByID(0, 5, 3)}
+	g.state.Enemies[0].Health = 100
+	large, mine := createMapTrapByID(11, 4, 3), createMapTrapByID(3, 4, 4)
+	large.FailRate, mine.FailRate = 0, 0
+	g.state.MapTraps = []MapTrap{large, mine}
+	before := g.state.Player.Health
+	g.queueLandedTrap(4, 3, true)
+	runQueuedActions(g)
+	if g.state.Player.Health != before {
+		t.Fatalf("無敵なのに HP が %d→%d", before, g.state.Player.Health)
+	}
+	if len(g.state.Enemies) == 1 && g.state.Enemies[0].Health >= 100 {
+		t.Fatal("周りの敵に爆風が届いていない")
+	}
+	if len(g.state.MapTraps) != 0 {
+		t.Fatalf("誘爆していない: %+v", g.state.MapTraps)
+	}
+}
+
+// 8-B×8-C: トラバサミにかかった敵は隣の海老さんを殴るが、身代わりの間は何もしない。
+func TestWave8DecoyInBearTrapDoesNotAttack(t *testing.T) {
+	for _, decoy := range []bool{false, true} {
+		g := newFoundationTestGame()
+		g.state.Enemies = []Enemy{CreateEnemyByID(0, 5, 4)}
+		g.applyEnemyStatus(0, StatusBearTrap, 6)
+		if decoy {
+			g.applyEnemyStatus(0, StatusDecoy, 30)
+		}
+		runQueuedActions(g)
+		hp := g.state.Player.Health
+		g.actEnemy(0)
+		runQueuedActions(g)
+		if attacked := g.state.Player.Health < hp; attacked == decoy {
+			t.Fatalf("decoy=%v attacked=%v", decoy, attacked)
+		}
+		if g.state.Enemies[0].X != 5 || g.state.Enemies[0].Y != 4 {
+			t.Fatalf("decoy=%v: トラバサミの敵が動いた", decoy)
+		}
+	}
+}

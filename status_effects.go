@@ -87,7 +87,7 @@ type statusDef struct {
 var statusDefs = []statusDef{
 	{
 		Kind: StatusBearTrap, Name: "トラバサミ", HUD: "トラバサミ", HUDOrder: 10,
-		Player: StatusTurns, Stack: StackLonger, Bad: true,
+		Player: StatusTurns, Enemy: StatusTurns, Stack: StackLonger, Bad: true,
 		PlayerApply:   "海老さんはトラバサミに足を挟まれた",
 		PlayerRecover: "海老さんはトラバサミから抜け出した",
 		Turns:         func(s *StatusAilments) int { return s.BearTrap },

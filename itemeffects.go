@@ -192,6 +192,7 @@ var shiftChange = func(g *Game) {
 		Duration: 0.4,
 		Message:  fmt.Sprintf("%sと入れ替わった", g.state.Enemies[g.TargetEnemyIndex].GetName()),
 		Execute: func(g *Game) {
+			defer g.enemyTrapAfterMove(g.TargetEnemyIndex, g.state.Enemies[g.TargetEnemyIndex].X, g.state.Enemies[g.TargetEnemyIndex].Y)
 			g.state.Player.X, g.state.Player.Y, g.state.Enemies[g.TargetEnemyIndex].X, g.state.Enemies[g.TargetEnemyIndex].Y = g.state.Enemies[g.TargetEnemyIndex].X, g.state.Enemies[g.TargetEnemyIndex].Y, g.state.Player.X, g.state.Player.Y
 			g.TargetEnemyIndex = -1
 		},

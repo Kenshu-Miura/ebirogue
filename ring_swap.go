@@ -43,6 +43,7 @@ func (g *Game) trySwapPlacesWithEnemy(i, dx, dy int) bool {
 	if enemy.X != player.X+dx || enemy.Y != player.Y+dy {
 		return false
 	}
+	defer g.enemyTrapAfterMove(i, enemy.X, enemy.Y)
 	oldX, oldY := player.X, player.Y
 	player.X, player.Y = enemy.X, enemy.Y
 	player.Direction = determineDirection(dx, dy)

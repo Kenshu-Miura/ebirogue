@@ -97,6 +97,7 @@ func init() {
 }
 
 func explodeRing(g *Game) {
+	g.explodeTraps(g.state.Player.X, g.state.Player.Y, 1, true, 0)
 	p := &g.state.Player
 	for i := len(g.state.Enemies) - 1; i >= 0; i-- {
 		e := g.state.Enemies[i]

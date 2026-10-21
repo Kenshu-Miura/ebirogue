@@ -28,6 +28,8 @@ var largeMineTrapEffect = func(g *Game) {
 		message = fmt.Sprintf("大型地雷が爆発したが、%sが威力を抑えて%dダメージを受けた", g.state.Player.EquippedArmor.Name, defense.Damage)
 	}
 	g.Enqueue(Action{Duration: 0.5, Message: message, Execute: func(g *Game) {
+		g.removeMineAt(x, y)
+		g.explodeTraps(x, y, 1, true, 0)
 		// 後ろから処理し、撃破によるスライス削除で対象を飛ばさない。
 		for i := len(g.state.Enemies) - 1; i >= 0; i-- {
 			enemy := g.state.Enemies[i]

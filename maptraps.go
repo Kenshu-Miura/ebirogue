@@ -59,6 +59,8 @@ var mineTrapEffect = func(g *Game) {
 		Message:  message,
 		Execute: func(g *Game) {
 			g.applyPlayerShieldDefense(defense, source, -1, -1, -1)
+			g.removeMineAt(g.state.Player.X, g.state.Player.Y)
+			g.explodeTraps(g.state.Player.X, g.state.Player.Y, 1, true, 0)
 		},
 	})
 }
@@ -101,10 +103,11 @@ var rustTrapEffect = func(g *Game) {
 }
 
 type mapTrapTemplate struct {
-	ID       int
-	Name     string
-	Effect   func(g *Game)
-	FailRate int
+	EnemyEffect func(g *Game, enemyIndex int, credit bool)
+	ID          int
+	Name        string
+	Effect      func(g *Game)
+	FailRate    int
 }
 
 // mapTrapTemplates は罠テンプレートを明示 ID で引くテーブル。

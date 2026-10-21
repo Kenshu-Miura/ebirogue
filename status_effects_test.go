@@ -98,7 +98,7 @@ func TestTickStatuses(t *testing.T) {
 	if len(ended) != 1 || ended[0] != StatusHaste {
 		t.Fatalf("enemy ended %v", ended)
 	}
-	if e != (StatusAilments{Sleep: -1, Blind: 5, BearTrap: 3, MouthSeal: 3}) {
+	if e != (StatusAilments{Sleep: -1, Blind: 5, BearTrap: 2, MouthSeal: 3}) {
 		t.Fatalf("enemy after tick %+v", e)
 	}
 }
