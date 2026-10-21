@@ -106,6 +106,9 @@ func (g *Game) applyTrapToEnemy(id, i int, credit bool) {
 	case 7:
 		g.applyEnemyStatus(i, StatusBearTrap, 6)
 	case 1:
+		// 毒矢: 海老さんのパワー低下に当たるものとして、敵には攻撃力低下を付ける（開発者の決定、2026-10-21）。
+		// 倒れると添字が無効になるので、ダメージより先にかける。
+		g.applyEnemyStatus(i, StatusAttackDown, poisonArrowEnemyAttackDownTurns)
 		g.trapEnemyDamage(i, 5, credit)
 	case 8, 9, 10:
 		power := map[int]int{8: woodArrowTrapPower, 9: ironArrowTrapPower, 10: fallingRockTrapPower}[id]

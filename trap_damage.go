@@ -18,6 +18,10 @@ const (
 // 下がったパワーはパワーアップのカードなど（boostPower）で戻す。
 const poisonPowerDrain = 1
 
+// 敵が毒矢の罠を踏んだときの攻撃力低下のターン数（敵にはパワーが無いので攻撃力低下で表す）。
+// 弱気の薬・弱体の杖と同じ30ターン。
+const poisonArrowEnemyAttackDownTurns = 30
+
 // 大型地雷は現在HPの3/4（切り上げ）。HP1でも危険が残る。
 func largeMineTrapDamage(health int) int {
 	if health <= 0 {

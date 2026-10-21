@@ -347,3 +347,38 @@ func TestWave8DecoyInBearTrapDoesNotAttack(t *testing.T) {
 		}
 	}
 }
+
+// 8-A×8-C（開発者の決定、2026-10-21）: 敵が毒矢の罠を踏むと5ダメージに加えて攻撃力低下になる。
+// 倒れた場合も panic しない。ボスは罠を踏まない。
+func TestWave8PoisonArrowTrapLowersEnemyAttack(t *testing.T) {
+	g := trapInteractionGame(1)
+	g.enemyTrapAfterMove(0, 2, 2)
+	runQueuedActions(g)
+	e := g.state.Enemies[0]
+	if e.Health != 95 {
+		t.Fatalf("damage: HP=%d", e.Health)
+	}
+	if e.StatusAilments.AttackDown != poisonArrowEnemyAttackDownTurns || statAttackMultiplier(e.StatusAilments) != 0.5 {
+		t.Fatalf("攻撃力低下が付かない: %+v", e.StatusAilments)
+	}
+	if g.state.Player.Power != g.state.Player.MaxPower {
+		t.Fatal("敵の毒矢で海老さんのパワーが下がった")
+	}
+
+	// 攻撃力上昇の敵は打ち消し合って両方消える（wave8-A の規則）。
+	g = trapInteractionGame(1)
+	g.applyEnemyStatus(0, StatusAttackUp, 30)
+	g.enemyTrapAfterMove(0, 2, 2)
+	runQueuedActions(g)
+	if s := g.state.Enemies[0].StatusAilments; s.AttackUp != 0 || s.AttackDown != 0 {
+		t.Fatalf("上昇と低下が打ち消し合わない: %+v", s)
+	}
+
+	g = trapInteractionGame(1)
+	g.state.Enemies[0].Health = 5
+	g.enemyTrapAfterMove(0, 2, 2)
+	runQueuedActions(g)
+	if len(g.state.Enemies) != 0 {
+		t.Fatal("毒矢で倒れない")
+	}
+}
