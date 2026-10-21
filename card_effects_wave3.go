@@ -170,7 +170,28 @@ func gatherItemsCard(g *Game) {
 		}
 		g.miniMapDirty = true
 		g.EnqueueMessage(fmt.Sprintf("道具が%d個集まった。", n), 0.4)
+		g.stealGatheredShopGoods()
 	})
+}
+
+// stealGatheredShopGoods は道具寄せで店の外へ出た商品の値段を消し、商売中の店なら泥棒にする（開発者の決定）。
+func (g *Game) stealGatheredShopGoods() {
+	stolen := false
+	for _, item := range g.state.Items {
+		x, y := item.GetPosition()
+		if g.inShopInterior(x, y) {
+			continue
+		}
+		forEachItemIn([]Item{item}, func(inner Item) {
+			if itemShopPrice(inner) > 0 {
+				setItemShopPrice(inner, 0)
+				stolen = true
+			}
+		})
+	}
+	if stolen {
+		g.becomeShopThief(false)
+	}
 }
 
 func gambleCard(g *Game) {

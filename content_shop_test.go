@@ -693,3 +693,31 @@ func TestMonsterHouseCardInShopMakesGoods(t *testing.T) {
 		}
 	}
 }
+
+// 道具寄せのカードで商品を店の外へ集めたら、その時点で泥棒になり、商品の値段は消える（開発者の決定）。
+// 店の中で使って商品が店の中にとどまれば、泥棒にならない。
+func TestGatherCardOutsideShopIsTheft(t *testing.T) {
+	g := newShopTestGame(t)
+	product := g.state.Items[0]
+	g.state.Player.X, g.state.Player.Y = 16, 4 // 店の外の部屋
+	useWave3TestCard(g, 171)
+	if x, _ := product.GetPosition(); x < 13 {
+		t.Fatalf("product not gathered: x=%d", x)
+	}
+	if itemShopPrice(product) != 0 {
+		t.Fatalf("price left on the gathered product: %d", itemShopPrice(product))
+	}
+	if g.shopOpen() || g.stats.ShopThefts != 1 {
+		t.Fatalf("not a theft: open=%v thefts=%d", g.shopOpen(), g.stats.ShopThefts)
+	}
+
+	g = newShopTestGame(t)
+	product = g.state.Items[0]
+	useWave3TestCard(g, 171)
+	if x, y := product.GetPosition(); !g.inShopInterior(x, y) {
+		t.Fatalf("product left the shop: (%d,%d)", x, y)
+	}
+	if itemShopPrice(product) == 0 || !g.shopOpen() || g.stats.ShopThefts != 0 {
+		t.Fatal("gathering inside the shop counted as a theft")
+	}
+}
