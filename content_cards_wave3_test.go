@@ -62,8 +62,10 @@ func TestWave3CardTemplatesAndSave(t *testing.T) {
 		}
 	}
 	// 174（ゾワゾワのカード）は段3の wave5-C で追加済み。内容は content_items_wave5c_test.go が検査する。
-	if itemCategorySpawnWeights["Card"] != 31 {
-		t.Fatal("category weight changed")
+	for floor := 1; floor <= finalFloor; floor++ {
+		if itemCategoryWeight("Card", floor) != 31 {
+			t.Fatal("category weight changed")
+		}
 	}
 }
 

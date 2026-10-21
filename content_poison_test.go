@@ -159,20 +159,11 @@ func TestEarlyBalanceValues(t *testing.T) {
 			t.Errorf("enemy %d special attack probability = %v, want 0.15", id, got)
 		}
 	}
-	count, cards := 0, 0
-	for _, category := range itemSpawnCategories {
-		if category.Name != "Card" {
-			continue
+	// パワーアップのカードは全階でほかのカード（重み1）の4倍出る。
+	for floor := 1; floor <= finalFloor; floor++ {
+		if got := itemFloorWeight(43, floor); got != powerUpCardSpawnWeight || itemFloorWeight(7, floor) != 1 {
+			t.Fatalf("floor %d: power-up card weight %d, black flame card %d", floor, got, itemFloorWeight(7, floor))
 		}
-		cards = len(category.Pool)
-		for _, id := range category.Pool {
-			if id == 43 {
-				count++
-			}
-		}
-	}
-	if count != powerUpCardSpawnWeight || cards != countTemplatesOfType("Card")+powerUpCardSpawnWeight-1 {
-		t.Fatalf("power-up card appears %d times in a card pool of %d", count, cards)
 	}
 }
 

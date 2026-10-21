@@ -46,7 +46,7 @@ func (g *Game) handleFadingOut() {
 		g.fadeAlpha = 1.0
 		if g.frameCounter == 0 {
 			// マップ生成
-			mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMap(70, 70, g.Floor, &g.state.Player, newFloorRNG(g.seed, g.Floor+1))
+			mapGrid, enemies, items, newFloor, newRoom, traps := GenerateRandomMapFor(70, 70, g.Floor, &g.state.Player, newFloorRNG(g.seed, g.Floor+1), g.difficulty)
 			// 新しいマップ情報を設定
 			g.miniMap = nil
 			g.state.Map = mapGrid
@@ -438,9 +438,10 @@ func placeBoss(bossID int, mapGrid [][]Tile, rooms []Room, playerRoom Room, enem
 	return CreateEnemyByID(bossID, x, y)
 }
 
-func generateItems(rooms []Room, rng *gameRNG) []Item {
+// generateItems は floor 階の床の道具を置く。数と抽選は難易度の補正 tuning と階層別の表（item_floor_tables.go）による。
+func generateItems(rooms []Room, rng *gameRNG, floor int, difficulty Difficulty) []Item {
 	var items []Item
-	for i := 0; i < 10; i++ {
+	for i := 0; i < spawnTuningFor(difficulty).floorItemCount(); i++ {
 		var itemRoom Room
 		var itemX, itemY int
 		for {
@@ -460,7 +461,7 @@ func generateItems(rooms []Room, rng *gameRNG) []Item {
 			}
 		}
 
-		items = append(items, createItem(itemX, itemY, rng.Intn))
+		items = append(items, createFloorItem(itemX, itemY, floor, difficulty, rng.Intn))
 	}
 	return items
 }
@@ -469,8 +470,14 @@ func generateItems(rooms []Room, rng *gameRNG) []Item {
 // 全部屋が連結になるまで作り直す（通常は1回目で成功する）。
 const maxMapGenAttempts = 30
 
-// GenerateRandomMap は currentFloor+1 階を生成する。rng はその階専用の乱数源（newFloorRNG）を渡す。
+// GenerateRandomMap は currentFloor+1 階を難易度の補正なし（上級）で生成する（テスト用）。
 func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gameRNG) ([][]Tile, []Enemy, []Item, int, []Room, []MapTrap) {
+	return GenerateRandomMapFor(width, height, currentFloor, player, rng, DifficultyAdvanced)
+}
+
+// GenerateRandomMapFor は currentFloor+1 階を生成する。rng はその階専用の乱数源（newFloorRNG）を渡す。
+// 床の道具・罠の数と抽選は難易度 difficulty の補正（difficultySpawnTunings）を使う。
+func GenerateRandomMapFor(width, height, currentFloor int, player *Player, rng *gameRNG, difficulty Difficulty) ([][]Tile, []Enemy, []Item, int, []Room, []MapTrap) {
 	var mapGrid [][]Tile
 	var rooms []Room
 
@@ -535,10 +542,10 @@ func GenerateRandomMap(width, height, currentFloor int, player *Player, rng *gam
 	if bossID, ok := bossIDForFloor(newFloor); ok {
 		enemies = append(enemies, placeBoss(bossID, mapGrid, rooms, playerRoom, enemies, player, rng))
 	}
-	items := generateItems(rooms, rng)
+	items := generateItems(rooms, rng, newFloor, difficulty)
 
 	// Generate map traps
-	traps := generateMapTraps(rooms, rng, newFloor)
+	traps := generateMapTrapsWith(rooms, rng, newFloor, spawnTuningFor(difficulty))
 
 	return mapGrid, enemies, items, newFloor, rooms, traps
 }

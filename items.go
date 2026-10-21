@@ -847,7 +847,7 @@ var baseItemTemplates = map[int]ItemTemplate{
 		Name:        "腐ったウインナー",
 		Description: "満腹度を10回復するが、パワーが1下がる。満腹でも最大満腹度は増えない。",
 		Char:        '!',
-		Recovery:    10,
+		Recovery:    rottenSausageSatiety,
 		UseActions:  map[string]UseAction{"RestoreSatiety": eatRottenSausage},
 	},
 }
@@ -972,47 +972,33 @@ func rollItemFromTemplate(id, x, y int, intn func(int) int) Item {
 // randomItemTemplateIDs は床のランダム生成の対象になるアイテム ID の一覧（昇順、重複なし）。
 var randomItemTemplateIDs = sortedTemplateIDs(itemTemplates, nil)
 
-// powerUpCardSpawnWeight はパワーアップのカード（ID 43）のカード内での出現の重み（ほかのカードは1）。
-// 毒（毒ヘビ系・毒矢の罠・腐った食料）で下がったパワーを戻せるよう多めに出す。
-// 根拠は docs/agents/early-game-analysis.md の「採用した変更」。
-const powerUpCardSpawnWeight = 4
+// floorItemCategories[floor] は floor 階（1〜finalFloor）の床の抽選表。表は item_floor_tables.go。
+var floorItemCategories = buildAllFloorItemCategories()
 
-// itemSpawnWeights はカテゴリ内での出現の重み（書いていない ID は1）。
-var itemSpawnWeights = map[int]int{
-	43: powerUpCardSpawnWeight,
-	// 薬の通常の重みを4、無敵だけ1にして出現を1/4に抑える。
-	2: 4, 3: 4, 17: 4, 18: 4, 19: 4, 28: 4, 29: 4,
-	205: 4, 206: 4, 207: 4, 208: 4, 209: 4, // 段8の能力値系の薬（wave8-A）
-	215: 4, 216: 4, 217: 1, 218: 4, // 段8の特殊系の薬（wave8-B）
+func buildAllFloorItemCategories() [][]floorSpawnCategory {
+	categoryOf := func(id int) string { return itemTemplates[id].ItemType }
+	tables := make([][]floorSpawnCategory, finalFloor+1)
+	for floor := 1; floor <= finalFloor; floor++ {
+		tables[floor] = buildFloorSpawnCategories(randomItemTemplateIDs, categoryOf, floor)
+	}
+	return tables
 }
 
-// itemCategorySpawnWeights は床に出るアイテムのカテゴリ（ItemTemplate.ItemType）ごとの出現の重み。
-// 全カテゴリの合計に対する割合がそのカテゴリの出現率になり、カテゴリ内は itemSpawnWeights で抽選する。
-// 値は導入時（2026-10-14、アイテム ID 0〜71）に全テンプレートが同じ重みだったときの割合と同じになるよう、
-// 当時のカテゴリ内の重みの合計にしてある（カードはパワーアップのカードの重み4を含めて31）。
-// 新しいアイテムを追加してもカテゴリの割合は変わらない（同じカテゴリのほかの道具が少し出にくくなる）。
-// 割合を変えるときは TestSimBatch の「床の道具」と餓死の数をベースラインと比べる。
-var itemCategorySpawnWeights = map[string]int{
-	"Card":      31,
-	"Armor":     14,
-	"Weapon":    12,
-	"Potion":    7,
-	"Food":      4,
-	"Cane":      2,
-	"Accessory": 3,
-	"Arrow":     1,
-	"Money":     1,
-	"Pot":       1,
-	"Trap":      1,
+// floorItemCategoriesFor は floor 階の抽選表（範囲外の階は1階・最下層の表）。
+func floorItemCategoriesFor(floor int) []floorSpawnCategory {
+	floor = min(max(floor, 1), finalFloor)
+	return floorItemCategories[floor]
 }
 
-// itemSpawnCategories は床の抽選用のカテゴリ別の一覧。
-var itemSpawnCategories = buildSpawnCategories(randomItemTemplateIDs,
-	func(id int) string { return itemTemplates[id].ItemType }, itemCategorySpawnWeights, itemSpawnWeights)
+// pickFloorItemID は floor 階・難易度 difficulty の床の道具を、カテゴリ → カテゴリ内の道具の順に重みで抽選して
+// テンプレート ID を返す（乱数を2回使う）。床の生成のほか、店の品ぞろえ（wave10-B）もこれを使う。
+func pickFloorItemID(floor int, difficulty Difficulty, intn func(int) int) int {
+	return pickFloorSpawnID(floorItemCategoriesFor(floor), spawnTuningFor(difficulty), intn, 0)
+}
 
-// createItem は床に置くアイテムを、カテゴリ → カテゴリ内のテンプレートの順に重み付きで抽選して作る。
-func createItem(x, y int, intn func(int) int) Item {
-	return rollItemFromTemplate(pickFromSpawnCategories(itemSpawnCategories, intn, 0), x, y, intn)
+// createFloorItem は floor 階に置くアイテムを抽選して作る。
+func createFloorItem(x, y, floor int, difficulty Difficulty, intn func(int) int) Item {
+	return rollItemFromTemplate(pickFloorItemID(floor, difficulty, intn), x, y, intn)
 }
 
 // 特定のIDのアイテムを冒険の乱数系列で生成する関数

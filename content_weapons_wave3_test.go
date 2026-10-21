@@ -108,8 +108,10 @@ func TestWave3WeaponTemplates(t *testing.T) {
 			}
 		})
 	}
-	if itemCategorySpawnWeights["Weapon"] != 12 {
-		t.Fatal("weapon category weight changed")
+	for floor := 1; floor <= finalFloor; floor++ {
+		if itemCategoryWeight("Weapon", floor) != 12 {
+			t.Fatal("weapon category weight changed")
+		}
 	}
 	// 147（巨大ハリセン）は段3の wave5-C で追加済み。内容は content_items_wave5c_test.go が検査する。
 }
