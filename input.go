@@ -827,7 +827,7 @@ func (g *Game) handleSettingsInput() error {
 		return nil
 	}
 
-	const settingsItemCount = 3
+	const settingsItemCount = 4
 	if g.settingsSelectedIndex == 2 && g.keys().JustPressed(KeyZ) {
 		g.showKeyConfig = true
 		g.keyConfigSelected = 0
@@ -849,6 +849,13 @@ func (g *Game) handleSettingsInput() error {
 			g.settings.Fullscreen = !g.settings.Fullscreen
 			if !g.headless {
 				ebiten.SetFullscreen(g.settings.Fullscreen)
+			}
+		case 3:
+			value := !replayEnabled(g.settings)
+			g.settings.SaveInputReplay = &value
+			if !value {
+				g.replaySuppressed = true
+				g.replay, g.replaySegment = nil, nil
 			}
 		case 1:
 			g.settings.ShowMiniMap = !g.settings.ShowMiniMap

@@ -213,11 +213,18 @@ type Game struct {
 	difficulty                Difficulty   // 冒険の難易度（開始時に決め、途中で変えない）
 	bossDefeated              bool         // 現在のボス階のボスを倒したか（フロア移動でリセット）
 	cleared                   bool         // 目標階のボスを倒して冒険をクリアした
-	inputFrame                int          // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
-	lastIncrementFrame        int          // 最後に足踏みしたフレーム（0 は未実行）
-	lastArrowPressFrame       int          // 方向キーで最後に移動したフレーム（0 は未実行）
-	lastDashStopFrame         int          // 最後にダッシュが停止したフレーム（0 は未実行）
-	showInventory             bool         // true when the inventory window should be displayed
+	replay                    *ReplayData
+	replaySegment             *ReplaySegment
+	replayPlayback            bool
+	replayFrameActive         bool
+	replaySavePending         bool
+	replaySuppressed          bool
+	replayPhysical            ReplayPhysical
+	inputFrame                int  // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
+	lastIncrementFrame        int  // 最後に足踏みしたフレーム（0 は未実行）
+	lastArrowPressFrame       int  // 方向キーで最後に移動したフレーム（0 は未実行）
+	lastDashStopFrame         int  // 最後にダッシュが停止したフレーム（0 は未実行）
+	showInventory             bool // true when the inventory window should be displayed
 	selectedItemIndex         int
 	showItemActions           bool
 	selectedActionIndex       int
@@ -362,11 +369,14 @@ func (g *Game) IsEnemyAdjacent() bool {
 }
 
 func (g *Game) Update() error {
+	finishReplayFrame := g.beginReplayFrame()
+	defer finishReplayFrame()
 	// フレームの区切り（入力状態の更新）
 	g.keys().Update()
+	g.recordReplayKeys()
 	g.inputFrame++
 	if g.showKeyConfig {
-		physical, held := capturePhysicalKey()
+		physical, held := g.replayPhysicalKey()
 		g.handleKeyConfigFrame(physical, held)
 		return nil
 	}

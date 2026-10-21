@@ -328,6 +328,7 @@ func (g *Game) buildSaveData() *SaveData {
 		log.Printf("乱数状態の保存に失敗: %v", err)
 	}
 	save := &SaveData{
+		Replay:            g.replay,
 		Version:           saveDataVersion,
 		Seed:              g.seed,
 		RNGState:          rngState,
@@ -552,6 +553,8 @@ func (g *Game) applySaveData(save *SaveData) error {
 		g.customNames[id] = string(runes)
 	}
 
+	g.replay, g.replaySegment = save.Replay, nil
+
 	// ミニマップの再構築を促す
 	g.miniMap = nil
 	g.miniMapDirty = true
@@ -563,6 +566,9 @@ func (g *Game) applySaveData(save *SaveData) error {
 
 // saveSuspendData は中断データをファイルへ保存する
 func (g *Game) saveSuspendData() error {
+	if g.replayFrameActive {
+		g.replaySavePending = true
+	}
 	if !g.persistent {
 		return nil // ヘッドレス（BOT）やテストではセーブファイルを書き換えない
 	}

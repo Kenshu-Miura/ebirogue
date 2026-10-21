@@ -164,6 +164,8 @@ func (g *Game) retrySameSeed() {
 // startNewRun は指定シードで1階から新しい冒険を始める。
 // 同じシードなら同じフロアが生成され、ターン進行の乱数列も同じになる。
 func (g *Game) startNewRun(seed int64) {
+	g.replay, g.replaySegment = nil, nil
+	g.replaySuppressed = false
 	g.showDifficultySelect, g.showClearScreen, g.showRunHistory = false, false, false
 	g.seed = seed
 	g.rng = newTurnRNG(seed)

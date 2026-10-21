@@ -27,6 +27,8 @@
 ebirogue_save.json
 ebirogue_settings.json
 ebirogue_results.json
+ebirogue_replay_last.json
+ebirogue_replays.json
 
 # BOT simulation reports (baseline only is tracked)
 /reports/*
