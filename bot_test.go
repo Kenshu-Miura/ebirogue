@@ -362,6 +362,9 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 	}
 	b.blockShopItems(blocked, width, height)
 	goods := b.shopGoodsMask(width, height)
+	// 未払いの品を持つ間は、ふさがれた道を越えるときも見つけた罠を踏まない（落とし穴・ワープで店を去ると泥棒。
+	// 段11の統合で見つけた型）
+	keepTraps := botFeature("shopsafe") && b.unpaidTotal() > 0
 	for _, trap := range g.state.MapTraps {
 		if b.mineNearKeeper(trap.X, trap.Y) {
 			blocked[trap.Y*width+trap.X] = true // 踏むと爆風が店主に当たる
@@ -369,7 +372,7 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 				goods[trap.Y*width+trap.X] = true
 			}
 		}
-		if through {
+		if through && !keepTraps {
 			continue
 		}
 		if trap.Discovered && trap.X >= 0 && trap.Y >= 0 && trap.X < width && trap.Y < height {
@@ -813,6 +816,10 @@ func (b *bot) makeRoomForFood() (bool, error) {
 	action := "置く"
 	if b.itemUnderPlayer() != nil || b.g.state.Map[p.Y][p.X].Type == "stairs" {
 		action = "投げる"
+		// 向いている直線に店主がいれば投げない（当たると泥棒。段11の統合で見つけた型）
+		if b.lineHitsShopkeeper(directionToDelta(p.Direction)) {
+			return false, nil
+		}
 	}
 	if b.discarded == nil {
 		b.discarded = map[discardKey]bool{}

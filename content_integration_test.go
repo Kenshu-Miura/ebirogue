@@ -728,3 +728,52 @@ func TestWave11HouseBuffUsesNoticedHouse(t *testing.T) {
 		t.Fatal("倍速の薬が効いていない")
 	}
 }
+
+// 段11の統合の TestSimBatch で見つけた泥棒（wave11-C の shopsafe の抜け道）: 食料のために満杯の持ち物を
+// 手放すとき、足元がふさがっていると投げて捨てる（bot-food）が、向いている直線に店主がいれば投げない。
+func TestWave11FoodDiscardThrowAvoidsShopkeeper(t *testing.T) {
+	g := newShopTestGame(t)
+	p := &g.state.Player
+	p.X, p.Y, p.Direction = 4, 3, Right // 店主 (8,3) の方を向く
+	for i := 0; i < 20; i++ {
+		p.Inventory = append(p.Inventory, buildItemFromTemplate(35, 0, 0)) // 不利なカード（手放す候補）
+	}
+	g.state.Items = []Item{buildItemFromTemplate(20, 4, 3), buildItemFromTemplate(1, 16, 6)} // 足元の自分の道具・隣の部屋の食料
+	g.state.Items[1].SetShowOnMiniMap(true)
+	markAllVisited(g)
+	b := newBot(g, g.input.(*VirtualInput), personaExpert, 1)
+	if done, err := b.makeRoomForFood(); err != nil || done || len(p.Inventory) != 20 {
+		t.Fatalf("店主の方へ道具を投げた: done=%v 持ち物 %d", done, len(p.Inventory))
+	}
+	p.Direction = Down
+	if done, err := b.makeRoomForFood(); err != nil || !done {
+		t.Fatalf("店主のいない向きでも手放さない: done=%v", done)
+	}
+	runQueuedActions(g)
+	if g.stats.ShopThefts != 0 || !g.shopOpen() {
+		t.Fatal("泥棒になった")
+	}
+}
+
+// 同じく: 未払いの品を持つ間は、ふさがれた道を越える経路（敵・見つけた罠も通る）でも見つけた罠を踏まない
+// （落とし穴で階を去ると泥棒）。払えば今までどおり罠も越える。
+func TestWave11UnpaidBotKeepsOffKnownTraps(t *testing.T) {
+	g := newShopTestGame(t)
+	pit := createMapTrapByID(6, 11, 4) // 店の外の通路
+	pit.Discovered = true
+	g.state.MapTraps = []MapTrap{pit}
+	b := newBot(g, g.input.(*VirtualInput), personaExpert, 1)
+	pastPit := func(x, y int) bool { return x == 16 && y == 4 } // 通路の罠の先（隣の部屋）
+	if _, _, ok := b.pathStepThrough(pastPit, true); !ok {
+		t.Fatal("未払いが無いのに罠を越える経路が無い")
+	}
+	product := g.state.Items[0] // 店の商品を拾って未払いにする
+	g.state.Items = nil
+	g.state.Player.Inventory = []Item{product}
+	if b.unpaidTotal() == 0 {
+		t.Fatal("未払いになっていない")
+	}
+	if _, _, ok := b.pathStepThrough(pastPit, true); ok {
+		t.Fatal("未払いのまま見つけた落とし穴へ向かった")
+	}
+}
