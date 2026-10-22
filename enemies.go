@@ -128,9 +128,11 @@ func (g *Game) updateEnemyVisibility() {
 
 // 統一されたモンスター定義テーブル
 type MonsterDefinition struct {
-	ID                       int
-	Type                     string
-	Name                     string
+	ID   int
+	Type string
+	Name string
+	// Description は図鑑に出す説明文。上位種は upperMonsterDefinition で基本種の文を引き継ぐ
+	Description              string
 	Char                     rune
 	Health                   int
 	MaxHealth                int
@@ -202,6 +204,7 @@ func withTraits(definition MonsterDefinition, traits ...EnemyTrait) MonsterDefin
 var baseMonsterDefinitions = map[int]MonsterDefinition{
 	0: {
 		ID:                       0,
+		Description:              "特別な能力を持たない。まっすぐ近づいて殴ってくる。",
 		Type:                     "Shrimp",
 		Name:                     "エビ",
 		Char:                     'E',
@@ -215,6 +218,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	1: {
 		ID:               1,
+		Description:      "毒のある攻撃で、ときどき海老さんのパワーを1下げる。",
 		Type:             "Snake",
 		Name:             "毒ヘビ",
 		Char:             'S',
@@ -237,6 +241,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	2: {
 		ID:                       2,
+		Description:              "特別な能力を持たない弱い敵。",
 		Type:                     "Mamuru",
 		Name:                     "マムル",
 		Char:                     'M',
@@ -250,6 +255,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	3: {
 		ID:               3,
+		Description:      "くねくね踊りで、ときどき海老さんを鈍足にする。",
 		Type:             "Honey",
 		Name:             "くねくねハニー",
 		Char:             'H',
@@ -272,6 +278,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	4: {
 		ID:               4,
+		Description:      "2〜8マス離れた一直線上から矢を放ってくる。",
 		Type:             "Harisenbow",
 		Traits:           []EnemyTrait{EnemyTraitAquatic},
 		Name:             "ハリセンボウ",
@@ -290,6 +297,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	5: {
 		ID:               5,
+		Description:      "2〜5マス離れた所から、壁やほかの敵を越えて石を投げてくる。",
 		Type:             "Ishigani",
 		Name:             "イシガニ",
 		Char:             'C',
@@ -308,6 +316,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	6: {
 		ID:               6,
+		Description:      "2〜6マス離れた一直線上から爆発弾を撃つ。着弾点の周り1マスも爆発に巻き込まれる。",
 		Type:             "BombUrchin",
 		Name:             "バクダンウニ",
 		Char:             'U',
@@ -327,6 +336,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	7: {
 		ID:                       7,
+		Description:              "装備していない持ち物を盗んで逃げ回る。倒すと盗まれた物を取り戻せる。",
 		Type:                     "ThiefHermitCrab",
 		Name:                     "コソドロヤドカリ",
 		Char:                     'T',
@@ -341,6 +351,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	8: {
 		ID:                       8,
+		Description:              "装備していない持ち物を1つウインナーに変えてしまう。",
 		Type:                     "NigiriShrimp",
 		Name:                     "にぎりエビ",
 		Char:                     'N',
@@ -354,6 +365,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	9: {
 		ID:                       9,
+		Description:              "持ち物の武器・盾・矢・指輪を1つ呪う。",
 		Type:                     "CurseCrab",
 		Name:                     "ノロイガニ",
 		Char:                     'C',
@@ -368,6 +380,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	10: {
 		ID:                       10,
+		Description:              "海老さんを操り、持ち物の食料や薬を勝手に使わせたり、勝手に歩かせたりする。",
 		Type:                     "PuppeteerJellyfish",
 		Name:                     "あやつりクラゲ",
 		Char:                     'J',
@@ -382,6 +395,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	11: {
 		ID:               11,
+		Description:      "壁を抜けて近づいてくる。",
 		Type:             "GhostShrimp",
 		Name:             "ユウレイエビ",
 		Char:             'G',
@@ -395,6 +409,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	12: {
 		ID:               12,
+		Description:      "1ターンに2回行動する。",
 		Type:             "MantisShrimp",
 		Name:             "ハヤテシャコ",
 		Char:             'F',
@@ -407,6 +422,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	13: {
 		ID:               13,
+		Description:      "近くの別の床へワープする。",
 		Type:             "WarpJellyfish",
 		Name:             "ワープクラゲ",
 		Char:             'W',
@@ -420,6 +436,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	14: {
 		ID:               14,
+		Description:      "離れた位置から海老さんと場所を入れ替える。",
 		Type:             "SwapOctopus",
 		Traits:           []EnemyTrait{EnemyTraitAquatic},
 		Name:             "イレカエダコ",
@@ -433,6 +450,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	15: {
 		ID:               15,
+		Description:      "歩いた床に隠れた罠を作る。",
 		Type:             "TrapHermitCrab",
 		Name:             "ワナシヤドカリ",
 		Char:             'R',
@@ -446,6 +464,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	16: {
 		ID:               16,
+		Description:      "床の道具に化けて待ち伏せる。",
 		Type:             "MimicClam",
 		Name:             "化け貝",
 		Char:             'Q',
@@ -459,6 +478,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	17: {
 		ID:               17,
+		Description:      "階段に化けて待ち伏せる。",
 		Type:             "MimicClam",
 		Name:             "化け貝",
 		Char:             'Q',
@@ -472,6 +492,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	36: {
 		ID:               36,
+		Description:      "特別な能力は無いが、打たれ強く攻撃も強い。竜の特効が効く。",
 		Type:             "SeaDragon",
 		Name:             "海竜",
 		Char:             'D',
@@ -484,6 +505,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	38: {
 		ID:               38,
+		Description:      "2〜5マス離れた一直線上から灼熱の炎を吐く。",
 		Type:             "FlameSquid",
 		Name:             "火吹きイカ",
 		Char:             'I',
@@ -501,6 +523,7 @@ var baseMonsterDefinitions = map[int]MonsterDefinition{
 	},
 	39: {
 		ID:               39,
+		Description:      "2〜6マス離れた一直線上から魔法弾を放つ。",
 		Type:             "MagicJellyfish",
 		Name:             "マホウクラゲ",
 		Char:             'J',
@@ -577,6 +600,15 @@ func buildMonsterDefinitions() map[int]MonsterDefinition {
 	definitions[42] = withTraits(definitions[42], EnemyTraitShell)
 	definitions[43] = bossDefinition(43, "深海ダコ将軍", "BossOctopus", 180, 18, 8, 500, nil)
 	definitions[44] = bossDefinition(44, "海竜王アカツキ", "BossDragon", 210, 16, 9, 800, nil)
+	for id, description := range map[int]string{
+		42: "10階のボス。殻で防御を上げ、手下を呼ぶ。全滅・ジェノサイドでは消えない。",
+		43: "20階のボス。墨・場所替え・二連撃を使う。全滅・ジェノサイドでは消えない。",
+		44: "30階のボス。炎と魔法を使い、HPが半分以下になると1ターンに2回行動する。金縛りは効かない。全滅・ジェノサイドでは消えない。",
+	} {
+		definition := definitions[id]
+		definition.Description = description
+		definitions[id] = definition
+	}
 
 	for id, attackPower := range map[int]int{22: 14, 23: 18, 24: 24, 40: 22, 41: 24, 49: 20, 50: 26, 51: 34, 64: 32, 65: 34} {
 		definition := definitions[id]

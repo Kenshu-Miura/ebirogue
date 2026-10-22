@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/font/basicfont"
+	"strings"
 	"testing"
 )
 
@@ -33,5 +34,35 @@ func TestCodexDrawAllEntriesPreservesRNG(t *testing.T) {
 	after, _ := g.rng.MarshalState()
 	if !bytes.Equal(before, after) || g.turnCount != turns {
 		t.Fatal("drawing changed the adventure")
+	}
+}
+
+// 図鑑のすべての敵・罠に説明文があり、ほかの敵の説明を取り違えないこと。
+func TestCodexEveryEnemyAndTrapHasDescription(t *testing.T) {
+	for tab, describe := range map[int]func(int) string{1: codexEnemyDescription, 2: codexTrapDescription} {
+		for _, id := range codexIDs(tab) {
+			desc := describe(id)
+			if desc == "" {
+				t.Errorf("タブ%d の ID %d に説明文が無い", tab, id)
+			}
+			if lines := codexWrap(desc, 41, 12); len(lines) == 12 && strings.HasSuffix(lines[11], "…") {
+				t.Errorf("タブ%d の ID %d の説明文が長すぎて途中で切れる", tab, id)
+			}
+		}
+	}
+	if codexEnemyDescription(0) == codexEnemyDescription(11) {
+		t.Errorf("エビにユウレイエビの説明が出ている: %q", codexEnemyDescription(0))
+	}
+	if codexEnemyDescription(36) == codexEnemyDescription(44) {
+		t.Errorf("海竜に海竜王の説明が出ている: %q", codexEnemyDescription(36))
+	}
+	if codexTrapDescription(3) == codexTrapDescription(11) {
+		t.Errorf("地雷に大型地雷の説明が出ている: %q", codexTrapDescription(3))
+	}
+	// 上位種は基本種の説明を引き継ぐ
+	for base, upper := range map[int]int{0: 18, 18: 45, 1: 20, 66: 67, 67: 68} {
+		if codexEnemyDescription(upper) != codexEnemyDescription(base) {
+			t.Errorf("上位種 %d の説明が基本種 %d と違う", upper, base)
+		}
 	}
 }

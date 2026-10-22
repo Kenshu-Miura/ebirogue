@@ -8,28 +8,28 @@ import "fmt"
 // 担当はこの表と、同じファイルの特殊攻撃・行動の関数だけを追加する（enemy_expansion.go がまとめて登録する）。
 var expansionA1MonsterFamilies = []monsterFamily{
 	{
-		Base:      MonsterDefinition{ID: 66, Type: "HibanaUmiushi", Name: "ヒバナウミウシ", Char: 'A', Health: 26, AttackPower: 6, DefensePower: 3, ExperiencePoints: 16, SpecialAttackProbability: 0.3},
+		Base:      MonsterDefinition{Description: "隣から火を吹く。火喰いの盾で半減できる。", ID: 66, Type: "HibanaUmiushi", Name: "ヒバナウミウシ", Char: 'A', Health: 26, AttackPower: 6, DefensePower: 3, ExperiencePoints: 16, SpecialAttackProbability: 0.3},
 		BaseImage: "img/hibana_umiushi.png",
 		Second:    monsterStage{67, "KaenUmiushi", "カエンウミウシ", 48, 11, 6, 40, "img/kaen_umiushi.png"},
 		Third:     monsterStage{68, "GoukaUmiushi", "ゴウカウミウシ", 82, 22, 8, 100, "img/gouka_umiushi.png"},
 		Spawns:    []monsterSpawnRange{{66, 3, 4, 5}, {66, 5, 8, 8}, {67, 7, 8, 4}, {67, 9, 16, 7}, {68, 15, 16, 4}, {68, 17, 30, 7}},
 	},
 	{
-		Base:      MonsterDefinition{ID: 69, Type: "TeppouEbi", Name: "テッポウエビ", Char: 'P', Health: 30, AttackPower: 7, DefensePower: 4, ExperiencePoints: 18},
+		Base:      MonsterDefinition{Description: "2マス先から攻撃してくる。角越しにも届く。", ID: 69, Type: "TeppouEbi", Name: "テッポウエビ", Char: 'P', Health: 30, AttackPower: 7, DefensePower: 4, ExperiencePoints: 18},
 		BaseImage: "img/teppou_ebi.png",
 		Second:    monsterStage{70, "TaihouEbi", "タイホウエビ", 54, 12, 7, 45, "img/taihou_ebi.png"},
 		Third:     monsterStage{71, "GouhouEbi", "ゴウホウエビ", 92, 24, 9, 112, "img/gouhou_ebi.png"},
 		Spawns:    []monsterSpawnRange{{69, 4, 5, 5}, {69, 6, 10, 8}, {70, 10, 17, 7}, {71, 18, 30, 7}},
 	},
 	{
-		Base:      MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 72, Type: "NigeHaze", Name: "ニゲハゼ", Char: 'Z', Health: 14, AttackPower: 2, DefensePower: 2, ExperiencePoints: 24, SpecialMovement: SpecialMovementDoubleSpeed},
+		Base:      MonsterDefinition{Description: "攻撃せず倍速で逃げ回る。経験値が多い。", Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 72, Type: "NigeHaze", Name: "ニゲハゼ", Char: 'Z', Health: 14, AttackPower: 2, DefensePower: 2, ExperiencePoints: 24, SpecialMovement: SpecialMovementDoubleSpeed},
 		BaseImage: "img/nige_haze.png",
 		Second:    monsterStage{73, "TonzuraHaze", "トンズラハゼ", 26, 4, 5, 60, "img/tonzura_haze.png"},
 		Third:     monsterStage{74, "KinpikaHaze", "キンピカハゼ", 44, 8, 7, 150, "img/kinpika_haze.png"},
 		Spawns:    []monsterSpawnRange{{72, 2, 9, 4}, {73, 8, 16, 4}, {74, 15, 30, 3}},
 	},
 	{
-		Base:      MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 75, Type: "YobikomiBora", Name: "ヨビコミボラ", Char: 'Y', Health: 28, AttackPower: 5, DefensePower: 6, ExperiencePoints: 22},
+		Base:      MonsterDefinition{Description: "同じ部屋で仲間を呼ぶ。", Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 75, Type: "YobikomiBora", Name: "ヨビコミボラ", Char: 'Y', Health: 28, AttackPower: 5, DefensePower: 6, ExperiencePoints: 22},
 		BaseImage: "img/yobikomi_bora.png",
 		Second:    monsterStage{76, "YobiatsumeBora", "ヨビアツメボラ", 50, 9, 9, 55, "img/yobiatsume_bora.png"},
 		Third:     monsterStage{77, "DaishoukanBora", "ダイショウカンボラ", 85, 18, 11, 138, "img/daishoukan_bora.png"},

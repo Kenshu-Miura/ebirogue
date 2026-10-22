@@ -7,12 +7,12 @@ import "fmt"
 // アナジャコ系は Alerted だけを使う（近接・被弾後の追跡を保持）。
 // Counter・Timer・Flag は使わず、コバンザメ系は汎用状態を使わない。
 var expansionC2MonsterFamilies = []monsterFamily{
-	{Base: MonsterDefinition{ID: 111, Type: "AnaJako", Name: "アナジャコ", Char: 'a', Health: 36, AttackPower: 8, DefensePower: 7, ExperiencePoints: 26},
+	{Base: MonsterDefinition{Description: "近づくまで追ってこない。壁を掘りながら歩く。", ID: 111, Type: "AnaJako", Name: "アナジャコ", Char: 'a', Health: 36, AttackPower: 8, DefensePower: 7, ExperiencePoints: 26},
 		BaseImage: "img/ana_jako.png",
 		Second:    monsterStage{112, "OoAnaJako", "オオアナジャコ", 63, 14, 10, 65, "img/oo_ana_jako.png"},
 		Third:     monsterStage{113, "JigokuAnaJako", "ジゴクアナジャコ", 107, 28, 12, 162, "img/jigoku_ana_jako.png"},
 		Spawns:    []monsterSpawnRange{{111, 7, 13, 5}, {112, 14, 21, 5}, {113, 22, 30, 5}}},
-	{Base: MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 120, Type: "Kobanzame", Name: "コバンザメ", Char: 'z', Health: 28, AttackPower: 6, DefensePower: 4, ExperiencePoints: 20},
+	{Base: MonsterDefinition{Description: "離れた所から財布の小銭を投げつける。守銭の盾で小銭の吸い出しを防げる。", Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 120, Type: "Kobanzame", Name: "コバンザメ", Char: 'z', Health: 28, AttackPower: 6, DefensePower: 4, ExperiencePoints: 20},
 		BaseImage: "img/kobanzame.png",
 		Second:    monsterStage{121, "Oobanzame", "オオバンザメ", 50, 11, 7, 50, "img/oobanzame.png"},
 		Third:     monsterStage{122, "Senryouzame", "センリョウザメ", 85, 22, 9, 125, "img/senryouzame.png"},

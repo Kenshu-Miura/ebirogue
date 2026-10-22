@@ -7,11 +7,11 @@ import "fmt"
 // expansionB2MonsterFamilies は追加計画の敵 B 後半（ID 99〜107、docs/agents/wave5-B-enemies.md）。
 // 担当はこの表と、同じファイルの特殊攻撃・行動・被弾時の関数だけを追加する（enemy_expansion.go がまとめて登録する）。
 var expansionB2MonsterFamilies = []monsterFamily{
-	{Base: MonsterDefinition{ID: 99, Type: "SabiHitode", Name: "サビヒトデ", Char: 's', Health: 30, AttackPower: 6, DefensePower: 5, ExperiencePoints: 18, SpecialAttackProbability: 0.3},
+	{Base: MonsterDefinition{Description: "武器か盾をさびさせる。攻撃すると分裂することがあり、分身は経験値が無い。さび止め・金の装備・錆よけでさびを防げる。", ID: 99, Type: "SabiHitode", Name: "サビヒトデ", Char: 's', Health: 30, AttackPower: 6, DefensePower: 5, ExperiencePoints: 18, SpecialAttackProbability: 0.3},
 		BaseImage: "img/sabi_hitode.png", Second: monsterStage{100, "KusareHitode", "クサレヒトデ", 55, 11, 8, 45, "img/kusare_hitode.png"}, Third: monsterStage{101, "DoroHitode", "ドロヒトデ", 94, 22, 10, 112, "img/doro_hitode.png"}, Spawns: []monsterSpawnRange{{99, 5, 11, 6}, {100, 12, 19, 6}, {101, 20, 30, 6}}},
-	{Base: MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 102, Type: "ItazuraKawahagi", Name: "イタズラカワハギ", Char: 'k', Health: 22, AttackPower: 4, DefensePower: 3, ExperiencePoints: 12, SpecialAttackProbability: 0.3},
+	{Base: MonsterDefinition{Description: "持ち物を遠くへ投げ捨てる。杖を狙う。", Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 102, Type: "ItazuraKawahagi", Name: "イタズラカワハギ", Char: 'k', Health: 22, AttackPower: 4, DefensePower: 3, ExperiencePoints: 12, SpecialAttackProbability: 0.3},
 		BaseImage: "img/itazura_kawahagi.png", Second: monsterStage{103, "WarusaKawahagi", "ワルサカワハギ", 40, 8, 6, 32, "img/warusa_kawahagi.png"}, Third: monsterStage{104, "AkutareKawahagi", "アクタレカワハギ", 68, 16, 8, 80, "img/akutare_kawahagi.png"}, Spawns: []monsterSpawnRange{{102, 3, 9, 6}, {103, 10, 17, 6}, {104, 18, 30, 6}}},
-	{Base: MonsterDefinition{ID: 105, Type: "OohasamiGani", Name: "オオハサミガニ", Char: 'g', Health: 36, AttackPower: 10, DefensePower: 6, ExperiencePoints: 26, CriticalPercent: 15, Traits: []EnemyTrait{EnemyTraitShell}},
+	{Base: MonsterDefinition{Description: "たまに痛恨の一撃を出す。甲殻斬りが有効。", ID: 105, Type: "OohasamiGani", Name: "オオハサミガニ", Char: 'g', Health: 36, AttackPower: 10, DefensePower: 6, ExperiencePoints: 26, CriticalPercent: 15, Traits: []EnemyTrait{EnemyTraitShell}},
 		BaseImage: "img/oohasami_gani.png", Second: monsterStage{106, "GuillotineGani", "ギロチンガニ", 64, 17, 9, 65, "img/guillotine_gani.png"}, Third: monsterStage{107, "DanzaiGani", "ダンザイガニ", 109, 34, 11, 162, "img/danzai_gani.png"}, Spawns: []monsterSpawnRange{{105, 6, 12, 6}, {106, 13, 20, 6}, {107, 21, 30, 6}}},
 }
 

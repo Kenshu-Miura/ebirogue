@@ -7,17 +7,17 @@ import "fmt"
 // expansionB1MonsterFamilies は追加計画の敵 B 前半（ID 90〜98、docs/agents/wave5-A-enemies.md）。
 // 担当はこの表と、同じファイルの特殊攻撃・行動の関数だけを追加する（enemy_expansion.go がまとめて登録する）。
 var expansionB1MonsterFamilies = []monsterFamily{
-	{Base: MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 90, Type: "UmiDango", Name: "ウミダンゴ", Char: 'd', Health: 34, AttackPower: 6, DefensePower: 6, ExperiencePoints: 20, SpecialAttackProbability: 0.25},
+	{Base: MonsterDefinition{Description: "体当たりで吹き飛ばし、持ち物を落とさせる。", Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 90, Type: "UmiDango", Name: "ウミダンゴ", Char: 'd', Health: 34, AttackPower: 6, DefensePower: 6, ExperiencePoints: 20, SpecialAttackProbability: 0.25},
 		BaseImage: "img/umi_dango.png",
 		Second:    monsterStage{91, "OoUmiDango", "オオウミダンゴ", 60, 11, 9, 50, "img/oo_umi_dango.png"},
 		Third:     monsterStage{92, "DaiouUmiDango", "ダイオウウミダンゴ", 102, 22, 11, 125, "img/daiou_umi_dango.png"},
 		Spawns:    []monsterSpawnRange{{90, 4, 10, 6}, {91, 11, 18, 6}, {92, 19, 30, 6}}},
-	{Base: MonsterDefinition{Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 93, Type: "KaeruAnkou", Name: "カエルアンコウ", Char: 'f', Health: 26, AttackPower: 5, DefensePower: 4, ExperiencePoints: 14},
+	{Base: MonsterDefinition{Description: "3マス先から引き寄せる。引き寄せられる途中の罠も踏む。", Traits: []EnemyTrait{EnemyTraitAquatic}, ID: 93, Type: "KaeruAnkou", Name: "カエルアンコウ", Char: 'f', Health: 26, AttackPower: 5, DefensePower: 4, ExperiencePoints: 14},
 		BaseImage: "img/kaeru_ankou.png",
 		Second:    monsterStage{94, "OoKaeruAnkou", "オオカエルアンコウ", 48, 10, 7, 38, "img/oo_kaeru_ankou.png"},
 		Third:     monsterStage{95, "NushiKaeruAnkou", "ヌシカエルアンコウ", 82, 20, 9, 95, "img/nushi_kaeru_ankou.png"},
 		Spawns:    []monsterSpawnRange{{93, 3, 9, 6}, {94, 10, 17, 6}, {95, 18, 30, 6}}},
-	{Base: MonsterDefinition{ID: 96, Type: "HajikiGani", Name: "ハジキガニ", Char: 'h', Health: 40, AttackPower: 9, DefensePower: 8, ExperiencePoints: 28, SpecialAttackProbability: 0.25, Traits: []EnemyTrait{EnemyTraitShell}},
+	{Base: MonsterDefinition{Description: "盾を弾き飛ばす。弾きよけの指輪で防げる。", ID: 96, Type: "HajikiGani", Name: "ハジキガニ", Char: 'h', Health: 40, AttackPower: 9, DefensePower: 8, ExperiencePoints: 28, SpecialAttackProbability: 0.25, Traits: []EnemyTrait{EnemyTraitShell}},
 		BaseImage: "img/hajiki_gani.png",
 		Second:    monsterStage{97, "KengouGani", "ケンゴウガニ", 70, 15, 11, 70, "img/kengou_gani.png"},
 		Third:     monsterStage{98, "KenseiGani", "ケンセイガニ", 119, 30, 13, 175, "img/kensei_gani.png"},

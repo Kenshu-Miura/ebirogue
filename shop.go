@@ -31,11 +31,14 @@ func isShopMonsterID(id int) bool {
 // 階の深さは16階からの強い番犬（128）で表す。
 func addShopMonsters(definitions map[int]MonsterDefinition) {
 	definitions[shopkeeperMonsterID] = MonsterDefinition{ID: shopkeeperMonsterID, Type: "Shopkeeper", Name: "店主", Char: 'K',
-		Health: 400, MaxHealth: 400, AttackPower: 50, DefensePower: 20, ExperiencePoints: 1000, IsBoss: true}
+		Description: "店の主人。ふだんは何もしないが、泥棒や攻撃をすると怒って襲ってくる。とても強い。",
+		Health:      400, MaxHealth: 400, AttackPower: 50, DefensePower: 20, ExperiencePoints: 1000, IsBoss: true}
 	definitions[guardDogMonsterID] = MonsterDefinition{ID: guardDogMonsterID, Type: "GuardDog", Name: "番犬", Char: 'd',
-		Health: 60, MaxHealth: 60, AttackPower: 18, DefensePower: 8, ExperiencePoints: 60}
+		Description: "泥棒をすると海老さんの近くに現れる店の番犬。",
+		Health:      60, MaxHealth: 60, AttackPower: 18, DefensePower: 8, ExperiencePoints: 60}
 	definitions[eliteGuardDogMonsterID] = MonsterDefinition{ID: eliteGuardDogMonsterID, Type: "EliteGuardDog", Name: "猛番犬", Char: 'd',
-		Health: 150, MaxHealth: 150, AttackPower: 38, DefensePower: 14, ExperiencePoints: 200}
+		Description: "泥棒をすると海老さんの近くに現れる強い番犬。16階から番犬の代わりに現れる。",
+		Health:      150, MaxHealth: 150, AttackPower: 38, DefensePower: 14, ExperiencePoints: 200}
 }
 
 func init() {

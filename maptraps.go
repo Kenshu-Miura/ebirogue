@@ -103,31 +103,33 @@ var rustTrapEffect = func(g *Game) {
 }
 
 type mapTrapTemplate struct {
-	ID       int
-	Name     string
-	Effect   func(g *Game)
-	FailRate int
+	ID   int
+	Name string
+	// Description は図鑑に出す説明文
+	Description string
+	Effect      func(g *Game)
+	FailRate    int
 }
 
 // mapTrapTemplates は罠テンプレートを明示 ID で引くテーブル。
 // ID はセーブデータに保存されるため、既存の ID を変更・再利用しないこと。
 var mapTrapTemplates = map[int]mapTrapTemplate{
-	0:  {ID: 0, Name: "睡眠ガスの罠", Effect: sleepGasTrapEffect, FailRate: 30},
-	1:  {ID: 1, Name: "毒矢の罠", Effect: poisonArrowTrapEffect, FailRate: 20},
-	2:  {ID: 2, Name: "鈍足の罠", Effect: slowTrapEffect, FailRate: 20},
-	3:  {ID: 3, Name: "地雷", Effect: mineTrapEffect, FailRate: 10},
-	4:  {ID: 4, Name: "サビの罠", Effect: rustTrapEffect, FailRate: 20},
-	5:  {ID: 5, Name: "ワープの罠", Effect: warpTrapEffect, FailRate: 20},
-	6:  {ID: 6, Name: "落とし穴", Effect: pitfallTrapEffect, FailRate: 20},
-	7:  {ID: 7, Name: "トラバサミ", Effect: bearTrapEffect, FailRate: 20},
-	8:  {ID: 8, Name: "木の矢の罠", Effect: woodArrowTrapEffect, FailRate: 20},
-	9:  {ID: 9, Name: "鉄の矢の罠", Effect: ironArrowTrapEffect, FailRate: 20},
-	10: {ID: 10, Name: "落石の罠", Effect: fallingRockTrapEffect, FailRate: 20},
-	11: {ID: 11, Name: "大型地雷", Effect: largeMineTrapEffect, FailRate: 10},
-	12: {ID: 12, Name: "装備はずしの罠", Effect: unequipTrapEffect, FailRate: itemTrapFailRate},
-	13: {ID: 13, Name: "腐敗の罠", FailRate: itemTrapFailRate}, // 効果はアイテムテーブルとの初期化循環を避けて init で登録。
-	14: {ID: 14, Name: "散乱の罠", Effect: scatterTrapEffect, FailRate: itemTrapFailRate},
-	15: {ID: 15, Name: "回復封じの罠", Effect: noHealingTrapEffect, FailRate: 20},
+	0:  {ID: 0, Name: "睡眠ガスの罠", Description: "眠りのガスが噴き出し、10ターン眠ってしまう。", Effect: sleepGasTrapEffect, FailRate: 30},
+	1:  {ID: 1, Name: "毒矢の罠", Description: "毒矢が刺さって5ダメージを受け、パワーが1下がる。", Effect: poisonArrowTrapEffect, FailRate: 20},
+	2:  {ID: 2, Name: "鈍足の罠", Description: "10ターンのあいだ鈍足になる。", Effect: slowTrapEffect, FailRate: 20},
+	3:  {ID: 3, Name: "地雷", Description: "爆発して現在HPの半分を失う。周りの罠も壊し、地雷は誘爆する。", Effect: mineTrapEffect, FailRate: 10},
+	4:  {ID: 4, Name: "サビの罠", Description: "装備中の武器か盾がさびて、強化値が1下がる。", Effect: rustTrapEffect, FailRate: 20},
+	5:  {ID: 5, Name: "ワープの罠", Description: "同じ階のどこかへ飛ばされる。", Effect: warpTrapEffect, FailRate: 20},
+	6:  {ID: 6, Name: "落とし穴", Description: "小ダメージを受けて次の階へ落ちる。ボス階には無い。", Effect: pitfallTrapEffect, FailRate: 20},
+	7:  {ID: 7, Name: "トラバサミ", Description: "しばらく歩けなくなる。攻撃・道具・足踏みはできる。", Effect: bearTrapEffect, FailRate: 20},
+	8:  {ID: 8, Name: "木の矢の罠", Description: "小さな物理ダメージを受ける。防御力が高いほど被害が減る。", Effect: woodArrowTrapEffect, FailRate: 20},
+	9:  {ID: 9, Name: "鉄の矢の罠", Description: "中程度の物理ダメージを受ける。防御力が高いほど被害が減る。", Effect: ironArrowTrapEffect, FailRate: 20},
+	10: {ID: 10, Name: "落石の罠", Description: "中程度の物理ダメージを受ける。防御力が高いほど被害が減る。", Effect: fallingRockTrapEffect, FailRate: 20},
+	11: {ID: 11, Name: "大型地雷", Description: "現在HPの約75%を失う（切り上げ）。周囲8マスの敵も爆風でダメージを受ける。爆風よけの盾で半減できる。HPが1でも致命傷になる。", Effect: largeMineTrapEffect, FailRate: 10},
+	12: {ID: 12, Name: "装備はずしの罠", Description: "武器か盾を外す。外れた装備は所持品に残り、呪いも残る。", Effect: unequipTrapEffect, FailRate: itemTrapFailRate},
+	13: {ID: 13, Name: "腐敗の罠", Description: "所持品の食料1つが腐る。壺の中の食料と腐った食料は対象外。", FailRate: itemTrapFailRate}, // 効果はアイテムテーブルとの初期化循環を避けて init で登録。
+	14: {ID: 14, Name: "散乱の罠", Description: "未装備の所持品を最大3個まわりに散らす。", Effect: scatterTrapEffect, FailRate: itemTrapFailRate},
+	15: {ID: 15, Name: "回復封じの罠", Description: "30ターンのあいだHPが回復しなくなる。", Effect: noHealingTrapEffect, FailRate: 20},
 }
 
 // randomMapTrapIDs は敵の罠設置などで一様に抽選する罠 ID の一覧（昇順）。

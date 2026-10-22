@@ -17,23 +17,15 @@ func codexRateLabel(ids []int, records map[int]CodexRecord) string {
 	return fmt.Sprintf("発見 %d / 全 %d（%.1f%%）", n, m, p)
 }
 
-// 既存ヘルプに名前を含む説明を引用する。独立した説明テーブルは増やさない。
-func codexHelpDescription(name string) string {
-	for _, page := range helpPages() {
-		for i, line := range page.Lines {
-			if strings.Contains(line, name) {
-				lines := []string{line}
-				for j := i + 1; j < min(i+3, len(page.Lines)); j++ {
-					if strings.TrimSpace(page.Lines[j]) == "" || strings.Contains(page.Lines[j], "：") {
-						break
-					}
-					lines = append(lines, page.Lines[j])
-				}
-				return strings.Join(lines, "\n")
-			}
-		}
-	}
-	return ""
+// codexEnemyDescription は敵の図鑑の説明文を返す。定義の Description を使い、
+// ヘルプの文章を名前で探すことはしない（「エビ」で「ユウレイエビ」の行が見つかる取り違えを防ぐ）。
+func codexEnemyDescription(id int) string {
+	return MonsterDefinitions[id].Description
+}
+
+// codexTrapDescription は罠の図鑑の説明文を返す。
+func codexTrapDescription(id int) string {
+	return mapTrapTemplates[id].Description
 }
 func codexWrap(s string, width, limit int) []string {
 	var out []string
@@ -97,22 +89,12 @@ func (g *Game) drawCodex(screen *ebiten.Image) {
 			case 1:
 				d := MonsterDefinitions[id]
 				name = d.Name
-				desc = codexHelpDescription(name)
-				if desc == "" {
-					for _, familyID := range monsterFamilyIDs(id) {
-						if base, ok := MonsterDefinitions[familyID]; ok {
-							desc = codexHelpDescription(base.Name)
-							if desc != "" {
-								break
-							}
-						}
-					}
-				}
+				desc = codexEnemyDescription(id)
 				info = fmt.Sprintf("HP %d 攻 %d 防 %d 経験値 %d  撃破 %d / 敗北 %d", d.MaxHealth, d.AttackPower, d.DefensePower, d.ExperiencePoints, r.Defeated, r.Deaths)
 				img = g.getEnemyImage(Enemy{ID: id, Type: d.Type, Name: d.Name})
 			case 2:
 				name = mapTrapTemplates[id].Name
-				desc = codexHelpDescription(name)
+				desc = codexTrapDescription(id)
 				info = "未踏"
 				if r.Stepped {
 					info = "踏んだことがある"
