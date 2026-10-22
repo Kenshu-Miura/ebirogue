@@ -258,41 +258,9 @@ func TestWave8ThrownHealingCuresNigiriDuringNoHealing(t *testing.T) {
 	}
 }
 
-// 8-A×8-C: 敵の防御力の上下は、敵が踏んだ物理罠のダメージにも効く（海老さんの物理罠と同じ規則）。
-func TestWave8EnemyDefenseStatusAffectsPhysicalTrap(t *testing.T) {
-	damage := map[StatusKind]int{}
-	for _, kind := range []StatusKind{"", StatusDefenseUp, StatusDefenseDown} {
-		g := trapInteractionGame(9) // 鉄の矢の罠
-		if kind != "" {
-			g.applyEnemyStatus(0, kind, 30)
-			runQueuedActions(g)
-		}
-		e := g.state.Enemies[0]
-		want := rollEnemyAttackDamageWith(ironArrowTrapPower, e.DefensePower, statDefenseMultiplier(e.StatusAilments), g.damageIntn())
-		g.enemyTrapAfterMove(0, 2, 2)
-		runQueuedActions(g)
-		got := 100 - g.state.Enemies[0].Health
-		if got != want {
-			t.Fatalf("%q: damage=%d want=%d", kind, got, want)
-		}
-		damage[kind] = got
-	}
-	if !(damage[StatusDefenseUp] < damage[""] && damage[""] < damage[StatusDefenseDown]) {
-		t.Fatalf("防御力の上下が効いていない: %v", damage)
-	}
-}
-
-// 8-A×8-C: 回復封じの罠（15）は敵が踏んでも何も起きず残り、海老さんだけに効く。
-func TestWave8NoHealingTrapOnlyAffectsPlayer(t *testing.T) {
+// 8-A: 回復封じの罠（15）は海老さんが踏むと回復不能にする（敵は罠を踏まない。TestEnemyDoesNotTriggerTraps）。
+func TestWave8NoHealingTrapAffectsPlayer(t *testing.T) {
 	g := trapInteractionGame(15)
-	g.enemyTrapAfterMove(0, 2, 2)
-	runQueuedActions(g)
-	if g.state.Enemies[0].StatusAilments != (StatusAilments{}) || len(g.state.MapTraps) != 1 {
-		t.Fatal("回復封じの罠が敵に作動した")
-	}
-	if statusActive(g.state.Player.StatusAilments, StatusNoHealing) {
-		t.Fatal("敵が踏んだ罠が海老さんに効いた")
-	}
 	trap := g.state.MapTraps[0]
 	g.steppedTrapSource = trapSource(trap.TemplateID, trap.Name)
 	trap.Effect(g)
@@ -345,41 +313,6 @@ func TestWave8DecoyInBearTrapDoesNotAttack(t *testing.T) {
 		if g.state.Enemies[0].X != 5 || g.state.Enemies[0].Y != 4 {
 			t.Fatalf("decoy=%v: トラバサミの敵が動いた", decoy)
 		}
-	}
-}
-
-// 8-A×8-C（開発者の決定、2026-10-21）: 敵が毒矢の罠を踏むと5ダメージに加えて攻撃力低下になる。
-// 倒れた場合も panic しない。ボスは罠を踏まない。
-func TestWave8PoisonArrowTrapLowersEnemyAttack(t *testing.T) {
-	g := trapInteractionGame(1)
-	g.enemyTrapAfterMove(0, 2, 2)
-	runQueuedActions(g)
-	e := g.state.Enemies[0]
-	if e.Health != 95 {
-		t.Fatalf("damage: HP=%d", e.Health)
-	}
-	if e.StatusAilments.AttackDown != poisonArrowEnemyAttackDownTurns || statAttackMultiplier(e.StatusAilments) != 0.5 {
-		t.Fatalf("攻撃力低下が付かない: %+v", e.StatusAilments)
-	}
-	if g.state.Player.Power != g.state.Player.MaxPower {
-		t.Fatal("敵の毒矢で海老さんのパワーが下がった")
-	}
-
-	// 攻撃力上昇の敵は打ち消し合って両方消える（wave8-A の規則）。
-	g = trapInteractionGame(1)
-	g.applyEnemyStatus(0, StatusAttackUp, 30)
-	g.enemyTrapAfterMove(0, 2, 2)
-	runQueuedActions(g)
-	if s := g.state.Enemies[0].StatusAilments; s.AttackUp != 0 || s.AttackDown != 0 {
-		t.Fatalf("上昇と低下が打ち消し合わない: %+v", s)
-	}
-
-	g = trapInteractionGame(1)
-	g.state.Enemies[0].Health = 5
-	g.enemyTrapAfterMove(0, 2, 2)
-	runQueuedActions(g)
-	if len(g.state.Enemies) != 0 {
-		t.Fatal("毒矢で倒れない")
 	}
 }
 

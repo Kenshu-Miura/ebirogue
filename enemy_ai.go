@@ -9,7 +9,6 @@ import (
 // 敵の行動AI（追跡・巡回・状態異常時の行動）をまとめたファイル。
 
 func moveEnemy(g *Game, i int, dx, dy int) bool {
-	defer g.enemyTrapAfterMove(i, g.state.Enemies[i].X, g.state.Enemies[i].Y)
 	enemy := g.state.Enemies[i]
 	newX, newY := enemy.X+dx, enemy.Y+dy
 
@@ -301,7 +300,6 @@ func isBlocked(g *Game, x, y int) (bool, bool, bool, bool) {
 
 // tryMoveEnemy は敵を (dx, dy) 方向へ1マス動かせるなら動かして true を返す。
 func (g *Game) tryMoveEnemy(enemyIndex, dx, dy int) bool {
-	defer g.enemyTrapAfterMove(enemyIndex, g.state.Enemies[enemyIndex].X, g.state.Enemies[enemyIndex].Y)
 	if dx == 0 && dy == 0 {
 		return false
 	}
@@ -321,7 +319,6 @@ func (g *Game) tryMoveEnemy(enemyIndex, dx, dy int) bool {
 // tryMoveEnemyThroughWall は壁抜け能力用に地形の通行可否だけを無視して移動する。
 // マップ外、プレイヤー、ほかの敵がいるマスへは移動しない。
 func (g *Game) tryMoveEnemyThroughWall(enemyIndex, dx, dy int) bool {
-	defer g.enemyTrapAfterMove(enemyIndex, g.state.Enemies[enemyIndex].X, g.state.Enemies[enemyIndex].Y)
 	if dx == 0 && dy == 0 {
 		return false
 	}
@@ -368,7 +365,6 @@ func rollSpecialMovement(intn func(int) int, oneIn int) bool {
 }
 
 func (g *Game) tryWarpEnemy(enemyIndex int, intn func(int) int) bool {
-	defer g.enemyTrapAfterMove(enemyIndex, g.state.Enemies[enemyIndex].X, g.state.Enemies[enemyIndex].Y)
 	enemy := &g.state.Enemies[enemyIndex]
 	if enemy.SpecialMovement != SpecialMovementWarp || enemy.StatusAilments.Seal || !rollSpecialMovement(intn, 4) {
 		return false
@@ -405,7 +401,6 @@ func (g *Game) tryWarpEnemy(enemyIndex int, intn func(int) int) bool {
 }
 
 func (g *Game) trySwapEnemyWithPlayer(enemyIndex int, intn func(int) int) bool {
-	defer g.enemyTrapAfterMove(enemyIndex, g.state.Enemies[enemyIndex].X, g.state.Enemies[enemyIndex].Y)
 	enemy := &g.state.Enemies[enemyIndex]
 	if enemy.SpecialMovement != SpecialMovementSwap || enemy.StatusAilments.Seal || !rollSpecialMovement(intn, 4) {
 		return false
@@ -522,7 +517,6 @@ func enemyMoveFallbacks(g *Game, enemyIndex, dx, dy int) [][2]int {
 }
 
 func (g *Game) moveEnemyConfused(i int) {
-	defer g.enemyTrapAfterMove(i, g.state.Enemies[i].X, g.state.Enemies[i].Y)
 	enemy := &g.state.Enemies[i]
 
 	// 8方向のランダムな移動先を選択
@@ -554,7 +548,6 @@ func (g *Game) moveEnemyConfused(i int) {
 }
 
 func (g *Game) moveEnemyBlind(i int) {
-	defer g.enemyTrapAfterMove(i, g.state.Enemies[i].X, g.state.Enemies[i].Y)
 	enemy := &g.state.Enemies[i]
 
 	// 方向が初期化されていない場合、ランダムに設定
@@ -629,23 +622,12 @@ func (g *Game) MoveEnemies() {
 		if enemy.StatusAilments.Slow > 0 && !hasExtraAction && g.moveCount%2 != 0 {
 			continue
 		}
-		startX, startY := enemy.X, enemy.Y
 		g.actEnemy(i)
 		// 倍速状態または固有の倍速能力を持つ敵はもう一度行動する。
 		// 封印は固有能力だけを止め、カードなどで付与された倍速状態は維持する。
 		// 鈍足中は倍速と相殺して通常の1回行動にする。
 		if hasExtraAction && g.state.Enemies[i].StatusAilments.Slow == 0 {
-			e := g.state.Enemies[i]
-			if (e.X != startX || e.Y != startY) && g.enemyOnActiveTrap(i) {
-				g.Enqueue(Action{Execute: func(g *Game) {
-					index := g.findEnemyForDefense(e.ID, e.X, e.Y)
-					if index >= 0 && g.state.Enemies[index].StatusAilments.Slow == 0 {
-						g.actEnemy(index)
-					}
-				}})
-			} else {
-				g.actEnemy(i)
-			}
+			g.actEnemy(i)
 		}
 	}
 }

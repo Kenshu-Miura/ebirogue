@@ -103,11 +103,10 @@ var rustTrapEffect = func(g *Game) {
 }
 
 type mapTrapTemplate struct {
-	EnemyEffect func(g *Game, enemyIndex int, credit bool)
-	ID          int
-	Name        string
-	Effect      func(g *Game)
-	FailRate    int
+	ID       int
+	Name     string
+	Effect   func(g *Game)
+	FailRate int
 }
 
 // mapTrapTemplates は罠テンプレートを明示 ID で引くテーブル。

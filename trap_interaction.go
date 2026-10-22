@@ -2,62 +2,25 @@
 
 package main
 
-// 敵用の効果はプレイヤー用と分離し、Action 実行時の対象を引き直す。
-func init() {
-	for _, id := range []int{0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11} {
-		id := id
-		t := mapTrapTemplates[id]
-		t.EnemyEffect = func(g *Game, i int, credit bool) { g.applyTrapToEnemy(id, i, credit) }
-		mapTrapTemplates[id] = t
-	}
-}
-
-func (g *Game) enemyTrapAfterMove(i, oldX, oldY int) {
-	if i < 0 || i >= len(g.state.Enemies) {
-		return
-	}
-	e := g.state.Enemies[i]
-	if e.X == oldX && e.Y == oldY {
-		return
-	}
-	if MonsterDefinitions[e.ID].IsBoss || hasEnemyTrait(e.Traits, EnemyTraitFloating) || e.SpecialMovement == SpecialMovementCreateTrap || isEnemyDisguised(e) || !g.terrainOpenAt(e.X, e.Y) {
-		return
-	}
-	if g.mapTrapIndexAt(e.X, e.Y) < 0 {
-		return
-	}
-	g.Enqueue(Action{Execute: func(g *Game) {
-		i := g.findEnemyForDefense(e.ID, e.X, e.Y)
-		if i < 0 {
-			return
-		}
-		g.activateInteractionTrap(e.X, e.Y, false, false, 0)
-	}})
-}
+// 敵は罠を踏まない（開発者の決定、2026-10-22）。罠が作動するのは海老さんが踏んだとき（maptraps.go の
+// stepOnTrap）と、海老さんが投げた道具・撃った矢が罠の上に落ちたとき（queueLandedTrap）だけ。
+// 地雷・大型地雷の爆風は周りの敵にも当たる（trapBlast）。
 
 func (g *Game) queueLandedTrap(x, y int, credit bool) {
-	g.Enqueue(Action{Execute: func(g *Game) { g.activateInteractionTrap(x, y, credit, true, 0) }})
+	g.Enqueue(Action{Execute: func(g *Game) { g.activateLandedTrap(x, y, credit) }})
 }
 
-func (g *Game) activateInteractionTrap(x, y int, credit, discover bool, depth int) {
+// activateLandedTrap は道具・矢が落ちたマスの罠を発見済みにして作動させる。
+// 効果は海老さんがそのマスにいるときだけ受け、地雷は爆発して消える。
+func (g *Game) activateLandedTrap(x, y int, credit bool) {
 	ti := g.mapTrapIndexAt(x, y)
 	if ti < 0 {
 		return
 	}
 	trap := g.state.MapTraps[ti]
-	i := g.enemyIndexAt(x, y)
-	effect := mapTrapTemplates[trap.TemplateID].EnemyEffect
-	if !discover && (i < 0 || effect == nil) {
-		return
-	}
 	failed := g.randIntn(100) < trap.FailRate
-	if !discover && failed {
-		return
-	}
-	if discover || (g.state.Player.StatusAilments.Blind == 0 && (g.IsInPlayerVisibleRoom(x, y) || max(abs(x-g.state.Player.X), abs(y-g.state.Player.Y)) <= 1)) {
-		g.state.MapTraps[ti].Discovered = true
-		g.miniMapDirty = true
-	}
+	g.state.MapTraps[ti].Discovered = true
+	g.miniMapDirty = true
 	if failed {
 		return
 	}
@@ -67,13 +30,10 @@ func (g *Game) activateInteractionTrap(x, y int, credit, discover bool, depth in
 		// 地雷は一度爆発すると消える。中心を先に除き、再帰で同じ罠を踏まない。
 		g.state.MapTraps = append(g.state.MapTraps[:ti], g.state.MapTraps[ti+1:]...)
 		hp := g.state.Player.Health
-		g.trapBlast(trap, credit, depth, &hp)
+		g.trapBlast(trap, credit, 0, &hp)
 		return
 	}
-	if i >= 0 && effect != nil {
-		effect(g, i, credit)
-	}
-	if g.state.Player.X == x && g.state.Player.Y == y && discover {
+	if g.state.Player.X == x && g.state.Player.Y == y {
 		g.steppedTrapSource = trapSource(trap.TemplateID, trap.Name)
 		if trap.Effect != nil {
 			trap.Effect(g)
@@ -98,44 +58,6 @@ func (g *Game) trapEnemyDamage(i, damage int, credit bool) {
 		return
 	}
 	g.applyDamageToEnemy(i, damage)
-}
-
-func (g *Game) applyTrapToEnemy(id, i int, credit bool) {
-	switch id {
-	case 0:
-		g.applyEnemyStatus(i, StatusSleep, 10)
-	case 2:
-		g.applyEnemyStatus(i, StatusSlow, 10)
-	case 7:
-		g.applyEnemyStatus(i, StatusBearTrap, 6)
-	case 1:
-		// 毒矢: 海老さんのパワー低下に当たるものとして、敵には攻撃力低下を付ける（開発者の決定、2026-10-21）。
-		// 倒れると添字が無効になるので、ダメージより先にかける。
-		g.applyEnemyStatus(i, StatusAttackDown, poisonArrowEnemyAttackDownTurns)
-		g.trapEnemyDamage(i, 5, credit)
-	case 8, 9, 10:
-		power := map[int]int{8: woodArrowTrapPower, 9: ironArrowTrapPower, 10: fallingRockTrapPower}[id]
-		target := g.state.Enemies[i]
-		g.trapEnemyDamage(i, rollEnemyAttackDamageWith(power, target.DefensePower, statDefenseMultiplier(target.StatusAilments), g.damageIntn()), credit)
-	case 6:
-		g.removeTrapEnemy(i)
-	case 5:
-		candidates := []Coordinate{}
-		for y, row := range g.state.Map {
-			for x, tile := range row {
-				if tile.Type == "floor" && !tile.Blocked && !isOccupied(g, x, y) && g.mapTrapIndexAt(x, y) < 0 {
-					candidates = append(candidates, Coordinate{X: x, Y: y})
-				}
-			}
-		}
-		if dest, ok := rollWarpDestination(candidates, g.randIntn); ok {
-			e := &g.state.Enemies[i]
-			e.X, e.Y = dest.X, dest.Y
-			e.dx, e.dy = 0, 0
-			e.Animating = false
-			g.miniMapDirty = true
-		}
-	}
 }
 
 // trapBlast は地雷1つの爆発。海老さんへのダメージは積んだ Action で後から減らすので、
@@ -196,11 +118,4 @@ func (g *Game) removeMineAt(x, y int) {
 	if i >= 0 && (g.state.MapTraps[i].TemplateID == 3 || g.state.MapTraps[i].TemplateID == 11) {
 		g.state.MapTraps = append(g.state.MapTraps[:i], g.state.MapTraps[i+1:]...)
 	}
-}
-
-// 倍速の2歩目より先に、1歩目に踏んだ罠を解決する。
-func (g *Game) enemyOnActiveTrap(i int) bool {
-	e := g.state.Enemies[i]
-	ti := g.mapTrapIndexAt(e.X, e.Y)
-	return ti >= 0 && mapTrapTemplates[g.state.MapTraps[ti].TemplateID].EnemyEffect != nil && !MonsterDefinitions[e.ID].IsBoss && !hasEnemyTrait(e.Traits, EnemyTraitFloating) && e.SpecialMovement != SpecialMovementCreateTrap
 }
