@@ -55,6 +55,17 @@ type bot struct {
 	hazardAvoided int
 	// chokeWait・ambushWait は expert が通路の入口・距離2の敵を足踏みで待ったターン数（bot_tactics_test.go）
 	chokeWait, ambushWait int
+	// house は expert がこの階で気づいたモンスターハウス、houseWait はそこで通路の入口で待ったターン数、
+	// logLen・logTail はメッセージ履歴の既読位置（bot_house_test.go）
+	house     botHouse
+	houseWait int
+	logLen    int
+	logTail   string
+	// searched・searchFloor・searchCount は隠し通路を調べた場所と、この階で調べた回数（bot_terrain_test.go）
+	searched    map[hiddenSpot]int
+	searchFloor int
+	searchCount int
+	searchRound int
 }
 
 func newBot(g *Game, in *VirtualInput, p persona, seed int64) *bot {
@@ -97,7 +108,13 @@ func directionKeys(dx, dy int) []Key {
 	return keys
 }
 
-func (b *bot) move(dx, dy int) error { return b.tap(directionKeys(dx, dy)...) }
+// move は1歩進む。expert の経路が正面の割れた壁を通るときは、殴って壊す（bot_terrain_test.go）。
+func (b *bot) move(dx, dy int) error {
+	if b.breaksCrackedWall(dx, dy) {
+		return b.attack(dx, dy)
+	}
+	return b.tap(directionKeys(dx, dy)...)
+}
 
 // attack は A＋方向キーで向きを変えてから Z で正面を攻撃する。
 func (b *bot) attack(dx, dy int) error {
@@ -321,6 +338,9 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 		if trap.Discovered && trap.X >= 0 && trap.Y >= 0 && trap.X < width && trap.Y < height {
 			blocked[trap.Y*width+trap.X] = true
 		}
+	}
+	if b.knownCrackedWall() { // 見えている割れた壁は壊して通れるものとして探す（expert）
+		return b.pathStepWeighted(goal, blocked)
 	}
 	start := g.state.Player.Y*width + g.state.Player.X
 	first := make([]int, width*height) // 始点から最初に踏み出した方向（+1）。0 は未訪問

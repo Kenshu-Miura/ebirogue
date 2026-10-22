@@ -21,7 +21,12 @@ var (
 	botOffSet  map[string]bool
 )
 
-// botFeature は expert の改善 name が有効かどうか。
+// botFeature は expert の改善 name が有効かどうか。名前の一覧:
+//   - bot-tactics: retreat ambush saveitem rings canes zowazowa selfdestruct sanctuary sausage bigroom blank pot swap shield
+//   - wave11-A: house（モンスターハウスの立ち回り、bot_house_test.go）、crackedwall（割れた壁を壊して通る）、
+//     hiddensearch（行き先が無いとき隠し通路を探す）、enemypath（追う敵は歩いて届く距離で選ぶ。水路の向こうの敵と
+//     道具の間で往復しない）、runaway（逃げ回るニゲハゼ系を脅威に数えず追わない）、gathershop（商売中の店がある階で
+//     道具寄せのカードを使わない）。house 以外は bot_terrain_test.go
 func botFeature(name string) bool {
 	botOffOnce.Do(func() {
 		botOffSet = map[string]bool{}
@@ -68,6 +73,9 @@ func (b *bot) approachingEnemies(r int) []Enemy {
 	p := g.state.Player
 	var out []Enemy
 	for _, e := range b.enemiesWithin(r) {
+		if botFeature("runaway") && isRunawayEnemy(e) {
+			continue // 逃げ回るだけで近づいてこない（bot_terrain_test.go）
+		}
 		if max(abs(e.X-p.X), abs(e.Y-p.Y)) <= 1 || e.SpecialMovement == SpecialMovementWallPass {
 			out = append(out, e)
 			continue
@@ -165,6 +173,11 @@ func (b *bot) expertTactics(adjacent []Enemy) (bool, error) {
 	p := &g.state.Player
 	if b.bossAlive() || g.playerOnSanctuary() {
 		return false, nil
+	}
+	if b.inHouseFight() { // モンスターハウス（bot_house_test.go）
+		if done, err := b.expertHouse(adjacent); done || err != nil {
+			return done, err
+		}
 	}
 	if botFeature("saveitem") {
 		if done, err := b.expertSaveItems(adjacent); done || err != nil {
