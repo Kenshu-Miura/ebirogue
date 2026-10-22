@@ -776,4 +776,42 @@ func TestWave11UnpaidBotKeepsOffKnownTraps(t *testing.T) {
 	if _, _, ok := b.pathStepThrough(pastPit, true); ok {
 		t.Fatal("未払いのまま見つけた落とし穴へ向かった")
 	}
+	// 店を去らせない罠（鈍足の罠）なら未払いでも越える（罠と商品に囲まれて動けなくならないように）
+	slow := createMapTrapByID(2, 11, 4)
+	slow.Discovered = true
+	g.state.MapTraps = []MapTrap{slow}
+	if _, _, ok := b.pathStepThrough(pastPit, true); !ok {
+		t.Fatal("未払いの間は危なくない罠も越えない")
+	}
+}
+
+// 同じく: 店の床に貼りついた聖域のカードは拾えないので、買う品に選ばない（乗っては離れるを繰り返していた）。
+func TestWave11ExpertDoesNotBuyStuckSanctuary(t *testing.T) {
+	g := newShopTestGame(t)
+	card := findSanctuaryCardForTest(t)
+	card.Stuck = true
+	card.SetPosition(2, 6)
+	card.SetShowOnMiniMap(true)
+	setItemShopPrice(card, itemBuyPrice(card))
+	g.state.Items = []Item{card}
+	g.state.Player.Cash = 100000
+	b := newBot(g, g.input.(*VirtualInput), personaExpert, 1)
+	if b.bestPurchase() != nil {
+		t.Fatal("貼りついた聖域のカードを買いに行く")
+	}
+	card.Stuck = false
+	if b.buyValue(card) > 0 && b.bestPurchase() != card {
+		t.Fatal("貼りついていない聖域のカードは買う候補になる")
+	}
+}
+
+func findSanctuaryCardForTest(t *testing.T) *Card {
+	t.Helper()
+	for _, id := range sortedTemplateIDs(itemTemplates, nil) {
+		if card, ok := buildItemFromTemplate(id, 0, 0).(*Card); ok && card.Name == sanctuaryCardName {
+			return card
+		}
+	}
+	t.Fatal("聖域のカードが無い")
+	return nil
 }

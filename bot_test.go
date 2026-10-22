@@ -342,6 +342,16 @@ var botSteps = [8][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1,
 
 // pathStep は幅優先探索で goal を満たす最寄りのマスへ向かう最初の1歩を返す。
 // 敵のいるマスと発見済みの罠は通らない（敵のいるマスが goal なら隣まで進む）。
+// unpaidRiskTrap は未払いの品を持って踏むと泥棒になりうる罠か（店の外へ出す落とし穴・ワープ、
+// 店主や商品に爆風が届く地雷）。
+func unpaidRiskTrap(id int) bool {
+	switch id {
+	case 3, 5, 6, 11:
+		return true
+	}
+	return false
+}
+
 func (b *bot) pathStep(goal func(x, y int) bool) (int, int, bool) {
 	return b.pathStepThrough(goal, false)
 }
@@ -362,9 +372,18 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 	}
 	b.blockShopItems(blocked, width, height)
 	goods := b.shopGoodsMask(width, height)
-	// 未払いの品を持つ間は、ふさがれた道を越えるときも見つけた罠を踏まない（落とし穴・ワープで店を去ると泥棒。
-	// 段11の統合で見つけた型）
+	// 未払いの品を持つ間は、ふさがれた道を越えるときも、見つけた店を去らせる罠（落とし穴・ワープ）と地雷を踏まない
+	// （泥棒になる。段11の統合で見つけた型）。ほかの罠は越えてよい（罠と商品に囲まれて動けなくなるため）
 	keepTraps := botFeature("shopsafe") && b.unpaidTotal() > 0
+	unpaidRisk := func(x, y int) bool {
+		i := g.mapTrapIndexAt(x, y)
+		return keepTraps && i >= 0 && g.state.MapTraps[i].Discovered && unpaidRiskTrap(g.state.MapTraps[i].TemplateID)
+	}
+	if keepTraps {
+		// 行き先のマスは通れないマスでも選ばれる（敵を行き先にするため）ので、行き先からも外す
+		orig := goal
+		goal = func(x, y int) bool { return !unpaidRisk(x, y) && orig(x, y) }
+	}
 	for _, trap := range g.state.MapTraps {
 		if b.mineNearKeeper(trap.X, trap.Y) {
 			blocked[trap.Y*width+trap.X] = true // 踏むと爆風が店主に当たる
@@ -372,7 +391,7 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 				goods[trap.Y*width+trap.X] = true
 			}
 		}
-		if through && !keepTraps {
+		if through && !unpaidRisk(trap.X, trap.Y) {
 			continue
 		}
 		if trap.Discovered && trap.X >= 0 && trap.Y >= 0 && trap.X < width && trap.Y < height {

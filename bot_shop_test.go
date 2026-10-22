@@ -493,7 +493,8 @@ func (b *bot) bestPurchase() Item {
 	for _, item := range g.state.Items {
 		price := itemShopPrice(item)
 		x, y := item.GetPosition()
-		if price <= 0 || !g.inShopInterior(x, y) || !item.GetShowOnMiniMap() || b.shopRejected[item] {
+		// 床に貼りついた聖域のカードは拾えない（乗っては離れるを繰り返す。段11の統合で見つけた型）
+		if price <= 0 || !g.inShopInterior(x, y) || !item.GetShowOnMiniMap() || b.shopRejected[item] || isStuckSanctuaryItem(item) {
 			continue
 		}
 		v := b.buyValue(item)
