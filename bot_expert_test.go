@@ -71,6 +71,10 @@ func (b *bot) expertBuffUsable(id int) bool {
 		}
 		return false
 	case 171:
+		// 店の商品まで寄せると店の外に商品が並び、踏むと泥棒・踏まなければ囲まれて動けなくなる
+		if botFeature("shopsafe") && b.g.shopOpen() {
+			return false
+		}
 		for _, item := range b.g.state.Items {
 			x, y := item.GetPosition()
 			if gatherDistance(Coordinate{X: x, Y: y}, Coordinate{X: p.X, Y: p.Y}) > 3 {
@@ -181,6 +185,9 @@ func (b *bot) adjacentEnemies() []Enemy {
 // enemyInLine は向き dx, dy の直線上（壁で遮られない range マス以内）で最初に当たる敵を返す。
 func (b *bot) enemyInLine(dx, dy, maxRange int) (Enemy, bool) {
 	g := b.g
+	if b.lineHitsShopkeeper(dx, dy) {
+		return Enemy{}, false // 外れた・貫通した矢や道具が後ろの店主に当たる
+	}
 	x, y := g.state.Player.X, g.state.Player.Y
 	for i := 1; i <= maxRange; i++ {
 		x, y = x+dx, y+dy
@@ -313,6 +320,9 @@ func (b *bot) expertWantsToDescend() bool {
 	if b.bossAlive() {
 		return false
 	}
+	if b.unpaidTotal() > 0 {
+		return false // 未払いのまま降りると泥棒になる
+	}
 	if g.floorTurns > 700 { // 風（1200ターン）よりかなり前に降りる
 		return true
 	}
@@ -328,6 +338,9 @@ func (b *bot) expertWantsToDescend() bool {
 	}
 	if g.state.Player.Satiety+food <= 50 {
 		return true // 食料が乏しければ探索を切り上げて先へ急ぐ（次の階で食料を探す）
+	}
+	if botFeature("leavefloor") && b.expertCutExploration(food) {
+		return true
 	}
 	if _, _, ok := b.pathStep(b.expertItemGoalFunc()); ok {
 		return false
@@ -354,6 +367,9 @@ func (b *bot) useByID(action string, ids ...int) (bool, error) {
 
 // faceAndUse は (dx, dy) を向いてから所持品 index に action を行う。
 func (b *bot) faceAndUse(dx, dy, index int, action string) (bool, error) {
+	if b.lineHitsShopkeeper(dx, dy) {
+		return false, nil // 飛ぶ道具・魔法弾が店主に当たる
+	}
 	if err := b.tap(append([]Key{KeyA}, directionKeys(sign(dx), sign(dy))...)...); err != nil {
 		return false, err
 	}
@@ -375,7 +391,7 @@ func (b *bot) expertStep() error {
 	g := b.g
 	player := &g.state.Player
 	if g.showStairsPrompt {
-		if b.expertWantsToDescend() && g.selectedOption == 0 {
+		if b.expertWantsToDescend() && g.selectedOption == 0 && !b.expertRestBeforeStairs() {
 			return b.tap(KeyZ)
 		}
 		return b.tap(KeyX)
@@ -383,6 +399,7 @@ func (b *bot) expertStep() error {
 	if b.windowOpen() {
 		return b.closeWindows()
 	}
+	b.resetShopFloor()
 	if done, err := b.returnUnpaidItem(); done || err != nil {
 		return err
 	}
@@ -562,10 +579,16 @@ func (b *bot) expertStep() error {
 		}
 	}
 
-	// 5b. 食料: 満杯なら価値の低い道具を手放して空きを作り、足元の食料を拾う
+	// 5b. 店で払う・売る・買う。食料: 満杯なら価値の低い道具を手放して空きを作り、足元の食料を拾う
 	if len(adjacent) == 0 {
+		if done, err := b.expertShop(); done || err != nil {
+			return err
+		}
 		if done, err := b.makeRoomForFood(); done || err != nil {
 			b.act = "discard"
+			return err
+		}
+		if done, err := b.makeRoomForMoney(); done || err != nil {
 			return err
 		}
 		if done, err := b.pickUpHere(); done || err != nil {
@@ -593,6 +616,10 @@ func (b *bot) expertStep() error {
 
 	// 6. 階段の上で降りたくなったら確認を開き直す
 	if g.state.Map[player.Y][player.X].Type == "stairs" && b.expertWantsToDescend() {
+		if b.expertRestBeforeStairs() {
+			b.act = "restStairs"
+			return b.stepInPlace()
+		}
 		b.act = "descend"
 		return b.tap(KeyS)
 	}
@@ -657,6 +684,9 @@ func (b *bot) expertStep() error {
 		labels = append([]string{"toStairs"}, labels...)
 	}
 	addGoal("toStairs", b.stairsGoal)
+	if done, err := b.expertRushStairs(); done || err != nil {
+		return err
+	}
 	for i, goal := range goals {
 		if dx, dy, ok := b.expertPathStep(goal); ok {
 			b.act = labels[i]

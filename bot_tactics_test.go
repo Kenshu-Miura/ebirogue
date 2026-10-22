@@ -16,6 +16,14 @@ import (
 // botOff は計測用に expert の改善を個別に切る（例: -bot.off=retreat,ambush）。
 var botOff = flag.String("bot.off", "", "計測用: 切る expert の改善（カンマ区切り）")
 
+// botOn は計測用に、既定で切ってある改善（botDefaultOff）を入れる（例: -bot.on=restbeforestairs）。
+var botOn = flag.String("bot.on", "", "計測用: 入れる expert の改善（既定で切ってあるもの、カンマ区切り）")
+
+// botDefaultOff は計測でクリア率を下げたため既定で切ってある改善（-bot.on で入れて測れる）。
+var botDefaultOff = []string{
+	"restbeforestairs", // wave11-C: 降りる前の階段の上の休憩。切った方が初級 +4.0pt・上級 +3.4pt（docs/agents/done/wave11-C.md）
+}
+
 var (
 	botOffOnce sync.Once
 	botOffSet  map[string]bool
@@ -25,6 +33,14 @@ var (
 func botFeature(name string) bool {
 	botOffOnce.Do(func() {
 		botOffSet = map[string]bool{}
+		for _, s := range botDefaultOff {
+			botOffSet[s] = true
+		}
+		for _, s := range strings.Split(*botOn, ",") {
+			if s = strings.TrimSpace(s); s != "" {
+				delete(botOffSet, s)
+			}
+		}
 		for _, s := range strings.Split(*botOff, ",") {
 			if s = strings.TrimSpace(s); s != "" {
 				botOffSet[s] = true
