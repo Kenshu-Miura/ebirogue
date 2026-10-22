@@ -645,3 +645,53 @@ func TestRegressionUnidentifiedNamesDoNotLeakInMessages(t *testing.T) {
 		}
 	}
 }
+
+// 未識別の壺・杖・指輪は説明で正体がわかってしまうので説明を隠す。武器・盾は未識別でも見せる（開発者の決定）。
+func TestUnidentifiedItemDescriptionHidden(t *testing.T) {
+	cases := []struct {
+		id     int
+		hidden bool
+	}{
+		{synthesisPotID, true}, // 合成の壺
+		{219, true},            // 身代わりの杖
+		{175, true},            // 指輪
+		{2, false},             // 薬（識別の仕組みが無い）
+	}
+	for _, c := range cases {
+		item := buildItemFromTemplate(c.id, 0, 0)
+		if got := itemDescriptionHidden(item); got != c.hidden {
+			t.Fatalf("ID %d: 隠す = %v, want %v", c.id, got, c.hidden)
+		}
+		if c.hidden {
+			if got := itemDescriptionText(item); got != unidentifiedDescription {
+				t.Fatalf("ID %d: 説明 %q", c.id, got)
+			}
+			item.(Identifiable).SetIdentified(true)
+			if itemDescriptionHidden(item) || itemDescriptionText(item) != item.GetDescription() {
+				t.Fatalf("ID %d: 識別後も説明が隠れている", c.id)
+			}
+		}
+	}
+	for _, id := range []int{4, 5} { // 武器・盾は未識別でも説明を見せる
+		item := buildItemFromTemplate(id, 0, 0)
+		if identifiable, ok := item.(Identifiable); !ok || identifiable.IsIdentified() {
+			t.Fatalf("ID %d（%s）が未識別の武器・盾ではない", id, item.GetName())
+		}
+		if itemDescriptionHidden(item) {
+			t.Fatalf("ID %d（%s）: 未識別の武器・盾の説明が隠れた", id, item.GetName())
+		}
+	}
+
+	// 足元の「説明」でも本当の説明が出ない
+	g, _ := newHeadlessGame(1, DifficultyAdvanced)
+	pot := buildItemFromTemplate(synthesisPotID, g.state.Player.X, g.state.Player.Y)
+	g.state.Items = []Item{pot}
+	g.ShowGroundItem = true
+	g.currentGroundItem = pot
+	g.selectedGroundActionIndex = 4
+	g.executeGroundItemAction()
+	if !strings.HasPrefix(g.groundItemDescriptionText, unidentifiedDescription) ||
+		strings.Contains(g.groundItemDescriptionText, itemTemplates[synthesisPotID].Description) {
+		t.Fatalf("足元の説明に正体が出た: %q", g.groundItemDescriptionText)
+	}
+}

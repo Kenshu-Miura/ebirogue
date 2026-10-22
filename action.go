@@ -230,7 +230,7 @@ func (g *Game) executeGroundItemAction() {
 
 	if g.selectedGroundActionIndex == 4 { // Assuming index 4 corresponds to '説明'
 		if g.currentGroundItem != nil {
-			g.groundItemDescriptionText = g.currentGroundItem.GetDescription() + g.shopPriceDescription(g.currentGroundItem)
+			g.groundItemDescriptionText = itemDescriptionText(g.currentGroundItem) + g.shopPriceDescription(g.currentGroundItem)
 			g.showGroundItemDescription = true
 		}
 		// 説明の場合はメニューを閉じずに説明ウィンドウのみ表示
@@ -539,7 +539,7 @@ func (g *Game) executeAction() {
 
 	if actionIndex == 3 { // Assuming 0-based index and "説明" is at index 3 (adjusted for arrows)
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
-		g.itemdescriptionText = selectedItem.GetDescription() + g.shopPriceDescription(selectedItem)
+		g.itemdescriptionText = itemDescriptionText(selectedItem) + g.shopPriceDescription(selectedItem)
 		g.showItemDescription = true
 	}
 

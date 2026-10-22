@@ -34,6 +34,28 @@ func displayItemName(item Item) (name string, identified bool) {
 	return getItemNameWithSharpness(item), identified
 }
 
+// unidentifiedDescription は説明を隠した未識別の道具の説明画面の文。
+const unidentifiedDescription = "未識別の道具。識別するまで効き目はわからない。"
+
+// itemDescriptionHidden は説明画面で説明を隠すかを返す。未識別の杖・壺・指輪（識別の仕組みを持つ
+// カードも）は説明で正体がわかってしまうので隠す。武器・盾は未識別でも説明を見せる（開発者の決定、2026-10-22）。
+func itemDescriptionHidden(item Item) bool {
+	switch item.(type) {
+	case *Weapon, *Armor:
+		return false
+	}
+	identifiable, ok := item.(Identifiable)
+	return ok && !identifiable.IsIdentified()
+}
+
+// itemDescriptionText は説明画面に出す道具の説明（未識別で隠す道具は決まった文）を返す。
+func itemDescriptionText(item Item) string {
+	if itemDescriptionHidden(item) {
+		return unidentifiedDescription
+	}
+	return item.GetDescription()
+}
+
 // isCursedEquipment は装備品（武器・防具・矢・アクセサリ）が呪われているかどうかを返す。
 func isCursedEquipment(item Equipable) bool {
 	switch v := item.(type) {
