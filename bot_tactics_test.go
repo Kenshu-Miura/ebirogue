@@ -16,6 +16,14 @@ import (
 // botOff は計測用に expert の改善を個別に切る（例: -bot.off=retreat,ambush）。
 var botOff = flag.String("bot.off", "", "計測用: 切る expert の改善（カンマ区切り）")
 
+// botOn は計測用に、既定で切ってある改善（botDefaultOff）を入れる（例: -bot.on=restbeforestairs）。
+var botOn = flag.String("bot.on", "", "計測用: 入れる expert の改善（既定で切ってあるもの、カンマ区切り）")
+
+// botDefaultOff は計測でクリア率を下げたため既定で切ってある改善（-bot.on で入れて測れる）。
+var botDefaultOff = []string{
+	"restbeforestairs", // wave11-C: 降りる前の階段の上の休憩。切った方が初級 +4.0pt・上級 +3.4pt（docs/agents/done/wave11-C.md）
+}
+
 var (
 	botOffOnce sync.Once
 	botOffSet  map[string]bool
@@ -27,9 +35,21 @@ var (
 //     hiddensearch（行き先が無いとき隠し通路を探す）、enemypath（追う敵は歩いて届く距離で選ぶ。水路の向こうの敵と
 //     道具の間で往復しない）、runaway（逃げ回るニゲハゼ系を脅威に数えず追わない）、gathershop（商売中の店がある階で
 //     道具寄せのカードを使わない）。house 以外は bot_terrain_test.go
+//   - wave11-B（bot_expert_wave11_test.go）: buffpotion debuffcane special statusest synthesis strengthpot coolpot
+//   - wave11-C: shopsafe shopsell shopbuy（bot_shop_test.go）、leavefloor restbeforestairs（bot_explore_test.go。
+//     restbeforestairs は既定で切ってある）。shopsafe と wave11-A の gathershop はどちらも店のある階の道具寄せの
+//     カードを止めていて、どちらか一方を切れば使うようになる
 func botFeature(name string) bool {
 	botOffOnce.Do(func() {
 		botOffSet = map[string]bool{}
+		for _, s := range botDefaultOff {
+			botOffSet[s] = true
+		}
+		for _, s := range strings.Split(*botOn, ",") {
+			if s = strings.TrimSpace(s); s != "" {
+				delete(botOffSet, s)
+			}
+		}
 		for _, s := range strings.Split(*botOff, ",") {
 			if s = strings.TrimSpace(s); s != "" {
 				botOffSet[s] = true

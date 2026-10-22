@@ -68,6 +68,14 @@ type bot struct {
 	searchRound int
 	// potJob は expert が何ターンかに分けて行う壺の作業（bot_expert_wave11_test.go）
 	potJob *botPotJob
+	// 店（bot_shop_test.go）: buyTarget は expert が買いに行く商品、shopRejected は払えずに返した商品、
+	// keeperSearched は店主の隣で罠を調べたマス
+	buyTarget      Item
+	shopRejected   map[Item]bool
+	keeperSearched map[keeperSearchKey]bool
+	// stairsRest は expert が階段の上で休んだターン数（bot_explore_test.go）、restFloor はその階、
+	// shopFloor は店の記録（buyTarget・shopRejected）の階
+	stairsRest, restFloor, shopFloor int
 }
 
 func newBot(g *Game, in *VirtualInput, p persona, seed int64) *bot {
@@ -110,16 +118,33 @@ func directionKeys(dx, dy int) []Key {
 	return keys
 }
 
-// move は1歩進む。expert の経路が正面の割れた壁を通るときは、殴って壊す（bot_terrain_test.go）。
+// move は (dx, dy) へ1歩動く。未払いのまま店を出る1歩は踏まず（足踏み）、expert の経路が正面の
+// 割れた壁を通るときは殴って壊し（bot_terrain_test.go）、怒っていない店主の隣の調べていないマスへは
+// 先に Z で罠を調べる（bot_shop_test.go）。
 func (b *bot) move(dx, dy int) error {
+	if botFeature("shopsafe") && b.leavesShopUnpaid(dx, dy) {
+		b.act = "holdUnpaid"
+		return b.stepInPlace()
+	}
 	if b.breaksCrackedWall(dx, dy) {
 		return b.attack(dx, dy)
+	}
+	if done, err := b.searchBeforeStep(dx, dy); done || err != nil {
+		return err
 	}
 	return b.tap(directionKeys(dx, dy)...)
 }
 
-// attack は A＋方向キーで向きを変えてから Z で正面を攻撃する。
+// attack は A＋方向キーで向きを変えてから Z で正面を攻撃する。三方向の武器の横の振りが怒っていない
+// 店主に当たるなら振らずに離れる（離れられなければ足踏み）。
 func (b *bot) attack(dx, dy int) error {
+	if b.swingHitsShopkeeper(dx, dy) {
+		b.act = "avoidKeeper"
+		if fx, fy, ok := b.fleeStep(); ok && !b.leavesShopUnpaid(fx, fy) {
+			return b.tap(directionKeys(fx, fy)...)
+		}
+		return b.stepInPlace()
+	}
 	if err := b.tap(append([]Key{KeyA}, directionKeys(dx, dy)...)...); err != nil {
 		return err
 	}
@@ -147,6 +172,9 @@ func (b *bot) closeWindows() error {
 		}
 		if b.g.showDifficultySelect || b.g.showClearScreen {
 			key = KeyZ
+		}
+		if b.g.shopPrompt != nil {
+			key = b.shopPromptKey()
 		}
 		if err := b.tap(key); err != nil {
 			return err
@@ -333,9 +361,16 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 		}
 	}
 	b.blockShopItems(blocked, width, height)
+	goods := b.shopGoodsMask(width, height)
 	for _, trap := range g.state.MapTraps {
+		if b.mineNearKeeper(trap.X, trap.Y) {
+			blocked[trap.Y*width+trap.X] = true // 踏むと爆風が店主に当たる
+			if goods != nil {
+				goods[trap.Y*width+trap.X] = true
+			}
+		}
 		if through {
-			break
+			continue
 		}
 		if trap.Discovered && trap.X >= 0 && trap.Y >= 0 && trap.X < width && trap.Y < height {
 			blocked[trap.Y*width+trap.X] = true
@@ -358,7 +393,7 @@ func (b *bot) pathStepThrough(goal func(x, y int) bool, through bool) (int, int,
 			}
 			nx, ny := x+step[0], y+step[1]
 			next := ny*width + nx
-			if first[next] != 0 {
+			if first[next] != 0 || (goods != nil && goods[next]) {
 				continue
 			}
 			dirFromStart := dir + 1
@@ -614,6 +649,9 @@ func (b *bot) equipUpgrades() (bool, error) {
 // useAttackItem は敵の方向を向いてカード・杖を使うか、要らない所持品を投げる。
 func (b *bot) useAttackItem(dx, dy int) (bool, error) {
 	dx, dy = sign(dx), sign(dy)
+	if b.lineHitsShopkeeper(dx, dy) {
+		return false, nil
+	}
 	if err := b.tap(append([]Key{KeyA}, directionKeys(dx, dy)...)...); err != nil {
 		return false, err
 	}
@@ -786,7 +824,7 @@ func (b *bot) makeRoomForFood() (bool, error) {
 // 所持品が満杯で拾えなかった食料の上で、空きを作った後に使う。
 func (b *bot) pickUpHere() (bool, error) {
 	item := b.itemUnderPlayer()
-	if item == nil || !isFoodItem(item) || b.inventoryFull() || isStuckSanctuaryItem(item) || b.g.pickupBanned {
+	if item == nil || !isFoodItem(item) || b.inventoryFull() || isStuckSanctuaryItem(item) || b.g.pickupBanned || (botFeature("shopsafe") && botAvoidsItem(item)) {
 		return false, nil
 	}
 	if err := b.tap(KeyC); err != nil {
