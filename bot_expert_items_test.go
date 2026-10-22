@@ -266,7 +266,7 @@ const storagePotID = 46
 func (b *bot) storagePot() (int, *Pot) {
 	best, bestPot := -1, (*Pot)(nil)
 	for i, item := range b.g.state.Player.Inventory {
-		if pot, ok := item.(*Pot); ok && (pot.GetID() == storagePotID || pot.GetID() == synthesisPotID) {
+		if pot, ok := item.(*Pot); ok && isFoodPot(pot) {
 			if bestPot == nil || pot.Capacity-len(pot.Contents) > bestPot.Capacity-len(bestPot.Contents) {
 				best, bestPot = i, pot
 			}
@@ -279,7 +279,7 @@ func (b *bot) storagePot() (int, *Pot) {
 func (b *bot) potFood() int {
 	n := 0
 	for _, item := range b.g.state.Player.Inventory {
-		if pot, ok := item.(*Pot); ok && (pot.GetID() == storagePotID || pot.GetID() == synthesisPotID) {
+		if pot, ok := item.(*Pot); ok && isFoodSourcePot(pot) {
 			for _, c := range pot.Contents {
 				if isFoodItem(c) && c.GetID() != rottenSausageItemID {
 					n++
@@ -316,7 +316,7 @@ func (b *bot) expertTakeFoodOut(limit int) (bool, error) {
 		return false, nil
 	}
 	for i, item := range p.Inventory {
-		if pot, ok := item.(*Pot); ok && (pot.GetID() == storagePotID || pot.GetID() == synthesisPotID) {
+		if pot, ok := item.(*Pot); ok && isFoodSourcePot(pot) {
 			for _, c := range pot.Contents {
 				if isFoodItem(c) {
 					b.act = "takeFood"
