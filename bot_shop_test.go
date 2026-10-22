@@ -21,7 +21,6 @@ const (
 	botBuyHealMax     = 2  // 回復の道具がこれ未満なら買う
 	botBuyMinValue    = 50 // 食料・回復・装備以外は価値がこれ以上なら買う
 	botShopEnemyRange = 5  // この距離以内に起きている敵がいたら売買しない
-	botMoneyDropValue = 10 // お金のために手放す道具の価値の上限
 )
 
 // expertHealItemIDs は expert が HP 40% 未満で使う回復の道具（bot_expert_test.go の回復の順番と同じ）。
@@ -569,43 +568,4 @@ func (b *bot) expertShop() (bool, error) {
 	}
 	b.buyTarget = nil
 	return false, nil
-}
-
-// --- お金（money） ---
-
-// visibleMoneyGoal は (x, y) に見えているお金があるか。
-func (b *bot) visibleMoneyGoal(x, y int) bool {
-	for _, item := range b.g.state.Items {
-		if _, ok := item.(*Money); ok {
-			if ix, iy := item.GetPosition(); ix == x && iy == y && item.GetShowOnMiniMap() && !botAvoidsItem(item) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// makeRoomForMoney は所持品が満杯で、見えているお金へ行けるとき、価値の低い道具を手放す。手放したら true。
-func (b *bot) makeRoomForMoney() (bool, error) {
-	if !botFeature("money") || !b.inventoryFull() || len(b.enemiesWithin(botShopEnemyRange)) > 0 {
-		return false, nil
-	}
-	if _, _, ok := b.pathStep(b.visibleMoneyGoal); !ok {
-		return false, nil
-	}
-	worst, worstValue := b.worstInventoryItem()
-	if worst < 0 || worstValue > botMoneyDropValue {
-		return false, nil
-	}
-	p := b.g.state.Player
-	action := "置く"
-	if b.itemUnderPlayer() != nil || b.g.state.Map[p.Y][p.X].Type == "stairs" {
-		action = "投げる"
-	}
-	if b.discarded == nil {
-		b.discarded = map[discardKey]bool{}
-	}
-	b.discarded[discardKey{b.g.Floor, p.Inventory[worst].GetID()}] = true
-	b.act = "dropForMoney"
-	return b.useInventoryItem(worst, action)
 }

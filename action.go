@@ -84,8 +84,8 @@ func (g *Game) executeGroundItemAction() {
 					break
 				}
 
-				// プレイヤーのインベントリサイズをチェック
-				if len(g.state.Player.Inventory) < 20 {
+				// プレイヤーのインベントリサイズをチェック（お金は満杯でも拾える）
+				if g.canPickUp(item) {
 					action := Action{
 						Duration: 0.8,
 						Message:  fmt.Sprintf("%sを拾った", itemName),

@@ -422,11 +422,12 @@ func (b *bot) unexploredGoal(x, y int) bool {
 }
 
 func (b *bot) itemGoal(x, y int) bool {
-	if len(b.g.state.Player.Inventory) >= b.g.state.Player.MaxInventory {
-		return false
-	}
+	full := len(b.g.state.Player.Inventory) >= b.g.state.Player.MaxInventory
 	for _, item := range b.g.state.Items {
 		if ix, iy := item.GetPosition(); ix == x && iy == y && !isStuckSanctuaryItem(item) && !botAvoidsItem(item) {
+			if _, isMoney := item.(*Money); full && !isMoney {
+				continue // 満杯でもお金は拾える
+			}
 			return true
 		}
 	}

@@ -512,7 +512,8 @@ func (b *bot) worthPicking(item Item) bool {
 	if v <= 0 {
 		return false
 	}
-	if !b.inventoryFull() {
+	// お金は持ち物の枠を使わないので、満杯でも入れ替えずに拾える
+	if _, isMoney := item.(*Money); isMoney || !b.inventoryFull() {
 		return true
 	}
 	_, worst := b.worstInventoryItem()
@@ -533,7 +534,7 @@ func (b *bot) expertItemGoal(x, y int) bool {
 func (b *bot) expertSwapHere() (bool, error) {
 	g := b.g
 	item := b.itemUnderPlayer()
-	if item == nil || !b.inventoryFull() || g.pickupBanned || !b.worthPicking(item) {
+	if _, isMoney := item.(*Money); isMoney || item == nil || !b.inventoryFull() || g.pickupBanned || !b.worthPicking(item) {
 		return false, nil
 	}
 	worst, _ := b.worstInventoryItem()

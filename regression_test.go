@@ -536,3 +536,53 @@ func TestRegressionMineChainUsesRemainingHealth(t *testing.T) {
 		})
 	}
 }
+
+// wave11-C の調査: 持ち物が満杯だとお金も「持ち物がいっぱいで拾えなかった」になっていた。
+// お金は持ち物の枠を使わず所持金に入るので、満杯でも拾える（開発者の決定、2026-10-22）。
+func fullInventoryWithMoneyAhead(t *testing.T) (*Game, *Money) {
+	t.Helper()
+	g := newProjectileTestGame()
+	g.state.Player.Inventory = nil
+	for i := 0; i < 20; i++ {
+		g.state.Player.Inventory = append(g.state.Player.Inventory, buildItemFromTemplate(1, 0, 0))
+	}
+	money := newStolenCash(150)
+	money.SetPosition(5, 4)
+	g.state.Items = []Item{money}
+	g.state.Player.Cash = 0
+	return g, money
+}
+
+func TestRegressionPickUpMoneyWithFullInventory(t *testing.T) {
+	g, _ := fullInventoryWithMoneyAhead(t)
+	if !g.MovePlayer(1, 0) {
+		t.Fatal("移動できない")
+	}
+	runQueuedActions(g)
+	if g.state.Player.Cash != 150 || len(g.state.Items) != 0 {
+		t.Fatalf("満杯でお金を拾えない: 所持金 %d・床の道具 %d", g.state.Player.Cash, len(g.state.Items))
+	}
+	if len(g.state.Player.Inventory) != 20 {
+		t.Fatalf("持ち物の数が変わった: %d", len(g.state.Player.Inventory))
+	}
+}
+
+func TestRegressionGroundMenuPicksUpMoneyWithFullInventory(t *testing.T) {
+	g, _ := fullInventoryWithMoneyAhead(t)
+	g.state.Player.X = 5
+	g.selectedGroundActionIndex = 0
+	g.executeGroundItemAction()
+	runQueuedActions(g)
+	if g.state.Player.Cash != 150 || len(g.state.Items) != 0 || len(g.state.Player.Inventory) != 20 {
+		t.Fatalf("足元のメニューで満杯でお金を拾えない: 所持金 %d・床の道具 %d・持ち物 %d",
+			g.state.Player.Cash, len(g.state.Items), len(g.state.Player.Inventory))
+	}
+	// お金以外は今までどおり満杯なら拾えない
+	g.state.Items = []Item{buildItemFromTemplate(1, 5, 4)}
+	g.selectedGroundActionIndex = 0
+	g.executeGroundItemAction()
+	runQueuedActions(g)
+	if len(g.state.Items) != 1 || len(g.state.Player.Inventory) != 20 {
+		t.Fatal("満杯でお金以外の道具を拾った")
+	}
+}

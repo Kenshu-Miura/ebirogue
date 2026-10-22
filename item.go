@@ -563,6 +563,15 @@ func (g *Game) PickUpItem(item Item, i int) {
 	g.state.Items = append(g.state.Items[:i], g.state.Items[i+1:]...)
 }
 
+// canPickUp は足元の道具を持ち物に入れられるかを返す。お金は持ち物の枠を使わず所持金に入るので、
+// 持ち物が満杯でも拾える（開発者の決定、2026-10-22）。
+func (g *Game) canPickUp(item Item) bool {
+	if _, isMoney := item.(*Money); isMoney {
+		return true
+	}
+	return len(g.state.Player.Inventory) < 20
+}
+
 func (g *Game) PickupItem() {
 	playerX, playerY := g.state.Player.X, g.state.Player.Y // プレイヤーの座標を取得
 
@@ -615,8 +624,8 @@ func (g *Game) PickupItem() {
 					break
 				}
 
-				// プレイヤーのインベントリサイズをチェック
-				if len(g.state.Player.Inventory) < 20 {
+				// プレイヤーのインベントリサイズをチェック（お金は満杯でも拾える）
+				if g.canPickUp(item) {
 					message := fmt.Sprintf("%sを拾った", itemName) // メッセージ全体を作成
 					action := Action{
 						Duration:     0.8,

@@ -610,16 +610,13 @@ func (b *bot) expertStep() error {
 		}
 	}
 
-	// 5b. 店で払う・売る・買う。食料: 満杯なら価値の低い道具を手放して空きを作り、足元の食料を拾う
+	// 5b. 店で払う・売る・買う。食料: 満杯なら価値の低い道具を手放して空きを作り、足元の食料を拾う（お金は満杯でも拾える）
 	if len(adjacent) == 0 {
 		if done, err := b.expertShop(); done || err != nil {
 			return err
 		}
 		if done, err := b.makeRoomForFood(); done || err != nil {
 			b.act = "discard"
-			return err
-		}
-		if done, err := b.makeRoomForMoney(); done || err != nil {
 			return err
 		}
 		if done, err := b.pickUpHere(); done || err != nil {
