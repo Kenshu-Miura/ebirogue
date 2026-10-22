@@ -228,6 +228,7 @@ func (g *Game) startNewRun(seed int64) {
 	// インベントリ拡張の状態をリセット
 	g.inventoryFilter = CategoryAll
 	g.customNames = map[int]string{}
+	g.identifiedTemplates = map[int]bool{}
 	g.showNameInput = false
 
 	// モンスター湧きシステム再初期化

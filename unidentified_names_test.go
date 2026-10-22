@@ -127,3 +127,67 @@ func TestUnidentifiedNameDisplayAndPotImage(t *testing.T) {
 		}
 	}
 }
+
+// 1つ識別すると同じ種類の杖・壺・指輪がすべて識別済みになる（持ち物・装備・床・壺の中・敵が持つ道具、後から手に入れた道具も）。
+// 武器・盾は1つずつ識別する。覚えた種類は中断・再開でも残り、新しい冒険では忘れる。
+func TestIdentifyingOneIdentifiesSameKind(t *testing.T) {
+	g, _ := newHeadlessGame(7, DifficultyAdvanced)
+	newPot := func() *Pot { return buildItemFromTemplate(synthesisPotID, 0, 0).(*Pot) }
+	first, second, onFloor, inside, held := newPot(), newPot(), newPot(), newPot(), newPot()
+	storage := buildItemFromTemplate(46, 0, 0).(*Pot) // 保存の壺（識別済み）
+	storage.Contents = []Item{inside}
+	ring := buildItemFromTemplate(175, 0, 0).(*Accessory)
+	weapon1 := buildItemFromTemplate(4, 0, 0).(*Weapon)
+	weapon2 := buildItemFromTemplate(4, 0, 0).(*Weapon)
+	g.state.Player.Inventory = []Item{first, second, storage, ring, weapon1, weapon2}
+	g.state.Items = []Item{onFloor}
+	g.state.Enemies = []Enemy{CreateEnemyByID(1, 1, 1)}
+	g.state.Enemies[0].HeldItem = held
+
+	first.SetIdentified(true)
+	weapon1.SetIdentified(true)
+	if err := g.StepFrame(); err != nil { // Update の中で広がる
+		t.Fatal(err)
+	}
+	for name, pot := range map[string]*Pot{"持ち物": second, "床": onFloor, "壺の中": inside, "敵が持つ": held} {
+		if !pot.Identified {
+			t.Fatalf("%sの合成の壺が識別されない", name)
+		}
+	}
+	if ring.Identified || weapon2.Identified {
+		t.Fatal("ほかの種類・武器まで識別された")
+	}
+
+	// 後から手に入れた同じ種類も識別済みになる
+	later := newPot()
+	g.state.Items = append(g.state.Items, later)
+	g.syncIdentifiedTemplates()
+	if !later.Identified {
+		t.Fatal("後から出た合成の壺が識別されない")
+	}
+
+	// 識別した道具が無くなっても、中断・再開で覚えている
+	g.state.Player.Inventory = nil
+	g.state.Items = nil
+	g.state.Enemies = nil
+	data := g.buildSaveData()
+	restored, _ := newHeadlessGame(99, DifficultyAdvanced)
+	if err := restored.applySaveData(data); err != nil {
+		t.Fatal(err)
+	}
+	afterResume := newPot()
+	restored.state.Items = []Item{afterResume}
+	restored.syncIdentifiedTemplates()
+	if !afterResume.Identified {
+		t.Fatal("再開後に識別済みの種類を忘れた")
+	}
+
+	// 新しい冒険では忘れる
+	restored.startNewRun(8)
+	fresh := newPot()
+	restored.state.Items = []Item{fresh}
+	restored.syncIdentifiedTemplates()
+	if fresh.Identified {
+		t.Fatal("新しい冒険でも識別済みのまま")
+	}
+}

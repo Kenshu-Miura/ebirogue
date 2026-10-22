@@ -137,6 +137,8 @@ type SaveData struct {
 	PendingEnemySpawns []PendingEnemySpawn `json:",omitempty"`
 	// Shop はこの階の店の状態（泥棒をしたか・使った未払いの品の代金。wave10-B）。古いセーブには無く、店の無い状態として読む
 	Shop *SavedShopState `json:",omitempty"`
+	// IdentifiedItemIDs はこの冒険で識別済みになった杖・壺・指輪のテンプレート ID（種類ごとの識別）。古いセーブには無く、空として読む
+	IdentifiedItemIDs []int `json:",omitempty"`
 }
 
 // SavedShopState は店の状態のセーブ用表現。商品の値段は各アイテムの ShopPrice、店の部屋は SavedRoom.Role、

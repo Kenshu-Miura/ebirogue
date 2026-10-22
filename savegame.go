@@ -357,6 +357,7 @@ func (g *Game) buildSaveData() *SaveData {
 		PickupBanned:      g.pickupBanned,
 		Messages:          g.messageLog.Messages,
 		CustomNames:       g.customNames,
+		IdentifiedItemIDs: g.identifiedTemplateIDs(),
 		Stats:             g.stats,
 	}
 	save.PendingEnemySpawns = append([]PendingEnemySpawn(nil), g.pendingEnemySpawns...)
@@ -558,6 +559,10 @@ func (g *Game) applySaveData(save *SaveData) error {
 	g.messageLog.Messages = messages
 
 	// 未識別アイテムの任意名を復元
+	g.identifiedTemplates = map[int]bool{}
+	for _, id := range save.IdentifiedItemIDs {
+		g.identifiedTemplates[id] = true
+	}
 	g.customNames = map[int]string{}
 	for id, name := range save.CustomNames {
 		runes := []rune(name)
