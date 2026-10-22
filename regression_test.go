@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -584,5 +585,63 @@ func TestRegressionGroundMenuPicksUpMoneyWithFullInventory(t *testing.T) {
 	runQueuedActions(g)
 	if len(g.state.Items) != 1 || len(g.state.Player.Inventory) != 20 {
 		t.Fatal("満杯でお金以外の道具を拾った")
+	}
+}
+
+// 未識別の壺・杖を拾う・交換する・投げるときのメッセージに本当の名前（合成の壺など）が出ていた。
+// 道具画面は未識別名（赤色の壺）なので、中断・再開で名前が変わったように見えた。
+func TestRegressionUnidentifiedNamesDoNotLeakInMessages(t *testing.T) {
+	for _, id := range []int{synthesisPotID, 219} {
+		real := itemTemplates[id].Name
+		newItem := func(x, y int) Item { return buildItemFromTemplate(id, x, y) }
+		disguised := specialUnidentifiedName(newItem(0, 0))
+		if disguised == real {
+			t.Fatalf("ID %d の未識別名が本当の名前と同じ: %s", id, real)
+		}
+		check := func(where string, g *Game) {
+			t.Helper()
+			if len(g.ActionQueue.Queue) == 0 {
+				t.Fatalf("%s: メッセージが積まれていない", where)
+			}
+			for _, a := range g.ActionQueue.Queue {
+				if strings.Contains(a.Message, real) || strings.Contains(a.ItemName, real) {
+					t.Fatalf("%s: 本当の名前が漏れた: %q", where, a.Message)
+				}
+				if !strings.Contains(a.Message, disguised) || a.IsIdentified {
+					t.Fatalf("%s: 未識別名で出ていない: %q (識別済み %v)", where, a.Message, a.IsIdentified)
+				}
+			}
+		}
+
+		// 歩いて拾う・拾わずに乗る・満杯で拾えない
+		for _, xPressed := range []bool{false, true} {
+			g := newProjectileTestGame()
+			g.state.Player.Inventory = nil
+			g.state.Items = []Item{newItem(g.state.Player.X, g.state.Player.Y)}
+			g.xPressed = xPressed
+			g.PickupItem()
+			check(fmt.Sprintf("拾う(xPressed=%v)", xPressed), g)
+		}
+		g := newProjectileTestGame()
+		g.state.Player.Inventory = nil
+		for i := 0; i < 20; i++ {
+			g.state.Player.Inventory = append(g.state.Player.Inventory, buildItemFromTemplate(1, 0, 0))
+		}
+		g.state.Items = []Item{newItem(g.state.Player.X, g.state.Player.Y)}
+		g.PickupItem()
+		check("満杯で拾えない", g)
+
+		// 足元の道具と持ち物の交換（持ち物側が未識別）
+		g = newProjectileTestGame()
+		g.state.Player.Inventory = []Item{newItem(0, 0)}
+		g.state.Items = []Item{buildItemFromTemplate(1, g.state.Player.X, g.state.Player.Y)}
+		g.selectedItemIndex = 0
+		g.executeItemSwap()
+		check("交換", g)
+
+		// 投げるときの名前
+		if name, identified := projectileItemLabel(newItem(0, 0)); name != disguised || identified {
+			t.Fatalf("投げる: %q (識別済み %v), want %q", name, identified, disguised)
+		}
 	}
 }

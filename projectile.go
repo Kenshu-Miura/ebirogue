@@ -115,14 +115,10 @@ func isCaneBolt(item Item) bool {
 
 // projectileItemLabel は飛ばすときのメッセージに使う道具の名前と、識別済みかを返す。
 func projectileItemLabel(item Item) (string, bool) {
-	identifiable, ok := item.(Identifiable)
-	if !ok {
+	if _, ok := item.(Identifiable); !ok {
 		return item.GetName(), true
 	}
-	if !identifiable.IsIdentified() {
-		return identifiable.GetName(), false
-	}
-	return getItemNameWithSharpness(item), true
+	return displayItemName(item)
 }
 
 // ThrowItem は道具 p を飛ばす Action を積む（「〜を投げた」「〜を撃った」「〜を使った」と表示し、

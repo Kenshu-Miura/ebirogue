@@ -451,21 +451,8 @@ func (g *Game) executeItemSwap() {
 
 			isCursedEquipped := false
 
-			// アイテムが識別されているかどうかをチェック
-			identified := true
-			var selectedItemName string
-			if identifiableItem, ok := selectedInventoryItem.(Identifiable); ok {
-				identified = identifiableItem.IsIdentified()
-				// 識別されていない場合は識別されていないアイテム名を取得
-				if !identified {
-					selectedItemName = identifiableItem.GetName()
-				}
-			}
-
-			// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
-			if identified {
-				selectedItemName = getItemNameWithSharpness(selectedInventoryItem)
-			}
+			// 未識別なら未識別名（色の壺・杖など）、識別済みなら強化値付きの名前
+			selectedItemName, identified := displayItemName(selectedInventoryItem)
 
 			// Check if the selected inventory item is Equipable and cursed using new system
 			if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
@@ -580,21 +567,8 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				// アイテムが識別されているかどうかをチェック
-				identified := true
-				var itemName string
-				if identifiableItem, ok := item.(Identifiable); ok {
-					identified = identifiableItem.IsIdentified()
-					// 識別されていない場合は識別されていないアイテム名を取得
-					if !identified {
-						itemName = identifiableItem.GetName()
-					}
-				}
-
-				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
-				if identified {
-					itemName = getItemNameWithSharpness(item)
-				}
+				// 未識別なら未識別名（色の壺・杖など）、識別済みなら強化値付きの名前
+				itemName, identified := displayItemName(item)
 
 				// 床に貼りついた聖域のカードは拾わずに上へ乗るだけ
 				if isStuckSanctuaryItem(item) {
@@ -657,21 +631,8 @@ func (g *Game) PickupItem() {
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
-				// アイテムが識別されているかどうかをチェック
-				identified := true
-				var itemName string
-				if identifiableItem, ok := item.(Identifiable); ok {
-					identified = identifiableItem.IsIdentified()
-					// 識別されていない場合は識別されていないアイテム名を取得
-					if !identified {
-						itemName = identifiableItem.GetName()
-					}
-				}
-
-				// 識別されている場合、またはIdentifiableインターフェースを実装していない場合は、Sharpnessを含む名前を使用
-				if identified {
-					itemName = getItemNameWithSharpness(item)
-				}
+				// 未識別なら未識別名（色の壺・杖など）、識別済みなら強化値付きの名前
+				itemName, identified := displayItemName(item)
 
 				action := Action{
 					Duration: 0.5,
