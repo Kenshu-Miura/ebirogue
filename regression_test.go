@@ -695,3 +695,115 @@ func TestUnidentifiedItemDescriptionHidden(t *testing.T) {
 		t.Fatalf("足元の説明に正体が出た: %q", g.groundItemDescriptionText)
 	}
 }
+
+// 呪われた武器を装備したまま、別の武器を「装備」すると付け替えられていた（exe 版のプレイで発見）。
+// 呪われた装備と同じ種類の装備には、持ち物からも足元からも付け替えられない。
+func TestCursedEquipmentBlocksSwap(t *testing.T) {
+	firstOf := func(want func(Item) bool) []int {
+		var ids []int
+		for _, id := range sortedTemplateIDs(itemTemplates, nil) {
+			if want(buildItemFromTemplate(id, 0, 0)) {
+				ids = append(ids, id)
+			}
+		}
+		return ids
+	}
+	weapons := firstOf(func(it Item) bool { _, ok := it.(*Weapon); return ok })
+	armors := firstOf(func(it Item) bool { _, ok := it.(*Armor); return ok })
+	rings := firstOf(func(it Item) bool { _, ok := it.(*Accessory); return ok })
+
+	setup := func() (*Game, *Weapon, *Armor) {
+		g, _ := newHeadlessGame(1, DifficultyAdvanced)
+		g.state.Enemies, g.state.MapTraps, g.state.Items = nil, nil, nil
+		cursed := buildItemFromTemplate(weapons[0], 0, 0).(*Weapon)
+		cursed.Cursed = true
+		cursed.SetIdentified(true)
+		armor := buildItemFromTemplate(armors[0], 0, 0).(*Armor)
+		g.state.Player.Inventory = []Item{cursed, armor}
+		g.state.Player.EquippedWeapon = nil
+		g.state.Player.EquippedArmor = nil
+		if _, err := g.state.Player.EquipItem(cursed); err != nil {
+			t.Fatal(err)
+		}
+		return g, cursed, armor
+	}
+
+	t.Run("inventory", func(t *testing.T) {
+		g, cursed, _ := setup()
+		other := buildItemFromTemplate(weapons[1], 0, 0).(*Weapon)
+		g.state.Player.Inventory = append(g.state.Player.Inventory, other)
+		turn := g.turnCount
+		g.showInventory, g.showItemActions = true, true
+		g.selectedItemIndex, g.selectedActionIndex = 2, 0
+		g.executeAction()
+		if len(g.ActionQueue.Queue) == 0 || !strings.Contains(g.ActionQueue.Queue[0].Message, "呪われていてはずせない") {
+			t.Fatalf("queue = %#v, want cursed message", g.ActionQueue.Queue)
+		}
+		if err := g.RunUntilInputReady(2000); err != nil {
+			t.Fatal(err)
+		}
+		if g.state.Player.EquippedWeapon != cursed {
+			t.Fatal("cursed weapon was swapped out")
+		}
+		if other.IsIdentified() {
+			t.Fatal("rejected weapon should not be identified")
+		}
+		if g.turnCount != turn {
+			t.Fatalf("turn %d -> %d, rejected swap should not take a turn", turn, g.turnCount)
+		}
+	})
+
+	t.Run("other kind still equips", func(t *testing.T) {
+		g, cursed, armor := setup()
+		g.showInventory, g.showItemActions = true, true
+		g.selectedItemIndex, g.selectedActionIndex = 1, 0
+		g.executeAction()
+		if err := g.RunUntilInputReady(2000); err != nil {
+			t.Fatal(err)
+		}
+		if g.state.Player.EquippedArmor != armor || g.state.Player.EquippedWeapon != cursed {
+			t.Fatal("armor should be equippable while the weapon is cursed")
+		}
+	})
+
+	t.Run("ground", func(t *testing.T) {
+		g, cursed, _ := setup()
+		px, py := g.state.Player.X, g.state.Player.Y
+		ground := buildItemFromTemplate(weapons[1], px, py)
+		g.state.Items = []Item{ground}
+		g.currentGroundItem = ground
+		g.ShowGroundItem, g.GroundItemActioned = true, true
+		g.selectedGroundActionIndex = 2 // 装備
+		g.executeGroundItemAction()
+		if err := g.RunUntilInputReady(2000); err != nil {
+			t.Fatal(err)
+		}
+		if g.state.Player.EquippedWeapon != cursed {
+			t.Fatal("cursed weapon was swapped out from the ground menu")
+		}
+		if len(g.state.Items) != 1 || len(g.state.Player.Inventory) != 2 {
+			t.Fatalf("ground %d, inventory %d: rejected item should stay on the floor", len(g.state.Items), len(g.state.Player.Inventory))
+		}
+	})
+
+	t.Run("rings", func(t *testing.T) {
+		p := &Player{}
+		r0 := buildItemFromTemplate(rings[0], 0, 0).(*Accessory)
+		r1 := buildItemFromTemplate(rings[1], 0, 0).(*Accessory)
+		r2 := buildItemFromTemplate(rings[2], 0, 0).(*Accessory)
+		p.EquipItem(r0)
+		p.EquipItem(r1)
+		r1.Cursed = true
+		if _, err := p.EquipItem(r2); err != nil {
+			t.Fatal(err)
+		}
+		if p.EquippedAccessories[1] != r1 || p.EquippedAccessories[0] != r2 {
+			t.Fatal("new ring should replace the uncursed ring")
+		}
+		r2.Cursed = true
+		r3 := buildItemFromTemplate(rings[0], 0, 0).(*Accessory)
+		if _, err := p.EquipItem(r3); err == nil {
+			t.Fatal("both rings cursed: equipping another ring should fail")
+		}
+	})
+}

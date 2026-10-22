@@ -167,6 +167,12 @@ func (g *Game) executeGroundItemAction() {
 						break
 					}
 
+					// 呪われた装備と同じ種類の装備には付け替えられない（拾わず、ターンも消費しない）
+					if g.rejectCursedEquipSwap(equipableItem) {
+						g.closeGroundItemMenu()
+						return
+					}
+
 					var message string
 					identified := false
 					itemName := g.getItemNameWithSharpness(equipableItem)
@@ -318,6 +324,13 @@ func (g *Game) executeAction() {
 				} else {
 					message = unequipMessage
 				}
+			} else if g.rejectCursedEquipSwap(equipableItem) {
+				// 呪われた装備と同じ種類の装備には付け替えられない（ターンは消費しない）
+				g.showItemActions = false
+				g.showInventory = false
+				g.selectedItemIndex = 0
+				g.selectedActionIndex = 0
+				return
 			} else {
 				// アクセサリは装備しても識別されない
 				if _, ok := equipableItem.(*Accessory); !ok {

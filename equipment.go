@@ -28,8 +28,36 @@ func (p *Player) GetAccessorySlots() []*Accessory {
 	return p.EquippedAccessories[:]
 }
 
+// cursedEquipmentBlocking は item を装備すると外れてしまう呪われた装備品を返す（無ければ nil）。
+// 武器・盾・矢は同じ種類の装備中の品、指輪は2つとも埋まっていて両方呪われているときだけ。
+func (p *Player) cursedEquipmentBlocking(item Equipable) Equipable {
+	switch item.(type) {
+	case *Weapon:
+		if p.EquippedWeapon != nil && p.EquippedWeapon != item && p.EquippedWeapon.Cursed {
+			return p.EquippedWeapon
+		}
+	case *Armor:
+		if p.EquippedArmor != nil && p.EquippedArmor != item && p.EquippedArmor.Cursed {
+			return p.EquippedArmor
+		}
+	case *Arrow:
+		if p.EquippedArrow != nil && p.EquippedArrow != item && p.EquippedArrow.Cursed {
+			return p.EquippedArrow
+		}
+	case *Accessory:
+		a0, a1 := p.EquippedAccessories[0], p.EquippedAccessories[1]
+		if a0 != nil && a1 != nil && a0.Cursed && a1.Cursed {
+			return a1
+		}
+	}
+	return nil
+}
+
 // アイテム装備
 func (p *Player) EquipItem(item Equipable) (string, error) {
+	if p.cursedEquipmentBlocking(item) != nil {
+		return "", fmt.Errorf("呪われた装備をはずせない")
+	}
 	switch v := item.(type) {
 	case *Weapon:
 		// 既存の武器があれば装備解除
@@ -68,11 +96,13 @@ func (p *Player) EquipItem(item Equipable) (string, error) {
 		} else if p.EquippedAccessories[1] == nil {
 			p.EquippedAccessories[1] = v
 		} else {
-			// 2個目のアクセサリーと交換
-			if p.EquippedAccessories[1] != nil {
-				p.EquippedAccessories[1].UpdatePlayerStats(p, false)
+			// 2個目のアクセサリーと交換（2個目が呪われていれば1個目と交換）
+			slot := 1
+			if p.EquippedAccessories[1].Cursed {
+				slot = 0
 			}
-			p.EquippedAccessories[1] = v
+			p.EquippedAccessories[slot].UpdatePlayerStats(p, false)
+			p.EquippedAccessories[slot] = v
 		}
 		v.UpdatePlayerStats(p, true)
 		return fmt.Sprintf("%sを装備した。", v.GetName()), nil

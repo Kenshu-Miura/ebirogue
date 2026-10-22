@@ -74,6 +74,23 @@ func isCursedEquipment(item Equipable) bool {
 	return false
 }
 
+// rejectCursedEquipSwap は item を装備すると呪われた装備品が外れてしまうなら、
+// 「〜は呪われていてはずせない。」と表示して true を返す（ターンは消費しない）。
+func (g *Game) rejectCursedEquipSwap(item Equipable) bool {
+	cursed := g.state.Player.cursedEquipmentBlocking(item)
+	if cursed == nil {
+		return false
+	}
+	name := g.getItemNameWithSharpness(cursed)
+	g.Enqueue(Action{
+		Duration: 0.5,
+		Message:  fmt.Sprintf("%sは呪われていてはずせない。", name),
+		ItemName: name,
+		Execute:  func(g *Game) {},
+	})
+	return true
+}
+
 // enqueueCursedEquipReveal は武器・防具を装備した際に呪いが判明するメッセージを追加する。
 // アクセサリの呪いは装備時には判明しない。
 func (g *Game) enqueueCursedEquipReveal(item Equipable, itemName string, identified bool) {
