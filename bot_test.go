@@ -55,6 +55,8 @@ type bot struct {
 	hazardAvoided int
 	// chokeWait・ambushWait は expert が通路の入口・距離2の敵を足踏みで待ったターン数（bot_tactics_test.go）
 	chokeWait, ambushWait int
+	// potJob は expert が何ターンかに分けて行う壺の作業（bot_expert_wave11_test.go）
+	potJob *botPotJob
 }
 
 func newBot(g *Game, in *VirtualInput, p persona, seed int64) *bot {

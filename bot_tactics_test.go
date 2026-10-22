@@ -227,7 +227,8 @@ func (b *bot) fightDamageEstimate(enemies []Enemy) float64 {
 		if turns < 1 {
 			turns = 1
 		}
-		foes = append(foes, foe{turns, b.expectedDamageToPlayer(e)})
+		turns /= b.playerDamageFactor(e) // 状態の倍率（statusest を切ると 1。wave11-B）
+		foes = append(foes, foe{turns, b.expectedDamageToPlayer(e) * b.enemyDamageFactor(e)})
 	}
 	sort.Slice(foes, func(i, j int) bool { return foes[i].dmg/foes[i].turns > foes[j].dmg/foes[j].turns })
 	total, elapsed := 0.0, 0.0
@@ -265,6 +266,11 @@ func (b *bot) expertSaveItems(adjacent []Enemy) (bool, error) {
 	if done, err := b.expertEscape(adjacent); done || err != nil {
 		return done, err
 	}
+	// 段8の薬・杖（身代わり・にぎり・弱める・暴走・強化の薬。wave11-B）
+	if done, err := b.expertSaveItemsWave11(adjacent); done || err != nil {
+		return done, err
+	}
+	b.act = "saveItem"
 	if botFeature("selfdestruct") && len(adjacent) >= 2 && p.Health*100 >= p.MaxHealth*50 {
 		if used, err := b.useByID("使う", cardSelfDestructID); used || err != nil { // HP が半分になるが隣の敵を消す
 			return used, err

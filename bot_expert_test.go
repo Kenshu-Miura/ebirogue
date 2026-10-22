@@ -91,7 +91,8 @@ func (b *bot) expertBuffUsable(id int) bool {
 	case 8:
 		return p.SetTrap == nil
 	case 205, 206, 207:
-		return true
+		// wave11-B: buffpotion ではすぐ飲まずにピンチ・ボス戦・モンスターハウスまでとっておく
+		return !botFeature("buffpotion")
 	case 43, 30:
 		return true
 	}
@@ -403,6 +404,10 @@ func (b *bot) expertStep() error {
 			b.act = "heal"
 			return err
 		}
+		// 回復手段が無ければ無敵の薬・透明の薬（wave11-B）
+		if done, err := b.expertLastResort(adjacent); done || err != nil {
+			return err
+		}
 		// 回復手段が無く敵に囲まれているなら、動きを止める
 		if len(adjacent) > 0 {
 			if done, err := b.expertEscape(adjacent); done || err != nil {
@@ -456,7 +461,10 @@ func (b *bot) expertStep() error {
 		}
 	}
 
-	// 4. 装備の持ち替え・指輪
+	// 4. 装備の持ち替え・指輪（合成・強化の壺の作業中は持ち替えない。wave11-B）
+	if done, err := b.expertPotJob(adjacent); done || err != nil || b.potJob != nil {
+		return err
+	}
 	if i, ok := b.bestEquipment(); ok {
 		if used, err := b.useInventoryItem(i, "装備"); used || err != nil {
 			return err
@@ -466,6 +474,11 @@ func (b *bot) expertStep() error {
 		if done, err := b.expertEquipRing(); done || err != nil {
 			return err
 		}
+	}
+
+	// 4b. ボス戦の開始・モンスターハウスで囲まれたときは強化の薬を飲む（wave11-B）
+	if done, err := b.expertBuffMoments(adjacent); done || err != nil {
+		return err
 	}
 
 	// 5. 戦闘: 立ち回り（道具を早めに使う・通路へ下がる・先手を取る）
@@ -520,7 +533,11 @@ func (b *bot) expertStep() error {
 			}
 		}
 		dx, dy := target.X-player.X, target.Y-player.Y
-		if b.isStrongEnemy(target) {
+		// 弱めて殴り合えるようになった強敵には道具を使わない（wave11-B）
+		if b.isStrongEnemy(target) && !b.weakenedEnough(target) {
+			if done, err := b.expertDebuffAt(dx, dy, target); done || err != nil {
+				return err
+			}
 			if botFeature("canes") {
 				if done, err := b.expertSeal(); done || err != nil {
 					return err
@@ -528,6 +545,9 @@ func (b *bot) expertStep() error {
 			}
 			if done, err := b.expertFightStrong(target, dx, dy); done || err != nil {
 				b.act = "strongItem"
+				return err
+			}
+			if done, err := b.expertNigiriThrow(target); done || err != nil {
 				return err
 			}
 		}
@@ -546,6 +566,9 @@ func (b *bot) expertStep() error {
 	}
 	if dx, dy, enemy, ok := b.targetInLine(8, notReflector); ok && len(adjacent) == 0 {
 		if b.isStrongEnemy(enemy) {
+			if done, err := b.expertDebuffInLine(); done || err != nil {
+				return err
+			}
 			if i := b.findInventoryID(17, 18, 19, 54); i >= 0 {
 				if used, err := b.faceAndUse(dx, dy, i, "投げる"); used || err != nil {
 					b.act = "throw"
