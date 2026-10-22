@@ -116,6 +116,13 @@ func (b *bot) houseRoom() (Room, bool) {
 	return b.roomByID(b.house.room)
 }
 
+// inKnownHouse は気づいたモンスターハウスの部屋の床にいるかどうか。
+func (b *bot) inKnownHouse() bool {
+	room, ok := b.houseRoom()
+	p := b.g.state.Player
+	return ok && roomContains(room, p.X, p.Y)
+}
+
 // houseFoes はモンスターハウスの部屋にいる起きている敵と、houseThreatRange 以内の起きている敵。
 func (b *bot) houseFoes() []Enemy {
 	room, ok := b.houseRoom()

@@ -631,3 +631,100 @@ func TestWave10CodexRecordsShopkeeper(t *testing.T) {
 		t.Fatalf("keeper record after defeat = %+v", r)
 	}
 }
+
+// --- 段11（wave11-A/B/C）の統合で足したテスト ---
+
+// 10-B×wave11-C の決定: 持ち物が満杯でも店の中のお金（値段は付かない）を拾え、泥棒にならない。
+func TestWave11FullInventoryPicksUpMoneyInShop(t *testing.T) {
+	g := newShopTestGame(t)
+	for i := 0; i < 20; i++ {
+		g.state.Player.Inventory = append(g.state.Player.Inventory, buildItemFromTemplate(1, 0, 0))
+	}
+	money := newStolenCash(80)
+	money.SetPosition(5, 4)
+	g.state.Items = append(g.state.Items, money)
+	if !g.MovePlayer(1, 0) {
+		t.Fatal("移動できない")
+	}
+	runQueuedActions(g)
+	if g.state.Player.Cash != 80 || g.itemOnFloor(money) || len(g.state.Player.Inventory) != 20 {
+		t.Fatalf("所持金 %d・床に残った %v・持ち物 %d", g.state.Player.Cash, g.itemOnFloor(money), len(g.state.Player.Inventory))
+	}
+	if !g.shopOpen() || g.stats.ShopThefts != 0 || g.shopUnpaidTotal() != 0 {
+		t.Fatal("店のお金を拾って泥棒・未払いになった")
+	}
+}
+
+// wave11-B×wave11-C: expert は満杯でも見えているお金へ向かって拾い（道具を手放さない）、足元のお金と交換しない。
+func TestWave11ExpertPicksUpMoneyWhenFull(t *testing.T) {
+	g, b := newBotFoodTestGame(t, personaExpert)
+	for i := 0; i < 20; i++ {
+		g.state.Player.Inventory = append(g.state.Player.Inventory, buildItemFromTemplate(2, 0, 0))
+	}
+	money := newStolenCash(30)
+	money.SetPosition(5, 3)
+	money.SetShowOnMiniMap(true)
+	g.state.Items = []Item{money}
+	if !b.worthPicking(money) {
+		t.Fatal("満杯でお金を拾う価値が無いと判断した")
+	}
+	stepUntil(t, b, 12, func() bool { return g.state.Player.Cash > 0 })
+	if g.state.Player.Cash != 30 || len(g.state.Player.Inventory) != 20 || countInventoryID(g, 2) != 20 {
+		t.Fatalf("所持金 %d・持ち物 %d act=%s", g.state.Player.Cash, len(g.state.Player.Inventory), b.act)
+	}
+}
+
+// wave11-B×wave11-C: 合成・強化の壺の作業は商売中の店の中では始めず（壺や中身が店の床に出るため）、店の外なら始める。
+func TestWave11ExpertNoPotJobInsideShop(t *testing.T) {
+	g := newShopTestGame(t)
+	player := &g.state.Player
+	weapon := buildItemFromTemplate(126, 0, 0).(*Weapon)
+	weapon.Sharpness, weapon.Cursed = 1, false
+	spare := buildItemFromTemplate(129, 0, 0).(*Weapon)
+	spare.Sharpness, spare.Cursed = 2, false
+	pot := buildItemFromTemplate(synthesisPotID, 0, 0).(*Pot)
+	pot.Capacity, pot.Contents = 3, nil
+	player.Inventory = []Item{weapon, spare, pot}
+	player.EquippedWeapon = weapon
+	b := newBot(g, g.input.(*VirtualInput), personaExpert, 1)
+	if !g.inShopInterior(player.X, player.Y) || b.potJobCalm() {
+		t.Fatal("店の中で壺の作業を始めてよいと判断した")
+	}
+	// 店の外（隣の部屋）では落ち着いていれば始める
+	player.X, player.Y = 16, 6
+	if !b.potJobCalm() {
+		t.Fatal("店の外で壺の作業を始めない")
+	}
+	stepUntil(t, b, 8, func() bool { return b.potJob == nil && hasEquipmentAbility(weapon.Abilities, AbilityShellSlayer) })
+	if !hasEquipmentAbility(weapon.Abilities, AbilityShellSlayer) || g.stats.ShopThefts != 0 {
+		t.Fatalf("店の外で合成しない: act=%s", b.act)
+	}
+}
+
+// wave11-A×wave11-B: モンスターハウスで囲まれたときに強化の薬を飲むのは、BOT が通知・混み具合で気づいた
+// 部屋だけ（部屋の正体 Room.Role は読まない）。
+func TestWave11HouseBuffUsesNoticedHouse(t *testing.T) {
+	setup := func() (*Game, *bot) {
+		g, b := newHouseTestGame(t, 0)
+		g.rooms[0].Role = RoomRoleMonsterHouse
+		g.state.Enemies = []Enemy{newActiveEnemy(0, 3, 4), newActiveEnemy(0, 5, 4)}
+		g.state.Player.Inventory = []Item{buildItemFromTemplate(potionHasteID, 0, 0)}
+		b.newMessages() // ここまでのメッセージは読んだことにする
+		return g, b
+	}
+	g, b := setup()
+	b.updateHouse()
+	if done, err := b.expertBuffMoments(b.adjacentEnemies()); err != nil || done || countInventoryID(g, potionHasteID) != 1 {
+		t.Fatalf("気づいていない部屋で強化の薬を飲んだ: act=%s", b.act)
+	}
+	g, b = setup()
+	g.messageLog.Add(houseNotice)
+	b.updateHouse()
+	if done, err := b.expertBuffMoments(b.adjacentEnemies()); err != nil || !done {
+		t.Fatalf("気づいたモンスターハウスで囲まれても強化の薬を飲まない: act=%s", b.act)
+	}
+	runQueuedActions(g)
+	if countInventoryID(g, potionHasteID) != 0 || g.state.Player.StatusAilments.Haste == 0 {
+		t.Fatal("倍速の薬が効いていない")
+	}
+}

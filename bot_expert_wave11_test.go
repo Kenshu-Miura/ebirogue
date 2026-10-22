@@ -96,7 +96,8 @@ func (b *bot) expertBuffMoments(adjacent []Enemy) (bool, error) {
 			return b.expertDrinkBuff(low)
 		}
 	}
-	if len(adjacent) >= 2 && b.g.inMonsterHouse() {
+	// モンスターハウスは部屋の正体（Room.Role）ではなく、wave11-A が通知・混み具合で覚えた部屋で判断する
+	if len(adjacent) >= 2 && b.inKnownHouse() {
 		return b.expertDrinkBuff(low)
 	}
 	return false, nil
@@ -474,9 +475,13 @@ func potContains(pot *Pot, item Item) bool {
 	return false
 }
 
-// potJobCalm は壺の作業を始めてよい落ち着いた状況かどうか。
+// potJobCalm は壺の作業を始めてよい落ち着いた状況かどうか。商売中の店の中と、未払いの品を持っている間は
+// 始めない（壺を割って散らばった装備や入れた品が店の床に出て、売買・泥棒の扱いになるため。wave11-C の shopsafe）。
 func (b *bot) potJobCalm() bool {
 	p := &b.g.state.Player
+	if botFeature("shopsafe") && ((b.g.shopOpen() && b.g.inShopInterior(p.X, p.Y)) || b.unpaidTotal() > 0) {
+		return false
+	}
 	return !b.bossAlive() && !b.inRangedFire(p.X, p.Y) && len(b.enemiesWithin(6)) == 0 && p.Health*100 >= p.MaxHealth*50 &&
 		p.StatusAilments.Nigiri == 0 && p.StatusAilments.Berserk == 0
 }
