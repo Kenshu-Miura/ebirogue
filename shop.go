@@ -372,7 +372,7 @@ func (g *Game) onShopItemPickedUp(item Item) {
 		return
 	}
 	g.shopCarried = append(g.shopCarried, item)
-	name, _ := displayItemName(item)
+	name, _ := g.displayItemName(item)
 	g.EnqueueMessage(fmt.Sprintf("店主「%sは%d円です」", name, price), 0.6)
 }
 
@@ -382,7 +382,7 @@ func (g *Game) onItemPlacedInShop(item Item) {
 	if !g.shopOpen() || !g.inShopInterior(x, y) {
 		return
 	}
-	name, _ := displayItemName(item)
+	name, _ := g.displayItemName(item)
 	if itemShopPrice(item) > 0 {
 		g.EnqueueMessage(fmt.Sprintf("%sを店に戻した", name), 0.5)
 		return
@@ -441,7 +441,7 @@ func (g *Game) sellToShop(item Item, price int) bool {
 	g.stats.ShopSold++
 	g.stats.ShopEarned += price
 	setItemShopPrice(item, max(itemBuyPrice(item), 1))
-	name, _ := displayItemName(item)
+	name, _ := g.displayItemName(item)
 	g.EnqueueMessage(fmt.Sprintf("%sを%d円で売った", name, price), 0.6)
 	return true
 }

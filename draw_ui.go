@@ -177,7 +177,7 @@ func (g *Game) DrawGroundItem(screen *ebiten.Image) {
 		// Draw item name window
 		drawWindowWithBorder(screen, itemwindowX, itemwindowY, itemWindowWidth, itemWindowHeight, 127)
 		if g.currentGroundItem != nil {
-			groundItemName := getItemNameWithSharpness(g.currentGroundItem)
+			groundItemName := g.getItemNameWithSharpness(g.currentGroundItem)
 
 			// アイテムが識別されているかチェック
 			identified := true

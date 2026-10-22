@@ -62,7 +62,7 @@ func (g *Game) executeGroundItemAction() {
 		for i, item := range g.state.Items { // GameStateの全てのアイテムに対してループ
 			itemX, itemY := item.GetPosition()        // アイテムの座標を取得
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
-				itemName, identified := displayItemName(item)
+				itemName, identified := g.displayItemName(item)
 
 				// 床に貼りついた聖域のカードは拾えない
 				if isStuckSanctuaryItem(item) {
@@ -169,13 +169,13 @@ func (g *Game) executeGroundItemAction() {
 
 					var message string
 					identified := false
-					itemName := getItemNameWithSharpness(equipableItem)
+					itemName := g.getItemNameWithSharpness(equipableItem)
 
 					// アクセサリは装備しても識別されない
 					if _, ok := equipableItem.(*Accessory); !ok {
 						equipableItem.SetIdentified(true) // Set the item as identified when equipping
 						identified = true
-						itemName = getItemNameWithSharpness(equipableItem)
+						itemName = g.getItemNameWithSharpness(equipableItem)
 					}
 
 					// Use new equipment system
@@ -230,7 +230,7 @@ func (g *Game) executeGroundItemAction() {
 
 	if g.selectedGroundActionIndex == 4 { // Assuming index 4 corresponds to '説明'
 		if g.currentGroundItem != nil {
-			g.groundItemDescriptionText = itemDescriptionText(g.currentGroundItem) + g.shopPriceDescription(g.currentGroundItem)
+			g.groundItemDescriptionText = g.itemDescriptionText(g.currentGroundItem) + g.shopPriceDescription(g.currentGroundItem)
 			g.showGroundItemDescription = true
 		}
 		// 説明の場合はメニューを閉じずに説明ウィンドウのみ表示
@@ -306,7 +306,7 @@ func (g *Game) executeAction() {
 		} else if equipableItem, ok := item.(Equipable); ok { // Check if item is of Equipable type
 			var message string
 			identified := false
-			itemName := getItemNameWithSharpness(equipableItem)
+			itemName := g.getItemNameWithSharpness(equipableItem)
 
 			// Check if the item is already equipped
 			if g.state.Player.IsEquipped(equipableItem) {
@@ -324,7 +324,7 @@ func (g *Game) executeAction() {
 					equipableItem.SetIdentified(true) // Set the item as identified when equipping
 					identified = true
 				}
-				itemName = getItemNameWithSharpness(equipableItem)
+				itemName = g.getItemNameWithSharpness(equipableItem)
 
 				if equipMessage, err := g.state.Player.EquipItem(equipableItem); err != nil {
 					message = fmt.Sprintf("%sを装備できない。", itemName)
@@ -390,7 +390,7 @@ func (g *Game) executeAction() {
 
 	if actionIndex == 1 { // Assuming index 1 corresponds to '投げる' (adjusted for arrows)
 		item := g.state.Player.Inventory[g.selectedItemIndex]
-		itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
+		itemName := g.getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
 		isCursedEquipped := false
 
 		// Type assertion to check if item is Equipable and if it's cursed
@@ -440,7 +440,7 @@ func (g *Game) executeAction() {
 				break
 			}
 		}
-		itemName, identified := displayItemName(g.state.Player.Inventory[g.selectedItemIndex])
+		itemName, identified := g.displayItemName(g.state.Player.Inventory[g.selectedItemIndex])
 
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
 
@@ -539,7 +539,7 @@ func (g *Game) executeAction() {
 
 	if actionIndex == 3 { // Assuming 0-based index and "説明" is at index 3 (adjusted for arrows)
 		selectedItem := g.state.Player.Inventory[g.selectedItemIndex]
-		g.itemdescriptionText = itemDescriptionText(selectedItem) + g.shopPriceDescription(selectedItem)
+		g.itemdescriptionText = g.itemDescriptionText(selectedItem) + g.shopPriceDescription(selectedItem)
 		g.showItemDescription = true
 	}
 

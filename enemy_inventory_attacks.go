@@ -54,7 +54,7 @@ func enqueueStealAttack(enemy *Enemy, g *Game, intn func(int) int) {
 	if target, found := g.backPotTarget(); found {
 		item = target
 	}
-	itemName, identified := displayItemName(item)
+	itemName, identified := g.displayItemName(item)
 	g.Enqueue(Action{
 		Duration:     0.5,
 		Message:      fmt.Sprintf("%sは%sを盗んだ。", name, itemName),
@@ -96,7 +96,7 @@ func enqueueFoodTransformationAttack(enemy *Enemy, g *Game, intn func(int) int) 
 	}
 
 	item := g.state.Player.Inventory[index]
-	itemName, identified := displayItemName(item)
+	itemName, identified := g.displayItemName(item)
 	g.Enqueue(Action{
 		Duration:     0.5,
 		Message:      fmt.Sprintf("%sは%sをウインナーに変えた。", name, itemName),
@@ -180,7 +180,7 @@ func enqueueCurseAttack(enemy *Enemy, g *Game, intn func(int) int) {
 	}
 
 	item := g.state.Player.Inventory[index]
-	itemName, identified := displayItemName(item)
+	itemName, identified := g.displayItemName(item)
 	g.Enqueue(Action{
 		Duration:     0.5,
 		Message:      fmt.Sprintf("%sの呪いで%sは呪われた。", name, itemName),
@@ -232,7 +232,7 @@ func forcedMoveDestinations(g *Game) []Coordinate {
 
 func enqueueForcedItemUse(enemy *Enemy, g *Game, indices []int, intn func(int) int) {
 	item := g.state.Player.Inventory[indices[intn(len(indices))]]
-	itemName, identified := displayItemName(item)
+	itemName, identified := g.displayItemName(item)
 	g.Enqueue(Action{
 		Duration:     0.5,
 		Message:      fmt.Sprintf("%sに操られ、海老さんは%sを使った。", g.enemyDisplayName(enemy.Name), itemName),

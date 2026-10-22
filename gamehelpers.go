@@ -23,15 +23,15 @@ func (g *Game) enemyDisplayName(name string) string {
 
 // displayItemName はアイテムの表示名と識別済みかどうかを返す。
 // 未識別のアイテムは未識別名、識別済みは強化値付きの名前になる。
-func displayItemName(item Item) (name string, identified bool) {
+func (g *Game) displayItemName(item Item) (name string, identified bool) {
 	identified = true
 	if identifiableItem, ok := item.(Identifiable); ok {
 		identified = identifiableItem.IsIdentified()
 		if !identified {
-			return specialUnidentifiedName(item), false
+			return g.unidentifiedName(item), false
 		}
 	}
-	return getItemNameWithSharpness(item), identified
+	return g.getItemNameWithSharpness(item), identified
 }
 
 // unidentifiedDescription は説明を隠した未識別の道具の説明画面の文。
@@ -49,9 +49,12 @@ func itemDescriptionHidden(item Item) bool {
 }
 
 // itemDescriptionText は説明画面に出す道具の説明（未識別で隠す道具は決まった文）を返す。
-func itemDescriptionText(item Item) string {
+func (g *Game) itemDescriptionText(item Item) string {
 	if itemDescriptionHidden(item) {
 		return unidentifiedDescription
+	}
+	if pot, ok := item.(*Pot); ok {
+		return g.potDescription(pot)
 	}
 	return item.GetDescription()
 }

@@ -21,7 +21,7 @@ func TestPotTemplate(t *testing.T) {
 		t.Fatal("pot should start identified")
 	}
 	want := fmt.Sprintf("保存の壺[0/%d]", pot.Capacity)
-	if got := getItemNameWithSharpness(pot); got != want {
+	if got := (&Game{}).getItemNameWithSharpness(pot); got != want {
 		t.Fatalf("pot display name = %q, want %q", got, want)
 	}
 }

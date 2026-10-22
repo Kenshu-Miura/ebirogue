@@ -156,161 +156,164 @@ type Game struct {
 	codexError              string
 	codexTab, codexPage     int
 
-	state                     GameState
-	seed                      int64    // 冒険のシード（同じシードなら同じフロアが生成される）
-	rng                       *gameRNG // ターン進行用の乱数源。直接ではなく random()/randIntn() 経由で使う
-	randHooks                 randHooks
-	rooms                     []Room
-	playerImg                 *ebiten.Image
-	nigiriPlayerImg           *ebiten.Image
-	decoyImg                  *ebiten.Image
-	ebiImg                    *ebiten.Image
-	snakeImg                  *ebiten.Image
-	mamuruImg                 *ebiten.Image
-	honeyImg                  *ebiten.Image
-	harisenbowImg             *ebiten.Image
-	ishiganiImg               *ebiten.Image
-	bakudanUniImg             *ebiten.Image
-	kosodoroYadokariImg       *ebiten.Image
-	nigiriEbiImg              *ebiten.Image
-	noroiGaniImg              *ebiten.Image
-	ayatsuriKurageImg         *ebiten.Image
-	yureiEbiImg               *ebiten.Image
-	hayateShakoImg            *ebiten.Image
-	warpKurageImg             *ebiten.Image
-	irekaeDakoImg             *ebiten.Image
-	wanashiYadokariImg        *ebiten.Image
-	mimicGaiImg               *ebiten.Image
-	seaDragonImg              *ebiten.Image
-	fireSquidImg              *ebiten.Image
-	magicJellyfishImg         *ebiten.Image
-	upperEnemyImages          map[string]*ebiten.Image
-	kaneImg                   *ebiten.Image
-	cardImg                   *ebiten.Image
-	mintiaImg                 *ebiten.Image
-	sausageImg                *ebiten.Image
-	tilesetImg                *ebiten.Image
-	weaponImg                 *ebiten.Image
-	specialWeaponImages       map[string]*ebiten.Image
-	armorImg                  *ebiten.Image
-	specialArmorImages        map[string]*ebiten.Image
-	arrowImg                  *ebiten.Image
-	caneImg                   *ebiten.Image
-	effectImg                 *ebiten.Image
-	accessoryImg              *ebiten.Image
-	hatenaImg                 *ebiten.Image
-	sleepTrapImg              *ebiten.Image
-	noHealingTrapImg          *ebiten.Image
-	poisonArrowTrapImg        *ebiten.Image
-	slowTrapImg               *ebiten.Image
-	mineTrapImg               *ebiten.Image
-	warpTrapImg               *ebiten.Image
-	pitfallTrapImg            *ebiten.Image
-	bearTrapImg               *ebiten.Image
-	rustTrapImg               *ebiten.Image
-	largeMineTrapImg          *ebiten.Image
-	unequipTrapImg            *ebiten.Image
-	spoilTrapImg              *ebiten.Image
-	scatterTrapImg            *ebiten.Image
-	rottenSausageImg          *ebiten.Image
-	fallingRockTrapImg        *ebiten.Image
-	ironArrowTrapImg          *ebiten.Image
-	woodArrowTrapImg          *ebiten.Image
-	potImg                    *ebiten.Image
-	additionalPotImages       map[int]*ebiten.Image
-	offsetX                   int
-	offsetY                   int
-	moveCount                 int
-	Floor                     int
-	input                     InputSource // キー入力の取得元（keys() 経由で使う）
-	headless                  bool        // 描画なしで動かす（BOT・テスト用）。死亡時に自動リスタートしない
-	audioState                *gameAudio
-	persistent                bool         // セーブ・設定・冒険の記録をストレージへ書き込む（通常のゲームのみ true）
-	lastDamageSource          DamageSource // 最後にプレイヤーへダメージを与えた原因（死因）
-	lastRunResult             *RunResult   // 直近に終了した冒険の結果
-	stats                     RunStats     // 冒険中の行動の統計（拾う・使う・投げる・装備・射撃）
-	steppedTrapSource         DamageSource // 効果を処理中の罠（罠の効果関数が死因の記録に使う）
-	fastForward               bool         // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
-	immortal                  bool         // シミュレーションの計測専用（-sim.immortal）。HP が1未満にならない
-	headlessDamageTaken       int          // 計測用。HPの下限を適用する前の被ダメージ合計
-	runEnded                  bool         // ヘッドレスで冒険が終了した（死亡・クリア）
-	difficulty                Difficulty   // 冒険の難易度（開始時に決め、途中で変えない）
-	bossDefeated              bool         // 現在のボス階のボスを倒したか（フロア移動でリセット）
-	cleared                   bool         // 目標階のボスを倒して冒険をクリアした
-	replay                    *ReplayData
-	replaySegment             *ReplaySegment
-	replayPlayback            bool
-	replayFrameActive         bool
-	replaySavePending         bool
-	replaySuppressed          bool
-	replayPhysical            ReplayPhysical
-	inputFrame                int  // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
-	lastIncrementFrame        int  // 最後に足踏みしたフレーム（0 は未実行）
-	lastArrowPressFrame       int  // 方向キーで最後に移動したフレーム（0 は未実行）
-	lastDashStopFrame         int  // 最後にダッシュが停止したフレーム（0 は未実行）
-	showInventory             bool // true when the inventory window should be displayed
-	selectedItemIndex         int
-	showItemActions           bool
-	selectedActionIndex       int
-	previousPlayerRoomID      int // 仮眠の入室抽選用。セーブ再開時は現在の部屋で初期化
-	showDescription           bool
-	descriptionText           string
-	showItemDescription       bool
-	itemdescriptionText       string
-	Animating                 bool
-	AnimationProgress         float64
-	dx, dy                    int
-	AnimationProgressInt      int
-	frameCount                int
-	tmpPlayerOffsetX          float64 // プレイヤーの一時的なオフセットX
-	tmpPlayerOffsetY          float64 // プレイヤーの一時的なオフセットY
-	attackTimer               float64 // 攻撃メッセージのタイマー
-	ActionQueue               ActionQueue
-	isCombatActive            bool
-	ActionDurationCounter     float64
-	isActioned                bool
-	zPressed                  bool
-	xPressed                  bool
-	dashStopped               bool // ダッシュ停止状態
-	dPressed                  bool
-	ShowGroundItem            bool
-	selectedGroundActionIndex int
-	selectedGroundItemIndex   int
-	GroundItemActioned        bool
-	isFrontEnemy              bool
-	currentGroundItem         Item
-	showGroundItemDescription bool
-	groundItemDescriptionText string
-	ThrownItem                ThrownItem
-	ThrownItemDestination     Coordinate
-	rangedAttackEffect        RangedAttackEffect
-	TargetEnemy               *Enemy
-	thrownItemHitPlayer       bool // 飛んでいる道具が海老さんに当たって消える（打ち返し）。着地で床に置かない
-	TargetEnemyIndex          int
-	playerDead                bool    // プレイヤーが死亡したかどうか
-	deathMessageAdded         bool    // 死亡メッセージが追加済みかどうか
-	fadeOutProgress           float64 // フェードアウトの進行度 (0.0 - 1.0)
-	fadeInProgress            float64 // フェードインの進行度 (0.0 - 1.0)
-	gameResetTimer            float64 // ゲームリセットまでのタイマー
-	starvationBlinkTimer      float64 // 満腹度0時の点滅タイマー
-	showStairsPrompt          bool
-	selectedOption            int // 0 for "Proceed", 1 for "Cancel"
-	ignoreStairs              bool
-	miniMap                   *ebiten.Image // ミニマップのキャッシュ
-	miniMapDirty              bool          // ミニマップが更新される必要があるかどうかを示すフラグ
-	prevPlayerX, prevPlayerY  int           // 前のフレームのプレイヤーの座標
-	fadingOut                 bool
-	pendingFloorDescent       bool // 落とし穴の落下待ち（行動の処理と敵ターンが終わってから階を移動する）
-	fadingIn                  bool
-	fadeAlpha                 float64 // 0.0（透明）から1.0（完全な不透明）の間の値
-	frameCounter              int
-	enemyYOffset              int
-	enemyYOffsetTimer         int
-	useIdentifyItem           bool
-	itemTargetEffect          func(g *Game, targetIndex int) // カードの対象を選択中。保存しない。
-	tmpSelectedItemIndex      int
-	usePotInsert              bool // 壺へ入れるアイテムを選択中かどうか
-	potInsertIndex            int  // 入れる対象の壺のインベントリ位置
+	state GameState
+	seed  int64    // 冒険のシード（同じシードなら同じフロアが生成される）
+	rng   *gameRNG // ターン進行用の乱数源。直接ではなく random()/randIntn() 経由で使う
+	// 未識別の杖・壺・指輪の見た目の番号（シードから作る。unidentified_names_game.go）
+	unidentifiedAppearances    map[int]int
+	unidentifiedAppearanceSeed int64
+	randHooks                  randHooks
+	rooms                      []Room
+	playerImg                  *ebiten.Image
+	nigiriPlayerImg            *ebiten.Image
+	decoyImg                   *ebiten.Image
+	ebiImg                     *ebiten.Image
+	snakeImg                   *ebiten.Image
+	mamuruImg                  *ebiten.Image
+	honeyImg                   *ebiten.Image
+	harisenbowImg              *ebiten.Image
+	ishiganiImg                *ebiten.Image
+	bakudanUniImg              *ebiten.Image
+	kosodoroYadokariImg        *ebiten.Image
+	nigiriEbiImg               *ebiten.Image
+	noroiGaniImg               *ebiten.Image
+	ayatsuriKurageImg          *ebiten.Image
+	yureiEbiImg                *ebiten.Image
+	hayateShakoImg             *ebiten.Image
+	warpKurageImg              *ebiten.Image
+	irekaeDakoImg              *ebiten.Image
+	wanashiYadokariImg         *ebiten.Image
+	mimicGaiImg                *ebiten.Image
+	seaDragonImg               *ebiten.Image
+	fireSquidImg               *ebiten.Image
+	magicJellyfishImg          *ebiten.Image
+	upperEnemyImages           map[string]*ebiten.Image
+	kaneImg                    *ebiten.Image
+	cardImg                    *ebiten.Image
+	mintiaImg                  *ebiten.Image
+	sausageImg                 *ebiten.Image
+	tilesetImg                 *ebiten.Image
+	weaponImg                  *ebiten.Image
+	specialWeaponImages        map[string]*ebiten.Image
+	armorImg                   *ebiten.Image
+	specialArmorImages         map[string]*ebiten.Image
+	arrowImg                   *ebiten.Image
+	caneImg                    *ebiten.Image
+	effectImg                  *ebiten.Image
+	accessoryImg               *ebiten.Image
+	hatenaImg                  *ebiten.Image
+	sleepTrapImg               *ebiten.Image
+	noHealingTrapImg           *ebiten.Image
+	poisonArrowTrapImg         *ebiten.Image
+	slowTrapImg                *ebiten.Image
+	mineTrapImg                *ebiten.Image
+	warpTrapImg                *ebiten.Image
+	pitfallTrapImg             *ebiten.Image
+	bearTrapImg                *ebiten.Image
+	rustTrapImg                *ebiten.Image
+	largeMineTrapImg           *ebiten.Image
+	unequipTrapImg             *ebiten.Image
+	spoilTrapImg               *ebiten.Image
+	scatterTrapImg             *ebiten.Image
+	rottenSausageImg           *ebiten.Image
+	fallingRockTrapImg         *ebiten.Image
+	ironArrowTrapImg           *ebiten.Image
+	woodArrowTrapImg           *ebiten.Image
+	potImg                     *ebiten.Image
+	additionalPotImages        map[int]*ebiten.Image
+	offsetX                    int
+	offsetY                    int
+	moveCount                  int
+	Floor                      int
+	input                      InputSource // キー入力の取得元（keys() 経由で使う）
+	headless                   bool        // 描画なしで動かす（BOT・テスト用）。死亡時に自動リスタートしない
+	audioState                 *gameAudio
+	persistent                 bool         // セーブ・設定・冒険の記録をストレージへ書き込む（通常のゲームのみ true）
+	lastDamageSource           DamageSource // 最後にプレイヤーへダメージを与えた原因（死因）
+	lastRunResult              *RunResult   // 直近に終了した冒険の結果
+	stats                      RunStats     // 冒険中の行動の統計（拾う・使う・投げる・装備・射撃）
+	steppedTrapSource          DamageSource // 効果を処理中の罠（罠の効果関数が死因の記録に使う）
+	fastForward                bool         // 演出スキップ（メッセージ待ち・アニメーション・フェードを0フレームにする）
+	immortal                   bool         // シミュレーションの計測専用（-sim.immortal）。HP が1未満にならない
+	headlessDamageTaken        int          // 計測用。HPの下限を適用する前の被ダメージ合計
+	runEnded                   bool         // ヘッドレスで冒険が終了した（死亡・クリア）
+	difficulty                 Difficulty   // 冒険の難易度（開始時に決め、途中で変えない）
+	bossDefeated               bool         // 現在のボス階のボスを倒したか（フロア移動でリセット）
+	cleared                    bool         // 目標階のボスを倒して冒険をクリアした
+	replay                     *ReplayData
+	replaySegment              *ReplaySegment
+	replayPlayback             bool
+	replayFrameActive          bool
+	replaySavePending          bool
+	replaySuppressed           bool
+	replayPhysical             ReplayPhysical
+	inputFrame                 int  // Update のたびに増えるフレーム番号（入力の間隔判定に使う）
+	lastIncrementFrame         int  // 最後に足踏みしたフレーム（0 は未実行）
+	lastArrowPressFrame        int  // 方向キーで最後に移動したフレーム（0 は未実行）
+	lastDashStopFrame          int  // 最後にダッシュが停止したフレーム（0 は未実行）
+	showInventory              bool // true when the inventory window should be displayed
+	selectedItemIndex          int
+	showItemActions            bool
+	selectedActionIndex        int
+	previousPlayerRoomID       int // 仮眠の入室抽選用。セーブ再開時は現在の部屋で初期化
+	showDescription            bool
+	descriptionText            string
+	showItemDescription        bool
+	itemdescriptionText        string
+	Animating                  bool
+	AnimationProgress          float64
+	dx, dy                     int
+	AnimationProgressInt       int
+	frameCount                 int
+	tmpPlayerOffsetX           float64 // プレイヤーの一時的なオフセットX
+	tmpPlayerOffsetY           float64 // プレイヤーの一時的なオフセットY
+	attackTimer                float64 // 攻撃メッセージのタイマー
+	ActionQueue                ActionQueue
+	isCombatActive             bool
+	ActionDurationCounter      float64
+	isActioned                 bool
+	zPressed                   bool
+	xPressed                   bool
+	dashStopped                bool // ダッシュ停止状態
+	dPressed                   bool
+	ShowGroundItem             bool
+	selectedGroundActionIndex  int
+	selectedGroundItemIndex    int
+	GroundItemActioned         bool
+	isFrontEnemy               bool
+	currentGroundItem          Item
+	showGroundItemDescription  bool
+	groundItemDescriptionText  string
+	ThrownItem                 ThrownItem
+	ThrownItemDestination      Coordinate
+	rangedAttackEffect         RangedAttackEffect
+	TargetEnemy                *Enemy
+	thrownItemHitPlayer        bool // 飛んでいる道具が海老さんに当たって消える（打ち返し）。着地で床に置かない
+	TargetEnemyIndex           int
+	playerDead                 bool    // プレイヤーが死亡したかどうか
+	deathMessageAdded          bool    // 死亡メッセージが追加済みかどうか
+	fadeOutProgress            float64 // フェードアウトの進行度 (0.0 - 1.0)
+	fadeInProgress             float64 // フェードインの進行度 (0.0 - 1.0)
+	gameResetTimer             float64 // ゲームリセットまでのタイマー
+	starvationBlinkTimer       float64 // 満腹度0時の点滅タイマー
+	showStairsPrompt           bool
+	selectedOption             int // 0 for "Proceed", 1 for "Cancel"
+	ignoreStairs               bool
+	miniMap                    *ebiten.Image // ミニマップのキャッシュ
+	miniMapDirty               bool          // ミニマップが更新される必要があるかどうかを示すフラグ
+	prevPlayerX, prevPlayerY   int           // 前のフレームのプレイヤーの座標
+	fadingOut                  bool
+	pendingFloorDescent        bool // 落とし穴の落下待ち（行動の処理と敵ターンが終わってから階を移動する）
+	fadingIn                   bool
+	fadeAlpha                  float64 // 0.0（透明）から1.0（完全な不透明）の間の値
+	frameCounter               int
+	enemyYOffset               int
+	enemyYOffsetTimer          int
+	useIdentifyItem            bool
+	itemTargetEffect           func(g *Game, targetIndex int) // カードの対象を選択中。保存しない。
+	tmpSelectedItemIndex       int
+	usePotInsert               bool // 壺へ入れるアイテムを選択中かどうか
+	potInsertIndex             int  // 入れる対象の壺のインベントリ位置
 	// モンスター湧きシステム
 	turnCount     int // プレイヤーのターン数
 	lastSpawnTurn int // 最後にモンスターが湧いたターン

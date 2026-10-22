@@ -594,12 +594,12 @@ func TestRegressionUnidentifiedNamesDoNotLeakInMessages(t *testing.T) {
 	for _, id := range []int{synthesisPotID, 219} {
 		real := itemTemplates[id].Name
 		newItem := func(x, y int) Item { return buildItemFromTemplate(id, x, y) }
-		disguised := specialUnidentifiedName(newItem(0, 0))
-		if disguised == real {
-			t.Fatalf("ID %d の未識別名が本当の名前と同じ: %s", id, real)
-		}
 		check := func(where string, g *Game) {
 			t.Helper()
+			disguised := g.unidentifiedName(newItem(0, 0))
+			if disguised == real {
+				t.Fatalf("ID %d の未識別名が本当の名前と同じ: %s", id, real)
+			}
 			if len(g.ActionQueue.Queue) == 0 {
 				t.Fatalf("%s: メッセージが積まれていない", where)
 			}
@@ -640,8 +640,8 @@ func TestRegressionUnidentifiedNamesDoNotLeakInMessages(t *testing.T) {
 		check("交換", g)
 
 		// 投げるときの名前
-		if name, identified := projectileItemLabel(newItem(0, 0)); name != disguised || identified {
-			t.Fatalf("投げる: %q (識別済み %v), want %q", name, identified, disguised)
+		if name, identified := g.projectileItemLabel(newItem(0, 0)); name != g.unidentifiedName(newItem(0, 0)) || identified || name == real {
+			t.Fatalf("投げる: %q (識別済み %v)", name, identified)
 		}
 	}
 }
@@ -657,17 +657,18 @@ func TestUnidentifiedItemDescriptionHidden(t *testing.T) {
 		{175, true},            // 指輪
 		{2, false},             // 薬（識別の仕組みが無い）
 	}
+	g, _ := newHeadlessGame(1, DifficultyAdvanced)
 	for _, c := range cases {
 		item := buildItemFromTemplate(c.id, 0, 0)
 		if got := itemDescriptionHidden(item); got != c.hidden {
 			t.Fatalf("ID %d: 隠す = %v, want %v", c.id, got, c.hidden)
 		}
 		if c.hidden {
-			if got := itemDescriptionText(item); got != unidentifiedDescription {
+			if got := g.itemDescriptionText(item); got != unidentifiedDescription {
 				t.Fatalf("ID %d: 説明 %q", c.id, got)
 			}
 			item.(Identifiable).SetIdentified(true)
-			if itemDescriptionHidden(item) || itemDescriptionText(item) != item.GetDescription() {
+			if text := g.itemDescriptionText(item); itemDescriptionHidden(item) || !strings.HasPrefix(text, itemTemplates[c.id].Description[:9]) {
 				t.Fatalf("ID %d: 識別後も説明が隠れている", c.id)
 			}
 		}
@@ -683,7 +684,6 @@ func TestUnidentifiedItemDescriptionHidden(t *testing.T) {
 	}
 
 	// 足元の「説明」でも本当の説明が出ない
-	g, _ := newHeadlessGame(1, DifficultyAdvanced)
 	pot := buildItemFromTemplate(synthesisPotID, g.state.Player.X, g.state.Player.Y)
 	g.state.Items = []Item{pot}
 	g.ShowGroundItem = true

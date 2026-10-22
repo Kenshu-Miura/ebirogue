@@ -234,13 +234,10 @@ func (g *Game) scatterBottomlessTraps(x, y int) {
 	g.miniMapDirty = true
 }
 
-func potUnidentifiedName(id int) string {
-	return fmt.Sprintf("%sの壺", []string{"赤色", "金色", "緑色", "青緑色", "水色", "青色", "紫色", "桃色"}[id-synthesisPotID])
-}
-
+// loadAdditionalPotImages は色違いの壺の画像を読む（キーはファイル番号。どの壺に使うかは potAppearanceImageID）。
 func loadAdditionalPotImages() map[int]*ebiten.Image {
 	result := map[int]*ebiten.Image{}
-	for id := 225; id <= 232; id++ {
+	for id := synthesisPotID; id < synthesisPotID+len(unidentifiedPotColors); id++ {
 		result[id] = loadImage(fmt.Sprintf("img/pot_%d.png", id))
 	}
 	return result

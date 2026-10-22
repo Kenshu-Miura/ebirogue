@@ -207,7 +207,7 @@ func TestAdditionalPotEffects(t *testing.T) {
 			if pot.Capacity < 3 || pot.Capacity > 5 || pot.Identified {
 				t.Fatal("capacity / identification")
 			}
-			if name, identified := displayItemName(pot); identified || name == pot.Name {
+			if name, identified := g.displayItemName(pot); identified || name == pot.Name {
 				t.Fatal("missing unidentified name")
 			}
 			item := buildItemFromTemplate(128, 0, 0).(*Weapon)

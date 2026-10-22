@@ -38,8 +38,8 @@ func (p *Pot) GetIdentified() bool {
 	return p.Identified
 }
 
-// GetDescription は基本説明に現在の中身の一覧を付けて返す。
-func (p *Pot) GetDescription() string {
+// potDescription は壺の基本説明に現在の中身の一覧を付けて返す（中身の未識別の道具は未識別名）。
+func (g *Game) potDescription(p *Pot) string {
 	if len(p.Contents) == 0 {
 		return wrapPotDescription(p.Description + "（中身は空）")
 	}
@@ -48,7 +48,7 @@ func (p *Pot) GetDescription() string {
 		if i > 0 {
 			names += "、"
 		}
-		name, _ := displayItemName(item)
+		name, _ := g.displayItemName(item)
 		names += name
 	}
 	return wrapPotDescription(p.Description + "（中身: " + names + "）")
@@ -67,7 +67,7 @@ func (g *Game) inventoryPots() []*Pot {
 
 // startPotInsert は「入れる」を選んだときに、壺へ入れるアイテムの選択モードへ移る。
 func (g *Game) startPotInsert(pot *Pot) {
-	potName, _ := displayItemName(pot)
+	potName, _ := g.displayItemName(pot)
 	if len(pot.Contents) >= pot.Capacity {
 		g.EnqueueMessage(fmt.Sprintf("%sはもういっぱいだ", potName), 0.4)
 		g.showItemActions = false
@@ -116,9 +116,9 @@ func (g *Game) executePotInsertSelection() {
 		closeAll()
 		return
 	}
-	potName, _ := displayItemName(pot)
+	potName, _ := g.displayItemName(pot)
 	item := g.state.Player.Inventory[itemIndex]
-	itemName, identified := displayItemName(item)
+	itemName, identified := g.displayItemName(item)
 
 	if _, isPot := item.(*Pot); isPot {
 		g.EnqueueMessage("壺に壺は入らない", 0.4)
@@ -159,7 +159,7 @@ func (g *Game) executePotInsertSelection() {
 // executePotTakeOut は壺の中身を持ち物へ取り出す。
 // 持ち物がいっぱいになったら残りは壺の中へ残る。
 func (g *Game) executePotTakeOut(pot *Pot) {
-	potName, _ := displayItemName(pot)
+	potName, _ := g.displayItemName(pot)
 	if !potAllowsTakeOut(pot) {
 		g.EnqueueMessage("中身は割るか吸い出しで取り出そう", 0.4)
 		g.closeAllMenus()
@@ -173,7 +173,7 @@ func (g *Game) executePotTakeOut(pot *Pot) {
 			item := pot.Contents[0]
 			pot.Contents = pot.Contents[1:]
 			g.state.Player.Inventory = append(g.state.Player.Inventory, item)
-			itemName, identified := displayItemName(item)
+			itemName, identified := g.displayItemName(item)
 			g.Enqueue(Action{
 				Duration:     0.4,
 				Message:      fmt.Sprintf("%sを壺から取り出した", itemName),

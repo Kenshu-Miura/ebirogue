@@ -87,7 +87,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 |---|---|---|
 | Ebiten 依存のゲーム本体 | `//go:build !test` | `main.go`, `draw.go`, `input.go`, `move.go`, `enemy_ai.go`, `items.go`, `enemies.go`, `itemeffects.go`, `action.go`, `map.go`, `savegame.go`, `direction.go`, `gamehelpers.go` など |
 | テスト時のスタブ | `//go:build test` | `game_stub.go`（最小限の `Game`/`Player`/`Enemy` 定義）, `draw_stub.go`, `fonts_stub.go`, `audio_stub.go`（音声の空実装） |
-| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `status_stats.go`, `status_special.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go`, `item_floor_tables.go`, `terrain.go`, `special_rooms.go`, `item_prices.go`, `codex.go` |
+| タグなし（両ビルドで共有） | なし | `helpers.go`, `leveling.go`, `status.go`, `status_effects.go`, `status_stats.go`, `status_special.go`, `replay.go`, `audio_settings.go`, `recovery.go`, `autostop.go`, `trajectory.go`, `messagelog.go`, `inventory_view.go`, `help.go`, `equipment_abilities.go`, `damage.go`, `savedata.go`, `ids.go`, `rng.go`, `input_source.go`, `deathcause.go`, `difficulty.go`, `item_trap_selection.go`, `displacement_path.go`, `item_floor_tables.go`, `terrain.go`, `special_rooms.go`, `item_prices.go`, `codex.go`, `unidentified_names.go` |
 | デバッグビルド専用 | `//go:build debug && !test` / `!debug && !test` | `debug_on.go`（F1 の処理）/ `debug_off.go`（空の実装） |
 
 - タグなしファイルは Ebiten を import できず、`game_stub.go` の最小 `Game` 構造体でもコンパイルが通る必要がある。**タグなしのコードから `Game` の新フィールドを参照する場合は `game_stub.go` にも同じフィールドを追加する。**
@@ -226,7 +226,7 @@ python -m http.server 8080 --directory public   # ローカル配信（http://lo
 - 敵・アイテムはスライス（`[]Enemy`, `[]Item`）で保持され、インデックスで参照する処理が多い。ループ中の要素削除は既存コードのパターン（`append(s[:i], s[i+1:]...)` 後の break 等）に合わせる。
 - `Player.EquippedItems [5]Item` は後方互換のために残っている旧配列。新規コードは `EquippedWeapon`/`EquippedArmor`/`EquippedArrow`/`EquippedAccessories` を使う（equipment.go）。
 - 足元の道具を拾えるか（持ち物の上限）は `g.canPickUp(item)`（item.go）で判定する。お金は持ち物の枠を使わないので満杯でも拾える（開発者の決定、2026-10-22）。**拾う経路を増やすときもこれを使う。**
-- 未識別アイテムの表示名は `inventoryItemLabel`（inventory.go）と `customNames`（テンプレート ID キー）で決まる。識別状態は `Identifiable` インタフェース。**メッセージに道具の名前を出すときは `displayItemName`（gamehelpers.go）を通す**（`GetName()` は未識別でも本当の名前を返す）。説明画面の文は `itemDescriptionText`（未識別の杖・壺・指輪など武器・盾以外の `Identifiable` は説明を隠す。開発者の決定、2026-10-22）。
+- 未識別アイテムの表示名は `inventoryItemLabel`（inventory.go）と `customNames`（テンプレート ID キー）で決まる。識別状態は `Identifiable` インタフェース。**メッセージに道具の名前を出すときは `g.displayItemName`（gamehelpers.go）を通す**（`GetName()` は未識別でも本当の名前を返す）。未識別の杖・壺・指輪の名前は冒険ごとにランダムで、`g.unidentifiedName`（`unidentified_names_game.go`）がシードから専用の乱数系列で割り当てる（ターン進行の乱数を使わず、保存も要らない）。名前の候補は種類ごとに `unidentifiedNamePools`（タグなしの `unidentified_names.go`）にあり、**新しい杖・壺・指輪を足して候補が足りなくなったら候補も足す**（`TestUnidentifiedNamePoolsCoverTemplates` が検出）。壺の画像は名前の色にそろえる（`g.potAppearanceImageID`）。説明画面の文は `itemDescriptionText`（未識別の杖・壺・指輪など武器・盾以外の `Identifiable` は説明を隠す。開発者の決定、2026-10-22）。
 - 画像ロードは `loadImage` が失敗時 `log.Fatal` する。画像ファイルを追加し忘れると起動しない。
 - **ファイル名末尾の `_windows.go` / `_js.go` / `_linux.go` 等は Go が暗黙の GOOS ビルド制約として扱う**。例えば `draw_windows.go` という名前は Windows 専用となり WASM ビルドから除外されてしまう（UI 描画ファイルは `draw_ui.go` と命名している）。
 - リポジトリ直下のビルド成果物（`ebirogue.exe`, `ebirogue.wasm` 等）はコミット対象にしない。

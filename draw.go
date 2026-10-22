@@ -222,8 +222,10 @@ func (g *Game) DrawPlayer(screen *ebiten.Image, centerX, centerY int) {
 }
 
 func (g *Game) getItemImage(item Item) *ebiten.Image {
-	if img := g.additionalPotImages[item.GetID()]; img != nil {
-		return img
+	if fileID, ok := g.potAppearanceImageID(item.GetID()); ok {
+		if img := g.additionalPotImages[fileID]; img != nil {
+			return img
+		}
 	}
 	if img := g.specialWeaponImages[item.GetType()]; img != nil {
 		return img

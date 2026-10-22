@@ -127,7 +127,7 @@ func (g *Game) tossPlayerItem(fromX, fromY int, prefer func(Item) bool, intn fun
 	}
 	directions := getDirections()
 	direction := directions[intn(len(directions))]
-	itemName, _ := displayItemName(item)
+	itemName, _ := g.displayItemName(item)
 	if _, landed := g.flingItem(item, fromX, fromY, direction.dx, direction.dy, itemTossDistance); landed {
 		g.EnqueueMessage(fmt.Sprintf("%sは遠くへ投げ捨てられた", itemName), 0.4)
 	} else {

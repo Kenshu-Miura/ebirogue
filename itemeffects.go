@@ -1177,8 +1177,8 @@ func (g *Game) executeItemIdentify() {
 
 		g.Enqueue(Action{
 			Duration:     0.5,
-			ItemName:     getItemNameWithSharpness(item),
-			Message:      fmt.Sprintf("アイテムの正体は%sだった。", getItemNameWithSharpness(item)),
+			ItemName:     g.getItemNameWithSharpness(item),
+			Message:      fmt.Sprintf("アイテムの正体は%sだった。", g.getItemNameWithSharpness(item)),
 			Execute:      func(g *Game) {},
 			IsIdentified: true,
 		})

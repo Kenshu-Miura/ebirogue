@@ -133,22 +133,6 @@ func (g *Game) placeSpecialFood(food Item, x, y int) {
 	}
 }
 
-// 未識別表示だけを差し替え、テンプレートの正式名は変えない。
-func specialUnidentifiedName(item Item) string {
-	if item.GetID() >= 225 && item.GetID() <= 232 {
-		return potUnidentifiedName(item.GetID())
-	}
-	switch item.GetID() {
-	case 219:
-		return "木彫りの杖"
-	case 220:
-		return "水晶の杖"
-	case 221:
-		return "赤珊瑚の杖"
-	}
-	return item.GetName()
-}
-
 // 杖の効果を直接呼ぶ経路でも、共通の付与と遅延実行を使う。
 func (g *Game) queueSpecialCaneStatus(itemID, index int) {
 	if index < 0 || index >= len(g.state.Enemies) {

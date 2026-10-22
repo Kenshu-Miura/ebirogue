@@ -372,7 +372,7 @@ func getEquippedIndex(equippedItems []Item, item Equipable) int {
 	return -1
 }
 
-func getItemNameWithSharpness(item Item) string {
+func (g *Game) getItemNameWithSharpness(item Item) string {
 	// Helper function to format sharpness
 	formatSharpness := func(sharpness int) string {
 		if sharpness > 0 {
@@ -388,7 +388,7 @@ func getItemNameWithSharpness(item Item) string {
 		// Check if the item is identified
 		if !identifiable.IsIdentified() {
 			// For unidentified items, return the base name without sharpness
-			return specialUnidentifiedName(item)
+			return g.unidentifiedName(item)
 		} else {
 			// Process identified items
 			switch item := item.(type) {
@@ -447,12 +447,12 @@ func (g *Game) executeItemSwap() {
 			}
 
 			selectedInventoryItem := g.state.Player.Inventory[g.selectedItemIndex]
-			//itemName := getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
+			//itemName := g.getItemNameWithSharpness(item) // You might want to adjust this if you have a different way to get the item's name.
 
 			isCursedEquipped := false
 
 			// 未識別なら未識別名（色の壺・杖など）、識別済みなら強化値付きの名前
-			selectedItemName, identified := displayItemName(selectedInventoryItem)
+			selectedItemName, identified := g.displayItemName(selectedInventoryItem)
 
 			// Check if the selected inventory item is Equipable and cursed using new system
 			if equipableItem, ok := selectedInventoryItem.(Equipable); ok {
@@ -568,7 +568,7 @@ func (g *Game) PickupItem() {
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
 				// 未識別なら未識別名（色の壺・杖など）、識別済みなら強化値付きの名前
-				itemName, identified := displayItemName(item)
+				itemName, identified := g.displayItemName(item)
 
 				// 床に貼りついた聖域のカードは拾わずに上へ乗るだけ
 				if isStuckSanctuaryItem(item) {
@@ -632,7 +632,7 @@ func (g *Game) PickupItem() {
 			if itemX == playerX && itemY == playerY { // アイテムの座標とプレイヤーの座標が一致するかチェック
 
 				// 未識別なら未識別名（色の壺・杖など）、識別済みなら強化値付きの名前
-				itemName, identified := displayItemName(item)
+				itemName, identified := g.displayItemName(item)
 
 				action := Action{
 					Duration: 0.5,

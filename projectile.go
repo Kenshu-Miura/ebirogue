@@ -114,17 +114,17 @@ func isCaneBolt(item Item) bool {
 }
 
 // projectileItemLabel は飛ばすときのメッセージに使う道具の名前と、識別済みかを返す。
-func projectileItemLabel(item Item) (string, bool) {
+func (g *Game) projectileItemLabel(item Item) (string, bool) {
 	if _, ok := item.(Identifiable); !ok {
 		return item.GetName(), true
 	}
-	return displayItemName(item)
+	return g.displayItemName(item)
 }
 
 // ThrowItem は道具 p を飛ばす Action を積む（「〜を投げた」「〜を撃った」「〜を使った」と表示し、
 // 表示の後に飛ぶ）。海老さんが飛ばす道具は g.newPlayerProjectile で作る。
 func (g *Game) ThrowItem(p Projectile) {
-	itemName, identified := projectileItemLabel(p.Item)
+	itemName, identified := g.projectileItemLabel(p.Item)
 	message := fmt.Sprintf("%sを投げた", itemName)
 	switch p.Kind {
 	case ProjectileBolt:
@@ -202,7 +202,7 @@ func (g *Game) flyProjectile(p *Projectile) {
 				continue
 			}
 			if !g.projectileHitsEnemy(p, index) {
-				itemName, _ := projectileItemLabel(p.Item)
+				itemName, _ := g.projectileItemLabel(p.Item)
 				g.EnqueueMessage(fmt.Sprintf("%sは%sに当たらなかった", itemName, g.enemyDisplayName(g.state.Enemies[index].Name)), 0.3)
 				continue
 			}
@@ -362,7 +362,7 @@ func (g *Game) returnProjectile(p *Projectile, index int) {
 	if enemyMasquerading(*enemy) {
 		g.revealEnemy(index)
 	}
-	itemName, _ := projectileItemLabel(p.Item)
+	itemName, _ := g.projectileItemLabel(p.Item)
 	g.EnqueueMessage(fmt.Sprintf("%sは%sを打ち返した！", g.enemyDisplayName(enemy.Name), itemName), 0.4)
 	enemy.AttackTimer = 0.5
 	enemy.AttackDirection = determineDirection(-p.DX, -p.DY)
@@ -388,7 +388,7 @@ func (g *Game) returnProjectile(p *Projectile, index int) {
 //     盾の回避・反射（打ち返した敵へダメージを返す）・カメの甲羅などの被ダメージのフックが効く。
 //     死因は「<打ち返した敵>の打ち返し」。
 func (g *Game) hitPlayerWithReturnedProjectile(p *Projectile) {
-	itemName, _ := projectileItemLabel(p.Item)
+	itemName, _ := g.projectileItemLabel(p.Item)
 	if p.Kind == ProjectileBolt {
 		g.EnqueueMessage(fmt.Sprintf("%sは海老さんに当たったが、何も起きなかった", itemName), 0.4)
 		g.isActioned = true
