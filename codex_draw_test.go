@@ -26,8 +26,8 @@ func TestCodexDrawAllEntriesPreservesRNG(t *testing.T) {
 		for _, id := range codexIDs(tab) {
 			records[id] = CodexRecord{Seen: true, Identified: true}
 		}
-		for page := 0; page < len(g.codexEntries()); page++ {
-			g.codexPage = page
+		for i := range g.codexEntries() {
+			g.codexCursor = i
 			g.drawCodex(screen)
 		}
 	}
@@ -37,15 +37,16 @@ func TestCodexDrawAllEntriesPreservesRNG(t *testing.T) {
 	}
 }
 
-// 図鑑のすべての敵・罠に説明文があり、ほかの敵の説明を取り違えないこと。
+// 図鑑のすべての敵・罠に説明文があり（道具を含め詳細の枠に収まる長さ）、ほかの敵の説明を取り違えないこと。
 func TestCodexEveryEnemyAndTrapHasDescription(t *testing.T) {
-	for tab, describe := range map[int]func(int) string{1: codexEnemyDescription, 2: codexTrapDescription} {
+	itemDescription := func(id int) string { return itemTemplates[id].Description }
+	for tab, describe := range map[int]func(int) string{0: itemDescription, 1: codexEnemyDescription, 2: codexTrapDescription} {
 		for _, id := range codexIDs(tab) {
 			desc := describe(id)
-			if desc == "" {
+			if desc == "" && tab != 0 {
 				t.Errorf("タブ%d の ID %d に説明文が無い", tab, id)
 			}
-			if lines := codexWrap(desc, 41, 12); len(lines) == 12 && strings.HasSuffix(lines[11], "…") {
+			if lines := codexWrap(desc, codexDescWidth, codexDescLines); len(lines) == codexDescLines && strings.HasSuffix(lines[codexDescLines-1], "…") {
 				t.Errorf("タブ%d の ID %d の説明文が長すぎて途中で切れる", tab, id)
 			}
 		}

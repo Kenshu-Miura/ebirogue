@@ -48,17 +48,35 @@ func TestCodexNonpersistentAndNavigation(t *testing.T) {
 	g.openCodex()
 	turn := g.turnCount
 	press := func(k Key) { v.ReleaseAll(); v.Update(); v.Press(k); v.Update(); g.handleCodexInput() }
-	press(KeyRight)
-	if g.codexPage != 1 {
-		t.Fatal(g.codexPage)
-	}
 	press(KeyDown)
-	if g.codexTab != 1 || g.codexPage != 0 {
+	if g.codexCursor != 1 {
+		t.Fatal(g.codexCursor)
+	}
+	press(KeyUp)
+	press(KeyUp)
+	if n := len(g.codexEntries()); g.codexCursor != n-1 || g.codexScroll != n-codexListRows {
+		t.Fatal("wrap to bottom", g.codexCursor, g.codexScroll)
+	}
+	press(KeyRight)
+	if g.codexTab != 1 || g.codexCursor != 0 || g.codexScroll != 0 {
 		t.Fatal("tab")
 	}
 	press(KeyLeft)
-	if g.codexPage == 0 {
-		t.Fatal("page wrap")
+	press(KeyLeft)
+	if g.codexTab != 2 {
+		t.Fatal("tab wrap", g.codexTab)
+	}
+	// 長押しは端で止まり、回り込まない
+	g.setCodexTab(0)
+	v.ReleaseAll()
+	v.Update()
+	v.Press(KeyDown)
+	for i := 0; i < 2000; i++ {
+		v.Update()
+		g.handleCodexInput()
+	}
+	if n := len(g.codexEntries()); g.codexCursor != n-1 {
+		t.Fatal("hold should stop at the end", g.codexCursor, n)
 	}
 	press(KeyX)
 	if g.showCodex || !g.showMenu {

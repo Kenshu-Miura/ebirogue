@@ -154,8 +154,11 @@ func (g *Game) openCodex() {
 	g.showMenu = false
 	g.showCodex = true
 	g.codexTab = 0
-	g.codexPage = 0
+	g.codexCursor = 0
+	g.codexScroll = 0
 }
+
+// handleCodexInput は図鑑の操作。←→でタブ、↑↓（長押しで連続）で一覧のカーソルを動かす。
 func (g *Game) handleCodexInput() {
 	if g.keys().JustPressed(KeyC) {
 		g.closeAllMenus()
@@ -166,21 +169,25 @@ func (g *Game) handleCodexInput() {
 		g.showMenu = true
 		return
 	}
-	if g.keys().JustPressed(KeyUp) {
-		g.codexTab = (g.codexTab + 2) % 3
-		g.codexPage = 0
-	}
-	if g.keys().JustPressed(KeyDown) {
-		g.codexTab = (g.codexTab + 1) % 3
-		g.codexPage = 0
-	}
-	pages := max(1, (len(g.codexEntries())+codexPageSize-1)/codexPageSize)
 	if g.keys().JustPressed(KeyLeft) {
-		g.codexPage = (g.codexPage + pages - 1) % pages
+		g.setCodexTab((g.codexTab + 2) % 3)
 	}
 	if g.keys().JustPressed(KeyRight) {
-		g.codexPage = (g.codexPage + 1) % pages
+		g.setCodexTab((g.codexTab + 1) % 3)
 	}
+	n := len(g.codexEntries())
+	if g.logScrollKeyPressed(KeyUp) {
+		g.codexCursor = codexMoveCursor(g.codexCursor, -1, n, g.keys().JustPressed(KeyUp))
+	}
+	if g.logScrollKeyPressed(KeyDown) {
+		g.codexCursor = codexMoveCursor(g.codexCursor, 1, n, g.keys().JustPressed(KeyDown))
+	}
+	g.codexScroll = codexScrollFor(g.codexCursor, g.codexScroll, codexListRows, n)
+}
+func (g *Game) setCodexTab(tab int) {
+	g.codexTab = tab
+	g.codexCursor = 0
+	g.codexScroll = 0
 }
 func (g *Game) codexEntries() []int {
 	ids := codexIDs(g.codexTab)

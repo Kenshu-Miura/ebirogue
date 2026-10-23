@@ -78,3 +78,33 @@ func codexDiscovery(ids []int, records map[int]CodexRecord) (found, total int, p
 	}
 	return
 }
+
+// codexMoveCursor は一覧のカーソルを delta だけ動かす。端で止め、wrap が true のときだけ反対の端へ回り込む
+// （押した瞬間だけ回り込み、長押しのリピートでは端で止まる）。
+func codexMoveCursor(cursor, delta, n int, wrap bool) int {
+	if n <= 0 {
+		return 0
+	}
+	next := cursor + delta
+	switch {
+	case next < 0 && wrap:
+		return n - 1
+	case next >= n && wrap:
+		return 0
+	}
+	return min(max(next, 0), n-1)
+}
+
+// codexScrollFor は rows 行見える一覧で、カーソルが見える位置に入る先頭行を返す。
+func codexScrollFor(cursor, scroll, rows, n int) int {
+	if rows <= 0 || n <= rows {
+		return 0
+	}
+	if cursor < scroll {
+		scroll = cursor
+	}
+	if cursor >= scroll+rows {
+		scroll = cursor - rows + 1
+	}
+	return min(max(scroll, 0), n-rows)
+}

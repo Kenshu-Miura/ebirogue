@@ -154,7 +154,8 @@ type Game struct {
 	codex                   CodexData
 	codexLoaded, codexDirty bool
 	codexError              string
-	codexTab, codexPage     int
+	codexTab, codexCursor   int
+	codexScroll             int // 図鑑の一覧の先頭行
 
 	state GameState
 	seed  int64    // 冒険のシード（同じシードなら同じフロアが生成される）
